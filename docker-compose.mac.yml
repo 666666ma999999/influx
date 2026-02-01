@@ -1,0 +1,54 @@
+version: '3.8'
+
+# macOS専用設定
+# 使用方法: docker-compose -f docker-compose.mac.yml up
+
+services:
+  xstock:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: xstock
+
+    environment:
+      - DISPLAY=host.docker.internal:0
+      - TZ=Asia/Tokyo
+
+    volumes:
+      - ./collector:/app/collector:ro
+      - ./scripts:/app/scripts:ro
+      - ./output:/app/output
+      - ./data:/app/data
+      - ./x_profile:/app/x_profile
+
+    stdin_open: true
+    tty: true
+    security_opt:
+      - seccomp:unconfined
+    shm_size: '2gb'
+
+  setup:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: xstock-setup
+
+    environment:
+      - DISPLAY=host.docker.internal:0
+      - TZ=Asia/Tokyo
+
+    volumes:
+      - ./collector:/app/collector:ro
+      - ./scripts:/app/scripts:ro
+      - ./x_profile:/app/x_profile
+
+    stdin_open: true
+    tty: true
+    security_opt:
+      - seccomp:unconfined
+    shm_size: '2gb'
+
+    command: python scripts/setup_profile.py
+
+    profiles:
+      - setup

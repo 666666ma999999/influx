@@ -1,0 +1,40 @@
+# ブラウザプロファイル（ログイン情報を含む）
+x_profile/
+
+# 出力ファイル
+output/*.json
+output/*.csv
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# 仮想環境
+venv/
+.venv/
+env/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# ログ
+*.log
+
+# 環境変数
+.env
+.env.local

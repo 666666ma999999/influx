@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  xstock:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: xstock
+
+    # ディスプレイ設定（GUIブラウザ表示用）
+    environment:
+      - DISPLAY=${DISPLAY:-:0}
+      - TZ=Asia/Tokyo
+
+    # ボリュームマウント
+    volumes:
+      # ソースコード（開発時のホットリロード用）
+      - ./collector:/app/collector:ro
+      - ./scripts:/app/scripts:ro
+
+      # データ永続化
+      - ./output:/app/output
+      - ./data:/app/data
+
+      # ブラウザプロファイル（ログイン状態を保持）
+      - ./x_profile:/app/x_profile
+
+      # macOS用: XQuartz経由でGUI表示
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+
+    # ネットワーク設定
+    network_mode: host
+
+    # インタラクティブモード（セットアップ時に必要）
+    stdin_open: true
+    tty: true
+
+    # セキュリティ設定（Chromium用）
+    security_opt:
+      - seccomp:unconfined
+
+    # 共有メモリ増加（Chromium用）
+    shm_size: '2gb'
+
+  # セットアップ用サービス（初回ログイン時に使用）
+  setup:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: xstock-setup
+
+    environment:
+      - DISPLAY=${DISPLAY:-:0}
+      - TZ=Asia/Tokyo
+
+    volumes:
+      - ./collector:/app/collector:ro
+      - ./scripts:/app/scripts:ro
+      - ./x_profile:/app/x_profile
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+
+    network_mode: host
+    stdin_open: true
+    tty: true
+    security_opt:
+      - seccomp:unconfined
+    shm_size: '2gb'
+
+    command: python scripts/setup_profile.py
+
+    profiles:
+      - setup  # docker-compose --profile setup up で起動

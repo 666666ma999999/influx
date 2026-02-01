@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>週刊インフルエンサー投資ニュース | 2026年1月22日〜23日</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #e8e8e8;
+            line-height: 1.8;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            padding: 40px 20px;
+            background: linear-gradient(135deg, #0f3460 0%, #16213e 100%);
+            border-bottom: 3px solid #e94560;
+            margin-bottom: 30px;
+        }
+
+        header h1 {
+            font-size: 2.2em;
+            color: #fff;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        header .subtitle {
+            font-size: 1.1em;
+            color: #e94560;
+            font-weight: bold;
+        }
+
+        .top-news {
+            background: linear-gradient(135deg, #b8860b 0%, #daa520 100%);
+            color: #1a1a2e;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(218, 165, 32, 0.3);
+        }
+
+        .top-news h2 {
+            font-size: 1.6em;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .top-news h2::before {
+            content: "TOP";
+            background: #1a1a2e;
+            color: #daa520;
+            padding: 5px 12px;
+            border-radius: 5px;
+            font-size: 0.7em;
+        }
+
+        .section {
+            background: rgba(255,255,255,0.05);
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 25px;
+            border-left: 4px solid #e94560;
+        }
+
+        .section h2 {
+            color: #e94560;
+            font-size: 1.4em;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(233, 69, 96, 0.3);
+        }
+
+        .section h3 {
+            color: #4fc3f7;
+            font-size: 1.15em;
+            margin: 20px 0 15px;
+        }
+
+        .quote {
+            background: rgba(79, 195, 247, 0.1);
+            border-left: 3px solid #4fc3f7;
+            padding: 15px 20px;
+            margin: 15px 0;
+            border-radius: 0 10px 10px 0;
+            font-style: italic;
+        }
+
+        .quote .author {
+            display: block;
+            margin-top: 10px;
+            color: #4fc3f7;
+            font-style: normal;
+            font-weight: bold;
+        }
+
+        .warning-section {
+            background: linear-gradient(135deg, rgba(233, 69, 96, 0.2) 0%, rgba(233, 69, 96, 0.1) 100%);
+            border-left-color: #ff6b6b;
+        }
+
+        .warning-section h2 {
+            color: #ff6b6b;
+        }
+
+        .alert-box {
+            background: rgba(255, 107, 107, 0.2);
+            border: 1px solid #ff6b6b;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+        }
+
+        .alert-box h4 {
+            color: #ff6b6b;
+            margin-bottom: 10px;
+        }
+
+        .summary-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: rgba(255,255,255,0.03);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .summary-table th {
+            background: rgba(233, 69, 96, 0.3);
+            padding: 12px 15px;
+            text-align: left;
+            font-weight: bold;
+        }
+
+        .summary-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .summary-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .trend-bullish { color: #4caf50; }
+        .trend-bearish { color: #ff6b6b; }
+        .trend-neutral { color: #ffc107; }
+        .trend-volatile { color: #e94560; }
+
+        .investor-index {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .investor-group {
+            background: rgba(255,255,255,0.05);
+            padding: 15px;
+            border-radius: 10px;
+        }
+
+        .investor-group h4 {
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .investor-group.bullish h4 { color: #4caf50; }
+        .investor-group.cautious h4 { color: #ffc107; }
+        .investor-group.contrarian h4 { color: #ff6b6b; }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .stat-card {
+            background: rgba(255,255,255,0.05);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-card .number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #e94560;
+        }
+
+        .stat-card .label {
+            font-size: 0.9em;
+            color: #aaa;
+            margin-top: 5px;
+        }
+
+        footer {
+            text-align: center;
+            padding: 30px;
+            color: #666;
+            font-size: 0.9em;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            margin-top: 40px;
+        }
+
+        .highlight {
+            background: linear-gradient(transparent 60%, rgba(233, 69, 96, 0.3) 60%);
+        }
+
+        .price-tag {
+            display: inline-block;
+            background: #daa520;
+            color: #1a1a2e;
+            padding: 3px 10px;
+            border-radius: 15px;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+
+        .ticker {
+            font-family: monospace;
+            background: rgba(79, 195, 247, 0.2);
+            padding: 2px 8px;
+            border-radius: 4px;
+            color: #4fc3f7;
+        }
+
+        @media (max-width: 600px) {
+            header h1 { font-size: 1.6em; }
+            .stats-grid { grid-template-columns: 1fr; }
+            .section { padding: 15px; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>週刊インフルエンサー投資ニュース</h1>
+        <p class="subtitle">2026年1月22日〜23日 マーケットダイジェスト</p>
+    </header>
+
+    <div class="container">
+        <!-- 収集統計 -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="number">88</div>
+                <div class="label">収集ツイート数</div>
+            </div>
+            <div class="stat-card">
+                <div class="number">30</div>
+                <div class="label">インフルエンサー数</div>
+            </div>
+            <div class="stat-card">
+                <div class="number">3</div>
+                <div class="label">グループ</div>
+            </div>
+        </div>
+
+        <!-- TOP NEWS -->
+        <div class="top-news">
+            <h2>金・銀が歴史的高値更新 — 「ペーパーマネーからの脱出」加速</h2>
+
+            <h3>ゴールド5,000ドル目前、シルバーは100ドル突破</h3>
+            <p>貴金属市場が歴史的な局面を迎えている。金価格は1オンス<span class="price-tag">5,000ドル</span>に接近し、銀は23日に<span class="price-tag">100ドル</span>を突破、一時101ドルまで上昇した。</p>
+
+            <div class="quote">
+                「地政学リスクで上がったはずのゴールドはトランプがタコっても下がらない。地政学云々よりやはり<span class="highlight">ペーパーマネーからの脱出</span>という大きなダイナミックが動いている」
+                <span class="author">— エミン・ユルマズ氏</span>
+            </div>
+
+            <div class="quote">
+                「デジタルゴールドなど存在しません。ビットコインを含むデジタルコイン類はナスダック連動の投機ビークル。インフレと地政学リスクのヘッジにはならない」
+                <span class="author">— エミン・ユルマズ氏</span>
+            </div>
+
+            <div class="quote">
+                「金は市場の異変を告げる炭鉱のカナリア。金価格の上昇は投機やパニックではなく、情報に精通した投資家と新興国中銀の着実な買いに支えられている」
+                <span class="author">— 朝倉智也氏（SBIグループ）</span>
+            </div>
+
+            <h3>個人投資家も貴金属へシフト</h3>
+
+            <div class="quote">
+                「田中貴金属での純金積立が<span class="highlight">4,750万円</span>に到達。半月で500万円近く伸びた。2004年に1オンス金貨2枚を51,000円で購入したが、買取価格が84万円に達した」
+                <span class="author">— 弐億貯男氏（1.7万いいね）</span>
+            </div>
+
+            <div class="quote">
+                「貴金属を持たざるリスクを天啓として感じ、純銀信託を<span class="highlight">500万円分</span>購入した。実需増＋増産困難性＋金高騰の連動＋現金からの逃避＋銀ETFへの資金流入が同時多発的に重なり、銀価格がとんでもないことになる」
+                <span class="author">— ゆーき氏</span>
+            </div>
+        </div>
+
+        <!-- 為替セクション -->
+        <div class="section">
+            <h2>【為替】FRBがレートチェック？ ドル円159円台から155円台へ急落</h2>
+
+            <h3>10年以上ぶりの米国側介入観測</h3>
+            <p>23日、ドル円相場が159円台前半から一気に155〜157円台へと急落し、市場に衝撃が走った。</p>
+
+            <div class="quote">
+                「【速報】急速に円高 この数分で、ドル円が159円台前半から157円台半ばへと急速に円高が進みました」
+                <span class="author">— 後藤達也氏（1万いいね）</span>
+            </div>
+
+            <div class="quote">
+                「複数の信頼できる情報筋によると、FRBはUSD/JPYについてレートを問い合わせてきた。これはドル安要因だ。極めて異例で、強いシグナル。<span class="highlight">10年以上ぶり</span>に、FRBが本日、円を下支えするために（口先で）介入した」
+                <span class="author">— やす氏（VC）</span>
+            </div>
+
+            <h3>投資家の反応</h3>
+
+            <div class="quote">
+                「待望の円高きたあああ！155円台で約定、予想より2%ぐらいドルが増えた。次は152-153円で全ブッパ。米国株のバーゲンセール、くっぞ！」
+                <span class="author">— ゆきママ氏</span>
+            </div>
+
+            <div class="quote">
+                「為替介入は利上げとセットじゃなきゃ単に押し目を作るだけでしょ」
+                <span class="author">— 東大ぱふぇっと氏</span>
+            </div>
+        </div>
+
+        <!-- 日本経済セクション -->
+        <div class="section">
+            <h2>【日本経済】スタグフレーション警戒、海外勢は日本国債売り</h2>
+
+            <h3>バンガードも日本超長期国債を買入停止</h3>
+
+            <div class="quote">
+                「日本国債に対する海外投資家は総じて『売り』。米バンガードは日本の超長期国債の買い入れを停止した。評価損が拡大する中、国内金融機関に積極的な買い余力は乏しい」
+                <span class="author">— 朝倉智也氏</span>
+            </div>
+
+            <div class="quote">
+                「これまで日本は、巨額の政府債務は問題化しないことを根拠にMMT的政策を正当化してきた。しかし現在、長期国債利回りは急騰し、<span class="highlight">円は実質実効レートでトルコリラ並みの最弱通貨</span>となっている」
+                <span class="author">— 朝倉智也氏</span>
+            </div>
+
+            <h3>政治と財政政策への批判</h3>
+
+            <div class="quote">
+                「各党の違い。自民党:雑にばらまく、国民民主:丁寧にばらまく、維新:結局ばらまく、共産:全力でばらまく。中身は本質的に全部同じ。積極財政が必要だというなら、政府の予算のどこが国の成長につながるか教えてほしい」
+                <span class="author">— やす氏</span>
+            </div>
+        </div>
+
+        <!-- 注目銘柄セクション -->
+        <div class="section">
+            <h2>【注目銘柄】フィジカルAI関連・割安株に注目</h2>
+
+            <h3>AIを活用した銘柄選定</h3>
+
+            <div class="quote">
+                「フィジカルAI関連ということでGeminiに提案を受けて投資した<span class="ticker">3918 PCIホールディングス</span>が爆上がり。月額2,900円の元が取れた」
+                <span class="author">— 弐億貯男氏（含み益+5,217万円）</span>
+            </div>
+
+            <div class="quote">
+                「<span class="ticker">5970 ジーテクト</span>を購入。PER8.7倍、PBR0.43倍、配当利回り4.43%、15期連続増配。こういう地味かつお宝株がまだ転がっているのが日本株の面白いところ」
+                <span class="author">— ゆーき氏</span>
+            </div>
+
+            <h3>米国株の注目銘柄</h3>
+
+            <div class="quote">
+                「<span class="ticker">$AVGO</span> ブロードコムの調整局面、どこで拾うか。最高値から▲20%安でテクニカルは短期的弱気だが、ファンダメンタルズは依然強気」
+                <span class="author">— ゆきママ氏</span>
+            </div>
+
+            <p><strong>みくかぶ氏の今月プラス寄与銘柄:</strong> <span class="ticker">$SLV</span> <span class="ticker">$RKLB</span> <span class="ticker">$AMD</span> <span class="ticker">$OKLO</span> <span class="ticker">$ASTS</span> <span class="ticker">$GLDM</span></p>
+        </div>
+
+        <!-- 逆指標セクション -->
+        <div class="section warning-section">
+            <h2>【逆指標シグナル】岐阜暴威氏、シルバーショートで大損失</h2>
+
+            <h3>YouTube収益を1日で溶かす</h3>
+            <p>当レポートの「逆指標インフルエンサー」として注目している<strong>岐阜暴威氏</strong>が、今週も大きな損失を報告した。</p>
+
+            <div class="quote">
+                「終わった…久しぶりのノックアウトで62万入金して<span class="highlight">60万損切り</span>。しかもたった1日で」
+                <span class="author">— 岐阜暴威氏</span>
+            </div>
+
+            <div class="quote">
+                「月曜日にさらに株でくらうこと考えると今月マイテン。250万くらい利確したのに」
+                <span class="author">— 岐阜暴威氏</span>
+            </div>
+
+            <div class="quote">
+                「シルバー持っていたら450万のマイナスだった…コモディティは短期間で指数やFXと違い2倍3倍になりえる。安易な逆張りは燃える」
+                <span class="author">— 岐阜暴威氏</span>
+            </div>
+
+            <div class="alert-box">
+                <h4>⚠️ 逆指標としての解釈</h4>
+                <p>岐阜氏がシルバーを損切りした直後、シルバーは100ドルを突破し101ドルまで上昇。同氏のポジションと逆方向への動きが続いており、<strong>シルバー・金の上昇トレンドは依然継続する可能性</strong>を示唆している。</p>
+                <p style="margin-top: 10px;">また、同氏が指摘した「jinさんの両建て」も過去の介入・円高の前兆とされるシグナルとして要注目。</p>
+            </div>
+        </div>
+
+        <!-- サマリーテーブル -->
+        <div class="section">
+            <h2>【今週のまとめ】</h2>
+
+            <table class="summary-table">
+                <tr>
+                    <th>カテゴリ</th>
+                    <th>トレンド</th>
+                    <th>注目ポイント</th>
+                </tr>
+                <tr>
+                    <td>貴金属</td>
+                    <td class="trend-bullish">🔥 強気</td>
+                    <td>金5,000ドル、銀100ドル突破。ペーパーマネー離れ加速</td>
+                </tr>
+                <tr>
+                    <td>為替</td>
+                    <td class="trend-volatile">⚡ 変動</td>
+                    <td>FRBレートチェックで155円台へ。介入観測</td>
+                </tr>
+                <tr>
+                    <td>日本国債</td>
+                    <td class="trend-bearish">⚠️ 警戒</td>
+                    <td>海外勢売り、バンガード買入停止</td>
+                </tr>
+                <tr>
+                    <td>日本株</td>
+                    <td class="trend-neutral">→ 中立</td>
+                    <td>フィジカルAI、割安配当株に妙味</td>
+                </tr>
+                <tr>
+                    <td>米国株</td>
+                    <td class="trend-bullish">📈 押し目</td>
+                    <td>AVGO調整、メガテック買い戻し</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- 投資家心理インデックス -->
+        <div class="section">
+            <h2>【投資家心理インデックス】</h2>
+
+            <div class="investor-index">
+                <div class="investor-group bullish">
+                    <h4>📈 強気派</h4>
+                    <p>弐億貯男、ゆーき、ゆきママ、みくかぶ</p>
+                </div>
+                <div class="investor-group cautious">
+                    <h4>⚖️ 中立〜警戒派</h4>
+                    <p>エミンユルマズ、朝倉智也、やす</p>
+                </div>
+                <div class="investor-group contrarian">
+                    <h4>🔄 逆指標</h4>
+                    <p>岐阜暴威（損失継続 → 市場は上昇方向）</p>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>本レポートは2026年1月22日〜23日にX（Twitter）で収集した88件の投稿を基に作成しています。</p>
+            <p>投資は自己責任でお願いします。</p>
+            <p style="margin-top: 15px;">
+                <strong>収集元グループ:</strong><br>
+                Group1（主要インフルエンサー）: 26件 /
+                Group2（追加インフルエンサー）: 31件 /
+                Group3（逆指標）: 31件
+            </p>
+            <p style="margin-top: 15px; color: #888;">生成日時: 2026年1月26日</p>
+        </footer>
+    </div>
+</body>
+</html>

@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>週刊インフルエンサー投資ニュース | 2026年1月22日〜23日</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #e8e8e8;
+            line-height: 1.8;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            padding: 40px 20px;
+            background: linear-gradient(135deg, #0f3460 0%, #16213e 100%);
+            border-bottom: 3px solid #e94560;
+            margin-bottom: 30px;
+        }
+
+        header h1 {
+            font-size: 2.2em;
+            color: #fff;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        header .subtitle {
+            font-size: 1.1em;
+            color: #e94560;
+            font-weight: bold;
+        }
+
+        .category-section {
+            background: rgba(255,255,255,0.03);
+            border-radius: 20px;
+            margin-bottom: 40px;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .category-header {
+            padding: 25px 30px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .category-header.recommend {
+            background: linear-gradient(135deg, #1e88e5 0%, #1565c0 100%);
+        }
+
+        .category-header.holding {
+            background: linear-gradient(135deg, #43a047 0%, #2e7d32 100%);
+        }
+
+        .category-header.ipo {
+            background: linear-gradient(135deg, #8e24aa 0%, #6a1b9a 100%);
+        }
+
+        .category-number {
+            background: rgba(255,255,255,0.2);
+            color: #fff;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+
+        .category-title {
+            color: #fff;
+            font-size: 1.4em;
+        }
+
+        .category-count {
+            margin-left: auto;
+            background: rgba(255,255,255,0.2);
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+        }
+
+        .category-content {
+            padding: 30px;
+        }
+
+        .asset-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .asset-card {
+            background: rgba(255,255,255,0.05);
+            border-radius: 15px;
+            padding: 20px;
+            border-left: 4px solid #4fc3f7;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .asset-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .asset-card.gold { border-left-color: #ffd700; }
+        .asset-card.silver { border-left-color: #c0c0c0; }
+        .asset-card.stock-jp { border-left-color: #e94560; }
+        .asset-card.stock-us { border-left-color: #4fc3f7; }
+        .asset-card.etf { border-left-color: #66bb6a; }
+        .asset-card.sector { border-left-color: #ab47bc; }
+        .asset-card.fx { border-left-color: #ff7043; }
+
+        .asset-type {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.75em;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        .asset-type.gold { background: rgba(255, 215, 0, 0.3); color: #ffd700; }
+        .asset-type.silver { background: rgba(192, 192, 192, 0.3); color: #e0e0e0; }
+        .asset-type.stock-jp { background: rgba(233, 69, 96, 0.3); color: #e94560; }
+        .asset-type.stock-us { background: rgba(79, 195, 247, 0.3); color: #4fc3f7; }
+        .asset-type.etf { background: rgba(102, 187, 106, 0.3); color: #66bb6a; }
+        .asset-type.sector { background: rgba(171, 71, 188, 0.3); color: #ab47bc; }
+        .asset-type.fx { background: rgba(255, 112, 67, 0.3); color: #ff7043; }
+        .asset-type.commodity { background: rgba(255, 152, 0, 0.3); color: #ff9800; }
+
+        .asset-name {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #fff;
+        }
+
+        .asset-ticker {
+            font-family: monospace;
+            background: rgba(79, 195, 247, 0.2);
+            padding: 2px 8px;
+            border-radius: 4px;
+            color: #4fc3f7;
+            margin-left: 8px;
+            font-size: 0.85em;
+        }
+
+        .asset-details {
+            font-size: 0.9em;
+            color: #aaa;
+            margin-bottom: 10px;
+        }
+
+        .asset-reason {
+            font-size: 0.95em;
+            color: #e8e8e8;
+            padding: 10px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+
+        .influencer-tag {
+            display: inline-block;
+            background: rgba(233, 69, 96, 0.3);
+            color: #e94560;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            margin-top: 10px;
+        }
+
+        .amount-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #ffd700 0%, #ff8c00 100%);
+            color: #1a1a2e;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-weight: bold;
+            font-size: 0.9em;
+            margin-top: 8px;
+        }
+
+        .profit-badge {
+            background: linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);
+        }
+
+        .metrics-row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        .metric {
+            background: rgba(255,255,255,0.1);
+            padding: 5px 10px;
+            border-radius: 8px;
+            font-size: 0.85em;
+        }
+
+        .metric-label {
+            color: #888;
+        }
+
+        .metric-value {
+            color: #4fc3f7;
+            font-weight: bold;
+        }
+
+        .summary-section {
+            background: linear-gradient(135deg, rgba(233, 69, 96, 0.1) 0%, rgba(233, 69, 96, 0.05) 100%);
+            border: 1px solid rgba(233, 69, 96, 0.3);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+
+        .summary-section h2 {
+            color: #e94560;
+            margin-bottom: 20px;
+            font-size: 1.3em;
+        }
+
+        .summary-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .summary-table th {
+            text-align: left;
+            padding: 12px;
+            background: rgba(233, 69, 96, 0.2);
+            border-radius: 8px 8px 0 0;
+        }
+
+        .summary-table td {
+            padding: 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .trend-up { color: #4caf50; }
+        .trend-down { color: #f44336; }
+
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: #888;
+        }
+
+        .no-data-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+
+        .quote-box {
+            background: rgba(79, 195, 247, 0.1);
+            border-left: 3px solid #4fc3f7;
+            padding: 15px 20px;
+            margin: 15px 0;
+            border-radius: 0 10px 10px 0;
+        }
+
+        .quote-text {
+            font-style: italic;
+            margin-bottom: 10px;
+        }
+
+        .quote-author {
+            color: #4fc3f7;
+            font-weight: bold;
+        }
+
+        .highlight-box {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.15) 0%, rgba(255, 215, 0, 0.05) 100%);
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+
+        .highlight-box h3 {
+            color: #ffd700;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        footer {
+            text-align: center;
+            padding: 30px;
+            color: #666;
+            font-size: 0.9em;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            margin-top: 40px;
+        }
+
+        .stats-row {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 30px;
+        }
+
+        .stat-box {
+            background: rgba(255,255,255,0.05);
+            padding: 20px 30px;
+            border-radius: 15px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #e94560;
+        }
+
+        .stat-label {
+            color: #888;
+            font-size: 0.9em;
+        }
+
+        @media (max-width: 768px) {
+            .asset-grid {
+                grid-template-columns: 1fr;
+            }
+            .category-header {
+                flex-wrap: wrap;
+            }
+            .category-count {
+                margin-left: 0;
+                margin-top: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>週刊インフルエンサー投資ニュース</h1>
+        <p class="subtitle">2026年1月22日〜23日 マーケットダイジェスト</p>
+    </header>
+
+    <div class="container">
+        <!-- 統計サマリー -->
+        <div class="stats-row">
+            <div class="stat-box">
+                <div class="stat-number">11</div>
+                <div class="stat-label">オススメ資産</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number">17</div>
+                <div class="stat-label">購入・保有資産</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number">0</div>
+                <div class="stat-label">IPO申込</div>
+            </div>
+        </div>
+
+        <!-- ハイライト：貴金属フィーバー -->
+        <div class="highlight-box">
+            <h3>🔥 今週のハイライト：貴金属フィーバー</h3>
+            <p>金が5,000ドル、銀が100ドルに到達し、複数のインフルエンサーが貴金属への投資を実行・推奨。「ペーパーマネーからの脱出」という大きなトレンドが継続中。</p>
+        </div>
+
+        <!-- カテゴリ1: オススメしている資産・セクター -->
+        <div class="category-section">
+            <div class="category-header recommend">
+                <div class="category-number">1</div>
+                <div class="category-title">オススメしている資産・セクター</div>
+                <div class="category-count">11件</div>
+            </div>
+            <div class="category-content">
+                <div class="asset-grid">
+                    <!-- ゴールド（金） -->
+                    <div class="asset-card gold">
+                        <span class="asset-type gold">GOLD</span>
+                        <div class="asset-name">金（ゴールド）</div>
+                        <div class="asset-details">現物 / ETF / 投資信託</div>
+                        <div class="asset-reason">
+                            「金は、誰かの負債ではない唯一の資産」「市場の異変を告げる炭鉱のカナリア」として各国中銀も積み増し中。5,000ドル目前。
+                        </div>
+                        <div class="influencer-tag">朝倉智也</div>
+                        <div class="influencer-tag">エミンユルマズ</div>
+                    </div>
+
+                    <!-- SBI・iシェアーズ・ゴールドファンド -->
+                    <div class="asset-card etf">
+                        <span class="asset-type etf">投資信託</span>
+                        <div class="asset-name">SBI・iシェアーズ・ゴールドファンド</div>
+                        <div class="asset-details">金に投資できる最安コスト商品</div>
+                        <div class="asset-reason">
+                            2023年6月設定、2年半で純資産3,000億円を突破。金の重要性に着目した商品。
+                        </div>
+                        <div class="influencer-tag" style="background: rgba(102, 187, 106, 0.3); color: #66bb6a;">SBI商品紹介</div>
+                        <div class="influencer-tag">朝倉智也</div>
+                    </div>
+
+                    <!-- シルバー（銀） -->
+                    <div class="asset-card silver">
+                        <span class="asset-type silver">SILVER</span>
+                        <div class="asset-name">銀（シルバー）</div>
+                        <div class="asset-details">現物 / ETF（$SLV）</div>
+                        <div class="asset-reason">
+                            実需増＋増産困難性＋金高騰の連動＋現金からの逃避＋銀ETFへの資金流入が複合的に重なり、100ドル突破。130ドルまでいく可能性も。
+                        </div>
+                        <div class="influencer-tag">ゆーき</div>
+                        <div class="influencer-tag">みくかぶ</div>
+                    </div>
+
+                    <!-- プラチナ -->
+                    <div class="asset-card silver">
+                        <span class="asset-type commodity">COMMODITY</span>
+                        <div class="asset-name">プラチナ</div>
+                        <div class="asset-details">貴金属コモディティ</div>
+                        <div class="asset-reason">
+                            1日で+4.9%上昇。実需・インフレ意識＋リスクオンでコモディティ全面高。銀と並んで強さが目立つ。
+                        </div>
+                        <div class="influencer-tag">みくかぶ</div>
+                    </div>
+
+                    <!-- フィジカルAI関連 -->
+                    <div class="asset-card sector">
+                        <span class="asset-type sector">SECTOR</span>
+                        <div class="asset-name">フィジカルAI関連</div>
+                        <div class="asset-details">成長性高めの割安株セクター</div>
+                        <div class="asset-reason">
+                            GeminiのDeep Researchで銘柄選定。フィジカルAI関連で割安成長株を探す手法を公開。
+                        </div>
+                        <div class="influencer-tag">弐億貯男</div>
+                    </div>
+
+                    <!-- ジーテクト -->
+                    <div class="asset-card stock-jp">
+                        <span class="asset-type stock-jp">日本株</span>
+                        <div class="asset-name">ジーテクト<span class="asset-ticker">5970</span></div>
+                        <div class="asset-details">自動車部品メーカー</div>
+                        <div class="metrics-row">
+                            <div class="metric"><span class="metric-label">PER</span> <span class="metric-value">8.7倍</span></div>
+                            <div class="metric"><span class="metric-label">PBR</span> <span class="metric-value">0.43倍</span></div>
+                            <div class="metric"><span class="metric-label">配当</span> <span class="metric-value">4.43%</span></div>
+                        </div>
+                        <div class="asset-reason">
+                            15期連続増配、自己資本比率6割超。DOE採用銘柄。1年継続保有でクオカードも貰える「お宝株」。
+                        </div>
+                        <div class="influencer-tag">ゆーき</div>
+                    </div>
+
+                    <!-- ブロードコム -->
+                    <div class="asset-card stock-us">
+                        <span class="asset-type stock-us">米国株</span>
+                        <div class="asset-name">ブロードコム<span class="asset-ticker">$AVGO</span></div>
+                        <div class="asset-details">半導体・インフラソフトウェア</div>
+                        <div class="asset-reason">
+                            最高値から▲20%調整局面。テクニカルは短期的弱気だが、ファンダメンタルズは依然強気。300ドル割れのリスクシナリオも警戒しつつ、押し目買い推奨。
+                        </div>
+                        <div class="influencer-tag">ゆきママ</div>
+                    </div>
+
+                    <!-- メガテック -->
+                    <div class="asset-card sector">
+                        <span class="asset-type sector">SECTOR</span>
+                        <div class="asset-name">メガテック</div>
+                        <div class="asset-details">大型ハイテク株全般</div>
+                        <div class="asset-reason">
+                            「売られてたメガテックは買い戻しの流れ。結局、安ければ買うだけの簡単なお仕事。メガテックの数字はなんだかんだ強い」
+                        </div>
+                        <div class="influencer-tag">ゆきママ</div>
+                    </div>
+
+                    <!-- 半導体・食品・バイオ -->
+                    <div class="asset-card sector">
+                        <span class="asset-type sector">SECTOR</span>
+                        <div class="asset-name">半導体・食品系・バイオ</div>
+                        <div class="asset-details">テスタ氏注目セクター</div>
+                        <div class="asset-reason">
+                            「今日とか明日売るようなポジはなくて、半導体、食品系、バイオとかを場中はチラ見したり、引け前はチェックしたりしてます」
+                        </div>
+                        <div class="influencer-tag">テスタ</div>
+                    </div>
+
+                    <!-- 日経平均 -->
+                    <div class="asset-card stock-jp">
+                        <span class="asset-type stock-jp">指数</span>
+                        <div class="asset-name">日経平均</div>
+                        <div class="asset-details">目標: 56,000円突破</div>
+                        <div class="asset-reason">
+                            「年明け早々にタコトレードの復活！日経平均は年明けの窓を埋めて、次のステージに行く準備ができています。まずは56000円をクリアしないといけない」
+                        </div>
+                        <div class="influencer-tag">エミンユルマズ</div>
+                    </div>
+
+                    <!-- 米国株・ゴールド（ドル転推奨） -->
+                    <div class="asset-card fx">
+                        <span class="asset-type fx">FX/投資戦略</span>
+                        <div class="asset-name">ドル転→米国株・ゴールド購入</div>
+                        <div class="asset-details">円高局面での戦略</div>
+                        <div class="asset-reason">
+                            「極端な円高もおきにくい地合いなので、ぼちぼち何回かに分けてドル転しながら、米国株、ゴールドを安く買いましょう」
+                        </div>
+                        <div class="influencer-tag">ゆきママ</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- カテゴリ2: 個人で購入・保有している資産 -->
+        <div class="category-section">
+            <div class="category-header holding">
+                <div class="category-number">2</div>
+                <div class="category-title">個人で購入・保有している資産</div>
+                <div class="category-count">17件</div>
+            </div>
+            <div class="category-content">
+                <div class="asset-grid">
+                    <!-- 純金積立 -->
+                    <div class="asset-card gold">
+                        <span class="asset-type gold">GOLD</span>
+                        <div class="asset-name">田中貴金属 純金積立</div>
+                        <div class="asset-details">現物金の積立</div>
+                        <div class="amount-badge">4,750万円</div>
+                        <div class="asset-reason">
+                            半月で500万円近く伸びた。「五千万貯男間近です」
+                        </div>
+                        <div class="influencer-tag">弐億貯男</div>
+                    </div>
+
+                    <!-- 金貨 -->
+                    <div class="asset-card gold">
+                        <span class="asset-type gold">GOLD</span>
+                        <div class="asset-name">1オンス金貨 × 2枚</div>
+                        <div class="asset-details">2004年購入、22年保有</div>
+                        <div class="metrics-row">
+                            <div class="metric"><span class="metric-label">購入</span> <span class="metric-value">51,000円/枚</span></div>
+                            <div class="metric"><span class="metric-label">現在</span> <span class="metric-value">840,000円/枚</span></div>
+                        </div>
+                        <div class="amount-badge profit-badge">+1,578,000円（+1,547%）</div>
+                        <div class="influencer-tag">弐億貯男</div>
+                    </div>
+
+                    <!-- 純銀信託 -->
+                    <div class="asset-card silver">
+                        <span class="asset-type silver">SILVER</span>
+                        <div class="asset-name">純銀信託</div>
+                        <div class="asset-details">銀ETF/信託</div>
+                        <div class="amount-badge">500万円</div>
+                        <div class="asset-reason">
+                            「貴金属を持たざるリスクを天啓として感じ」購入。実需増＋金高騰連動で銀価格がとんでもないことに。
+                        </div>
+                        <div class="influencer-tag">ゆーき</div>
+                    </div>
+
+                    <!-- PCIホールディングス -->
+                    <div class="asset-card stock-jp">
+                        <span class="asset-type stock-jp">日本株</span>
+                        <div class="asset-name">PCIホールディングス<span class="asset-ticker">3918</span></div>
+                        <div class="asset-details">フィジカルAI関連</div>
+                        <div class="asset-reason">
+                            GeminiのDeep Researchで提案を受けて投資。「今日は爆上がり。月額2,900円の元が取れました」
+                        </div>
+                        <div class="influencer-tag">弐億貯男</div>
+                    </div>
+
+                    <!-- フィジカルAI関連ポートフォリオ -->
+                    <div class="asset-card stock-jp">
+                        <span class="asset-type stock-jp">日本株</span>
+                        <div class="asset-name">フィジカルAI関連・割安株ポートフォリオ</div>
+                        <div class="asset-details">成長性高めの構成</div>
+                        <div class="amount-badge profit-badge">含み益 +5,217万円</div>
+                        <div class="asset-reason">
+                            「フィジカルAI関連など、成長性高めの割安株の構成比率を増やしてます」
+                        </div>
+                        <div class="influencer-tag">弐億貯男</div>
+                    </div>
+
+                    <!-- ジーテクト -->
+                    <div class="asset-card stock-jp">
+                        <span class="asset-type stock-jp">日本株</span>
+                        <div class="asset-name">ジーテクト<span class="asset-ticker">5970</span></div>
+                        <div class="asset-details">新規購入</div>
+                        <div class="metrics-row">
+                            <div class="metric"><span class="metric-label">PER</span> <span class="metric-value">8.7倍</span></div>
+                            <div class="metric"><span class="metric-label">PBR</span> <span class="metric-value">0.43倍</span></div>
+                            <div class="metric"><span class="metric-label">配当</span> <span class="metric-value">4.43%</span></div>
+                        </div>
+                        <div class="asset-reason">
+                            「こういう地味かつお宝株がまだ転がっているのが日本株の面白いところであり、四季報読みの醍醐味」
+                        </div>
+                        <div class="influencer-tag">ゆーき</div>
+                    </div>
+
+                    <!-- 半導体・食品・バイオ -->
+                    <div class="asset-card stock-jp">
+                        <span class="asset-type stock-jp">日本株</span>
+                        <div class="asset-name">半導体・食品系・バイオ</div>
+                        <div class="asset-details">保有中（銘柄非公開）</div>
+                        <div class="asset-reason">
+                            「ポジが無いわけではなくて今日とか明日売るようなポジはなくて」長期保有中。
+                        </div>
+                        <div class="influencer-tag">テスタ</div>
+                    </div>
+
+                    <!-- $SLV -->
+                    <div class="asset-card etf">
+                        <span class="asset-type etf">ETF</span>
+                        <div class="asset-name">iシェアーズ シルバートラスト<span class="asset-ticker">$SLV</span></div>
+                        <div class="asset-details">銀ETF</div>
+                        <div class="asset-reason">
+                            「シルバーシルバー言ってるのは、買ってるからでして」今月プラス寄与。
+                        </div>
+                        <div class="influencer-tag">みくかぶ</div>
+                    </div>
+
+                    <!-- $RKLB -->
+                    <div class="asset-card stock-us">
+                        <span class="asset-type stock-us">米国株</span>
+                        <div class="asset-name">Rocket Lab<span class="asset-ticker">$RKLB</span></div>
+                        <div class="asset-details">宇宙関連</div>
+                        <div class="asset-reason">今月プラス寄与銘柄</div>
+                        <div class="influencer-tag">みくかぶ</div>
+                    </div>
+
+                    <!-- $SNDK -->
+                    <div class="asset-card stock-us">
+                        <span class="asset-type stock-us">米国株</span>
+                        <div class="asset-name">SanDisk<span class="asset-ticker">$SNDK</span></div>
+                        <div class="asset-details">半導体ストレージ</div>
+                        <div class="asset-reason">今月プラス寄与銘柄</div>
+                        <div class="influencer-tag">みくかぶ</div>
+                    </div>
+
+                    <!-- $AMD -->
+                    <div class="asset-card stock-us">
+                        <span class="asset-type stock-us">米国株</span>
+                        <div class="asset-name">AMD<span class="asset-ticker">$AMD</span></div>
+                        <div class="asset-details">半導体</div>
+                        <div class="asset-reason">
+                            「AMDもほぼ最高値圏に戻るほっ。なぜエヌビディアは戻らないの…」今月プラス寄与。
+                        </div>
+                        <div class="influencer-tag">みくかぶ</div>
+                    </div>
+
+                    <!-- $OKLO -->
+                    <div class="asset-card stock-us">
+                        <span class="asset-type stock-us">米国株</span>
+                        <div class="asset-name">Oklo<span class="asset-ticker">$OKLO</span></div>
+                        <div class="asset-details">原子力・クリーンエネルギー</div>
+                        <div class="asset-reason">今月プラス寄与銘柄</div>
+                        <div class="influencer-tag">みくかぶ</div>
+                    </div>
+
+                    <!-- $ASTS -->
+                    <div class="asset-card stock-us">
+                        <span class="asset-type stock-us">米国株</span>
+                        <div class="asset-name">AST SpaceMobile<span class="asset-ticker">$ASTS</span></div>
+                        <div class="asset-details">宇宙通信</div>
+                        <div class="asset-reason">今月プラス寄与銘柄</div>
+                        <div class="influencer-tag">みくかぶ</div>
+                    </div>
+
+                    <!-- $GLDM -->
+                    <div class="asset-card etf">
+                        <span class="asset-type etf">ETF</span>
+                        <div class="asset-name">SPDR Gold MiniShares<span class="asset-ticker">$GLDM</span></div>
+                        <div class="asset-details">金ETF（低コスト）</div>
+                        <div class="asset-reason">今月プラス寄与銘柄</div>
+                        <div class="influencer-tag">みくかぶ</div>
+                    </div>
+
+                    <!-- ドル（FX） -->
+                    <div class="asset-card fx">
+                        <span class="asset-type fx">FX</span>
+                        <div class="asset-name">米ドル</div>
+                        <div class="asset-details">155円台で約定</div>
+                        <div class="asset-reason">
+                            「155円台で約定してた！予想より2パーぐらいドルが増えた！やったぜ！次は152-153円で全ブッパだ！」
+                        </div>
+                        <div class="influencer-tag">ゆきママ</div>
+                    </div>
+
+                    <!-- インド株（過去） -->
+                    <div class="asset-card stock-us">
+                        <span class="asset-type sector">新興国</span>
+                        <div class="asset-name">インド株</div>
+                        <div class="asset-details">過去保有（リーマン前）</div>
+                        <div class="asset-reason">
+                            「リーマンショック前までは猫も杓子もBRICsという時代でした（ワイもインド株買ってましたw）」
+                        </div>
+                        <div class="influencer-tag">ななし</div>
+                    </div>
+
+                    <!-- 岐阜暴威（逆指標）の損失ポジション -->
+                    <div class="asset-card" style="border-left-color: #f44336;">
+                        <span class="asset-type" style="background: rgba(244,67,54,0.3); color: #f44336;">逆指標</span>
+                        <div class="asset-name">日経ロング / シルバーショート</div>
+                        <div class="asset-details">岐阜暴威氏のポジション（損失）</div>
+                        <div class="metrics-row">
+                            <div class="metric"><span class="metric-label">シルバー損切り</span> <span class="metric-value" style="color:#f44336;">-60万円</span></div>
+                            <div class="metric"><span class="metric-label">日経含み損</span> <span class="metric-value" style="color:#f44336;">-50万円</span></div>
+                        </div>
+                        <div class="asset-reason">
+                            ⚠️ 逆指標：岐阜氏が損切りした後、シルバーは100ドル→101ドルへ上昇。同氏の逆が正解のパターン継続中。
+                        </div>
+                        <div class="influencer-tag">岐阜暴威（逆指標）</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- カテゴリ3: 申し込んだIPO -->
+        <div class="category-section">
+            <div class="category-header ipo">
+                <div class="category-number">3</div>
+                <div class="category-title">申し込んだIPO</div>
+                <div class="category-count">0件</div>
+            </div>
+            <div class="category-content">
+                <div class="no-data">
+                    <div class="no-data-icon">📋</div>
+                    <p>今週の収集期間（1/22-23）では、IPO申込に関する投稿は確認されませんでした。</p>
+                    <p style="margin-top: 10px; color: #666;">次回収集時にIPO関連の投稿があれば、ここに表示されます。</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- サマリー -->
+        <div class="summary-section">
+            <h2>📊 資産別サマリー</h2>
+            <table class="summary-table">
+                <tr>
+                    <th>資産タイプ</th>
+                    <th>オススメ数</th>
+                    <th>保有数</th>
+                    <th>トレンド</th>
+                </tr>
+                <tr>
+                    <td>金（ゴールド）</td>
+                    <td>2</td>
+                    <td>3</td>
+                    <td class="trend-up">🔥 強気（5,000ドル目前）</td>
+                </tr>
+                <tr>
+                    <td>銀（シルバー）</td>
+                    <td>1</td>
+                    <td>2</td>
+                    <td class="trend-up">🔥 強気（100ドル突破）</td>
+                </tr>
+                <tr>
+                    <td>日本株</td>
+                    <td>3</td>
+                    <td>4</td>
+                    <td class="trend-up">📈 フィジカルAI・割安株に注目</td>
+                </tr>
+                <tr>
+                    <td>米国株・ETF</td>
+                    <td>3</td>
+                    <td>8</td>
+                    <td class="trend-up">📈 押し目買い推奨</td>
+                </tr>
+                <tr>
+                    <td>セクター</td>
+                    <td>2</td>
+                    <td>-</td>
+                    <td>半導体・バイオ・メガテック</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- インフルエンサー別投資スタイル -->
+        <div class="summary-section">
+            <h2>👤 インフルエンサー別 投資スタイル</h2>
+            <table class="summary-table">
+                <tr>
+                    <th>インフルエンサー</th>
+                    <th>主な投資対象</th>
+                    <th>特徴</th>
+                </tr>
+                <tr>
+                    <td><strong>弐億貯男</strong></td>
+                    <td>純金積立、フィジカルAI株</td>
+                    <td>長期・積立志向、AI活用で銘柄選定</td>
+                </tr>
+                <tr>
+                    <td><strong>ゆーき</strong></td>
+                    <td>純銀信託、割安配当株</td>
+                    <td>四季報読み、バリュー投資</td>
+                </tr>
+                <tr>
+                    <td><strong>みくかぶ</strong></td>
+                    <td>シルバーETF、米国成長株</td>
+                    <td>分散投資、宇宙・半導体テーマ</td>
+                </tr>
+                <tr>
+                    <td><strong>ゆきママ</strong></td>
+                    <td>米国株、ドル転</td>
+                    <td>円高時にドル転、押し目買い</td>
+                </tr>
+                <tr>
+                    <td><strong>テスタ</strong></td>
+                    <td>半導体、食品、バイオ</td>
+                    <td>中長期保有、セクター分散</td>
+                </tr>
+                <tr>
+                    <td><strong>朝倉智也</strong></td>
+                    <td>金（ゴールド）</td>
+                    <td>マクロ視点、リスクヘッジ重視</td>
+                </tr>
+                <tr>
+                    <td><strong>エミンユルマズ</strong></td>
+                    <td>金、日経平均</td>
+                    <td>ペーパーマネー離れ、日本株強気</td>
+                </tr>
+            </table>
+        </div>
+
+        <footer>
+            <p>本レポートは2026年1月22日〜23日にX（Twitter）で収集した88件の投稿を基に作成しています。</p>
+            <p>投資は自己責任でお願いします。</p>
+            <p style="margin-top: 15px;">
+                <strong>収集元グループ:</strong><br>
+                Group1（主要インフルエンサー）: 26件 /
+                Group2（追加インフルエンサー）: 31件 /
+                Group3（逆指標）: 31件
+            </p>
+            <p style="margin-top: 15px; color: #888;">生成日時: 2026年1月26日</p>
+        </footer>
+    </div>
+</body>
+</html>

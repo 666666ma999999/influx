@@ -1,0 +1,51 @@
+FROM mcr.microsoft.com/playwright/python:v1.57.0-jammy
+
+WORKDIR /app
+
+# 非対話モード設定
+ENV DEBIAN_FRONTEND=noninteractive
+
+# VNC + noVNC環境をインストール
+RUN apt-get update && apt-get install -y \
+    fonts-noto-cjk \
+    locales \
+    xvfb \
+    x11vnc \
+    fluxbox \
+    novnc \
+    websockify \
+    supervisor \
+    net-tools \
+    && rm -rf /var/lib/apt/lists/* \
+    && locale-gen ja_JP.UTF-8
+
+ENV LANG=ja_JP.UTF-8
+ENV LANGUAGE=ja_JP:ja
+ENV LC_ALL=ja_JP.UTF-8
+ENV TZ=Asia/Tokyo
+ENV DISPLAY=:99
+ENV VNC_PORT=5900
+ENV NOVNC_PORT=6080
+
+# 依存パッケージをインストール
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# supervisord設定
+RUN mkdir -p /var/log/supervisor
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+# アプリケーションコードをコピー
+COPY . .
+
+# 出力ディレクトリを作成
+RUN mkdir -p /app/output /app/data /app/x_profile
+
+# 権限設定
+RUN chown -R pwuser:pwuser /app
+
+# noVNCポートを公開
+EXPOSE 6080
+
+# supervisordで起動
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

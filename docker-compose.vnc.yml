@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  xstock-vnc:
+    build:
+      context: .
+      dockerfile: Dockerfile.vnc
+    container_name: xstock-vnc
+
+    environment:
+      - TZ=Asia/Tokyo
+      - DISPLAY=:99
+
+    ports:
+      - "6080:6080"  # noVNC (ブラウザからアクセス)
+
+    volumes:
+      - ./collector:/app/collector:ro
+      - ./scripts:/app/scripts:ro
+      - ./output:/app/output
+      - ./data:/app/data
+      - ./x_profile:/app/x_profile
+
+    shm_size: '2gb'
+    security_opt:
+      - seccomp:unconfined
