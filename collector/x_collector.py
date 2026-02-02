@@ -291,6 +291,13 @@ class SafeXCollector:
                 retweet_text = retweet_elem.inner_text()
                 retweet_count = self._parse_count(retweet_text)
 
+            # リプライ数
+            reply_elem = card.query_selector('[data-testid="reply"] span span')
+            reply_count = None
+            if reply_elem:
+                reply_text = reply_elem.inner_text()
+                reply_count = self._parse_count(reply_text)
+
             return {
                 'username': username,
                 'display_name': display_name,
@@ -299,6 +306,7 @@ class SafeXCollector:
                 'posted_at': posted_at,
                 'like_count': like_count,
                 'retweet_count': retweet_count,
+                'reply_count': reply_count,
                 'collected_at': datetime.now().isoformat()
             }
 

@@ -187,7 +187,7 @@ CLASSIFICATION_RULES = {
 
 # 収集設定
 COLLECTION_SETTINGS = {
-    "max_scrolls": 20,           # 1セッションあたりの最大スクロール回数（動的終了あり）
+    "max_scrolls": 180,          # 1セッションあたりの最大スクロール回数（動的終了あり）
     "min_wait_sec": 3,           # 最小待機時間（秒）
     "max_wait_sec": 8,           # 最大待機時間（秒）
     "reading_probability": 0.2,  # 読み込み動作を入れる確率
@@ -205,3 +205,14 @@ PROFILE_PATH = "./x_profile"
 # 出力ディレクトリ
 OUTPUT_DIR = "./output"
 DATA_DIR = "./data"
+
+
+# LLM分類器設定
+LLM_CONFIG = {
+    "model": "claude-3-5-haiku-20241022",  # 使用するClaudeモデル
+    "batch_size": 20,                      # 一度に処理するツイート数
+    "max_tokens": 4096,                    # 最大トークン数
+    "few_shot_path": "data/few_shot_examples.json",  # Few-shot例のJSONファイルパス
+    "max_retries": 3,                     # API呼び出しの最大リトライ回数
+    "retry_backoff_base": 2.0             # リトライ時の待機時間の基数（指数バックオフ）
+}

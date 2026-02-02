@@ -1,0 +1,149 @@
+{
+  "version": "1.0",
+  "examples": [
+    {
+      "text": "今の相場ならゴールド一択だと思う。あとPERが落ちてる半導体株も注目してる",
+      "is_contrarian": false,
+      "categories": ["recommended_assets"],
+      "reasoning": "特定の資産（ゴールド、半導体株）を推奨する内容。「一択」「注目」という表現から、他者への推奨意図が明確"
+    },
+    {
+      "text": "ディフェンシブ銘柄に切り替えるタイミングかもね。医薬品、食品、通信あたりが安定してる",
+      "is_contrarian": false,
+      "categories": ["recommended_assets"],
+      "reasoning": "ディフェンシブ銘柄（医薬品、食品、通信）を推奨。「タイミング」という表現で投資判断を示唆"
+    },
+    {
+      "text": "REITの分配金利回りが魅力的。インフレヘッジにもなるし、ポートフォリオに組み入れるべき",
+      "is_contrarian": false,
+      "categories": ["recommended_assets"],
+      "reasoning": "REITを具体的に推奨。「組み入れるべき」という明確な推奨表現を使用"
+    },
+    {
+      "text": "トヨタ100株追加購入しました。含み益が10%超えたので利確せずにホールド継続",
+      "is_contrarian": false,
+      "categories": ["purchased_assets"],
+      "reasoning": "自身の購入報告（トヨタ100株）。「追加購入」「含み益」など実際の取引を示す表現"
+    },
+    {
+      "text": "日経レバETF買い増し完了。平均取得単価を下げられた",
+      "is_contrarian": false,
+      "categories": ["purchased_assets"],
+      "reasoning": "ETFの買い増しを報告。「完了」「平均取得単価」など購入実績を示す"
+    },
+    {
+      "text": "S&P500インデックスファンドに月3万円の積立設定した。長期で増やす",
+      "is_contrarian": false,
+      "categories": ["purchased_assets"],
+      "reasoning": "積立投資の設定報告。具体的な金額と購入資産を明示"
+    },
+    {
+      "text": "来週のIPO、3社とも抽選申し込んだ。当選したいなぁ",
+      "is_contrarian": false,
+      "categories": ["ipo"],
+      "reasoning": "IPO抽選への参加報告。「抽選申し込み」「当選」などIPO特有の表現"
+    },
+    {
+      "text": "IPO初値予想が公募価格の2倍！これは期待できそう",
+      "is_contrarian": false,
+      "categories": ["ipo"],
+      "reasoning": "IPOの初値予想に関する言及。「公募価格」「初値」などIPO用語を使用"
+    },
+    {
+      "text": "今回のIPO、主幹事がSBI証券だから当選確率上がるかも。全力で申し込む",
+      "is_contrarian": false,
+      "categories": ["ipo"],
+      "reasoning": "IPO抽選戦略の言及。「主幹事」「当選確率」などIPO固有の話題"
+    },
+    {
+      "text": "利上げ観測で円高に振れてるな。地合い悪化の兆しか",
+      "is_contrarian": false,
+      "categories": ["market_trend"],
+      "reasoning": "為替と金利政策に関する市況分析。「地合い」は市場全体の雰囲気を指す用語"
+    },
+    {
+      "text": "NYダウが3日連続で下落。VIX指数も上昇中。市場全体がリスクオフモードに入ってる",
+      "is_contrarian": false,
+      "categories": ["market_trend"],
+      "reasoning": "海外市場の動向と恐怖指数（VIX）の分析。市場全体のセンチメントを論じている"
+    },
+    {
+      "text": "日銀のYCC修正観測が強まってきた。長期金利の上昇に要警戒",
+      "is_contrarian": false,
+      "categories": ["market_trend"],
+      "reasoning": "金融政策と金利動向に関する市況分析。マクロ経済の話題"
+    },
+    {
+      "text": "エヌビディア爆上げキタ━━━━(゚∀゚)━━━━!! ストップ高まであるぞこれ",
+      "is_contrarian": false,
+      "categories": ["bullish_assets"],
+      "reasoning": "特定銘柄（エヌビディア）の急騰報告。「爆上げ」「ストップ高」など高騰を示す表現"
+    },
+    {
+      "text": "半導体セクター全面高！TSMCもASMLも軒並み上昇。波に乗るしかない",
+      "is_contrarian": false,
+      "categories": ["bullish_assets"],
+      "reasoning": "セクター全体の上昇トレンド報告。複数銘柄の同時上昇を指摘"
+    },
+    {
+      "text": "テスラ株が前日比+15%！イーロンの発表が材料になった模様",
+      "is_contrarian": false,
+      "categories": ["bullish_assets"],
+      "reasoning": "具体的な上昇率と材料を示した高騰報告。「+15%」という明確な数値"
+    },
+    {
+      "text": "中国株暴落してるやん...もう終わった感ある",
+      "is_contrarian": false,
+      "categories": ["bearish_assets"],
+      "reasoning": "中国株の下落を報告。「暴落」「終わった」など悲観的な表現"
+    },
+    {
+      "text": "グロース株が総崩れ。ナスダックが-3%超え。含み損が拡大中...",
+      "is_contrarian": false,
+      "categories": ["bearish_assets"],
+      "reasoning": "成長株セクターの下落と損失の報告。「総崩れ」「含み損拡大」など"
+    },
+    {
+      "text": "銀行株が軒並み安。決算ミスった企業が多いみたい",
+      "is_contrarian": false,
+      "categories": ["bearish_assets"],
+      "reasoning": "金融セクターの下落と原因分析。「軒並み安」「決算ミス」という表現"
+    },
+    {
+      "text": "信用買い残が過去最高水準に到達。これ完全にバブルの天井サインじゃね？",
+      "is_contrarian": false,
+      "categories": ["warning_signals"],
+      "reasoning": "信用取引残高という警戒指標を指摘。「天井サイン」と明確に警戒を示唆"
+    },
+    {
+      "text": "PERが80倍超えてる銘柄が増えすぎ。過熱感がやばい。そろそろ調整入りそう",
+      "is_contrarian": false,
+      "categories": ["warning_signals"],
+      "reasoning": "バリュエーション指標（PER）の過熱を警戒。「調整入りそう」と下落を予測"
+    },
+    {
+      "text": "米国10年債利回りが急上昇。株式市場には逆風だな。リスク資産から逃げる準備しとく",
+      "is_contrarian": false,
+      "categories": ["warning_signals"],
+      "reasoning": "金利上昇リスクを警戒。「逆風」「逃げる準備」など防衛的な姿勢"
+    },
+    {
+      "text": "【爆益確定】AI関連株が今後10倍になる！今すぐ買わないと後悔するぞ！リツイートで拡散希望！",
+      "is_contrarian": true,
+      "categories": ["warning_signals"],
+      "reasoning": "逆張りアカウント（is_contrarian: true）の過度に楽観的な投稿。「10倍」「今すぐ買わないと」など煽り表現が特徴。通常なら高騰カテゴリだが、逆張りアカウントのため警戒シグナルとして分類"
+    },
+    {
+      "text": "今日のランチは天丼でした。美味しかった〜",
+      "is_contrarian": false,
+      "categories": [],
+      "reasoning": "投資や資産運用に全く関係ない日常ツイート。分類対象外のため空配列"
+    },
+    {
+      "text": "日経平均が年初来高値更新！今日は保有してる商社株3銘柄を利確した。利益確定は正義",
+      "is_contrarian": false,
+      "categories": ["market_trend", "purchased_assets"],
+      "reasoning": "市況トレンド（日経平均の高値更新）と自身の売却行動（利確）の両方を含む。複数カテゴリに該当する例"
+    }
+  ]
+}
