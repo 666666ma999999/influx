@@ -4,6 +4,8 @@
 """
 import json
 import sys
+import os
+import argparse
 from pathlib import Path
 from datetime import datetime
 import time
@@ -34,8 +36,27 @@ TARGET_ACCOUNTS = [
 def load_cookies(profile_path: Path) -> list:
     cookies_file = profile_path / "cookies.json"
     if cookies_file.exists():
+        # ファイルパーミッションチェック（world-readableの場合は警告）
+        file_stat = os.stat(cookies_file)
+        file_mode = file_stat.st_mode
+        if file_mode & 0o004:  # others-readable
+            print(f"⚠️ セキュリティ警告: {cookies_file} が他のユーザーから読み取り可能です。")
+            print(f"  推奨: chmod 600 {cookies_file}")
+
         with open(cookies_file, 'r') as f:
-            return json.load(f)
+            cookies = json.load(f)
+
+        # Cookie有効期限チェック
+        now_timestamp = time.time()
+        expired_count = 0
+        for cookie in cookies:
+            expiry = cookie.get("expires", -1)
+            if expiry > 0 and expiry < now_timestamp:
+                expired_count += 1
+        if expired_count > 0:
+            print(f"⚠️ 警告: {expired_count}件の期限切れCookieが含まれています。再ログインを推奨します。")
+
+        return cookies
     return []
 
 
@@ -133,6 +154,11 @@ def check_account_status(page, username: str) -> dict:
 
 
 def main():
+    parser = argparse.ArgumentParser(description="インフルエンサーアカウントの最終投稿日確認")
+    parser.add_argument("--headless", action="store_true", default=False,
+                        help="ヘッドレスモードで実行（CI/サーバー環境向け）")
+    args = parser.parse_args()
+
     profile_path = Path(__file__).parent.parent / "x_profile"
     cookies = load_cookies(profile_path)
 
@@ -142,48 +168,49 @@ def main():
     results = []
 
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=False)
-        context = browser.new_context(
-            viewport={"width": 1280, "height": 800},
-            locale="ja-JP",
-            user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
-        )
+        browser = p.chromium.launch(headless=args.headless)
+        try:
+            context = browser.new_context(
+                viewport={"width": 1280, "height": 800},
+                locale="ja-JP",
+                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
+            )
 
-        if cookies:
-            context.add_cookies(cookies)
+            if cookies:
+                context.add_cookies(cookies)
 
-        page = context.new_page()
+            page = context.new_page()
 
-        print(f"\n{'='*60}")
-        print(f"インフルエンサーアカウント状態確認")
-        print(f"対象: {len(TARGET_ACCOUNTS)}件")
-        print(f"{'='*60}\n")
+            print(f"\n{'='*60}")
+            print(f"インフルエンサーアカウント状態確認")
+            print(f"対象: {len(TARGET_ACCOUNTS)}件")
+            print(f"{'='*60}\n")
 
-        for i, username in enumerate(TARGET_ACCOUNTS, 1):
-            print(f"[{i}/{len(TARGET_ACCOUNTS)}] @{username} を確認中...")
+            for i, username in enumerate(TARGET_ACCOUNTS, 1):
+                print(f"[{i}/{len(TARGET_ACCOUNTS)}] @{username} を確認中...")
 
-            result = check_account_status(page, username)
-            results.append(result)
+                result = check_account_status(page, username)
+                results.append(result)
 
-            # 結果表示
-            if result["status"] == "active":
-                date_str = result["last_post_date"][:10] if result["last_post_date"] else "不明"
-                print(f"  → アクティブ | 最終投稿: {date_str}")
-            elif result["status"] == "suspended":
-                print(f"  → ⚠️ 凍結")
-            elif result["status"] == "not_found":
-                print(f"  → ❌ アカウント存在しない")
-            elif result["status"] == "protected":
-                print(f"  → 🔒 非公開")
-            else:
-                print(f"  → ？ {result['status']}: {result.get('error', '')}")
+                # 結果表示
+                if result["status"] == "active":
+                    date_str = result["last_post_date"][:10] if result["last_post_date"] else "不明"
+                    print(f"  → アクティブ | 最終投稿: {date_str}")
+                elif result["status"] == "suspended":
+                    print(f"  → ⚠️ 凍結")
+                elif result["status"] == "not_found":
+                    print(f"  → ❌ アカウント存在しない")
+                elif result["status"] == "protected":
+                    print(f"  → 🔒 非公開")
+                else:
+                    print(f"  → ？ {result['status']}: {result.get('error', '')}")
 
-            # 人間らしい待機
-            if i < len(TARGET_ACCOUNTS):
-                wait_time = random.uniform(3, 6)
-                time.sleep(wait_time)
-
-        browser.close()
+                # 人間らしい待機
+                if i < len(TARGET_ACCOUNTS):
+                    wait_time = random.uniform(3, 6)
+                    time.sleep(wait_time)
+        finally:
+            browser.close()
 
     # 結果サマリー
     print(f"\n{'='*60}")
@@ -213,6 +240,7 @@ def main():
 
     # 結果をJSONで保存
     output_path = Path(__file__).parent.parent / "output" / "inactive_check_result.json"
+    output_path.parent.mkdir(parents=True, exist_ok=True)
     with open(output_path, 'w', encoding='utf-8') as f:
         json.dump(results, f, ensure_ascii=False, indent=2)
     print(f"\n結果を保存しました: {output_path}")
