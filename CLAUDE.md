@@ -11,7 +11,7 @@ X(Twitter)上の株式投資インフルエンサーのツイートをPlaywright
 ```
 influx/
 ├── collector/                  # コアモジュール
-│   ├── config.py              # インフルエンサー定義・分類ルール・収集設定・LLM設定
+│   ├── config.py              # インフルエンサー定義（個別min_faves）・分類ルール・収集設定・LLM設定
 │   ├── x_collector.py         # SafeXCollector: Playwright+Cookie認証によるツイート収集
 │   ├── classifier.py          # TweetClassifier: キーワード/正規表現ベース分類
 │   └── llm_classifier.py      # LLMClassifier: Claude API(urllib)によるバッチ分類
@@ -99,7 +99,7 @@ docker compose run xstock python scripts/check_inactive_accounts.py
 
 | オプション | デフォルト | 説明 |
 |-----------|-----------|------|
-| `--groups` / `-g` | `all` | 収集グループ（group1, group2, group3, all） |
+| `--groups` / `-g` | `all` | 収集グループ（group1, group2, group3, group4, group5, group6, all） |
 | `--scrolls` / `-s` | `10` | スクロール回数 |
 | `--no-csv` | false | CSV出力スキップ |
 | `--no-classify` | false | キーワード分類スキップ |
@@ -116,13 +116,16 @@ docker compose run xstock python scripts/check_inactive_accounts.py
 
 ## インフルエンサーグループ定義
 
-`collector/config.py` で3グループを定義。
+`collector/config.py` で6グループを定義。各アカウントに個別の `min_faves` を設定。
 
-| グループ | 名称 | min_faves | アカウント数 | 特記 |
-|----------|------|-----------|-------------|------|
-| group1 | 主要インフルエンサー | 502 | 7 | - |
-| group2 | 追加インフルエンサー | 72 | 21 | - |
-| group3 | 逆指標インフルエンサー | 50 | 1 | `is_contrarian: True`（強気発言 = 警戒シグナル） |
+| グループ | 名称 | アカウント数 | min_faves範囲 | 特記 |
+|----------|------|-------------|--------------|------|
+| group1 | 超大型インフルエンサー | 4 | 300-400 | tesuta001, goto_finance, yurumazu, cissan_9984 |
+| group2 | 大型インフルエンサー | 6 | 80-150 | 2okutameo, tapazou29, kanpo_blog 等 |
+| group3 | 中型インフルエンサー | 8 | 30-50 | uehara_sato4, miku919191, yuki75868813751 等 |
+| group4 | 小型インフルエンサー | 4 | 20 | momoblog0214, pay_cashless 等 |
+| group5 | 極小型インフルエンサー | 7 | 10 | YasLovesTech, Adscience12000, hd_qu8 等 |
+| group6 | 逆指標インフルエンサー | 1 | 50 | `is_contrarian: True`（強気発言 = 警戒シグナル） |
 
 ## 分類カテゴリ
 

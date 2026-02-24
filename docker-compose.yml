@@ -11,6 +11,7 @@ services:
     environment:
       - DISPLAY=${DISPLAY:-:0}
       - TZ=Asia/Tokyo
+      - ANTHROPIC_API_KEY
 
     # ボリュームマウント
     volumes:
@@ -29,7 +30,8 @@ services:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
 
     # ネットワーク設定
-    network_mode: host
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
     # インタラクティブモード（セットアップ時に必要）
     stdin_open: true
@@ -37,7 +39,7 @@ services:
 
     # セキュリティ設定（Chromium用）
     security_opt:
-      - seccomp:unconfined
+      - seccomp:./docker/chromium-seccomp.json
 
     # 共有メモリ増加（Chromium用）
     shm_size: '2gb'
@@ -52,6 +54,7 @@ services:
     environment:
       - DISPLAY=${DISPLAY:-:0}
       - TZ=Asia/Tokyo
+      - ANTHROPIC_API_KEY
 
     volumes:
       - ./collector:/app/collector:ro
@@ -59,11 +62,12 @@ services:
       - ./x_profile:/app/x_profile
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
 
-    network_mode: host
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     stdin_open: true
     tty: true
     security_opt:
-      - seccomp:unconfined
+      - seccomp:./docker/chromium-seccomp.json
     shm_size: '2gb'
 
     command: python scripts/setup_profile.py

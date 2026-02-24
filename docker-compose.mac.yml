@@ -13,6 +13,7 @@ services:
     environment:
       - DISPLAY=host.docker.internal:0
       - TZ=Asia/Tokyo
+      - ANTHROPIC_API_KEY
 
     volumes:
       - ./collector:/app/collector:ro
@@ -24,7 +25,7 @@ services:
     stdin_open: true
     tty: true
     security_opt:
-      - seccomp:unconfined
+      - seccomp:./docker/chromium-seccomp.json
     shm_size: '2gb'
 
   setup:
@@ -36,6 +37,7 @@ services:
     environment:
       - DISPLAY=host.docker.internal:0
       - TZ=Asia/Tokyo
+      - ANTHROPIC_API_KEY
 
     volumes:
       - ./collector:/app/collector:ro
@@ -45,7 +47,7 @@ services:
     stdin_open: true
     tty: true
     security_opt:
-      - seccomp:unconfined
+      - seccomp:./docker/chromium-seccomp.json
     shm_size: '2gb'
 
     command: python scripts/setup_profile.py

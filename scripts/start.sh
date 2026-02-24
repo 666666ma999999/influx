@@ -3,6 +3,13 @@
 
 set -e
 
+# X11クリーンアップ用trap
+cleanup_x11() {
+    xhost -localhost 2>/dev/null || true
+    xhost -local:docker 2>/dev/null || true
+}
+trap cleanup_x11 EXIT
+
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 

@@ -19,7 +19,9 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # アプリケーションコードをコピー
-COPY . .
+COPY collector/ ./collector/
+COPY scripts/ ./scripts/
+COPY data/ ./data/
 
 # 出力ディレクトリを作成
 RUN mkdir -p /app/output /app/data /app/x_profile

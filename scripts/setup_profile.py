@@ -61,7 +61,7 @@ def setup_profile():
                 timeout=5000
             )
             print("\nログイン確認OK!")
-        except:
+        except Exception:
             print("\n[警告] ログイン状態を確認できませんでした。")
             print("再度ログインを確認してください。")
 

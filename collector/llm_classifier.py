@@ -11,6 +11,9 @@ import time
 from typing import List, Dict, Any, Optional
 
 from .config import CLASSIFICATION_RULES
+from collector.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 # LLM設定（config.pyに存在しない場合のデフォルト）
@@ -26,6 +29,19 @@ DEFAULT_LLM_CONFIG = {
 
 class LLMClassifier:
     """Claude APIを使用したツイート分類器"""
+
+    @staticmethod
+    def _sanitize_log(text: str) -> str:
+        """ログ出力からAPIキーなどの機密情報をマスク"""
+        import re
+        # Anthropic APIキーパターン
+        text = re.sub(r'sk-ant-[a-zA-Z0-9\-_]+', 'sk-ant-***REDACTED***', text)
+        # 一般的なAPIキーパターン
+        text = re.sub(
+            r'(?i)(api[_-]?key|token|secret)["\s:=]+["\']?([a-zA-Z0-9\-_]{20,})',
+            r'\1: ***REDACTED***', text
+        )
+        return text
 
     def __init__(
         self,
@@ -215,7 +231,7 @@ JSON配列で以下の形式で返してください:
 
             except urllib.error.HTTPError as e:
                 error_body = e.read().decode('utf-8')
-                print(f"HTTPエラー (試行 {attempt + 1}/{self.max_retries}): {e.code} - {error_body}")
+                logger.error("API HTTP error", extra={"extra_data": {"status_code": e.code, "attempt": attempt + 1, "max_retries": self.max_retries, "error_body": self._sanitize_log(error_body[:500])}})
 
                 # 429 (Rate Limit) または 500系エラーの場合はリトライ
                 if e.code in [429, 500, 502, 503, 504] and attempt < self.max_retries - 1:
@@ -224,7 +240,7 @@ JSON配列で以下の形式で返してください:
                     time.sleep(wait_time)
                     continue
                 else:
-                    raise Exception(f"API呼び出し失敗: {e.code} - {error_body}")
+                    raise Exception(f"API呼び出し失敗: {e.code} - {self._sanitize_log(error_body[:500])}")
 
             except urllib.error.URLError as e:
                 print(f"ネットワークエラー (試行 {attempt + 1}/{self.max_retries}): {e.reason}")
@@ -314,18 +330,39 @@ JSON配列で以下の形式で返してください:
             # 結果の整形
             results = []
             for cls in classifications:
+                if not isinstance(cls, dict):
+                    continue
+                # ID の安全な取得
+                try:
+                    cls_id = int(cls.get("id", 0))
+                except (ValueError, TypeError):
+                    cls_id = 0
+                # カテゴリの検証
+                cat_list = cls.get("categories", [])
+                if not isinstance(cat_list, list):
+                    cat_list = []
+                cat_list = [c for c in cat_list if isinstance(c, str)]
+                # confidence の検証
+                confidence = cls.get("confidence", 0.5)
+                try:
+                    confidence = max(0.0, min(1.0, float(confidence)))
+                except (ValueError, TypeError):
+                    confidence = 0.5
+                # reasoning の検証
+                reasoning = str(cls.get("reasoning", ""))[:500]
+
                 results.append({
-                    "id": cls.get("id", 0),
-                    "llm_categories": cls.get("categories", []),
-                    "llm_reasoning": cls.get("reasoning", ""),
-                    "llm_confidence": cls.get("confidence", 0.5)
+                    "id": cls_id,
+                    "llm_categories": cat_list,
+                    "llm_reasoning": reasoning,
+                    "llm_confidence": confidence
                 })
 
             return results
 
         except json.JSONDecodeError as e:
-            print(f"エラー: APIレスポンスのJSONパースに失敗しました: {e}")
-            print(f"レスポンステキスト: {response_text[:500]}")
+            logger.error("API response JSON parse error", extra={"extra_data": {"error": str(e)}})
+            logger.debug("API response parse error", extra={"extra_data": {"response_preview": self._sanitize_log(response_text[:200])}})
             return []
         except Exception as e:
             print(f"エラー: バッチ分類に失敗しました: {e}")
@@ -363,6 +400,8 @@ JSON配列で以下の形式で返してください:
             # 結果をツイートにマージ
             for i, result in enumerate(results):
                 tweet_idx = start_idx + result["id"]
+                if tweet_idx < 0 or tweet_idx >= len(tweets):
+                    continue  # 範囲外のインデックスをスキップ
                 if tweet_idx < len(tweets):
                     tweets[tweet_idx]["llm_categories"] = result["llm_categories"]
                     tweets[tweet_idx]["llm_reasoning"] = result["llm_reasoning"]

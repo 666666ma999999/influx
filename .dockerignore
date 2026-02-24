@@ -1,0 +1,11 @@
+.git
+.gitignore
+.claude
+.env*
+.envrc*
+*.md
+x_profile/
+output/
+docker-compose*.yml
+Dockerfile*
+supervisord.conf

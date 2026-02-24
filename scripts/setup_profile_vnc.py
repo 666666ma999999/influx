@@ -60,7 +60,7 @@ def setup_profile():
         try:
             while len(browser.pages) > 0:
                 time.sleep(1)
-        except:
+        except Exception:
             pass
 
         browser.close()

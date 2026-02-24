@@ -4,6 +4,7 @@
 既存のログイン状態を完全に引き継ぐ
 """
 
+import os
 import sys
 import json
 import time
@@ -86,9 +87,9 @@ def setup_with_remote_chrome():
                 print(f"\nX関連のCookieを{len(x_cookies)}個取得しました")
 
                 # Cookieを保存
+                from collector.cookie_crypto import save_cookies_encrypted
                 cookie_file = profile_path / "cookies.json"
-                with open(cookie_file, "w") as f:
-                    json.dump(x_cookies, f, indent=2)
+                save_cookies_encrypted(x_cookies, cookie_file)
 
                 print(f"Cookieを保存しました: {cookie_file}")
 

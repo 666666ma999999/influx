@@ -3,6 +3,7 @@
 既存のChromeプロファイルからXのログイン状態をコピーするセットアップ
 """
 
+import os
 import sys
 import shutil
 from pathlib import Path
@@ -104,10 +105,9 @@ def setup_from_chrome():
             # 新しいプロファイルにCookieを保存
             profile_path.mkdir(parents=True, exist_ok=True)
 
-            import json
+            from collector.cookie_crypto import save_cookies_encrypted
             cookie_file = profile_path / "cookies.json"
-            with open(cookie_file, "w") as f:
-                json.dump(cookies, f)
+            save_cookies_encrypted(cookies, cookie_file)
 
             print(f"Cookieを保存しました: {cookie_file}")
 

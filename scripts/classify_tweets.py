@@ -29,25 +29,25 @@ from collector.llm_classifier import LLMClassifier
 def find_latest_tweets_json(output_dir: str = 'output') -> Optional[str]:
     """
     Find the latest tweets JSON file in the output directory.
-    Uses file modification time to determine the latest file.
+    Looks for tweets.json inside date-based subdirectories (e.g. output/2026-02-21/tweets.json)
+    and sorts by directory name (date string) to find the latest.
 
     Args:
         output_dir: Directory to search for tweets JSON files
 
     Returns:
-        Path to the latest tweets JSON file, or None if not found
+        Path to the latest tweets.json file, or None if not found
     """
-    pattern = os.path.join(output_dir, 'tweets_*.json')
+    pattern = os.path.join(output_dir, '*', 'tweets.json')
     files = glob.glob(pattern)
 
     if not files:
         return None
 
-    # Sort by modification time (most recent first)
-    files_with_mtime = [(f, os.path.getmtime(f)) for f in files]
-    files_with_mtime.sort(key=lambda x: x[1], reverse=True)
+    # Sort by directory name (date string like 2026-02-21) in descending order
+    files.sort(key=lambda f: os.path.basename(os.path.dirname(f)), reverse=True)
 
-    return files_with_mtime[0][0]
+    return files[0]
 
 
 def load_tweets(file_path: str) -> List[Dict]:
@@ -60,7 +60,11 @@ def load_tweets(file_path: str) -> List[Dict]:
     Returns:
         List of tweet dictionaries
     """
-    with open(file_path, 'r', encoding='utf-8') as f:
+    resolved = os.path.realpath(file_path)
+    if not os.path.isfile(resolved):
+        raise FileNotFoundError(f"ファイルが見つかりません: {file_path}")
+
+    with open(resolved, 'r', encoding='utf-8') as f:
         tweets = json.load(f)
 
     return tweets
@@ -142,6 +146,10 @@ def regenerate_viewer_html(tweets: List[Dict], output_path: str = 'output/viewer
     # Convert tweets to JSON string (compact format)
     tweets_json = json.dumps(tweets, ensure_ascii=False, separators=(',', ':'))
 
+    # XSS対策: スクリプト注入を防止
+    tweets_json = tweets_json.replace('</script>', '<\\/script>')
+    tweets_json = tweets_json.replace('<!--', '<\\!--')
+
     # Find and replace the EMBEDDED_DATA line
     # The pattern is: const EMBEDDED_DATA = [...];
     import re
@@ -154,7 +162,7 @@ def regenerate_viewer_html(tweets: List[Dict], output_path: str = 'output/viewer
         return False
 
     # Replace the data
-    new_content = re.sub(pattern, replacement, content, flags=re.DOTALL)
+    new_content = re.sub(pattern, lambda m: replacement, content, flags=re.DOTALL)
 
     # Write back to file
     with open(output_path, 'w', encoding='utf-8') as f:
@@ -265,9 +273,9 @@ def main():
 
     final_classified = keyword_classified
 
-    # Save classified tweets
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    output_json = f'output/classified_llm_{timestamp}.json'
+    # Save classified tweets in the same date folder as input
+    input_dir = os.path.dirname(input_file)
+    output_json = os.path.join(input_dir, 'classified_llm.json')
     save_classified_tweets(final_classified, output_json)
 
     # Regenerate viewer.html

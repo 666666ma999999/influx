@@ -13,6 +13,20 @@ from pathlib import Path
 from typing import List, Dict, Optional
 
 from .config import COLLECTION_SETTINGS, PROFILE_PATH, OUTPUT_DIR
+from collector.logger import get_logger
+from dataclasses import dataclass
+
+logger = get_logger(__name__)
+
+
+@dataclass
+class CollectionResult:
+    """収集結果を表すデータクラス"""
+    tweets: list
+    status: str           # "success", "blocked", "error", "login_required"
+    error_type: str = ""
+    error_message: str = ""
+    collected_count: int = 0
 
 
 class SafeXCollector:
@@ -25,23 +39,23 @@ class SafeXCollector:
     - 週1-2回程度の使用を想定
     """
 
-    def __init__(self, profile_path: str = PROFILE_PATH):
+    def __init__(self, profile_path: str = PROFILE_PATH, shared_collected_urls: set = None):
         """
         Args:
             profile_path: ログイン済みブラウザプロファイルのパス
+            shared_collected_urls: 外部から注入する重複排除セット（Noneで従来動作）
         """
         self.profile_path = Path(profile_path).resolve()
         self.tweets: List[Dict] = []
-        self.collected_urls: set = set()  # 重複防止用
+        self.collected_urls: set = shared_collected_urls if shared_collected_urls is not None else set()
         self.settings = COLLECTION_SETTINGS
+        self._shared_mode = shared_collected_urls is not None
 
     def _load_cookies(self) -> List[Dict]:
-        """保存済みCookieを読み込む"""
+        """保存済みCookieを読み込む（暗号化対応）"""
         cookie_file = self.profile_path / "cookies.json"
-        if cookie_file.exists():
-            with open(cookie_file, 'r') as f:
-                return json.load(f)
-        return []
+        from collector.cookie_crypto import load_cookies_encrypted
+        return load_cookies_encrypted(cookie_file)
 
     def collect(
         self,
@@ -49,7 +63,7 @@ class SafeXCollector:
         max_scrolls: int = None,
         group_name: str = "unknown",
         stop_after_empty: int = 3
-    ) -> List[Dict]:
+    ) -> CollectionResult:
         """
         検索URLから投稿を収集（動的終了判定付き）
 
@@ -60,13 +74,14 @@ class SafeXCollector:
             stop_after_empty: 新規0件が連続N回で終了（デフォルト3）
 
         Returns:
-            収集したツイートのリスト
+            CollectionResult: 収集結果
         """
         if max_scrolls is None:
             max_scrolls = self.settings["max_scrolls"]
 
         self.tweets = []
-        self.collected_urls = set()
+        if not self._shared_mode:
+            self.collected_urls = set()
 
         print(f"\n{'='*60}")
         print(f"収集開始: {group_name}")
@@ -99,20 +114,60 @@ class SafeXCollector:
             try:
                 page = context.new_page()
 
-                # ページ遷移
+                # ページ読み込み
                 print("ページを開いています...")
-                page.goto(search_url, wait_until="domcontentloaded")
+                try:
+                    page.goto(search_url, wait_until="domcontentloaded")
+                except Exception as goto_err:
+                    error_type = self._classify_error(str(goto_err))
+                    if error_type:
+                        logger.warning("ブロック検知", extra={"extra_data": {"error_type": error_type, "url": search_url, "phase": "goto", "detail": str(goto_err)}})
+                        return CollectionResult(
+                            tweets=[], status="blocked",
+                            error_type=error_type, error_message=str(goto_err)
+                        )
+                    raise
+
+                # ツイートカード読み込みリトライ（指数バックオフ）
+                max_retries = 3
+                tweet_loaded = False
+                for retry in range(max_retries + 1):
+                    try:
+                        page.wait_for_selector('[data-testid="tweet"]', timeout=30000)
+                        tweet_loaded = True
+                        break
+                    except Exception as e:
+                        if retry < max_retries:
+                            backoff = 10 * (2 ** retry)  # 10, 20, 40秒
+                            print(f"\n⚠️  ツイートカード読み込み失敗 - {backoff}秒後にリトライ ({retry+1}/{max_retries})")
+                            time.sleep(backoff)
+                            try:
+                                page.reload(wait_until="domcontentloaded")
+                            except Exception as reload_err:
+                                error_type = self._classify_error(str(reload_err))
+                                if error_type:
+                                    logger.warning("ブロック検知", extra={"extra_data": {"error_type": error_type, "url": search_url, "phase": "reload", "detail": str(reload_err)}})
+                                    return CollectionResult(
+                                        tweets=self.tweets, status="blocked",
+                                        error_type=error_type, error_message=str(reload_err),
+                                        collected_count=len(self.tweets)
+                                    )
+                                raise
+                        else:
+                            print(f"\n⚠️  ツイートカードの読み込みタイムアウト（{max_retries}回リトライ後）- 検索結果が0件の可能性")
 
                 # 初期読み込み待機
                 self._human_wait(3, 5)
 
                 # ログイン状態確認
                 if not self._check_login_status(page):
-                    print("\n[警告] ログインしていない可能性があります")
-                    print("scripts/setup_profile.py を実行してログインしてください")
-                    return []
+                    logger.warning("ログイン未確認", extra={"extra_data": {"url": search_url, "action": "setup_profile.py を実行してログインしてください"}})
+                    return CollectionResult(
+                        tweets=[], status="login_required",
+                        error_message="ログインしていない可能性があります"
+                    )
 
-                print("ログイン確認OK\n")
+                logger.info("ログイン確認OK", extra={"extra_data": {"url": search_url}})
 
                 # 動的終了判定用カウンター
                 consecutive_empty = 0
@@ -129,6 +184,11 @@ class SafeXCollector:
                     if new_count == 0:
                         consecutive_empty += 1
                         print(f" [空{consecutive_empty}/{stop_after_empty}]", end="")
+
+                        # 初回スクロールで0件の場合は警告
+                        if i == 0:
+                            print(f"\n⚠️  WARNING: 初回スクロールで検索結果0件 - URL: {search_url[:100]}...")
+                            print(f"    min_faves フィルタ条件が厳しすぎるか、ページ読み込みに失敗した可能性があります", end="")
                         if consecutive_empty >= stop_after_empty:
                             print(f"\n\n[終了] 新規0件が{stop_after_empty}回連続のため収集終了")
                             break
@@ -153,14 +213,26 @@ class SafeXCollector:
                             self._simulate_reading(page)
 
             except Exception as e:
-                print(f"\n[エラー] 収集中にエラーが発生: {e}")
+                error_str = str(e)
+                error_type = self._classify_error(error_str)
+                if error_type:
+                    logger.warning("ブロック検知", extra={"extra_data": {"error_type": error_type, "url": search_url, "phase": "collect", "detail": error_str}})
+                    return CollectionResult(
+                        tweets=self.tweets, status="blocked",
+                        error_type=error_type, error_message=error_str,
+                        collected_count=len(self.tweets)
+                    )
+                logger.error("収集中にエラーが発生", extra={"extra_data": {"url": search_url, "detail": str(e)}})
 
             finally:
                 context.close()
                 browser.close()
 
         print(f"\n収集完了: {len(self.tweets)}件")
-        return self.tweets
+        return CollectionResult(
+            tweets=self.tweets, status="success",
+            collected_count=len(self.tweets)
+        )
 
     def _check_login_status(self, page: Page) -> bool:
         """ログイン状態を確認"""
@@ -171,7 +243,7 @@ class SafeXCollector:
                 timeout=5000
             )
             return True
-        except:
+        except Exception:
             return False
 
     def _human_wait(self, min_sec: float, max_sec: float):
@@ -330,8 +402,25 @@ class SafeXCollector:
             else:
                 # カンマ除去
                 return int(text.replace(',', ''))
-        except:
+        except (ValueError, TypeError):
             return None
+
+    def _classify_error(self, error_str: str) -> str:
+        """
+        エラー文字列からブロック種別を判定
+
+        Args:
+            error_str: エラーメッセージ文字列
+
+        Returns:
+            ブロック種別文字列。ブロックでない場合は空文字
+        """
+        from .config import BLOCK_ERROR_PATTERNS
+        error_upper = error_str.upper()
+        for pattern in BLOCK_ERROR_PATTERNS:
+            if pattern.upper() in error_upper:
+                return pattern
+        return ""
 
     def save_to_json(self, filename: str = None, output_dir: str = OUTPUT_DIR):
         """
@@ -422,13 +511,25 @@ def collect_all_groups(
         group_info = INFLUENCER_GROUPS.get(group_key, {})
         group_name = group_info.get('name', group_key)
 
-        search_url = SEARCH_URLS[group_key]
+        search_urls = SEARCH_URLS[group_key]
 
-        tweets = collector.collect(
-            search_url=search_url,
-            max_scrolls=max_scrolls,
-            group_name=f"{group_key} ({group_name})"
-        )
+        tweets = []
+        for idx, search_url in enumerate(search_urls):
+            # 同一グループ内の2番目以降のURL処理前に15-30秒待機
+            if idx > 0:
+                wait_sec = random.uniform(15, 30)
+                print(f"\n次のURL処理まで {wait_sec:.0f}秒 待機中...")
+                time.sleep(wait_sec)
+
+            sub_name = f"{group_key} ({group_name})"
+            if len(search_urls) > 1:
+                sub_name += f" [{idx + 1}/{len(search_urls)}]"
+            result = collector.collect(
+                search_url=search_url,
+                max_scrolls=max_scrolls,
+                group_name=sub_name
+            )
+            tweets.extend(result.tweets)
 
         # グループ情報を各ツイートに追加
         for tweet in tweets:

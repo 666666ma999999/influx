@@ -10,6 +10,8 @@ services:
     environment:
       - TZ=Asia/Tokyo
       - DISPLAY=:99
+      - VNC_PASSWORD=${VNC_PASSWORD}
+      - ANTHROPIC_API_KEY
 
     ports:
       - "6080:6080"  # noVNC (ブラウザからアクセス)
@@ -23,4 +25,4 @@ services:
 
     shm_size: '2gb'
     security_opt:
-      - seccomp:unconfined
+      - seccomp:./docker/chromium-seccomp.json

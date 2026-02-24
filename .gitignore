@@ -4,6 +4,7 @@ x_profile/
 # 出力ファイル
 output/*.json
 output/*.csv
+output/*/
 
 # Python
 __pycache__/
@@ -38,3 +39,5 @@ Thumbs.db
 # 環境変数
 .env
 .env.local
+.envrc
+docker-compose.override.yml
