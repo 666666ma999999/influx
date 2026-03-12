@@ -20,6 +20,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # アプリケーションコードをコピー
 COPY collector/ ./collector/
+COPY core/ ./core/
+COPY extensions/ ./extensions/
+COPY configs/ ./configs/
 COPY scripts/ ./scripts/
 COPY data/ ./data/
 

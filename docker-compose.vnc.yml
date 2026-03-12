@@ -22,6 +22,9 @@ services:
       - ./output:/app/output
       - ./data:/app/data
       - ./x_profile:/app/x_profile
+      - ./core:/app/core:ro
+      - ./extensions:/app/extensions:ro
+      - ./configs:/app/configs:ro
 
     shm_size: '2gb'
     security_opt:
