@@ -1,0 +1,19 @@
+app:
+  name: influx
+  log_level: INFO
+
+extensions:
+  path: extensions
+  enabled_tiers:
+    - tier1
+    - tier2
+    - tier3
+
+collection:
+  max_scrolls: 180
+  stop_after_empty: 3
+
+classification:
+  model: claude-3-5-haiku-20241022
+  batch_size: 20
+  max_tokens: 4096

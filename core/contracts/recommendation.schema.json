@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "$id": "influx://contracts/recommendation.schema.json",
+  "title": "Recommendation",
+  "description": "Influencer recommendation record linking a tweet to a specific ticker with price tracking.",
+  "type": "object",
+  "required": [
+    "rec_id",
+    "tweet_url",
+    "ticker",
+    "influencer",
+    "recommended_at",
+    "registered_at"
+  ],
+  "properties": {
+    "rec_id": {
+      "type": "string",
+      "description": "Unique identifier: sha256(tweet_url + ':' + ticker)[:16]."
+    },
+    "tweet_url": {
+      "type": "string",
+      "format": "uri",
+      "description": "URL of the source tweet (e.g. https://twitter.com/.../status/...)."
+    },
+    "ticker": {
+      "type": "string",
+      "description": "Ticker symbol (e.g. 'AVGO', '7203.T', 'BTC-USD')."
+    },
+    "matched_text": {
+      "type": "string",
+      "description": "Original text fragment that matched the ticker mapping."
+    },
+    "extraction_source": {
+      "type": "string",
+      "enum": ["regex", "jp_mapping", "etf_mapping"],
+      "description": "Method used to extract the ticker from tweet text."
+    },
+    "influencer": {
+      "type": "string",
+      "description": "Username / handle of the influencer (e.g. 'goto_finance')."
+    },
+    "display_name": {
+      "type": "string",
+      "description": "Human-readable display name of the influencer."
+    },
+    "categories": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Classification categories assigned to the source tweet."
+    },
+    "is_contrarian": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the influencer is a contrarian indicator (bullish tweets -> warning signals)."
+    },
+    "recommended_at": {
+      "type": "string",
+      "format": "date",
+      "description": "Date of the recommendation (YYYY-MM-DD)."
+    },
+    "price_at_recommendation": {
+      "type": ["number", "null"],
+      "description": "Asset price at the recommendation date. Null if unavailable."
+    },
+    "registered_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When this record was registered (ISO 8601)."
+    }
+  },
+  "additionalProperties": false
+}

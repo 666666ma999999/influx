@@ -1,0 +1,11 @@
+app:
+  name: influx
+  version: 0.1.0
+  log_level: INFO
+
+extensions:
+  path: extensions
+
+logging:
+  level: INFO
+  format: "%(asctime)s [%(name)s] %(levelname)s: %(message)s"

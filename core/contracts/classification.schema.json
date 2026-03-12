@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "$id": "influx://contracts/classification.schema.json",
+  "title": "Classification",
+  "description": "Classification result attached to a tweet by any classification stage.",
+  "type": "object",
+  "required": [
+    "tweet_id",
+    "labels",
+    "model",
+    "classified_at"
+  ],
+  "properties": {
+    "tweet_id": {
+      "type": "string",
+      "description": "Reference to the tweet being classified."
+    },
+    "labels": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["category", "score"],
+        "properties": {
+          "category": {
+            "type": "string",
+            "enum": [
+              "recommended_assets",
+              "purchased_assets",
+              "sold_assets",
+              "winning_trades",
+              "ipo",
+              "market_trend",
+              "bullish_assets",
+              "bearish_assets",
+              "warning_signals"
+            ],
+            "description": "Classification category key."
+          },
+          "score": {
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 1.0,
+            "description": "Confidence score for this label."
+          },
+          "rationale": {
+            "type": ["string", "null"],
+            "description": "Human-readable explanation for why this label was assigned."
+          }
+        },
+        "additionalProperties": false
+      },
+      "description": "Array of category labels with confidence scores."
+    },
+    "model": {
+      "type": "object",
+      "required": ["name", "version", "stage"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Model or classifier name (e.g. 'keyword-v1', 'claude-3-5-haiku')."
+        },
+        "version": {
+          "type": "string",
+          "description": "Version string for reproducibility."
+        },
+        "stage": {
+          "type": "string",
+          "enum": ["keyword", "llm", "ml", "ensemble"],
+          "description": "Classification pipeline stage."
+        }
+      },
+      "additionalProperties": false
+    },
+    "classified_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the classification was performed (ISO 8601)."
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Extension point for stage-specific data (matched keywords, prompt version, etc.).",
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}

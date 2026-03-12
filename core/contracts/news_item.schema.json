@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "$id": "influx://contracts/news_item.schema.json",
+  "title": "NewsItem",
+  "description": "A curated news item ready for publishing, composed from one or more source tweets.",
+  "type": "object",
+  "required": [
+    "news_id",
+    "source_items",
+    "title",
+    "body",
+    "format",
+    "scheduled_at"
+  ],
+  "properties": {
+    "news_id": {
+      "type": "string",
+      "description": "Unique identifier for the news item."
+    },
+    "source_items": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "description": "Array of tweet_id references that this news item is composed from."
+    },
+    "title": {
+      "type": "string",
+      "description": "Headline / title of the news item."
+    },
+    "body": {
+      "type": "string",
+      "description": "Full body text of the news item."
+    },
+    "format": {
+      "type": "string",
+      "enum": ["x_post", "thread", "summary_card"],
+      "description": "Output format for the news item."
+    },
+    "scheduled_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the news item is scheduled to be published (ISO 8601)."
+    },
+    "hashtags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Hashtags to include when posting."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "approved", "scheduled", "posted", "failed", "rejected"],
+      "default": "draft",
+      "description": "Current lifecycle status of the news item."
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Extension point for format-specific data.",
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}

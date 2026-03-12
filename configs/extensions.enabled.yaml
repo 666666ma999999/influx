@@ -1,0 +1,7 @@
+enabled:
+  - tier2.keyword_classifier
+  - tier2.performance_tracker
+  - tier3.news_curator
+  - tier3.post_composer
+  - tier3.scheduler
+  - tier3.x_poster

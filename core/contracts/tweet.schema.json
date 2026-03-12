@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "$id": "influx://contracts/tweet.schema.json",
+  "title": "Tweet",
+  "description": "Normalized tweet collected from X (Twitter) or other sources.",
+  "type": "object",
+  "required": [
+    "tweet_id",
+    "source",
+    "author",
+    "content",
+    "created_at"
+  ],
+  "properties": {
+    "tweet_id": {
+      "type": "string",
+      "description": "Unique identifier for the tweet (extracted from URL or generated)."
+    },
+    "source": {
+      "type": "string",
+      "enum": ["x", "rss", "news_site"],
+      "description": "Origin platform of the content."
+    },
+    "author": {
+      "type": "object",
+      "required": ["id", "handle", "display_name"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Platform-specific author identifier."
+        },
+        "handle": {
+          "type": "string",
+          "description": "Username / handle (e.g. @goto_finance). Maps to legacy 'username' field."
+        },
+        "display_name": {
+          "type": "string",
+          "description": "Human-readable display name."
+        }
+      },
+      "additionalProperties": false
+    },
+    "content": {
+      "type": "string",
+      "description": "Full text body of the tweet. Maps to legacy 'text' field."
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the tweet was posted (ISO 8601). Maps to legacy 'posted_at'."
+    },
+    "url": {
+      "type": ["string", "null"],
+      "format": "uri",
+      "description": "Permalink to the original tweet."
+    },
+    "lang": {
+      "type": ["string", "null"],
+      "description": "ISO 639-1 language code (e.g. 'ja', 'en')."
+    },
+    "metrics": {
+      "type": "object",
+      "properties": {
+        "likes": {
+          "type": ["integer", "null"],
+          "minimum": 0,
+          "description": "Like / faves count. Maps to legacy 'like_count'."
+        },
+        "replies": {
+          "type": ["integer", "null"],
+          "minimum": 0,
+          "description": "Reply count. Maps to legacy 'reply_count'."
+        },
+        "reposts": {
+          "type": ["integer", "null"],
+          "minimum": 0,
+          "description": "Retweet / repost count. Maps to legacy 'retweet_count'."
+        }
+      },
+      "additionalProperties": false
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Extension point for source-specific data (group, group_name, collected_at, etc.).",
+      "properties": {
+        "group": {
+          "type": "string",
+          "description": "Influencer group key (group1-group6)."
+        },
+        "group_name": {
+          "type": "string",
+          "description": "Human-readable group name."
+        },
+        "collected_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the tweet was collected (ISO 8601)."
+        }
+      },
+      "additionalProperties": true
+    },
+    "is_contrarian": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the author is a contrarian indicator (bullish tweets -> warning signals)."
+    }
+  },
+  "additionalProperties": false
+}
