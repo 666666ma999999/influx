@@ -1,0 +1,1026 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ツイート分類ツール</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  background: #1a1a2e;
+  color: #eee;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  line-height: 1.5;
+  height: 100vh;
+  overflow: hidden;
+}
+a { color: #1d9bf0; text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* Header */
+.header {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(26,26,46,0.85);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  padding: 12px 16px;
+  flex-shrink: 0;
+}
+.header-top {
+  display: flex; align-items: center; justify-content: center; gap: 16px;
+  flex-wrap: wrap;
+}
+.header-title {
+  font-size: 18px; font-weight: 700;
+}
+.header-stats {
+  font-size: 13px; color: #aaa;
+}
+.progress-wrap {
+  width: 120px; height: 6px;
+  background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden;
+}
+.progress-bar {
+  height: 100%; background: #4CAF50; border-radius: 3px;
+  transition: width 0.3s ease;
+}
+.btn-export {
+  background: transparent; border: 1px solid #aaa; color: #eee;
+  padding: 4px 12px; border-radius: 8px; cursor: pointer; font-size: 13px;
+  white-space: nowrap;
+}
+.btn-export:hover { background: rgba(255,255,255,0.1); }
+
+/* Board - Kanban */
+.board {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  overflow-x: auto;
+  height: calc(100vh - 60px);
+  align-items: flex-start;
+}
+.board.is-dragging { cursor: grabbing; }
+.scroll-hint {
+  position: fixed; top: 50%; z-index: 50;
+  width: 40px; height: 80px;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,0.1); border-radius: 8px;
+  color: rgba(255,255,255,0.5); font-size: 24px;
+  pointer-events: none; opacity: 0; transition: opacity 0.2s;
+}
+.scroll-hint.left { left: 8px; transform: translateY(-50%); }
+.scroll-hint.right { right: 8px; transform: translateY(-50%); }
+.scroll-hint.visible { opacity: 1; }
+
+/* Column */
+.column {
+  flex: 0 0 280px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  max-height: 100%;
+}
+.column-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 12px 8px;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+.column-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.column-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #eee;
+}
+.column-count {
+  font-size: 12px;
+  color: #888;
+  margin-left: auto;
+}
+.column-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 8px 8px;
+  min-height: 100px;
+  transition: background 0.2s, border 0.2s;
+  border: 2px solid transparent;
+  border-radius: 8px;
+}
+.column-body::-webkit-scrollbar { width: 4px; }
+.column-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
+
+/* Drag over highlight */
+.column-body.drag-over {
+  background: rgba(255,255,255,0.08);
+  border: 2px dashed rgba(255,255,255,0.3);
+  border-radius: 8px;
+}
+
+/* Card */
+.card {
+  position: relative;
+  background: #16213e;
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  cursor: grab;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+  transition: box-shadow 0.2s, transform 0.2s;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.card:active { cursor: grabbing; }
+.card.dragging {
+  opacity: 0.5;
+  transform: rotate(2deg);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+}
+.board.dragging-active .card:not(.dragging) {
+  pointer-events: none;
+}
+.card-username {
+  font-size: 12px; font-weight: 600; color: #1d9bf0;
+  margin-bottom: 4px;
+}
+.card-text {
+  font-size: 12px; line-height: 1.4; color: #ccc;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.card-meta {
+  font-size: 11px; color: #666; margin-top: 4px;
+}
+.card-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 4px;
+}
+.card-likes {
+  font-size: 11px; color: #aaa; white-space: nowrap;
+}
+.card-badges {
+  display: flex; flex-wrap: wrap; gap: 3px; margin-top: 4px;
+}
+.badge {
+  font-size: 0.65rem; padding: 1px 6px; border-radius: 8px;
+  color: #fff; white-space: nowrap;
+}
+.badge-none {
+  background: #555;
+}
+
+/* Trash button on card */
+.card-trash-btn {
+  position: absolute;
+  top: 6px; right: 6px;
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255,255,255,0.08);
+  color: #888;
+  font-size: 13px;
+  line-height: 22px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.15s;
+  padding: 0;
+  z-index: 2;
+}
+.card-trash-btn:hover {
+  background: #c62828;
+  color: #fff;
+}
+.card-restore-btn:hover {
+  background: #2e7d32;
+  color: #fff;
+}
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.modal {
+  background: #16213e;
+  border-radius: 16px;
+  padding: 20px;
+  max-width: 520px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+}
+.modal::-webkit-scrollbar { width: 4px; }
+.modal::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 2px; }
+.modal-close {
+  float: right;
+  background: transparent; border: none; color: #aaa;
+  font-size: 18px; cursor: pointer; padding: 0 4px;
+}
+.modal-close:hover { color: #fff; }
+.modal-username {
+  font-size: 15px; font-weight: 600;
+}
+.modal-meta {
+  font-size: 12px; color: #aaa; margin-top: 4px;
+}
+.modal-contrarian {
+  font-size: 12px; color: #FF5722; margin-top: 4px;
+}
+.modal-text {
+  font-size: 13px; line-height: 1.6; color: #ddd;
+  white-space: pre-wrap; word-break: break-word;
+  margin: 12px 0;
+  max-height: 240px; overflow-y: auto;
+}
+.modal-text::-webkit-scrollbar { width: 4px; }
+.modal-text::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 2px; }
+
+/* Category chips */
+.chips-area {
+  display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0;
+}
+.chip {
+  padding: 5px 12px; border-radius: 8px; font-size: 12px;
+  cursor: pointer; transition: all 0.15s;
+  border: 2px solid; user-select: none;
+  -webkit-user-select: none;
+}
+.chip.off {
+  background: transparent;
+}
+.chip.on {
+  color: #fff;
+}
+
+/* Reference info */
+.card-ref {
+  font-size: 11px; color: #666; margin-top: 8px;
+}
+
+/* Empty state */
+.empty-state {
+  text-align: center; padding: 60px 20px; color: #666;
+  font-size: 15px;
+}
+
+/* Column empty */
+.column-empty {
+  padding: 16px 8px;
+  color: #555;
+  font-size: 12px;
+  text-align: center;
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <span class="header-title">ツイート分類ツール</span>
+    <span class="header-stats">分類済み: <span id="annotatedCount">0</span>/<span id="totalCount">0</span></span>
+    <div class="progress-wrap"><div class="progress-bar" id="progressBar" style="width:0%"></div></div>
+    <button class="btn-export" onclick="exportAnnotations()">&#128229; エクスポート</button>
+    <button class="btn-export" onclick="document.getElementById('importFile').click()">&#128228; インポート</button>
+    <input type="file" id="importFile" accept=".json" style="display:none" onchange="importAnnotations(event)">
+  </div>
+</div>
+<div class="board" id="board"></div>
+<div id="modalContainer"></div>
+<div class="empty-state" id="emptyState" style="display:none;">該当するツイートはありません</div>
+
+<script>
+const EMBEDDED_DATA = [{"username": "yurumazu", "display_name": "Emin Yurumazu (エミンユルマズ)", "text": "トランプ政権はオイルタンカーに保険と米海軍の警護を提供することを検討しているようです。このニュースで米株が反発しています。", "url": "https://twitter.com/yurumazu/status/2029246727291847046", "posted_at": "2026-03-04T17:24:56.000Z", "like_count": 1100, "retweet_count": 100, "reply_count": null, "is_contrarian": false, "group": "group1", "group_name": "超大型インフルエンサー", "categories": ["bullish_assets"], "category_details": {"bullish_assets": {"name": "高騰している資産", "matched_keywords": ["反発"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "yurumazu", "display_name": "Emin Yurumazu (エミンユルマズ)", "text": "日中韓の弱点が同じ。油がない。", "url": "https://twitter.com/yurumazu/status/2029183700936868318", "posted_at": "2026-03-04T13:14:29.000Z", "like_count": 2600, "retweet_count": 298, "reply_count": null, "is_contrarian": false, "group": "group1", "group_name": "超大型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "yurumazu", "display_name": "Emin Yurumazu (エミンユルマズ)", "text": "トルコ東南部のNATO基地に向けて発射された可能性が高い。しかし、NATOを巻き込んだら今度こそイランの体制が崩壊します。", "url": "https://twitter.com/yurumazu/status/2029181425875075464", "posted_at": "2026-03-04T13:05:26.000Z", "like_count": 2400, "retweet_count": 321, "reply_count": null, "is_contrarian": false, "group": "group1", "group_name": "超大型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "yurumazu", "display_name": "Emin Yurumazu (エミンユルマズ)", "text": "", "url": "https://twitter.com/yurumazu/status/2029060912066523335", "posted_at": "2026-03-04T05:06:34.000Z", "like_count": 442, "retweet_count": 7, "reply_count": null, "is_contrarian": false, "group": "group1", "group_name": "超大型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "yurumazu", "display_name": "Emin Yurumazu (エミンユルマズ)", "text": "トランプはイランの新指導者が現体制からが適切と言っているようです。政権倒すと言ったり、リーダーが現体制からの方が良いと言ったり発言は二転三転しています。株価暴落でタコって政権打倒を諦めた可能性も否定できません。", "url": "https://twitter.com/yurumazu/status/2029032549998313885", "posted_at": "2026-03-04T03:13:52.000Z", "like_count": 2200, "retweet_count": 435, "reply_count": null, "is_contrarian": false, "group": "group1", "group_name": "超大型インフルエンサー", "categories": ["bearish_assets"], "category_details": {"bearish_assets": {"name": "下落している資産", "matched_keywords": ["暴落"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "yurumazu", "display_name": "Emin Yurumazu (エミンユルマズ)", "text": "日経平均は解散総選挙後の窓を埋めました。ただ、大きく調整しているとはいえ高市政権のご祝儀相場を消しただけです。ホルムズ海峡が永遠に封鎖されるみたいな悲観論が先行しているが、そんなことをしたらイランも油を輸出できないので現実的ではない。イラン情勢と相場見通しについて書きました。", "url": "https://twitter.com/yurumazu/status/2029031403862843809", "posted_at": "2026-03-04T03:09:18.000Z", "like_count": 2900, "retweet_count": 251, "reply_count": null, "is_contrarian": false, "group": "group1", "group_name": "超大型インフルエンサー", "categories": ["market_trend"], "category_details": {"market_trend": {"name": "市況トレンドに関する見解", "matched_keywords": ["相場"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "yurumazu", "display_name": "Emin Yurumazu (エミンユルマズ)", "text": "韓国株はサーキットブレーカーを発動してから下げ幅を広げて9.5%安となっています。", "url": "https://twitter.com/yurumazu/status/2029029739684671591", "posted_at": "2026-03-04T03:02:42.000Z", "like_count": 2100, "retweet_count": 395, "reply_count": null, "is_contrarian": false, "group": "group1", "group_name": "超大型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "tesuta001", "display_name": "テスタ", "text": "僕が色んな人のを見て勉強してた時はむしろこういう激しい動きの時こそ\n上手な人はどうやってるか見たいと思ってましたが今の時代は違うのでしょうか", "url": "https://twitter.com/tesuta001/status/2028938658422890737", "posted_at": "2026-03-03T21:00:46.000Z", "like_count": 2500, "retweet_count": 96, "reply_count": 211, "is_contrarian": false, "group": "group1", "group_name": "超大型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "tesuta001", "display_name": "テスタ", "text": "55550で500枚バーチャ分も利確\n結局どっちのプランでもプラスになった模様\nおはようございます", "url": "https://twitter.com/tesuta001/status/2028925771780345977", "posted_at": "2026-03-03T20:09:34.000Z", "like_count": 203, "retweet_count": 7, "reply_count": 15, "is_contrarian": false, "group": "group1", "group_name": "超大型インフルエンサー", "categories": ["sold_assets", "winning_trades"], "category_details": {"sold_assets": {"name": "売却した資産", "matched_keywords": ["利確"], "matched_patterns": [], "is_from_contrarian": false}, "winning_trades": {"name": "勝ちトレード・利益報告", "matched_keywords": ["プラス"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "tesuta001", "display_name": "テスタ", "text": "ソファで寝ちゃっててアラートで起きた\n54150平均→55150で1000円抜き利確\n久々のリアルタイム先物トレードはこれで一旦終了しますおやすみなさい〜完", "url": "https://twitter.com/tesuta001/status/2028904560677597477", "posted_at": "2026-03-03T18:45:17.000Z", "like_count": 284, "retweet_count": 8, "reply_count": 7, "is_contrarian": false, "group": "group1", "group_name": "超大型インフルエンサー", "categories": ["sold_assets"], "category_details": {"sold_assets": {"name": "売却した資産", "matched_keywords": ["利確"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "yurumazu", "display_name": "Emin Yurumazu (エミンユルマズ)", "text": "このシナリオではシリアを超える難民危機が生まれ、欧州で極右が台頭します。まあ、それが狙いかもしれないけどね。トランプ主義の広がりを意味します。", "url": "https://twitter.com/yurumazu/status/2028856818286678419", "posted_at": "2026-03-03T15:35:34.000Z", "like_count": 926, "retweet_count": 119, "reply_count": null, "is_contrarian": false, "group": "group1", "group_name": "超大型インフルエンサー", "categories": ["warning_signals"], "category_details": {"warning_signals": {"name": "警戒すべき動き・逆指標シグナル", "matched_keywords": ["危機"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "yurumazu", "display_name": "Emin Yurumazu (エミンユルマズ)", "text": "個人的には今日の一番大きなニュースはこちらです。トランプはイランの反政府勢力を軍事支援すると言っています。要はシリアの内戦のような構図に持っていきたいと言うこと。そんな勢力はいるのかどうか不明ですが、これは周辺国にとって最悪のシナリオです。", "url": "https://twitter.com/yurumazu/status/2028856162461044904", "posted_at": "2026-03-03T15:32:58.000Z", "like_count": 2900, "retweet_count": 679, "reply_count": 1, "is_contrarian": false, "group": "group1", "group_name": "超大型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "yurumazu", "display_name": "Emin Yurumazu (エミンユルマズ)", "text": "ナスダックは売りが加速しています。昨年から動きもダブルトップに見えてチャートの形が悪い。", "url": "https://twitter.com/yurumazu/status/2028854896980852948", "posted_at": "2026-03-03T15:27:56.000Z", "like_count": 1400, "retweet_count": 133, "reply_count": null, "is_contrarian": false, "group": "group1", "group_name": "超大型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "yurumazu", "display_name": "Emin Yurumazu (エミンユルマズ)", "text": "メモリー不足の追い風で韓国株は年初来から抜群のパフォーマンスでしたが、今日は7%下がっています。グローバル経済が揺らぐとAIトレードの勢いも消えます。", "url": "https://twitter.com/yurumazu/status/2028854218766028853", "posted_at": "2026-03-03T15:25:14.000Z", "like_count": 1200, "retweet_count": 83, "reply_count": null, "is_contrarian": false, "group": "group1", "group_name": "超大型インフルエンサー", "categories": ["winning_trades"], "category_details": {"winning_trades": {"name": "勝ちトレード・利益報告", "matched_keywords": ["パフォーマンス"], "matched_patterns": ["年初来から抜群のパフォーマンス"], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "tesuta001", "display_name": "テスタ", "text": "含み損が−500万に！\n先物−2200円とか\nやってくれるやないかああああ！！", "url": "https://twitter.com/tesuta001/status/2028846484368785597", "posted_at": "2026-03-03T14:54:30.000Z", "like_count": 147, "retweet_count": 7, "reply_count": 6, "is_contrarian": false, "group": "group1", "group_name": "超大型インフルエンサー", "categories": ["purchased_assets"], "category_details": {"purchased_assets": {"name": "個人で購入・保有している資産", "matched_keywords": ["含み損"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "tesuta001", "display_name": "テスタ", "text": "後で書けば後出しと言われたりもしますのでそこはどちらもバランスで\n先物みたいに書いても値動きに無関係な商品や時価総額が大きいのはたまに書いてます\nあと先物はそもそも投資初心者の人はほぼしてないですから\nこういう時はいつも実際真似したみたいな人より\n真似する人が沢山いたに違いない！", "url": "https://twitter.com/tesuta001/status/2028844602338488372", "posted_at": "2026-03-03T14:47:01.000Z", "like_count": 363, "retweet_count": 3, "reply_count": 9, "is_contrarian": false, "group": "group1", "group_name": "超大型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "tesuta001", "display_name": "テスタ", "text": "そういえば宅配ピザに\nマヨネーズかけたら\nおいしさは３倍になります", "url": "https://twitter.com/tesuta001/status/2028835715925397849", "posted_at": "2026-03-03T14:11:43.000Z", "like_count": 1300, "retweet_count": 19, "reply_count": 87, "is_contrarian": false, "group": "group1", "group_name": "超大型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "tesuta001", "display_name": "テスタ", "text": "僕は９割がUberなのでwちなみに今日はピザハットですw（ちょっと傾いてる、、）", "url": "https://twitter.com/tesuta001/status/2028835156195430628", "posted_at": "2026-03-03T14:09:29.000Z", "like_count": 221, "retweet_count": 4, "reply_count": 12, "is_contrarian": false, "group": "group1", "group_name": "超大型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "yurumazu", "display_name": "Emin Yurumazu (エミンユルマズ)", "text": "【カギは米中新冷戦】イラン攻撃に踏み切ったアメリカの論理をエミン・ユルマズが深掘り解説／体制転換は可能か／ホルムズ海峡封鎖は1年以上続く？／原油... \nhttps://\nyoutu.be/Y4HRdIRKRdg?si\n=LRV74zpf1qhmEqpY\n… via \n@YouTube", "url": "https://twitter.com/yurumazu/status/2028821138835730873", "posted_at": "2026-03-03T13:13:47.000Z", "like_count": 616, "retweet_count": 63, "reply_count": null, "is_contrarian": false, "group": "group1", "group_name": "超大型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "tesuta001", "display_name": "テスタ", "text": "最初から決めてる計画的買い下がりと\nナンピンは全く違うので\nそこが見てわからない初心者の方はもちろんダメですよ", "url": "https://twitter.com/tesuta001/status/2028814795059950022", "posted_at": "2026-03-03T12:48:35.000Z", "like_count": 409, "retweet_count": 14, "reply_count": 11, "is_contrarian": false, "group": "group1", "group_name": "超大型インフルエンサー", "categories": ["recommended_assets", "purchased_assets"], "category_details": {"recommended_assets": {"name": "オススメしている資産・セクター", "matched_keywords": ["買い"], "matched_patterns": [], "is_from_contrarian": false}, "purchased_assets": {"name": "個人で購入・保有している資産", "matched_keywords": ["ナンピン"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "tesuta001", "display_name": "テスタ", "text": "真似をするとかは意味が無いです\nそもそも経験も資産も特性も時間軸も\nみんな違うので。\nただ\nこういう人もいるんだ\nこういう考え方もあるんだ\nこういうトレードもあるんだということを\n色んな人のを見て学んで\n自分の取引に活かせるところがあれば活かすというのが大事だと思います", "url": "https://twitter.com/tesuta001/status/2028810925374140575", "posted_at": "2026-03-03T12:33:12.000Z", "like_count": 1200, "retweet_count": 63, "reply_count": 36, "is_contrarian": false, "group": "group1", "group_name": "超大型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "tesuta001", "display_name": "テスタ", "text": "リアルが含み益546万！\nなので実質−1200万！\nバーチャは−4000万！\nリアルを1000円抜きで指値セットオン！", "url": "https://twitter.com/tesuta001/status/2028808959415775327", "posted_at": "2026-03-03T12:25:24.000Z", "like_count": 146, "retweet_count": 7, "reply_count": 7, "is_contrarian": false, "group": "group1", "group_name": "超大型インフルエンサー", "categories": ["purchased_assets", "winning_trades"], "category_details": {"purchased_assets": {"name": "個人で購入・保有している資産", "matched_keywords": ["含み益", "指値"], "matched_patterns": [], "is_from_contrarian": false}, "winning_trades": {"name": "勝ちトレード・利益報告", "matched_keywords": ["含み益"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "tesuta001", "display_name": "テスタ", "text": "現在値54225なので\nリアルは含み益になったけど最初切ったのと合わせたら-1600万くらい\nバーチャの方は−5500万かな\nボラ大きいいいいぃ", "url": "https://twitter.com/tesuta001/status/2028804060091146416", "posted_at": "2026-03-03T12:05:55.000Z", "like_count": 132, "retweet_count": 2, "reply_count": 3, "is_contrarian": false, "group": "group1", "group_name": "超大型インフルエンサー", "categories": ["purchased_assets", "winning_trades"], "category_details": {"purchased_assets": {"name": "個人で購入・保有している資産", "matched_keywords": ["含み益"], "matched_patterns": [], "is_from_contrarian": false}, "winning_trades": {"name": "勝ちトレード・利益報告", "matched_keywords": ["含み益"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "tesuta001", "display_name": "テスタ", "text": "お気づきの通り\nリアルが53650で追加して150枚に\n約定時含み損は\nバーチャの方が−8400万\nリアルが−750万", "url": "https://twitter.com/tesuta001/status/2028792047222825371", "posted_at": "2026-03-03T11:18:11.000Z", "like_count": 123, "retweet_count": 6, "reply_count": 7, "is_contrarian": false, "group": "group1", "group_name": "超大型インフルエンサー", "categories": ["purchased_assets"], "category_details": {"purchased_assets": {"name": "個人で購入・保有している資産", "matched_keywords": ["追加", "含み損", "約定"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "tesuta001", "display_name": "テスタ", "text": "お風呂入ってたら約定きてびっくりした\n54150@100枚で55330@500枚絶対絶命ポジ完了バーチャと\n54150@50枚追加で54400@100枚リアル\n約定時含み損は−5900万と−250万", "url": "https://twitter.com/tesuta001/status/2028772888464199691", "posted_at": "2026-03-03T10:02:04.000Z", "like_count": 177, "retweet_count": 17, "reply_count": 8, "is_contrarian": false, "group": "group1", "group_name": "超大型インフルエンサー", "categories": ["purchased_assets"], "category_details": {"purchased_assets": {"name": "個人で購入・保有している資産", "matched_keywords": ["追加", "含み損", "約定"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "yurumazu", "display_name": "Emin Yurumazu (エミンユルマズ)", "text": "今日の相場は円安、株安、債券安ですね。リスクオフで円高にならないことに驚く人もいますが、これは通常のリスクオフではない。エネルギー価格の高騰は日本の貿易収支を悪化させるので円安、インフレ要因です。", "url": "https://twitter.com/yurumazu/status/2028766281881850017", "posted_at": "2026-03-03T09:35:48.000Z", "like_count": 3300, "retweet_count": 398, "reply_count": null, "is_contrarian": false, "group": "group1", "group_name": "超大型インフルエンサー", "categories": ["market_trend"], "category_details": {"market_trend": {"name": "市況トレンドに関する見解", "matched_keywords": ["相場", "インフレ", "円安", "円高"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "kanpo_blog", "display_name": "官報ブログ", "text": "Google、アプリ手数料下げ　ゲーム「フォートナイト」配信が復活", "url": "https://twitter.com/kanpo_blog/status/2029361380781183339", "posted_at": "2026-03-05T01:00:31.000Z", "like_count": 39, "retweet_count": 22, "reply_count": null, "is_contrarian": false, "group": "group2", "group_name": "大型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "米国ETF", "display_name": "ハル", "text": "ジョン・D・ロックフェラー 「一日中働く者はお金を稼ぐ時間がない」", "url": "https://twitter.com/haru_tachibana8/status/2029340159892963541", "posted_at": "2026-03-04T23:36:12.000Z", "like_count": 567, "retweet_count": 83, "reply_count": 3, "is_contrarian": false, "group": "group2", "group_name": "大型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "米国ETF", "display_name": "ハル", "text": "\"自分の痛い経験を通じてではなく、他人の経験から学べる厳しい教訓は、多ければ多いほど良い\"\n\n- チャーリー・マンガー", "url": "https://twitter.com/haru_tachibana8/status/2029167154869010643", "posted_at": "2026-03-04T12:08:44.000Z", "like_count": 100, "retweet_count": 13, "reply_count": 3, "is_contrarian": false, "group": "group2", "group_name": "大型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "米国ETF", "display_name": "ハル", "text": "本日、日経平均株価が-3.61%と大きく下落しました。\n\n改めて2024/8/5の暴落-12.4%を振り返ると…\n\n何度見ても凄いな…", "url": "https://twitter.com/haru_tachibana8/status/2029093314612609389", "posted_at": "2026-03-04T07:15:19.000Z", "like_count": 96, "retweet_count": 17, "reply_count": 7, "is_contrarian": false, "group": "group2", "group_name": "大型インフルエンサー", "categories": ["bearish_assets"], "category_details": {"bearish_assets": {"name": "下落している資産", "matched_keywords": ["暴落", "下落"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "米国ETF", "display_name": "ハル", "text": "さようなら、ファンドマネージャー。さようなら、ブルームバーグ端末。\n\nもう年間2万4,000ドル（約370万円）のサブスクリプションは必要ありません。\nClaudeが、あなたのノートPCを個人専属のクオンツアナリストに変えてしまいました。", "url": "https://twitter.com/haru_tachibana8/status/2029066825645081077", "posted_at": "2026-03-04T05:30:04.000Z", "like_count": 3400, "retweet_count": 379, "reply_count": 5, "is_contrarian": false, "group": "group2", "group_name": "大型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "kanpo_blog", "display_name": "官報ブログ", "text": "楽天 浅村栄斗選手ら書類送検へ オンラインカジノで賭博疑い \nhttps://\nnews.web.nhk/newsweb/na/na-\nk10015066091000\n…\n\n楽天に所属する浅村栄斗選手とコーチら2人のあわせて3人が、オンラインカジノで金を賭けていたとして、警察が賭博の疑いで4日にも書類送検する方針を固めたことが、捜査関係者への取材で分かりました。", "url": "https://twitter.com/kanpo_blog/status/2029048030486499582", "posted_at": "2026-03-04T04:15:23.000Z", "like_count": 59, "retweet_count": 47, "reply_count": 2, "is_contrarian": false, "group": "group2", "group_name": "大型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "米国ETF", "display_name": "ハル", "text": "ウォーレン・バフェット「10万ドル持っていても幸せでないなら、1億ドル持っていたとしても幸せにはなれないでしょう」", "url": "https://twitter.com/haru_tachibana8/status/2029025592344232291", "posted_at": "2026-03-04T02:46:13.000Z", "like_count": 476, "retweet_count": 72, "reply_count": 12, "is_contrarian": false, "group": "group2", "group_name": "大型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "kanpo_blog", "display_name": "官報ブログ", "text": "旧統一教会に解散命令 東京高裁 清算の手続き開始へ | NHKニュース", "url": "https://twitter.com/kanpo_blog/status/2029025279604355527", "posted_at": "2026-03-04T02:44:58.000Z", "like_count": 55, "retweet_count": 16, "reply_count": null, "is_contrarian": false, "group": "group2", "group_name": "大型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "kanpo_blog", "display_name": "官報ブログ", "text": "プロ野球CS・日本シリーズ、中傷466件確認　選手会がSNS調査 \nhttps://\nnikkei.com/article/DGXZQO\nKC039OL0T00C26A3000000/\n…\n\n日本プロ野球選手会は、昨年のクライマックスシリーズと日本シリーズの期間中に、SNSでの選手や家族等に対する誹謗中傷が466件、確認されたと発表した。", "url": "https://twitter.com/kanpo_blog/status/2028984769699299466", "posted_at": "2026-03-04T00:04:00.000Z", "like_count": 34, "retweet_count": 9, "reply_count": null, "is_contrarian": false, "group": "group2", "group_name": "大型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "heihachiro888", "display_name": "HUTCH ハッチ (岡元兵八郎)", "text": "【ライブ配信】明日(3/5)木曜日8時pmからは「インド、ベトナム株オンラインセミナーハッチと読み解く！インド・ベトナム株投資の現在地」を行います。どなたでもご覧頂けます。", "url": "https://twitter.com/heihachiro888/status/2028978848059277520", "posted_at": "2026-03-03T23:40:28.000Z", "like_count": 37, "retweet_count": 1, "reply_count": 3, "is_contrarian": false, "group": "group2", "group_name": "大型インフルエンサー", "categories": ["purchased_assets"], "category_details": {"purchased_assets": {"name": "個人で購入・保有している資産", "matched_keywords": [], "matched_patterns": ["株オンライン"], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "kanpo_blog", "display_name": "官報ブログ", "text": "クリエイタープラットフォーム事業など「BitStar」 決算公告（第11期） \nhttps://\nkanpo-kanpo.blog.jp/archives/45864\n473.html\n…\n\n第11期 決算公告\n当期純利益：4億9100万円\n利益剰余金：▲1200万円", "url": "https://twitter.com/kanpo_blog/status/2028978586322125133", "posted_at": "2026-03-03T23:39:26.000Z", "like_count": 36, "retweet_count": 2, "reply_count": null, "is_contrarian": false, "group": "group2", "group_name": "大型インフルエンサー", "categories": ["winning_trades", "market_trend"], "category_details": {"winning_trades": {"name": "勝ちトレード・利益報告", "matched_keywords": [], "matched_patterns": ["利益：4億9100万"], "is_from_contrarian": false}, "market_trend": {"name": "市況トレンドに関する見解", "matched_keywords": ["決算"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "米国ETF", "display_name": "ハル", "text": "ホルムズ海峡を通過する大型船の1日あたりの数：\n\n通常：75  \n昨日：20  \n今日：2", "url": "https://twitter.com/haru_tachibana8/status/2028969999478735078", "posted_at": "2026-03-03T23:05:18.000Z", "like_count": 59, "retweet_count": 10, "reply_count": 4, "is_contrarian": false, "group": "group2", "group_name": "大型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "kanpo_blog", "display_name": "官報ブログ", "text": "高木美帆、現役引退へ　今週末の世界選手権で「一区切り」今後は「帰国してから改めて公式の場で…」（スポニチアネックス） \n\nhttps://\napproach.yahoo.co.jp/r/QUyHCH?src=h\nttps://news.yahoo.co.jp/articles/582b01e100f5e768dc4cb1a45dced22a75bd0c15&preview=auto\n…\n\n大変お疲れ様でした", "url": "https://twitter.com/kanpo_blog/status/2028961926550868466", "posted_at": "2026-03-03T22:33:14.000Z", "like_count": 39, "retweet_count": 12, "reply_count": null, "is_contrarian": false, "group": "group2", "group_name": "大型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "米国ETF", "display_name": "ハル", "text": "ピーター・リンチ「市場は大きく下落することがあります。それに備えていないなら、株を持つべきではありません。」", "url": "https://twitter.com/haru_tachibana8/status/2028946772115300499", "posted_at": "2026-03-03T21:33:01.000Z", "like_count": 126, "retweet_count": 9, "reply_count": 3, "is_contrarian": false, "group": "group2", "group_name": "大型インフルエンサー", "categories": ["bearish_assets"], "category_details": {"bearish_assets": {"name": "下落している資産", "matched_keywords": ["下落"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "heihachiro888", "display_name": "HUTCH ハッチ (岡元兵八郎)", "text": "以前ポストしたバフェットさんの言葉ですが、再度ポストしておきます。「株に投資するなら、株価が50％、あるいはそれ以上下がっても、平静でいられる心構えが必要だ。」　ウォーレン・バフェット", "url": "https://twitter.com/heihachiro888/status/2028818043963650519", "posted_at": "2026-03-03T13:01:29.000Z", "like_count": 437, "retweet_count": 46, "reply_count": 13, "is_contrarian": false, "group": "group2", "group_name": "大型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "米国ETF", "display_name": "ハル", "text": "ウォーレン・バフェット「株に投資するなら、株価が50％以上下落するのを目の当たりにしても、冷静でいられるよう精神的な準備をしておく必要がある」", "url": "https://twitter.com/haru_tachibana8/status/2028770960518922273", "posted_at": "2026-03-03T09:54:24.000Z", "like_count": 51, "retweet_count": 4, "reply_count": 1, "is_contrarian": false, "group": "group2", "group_name": "大型インフルエンサー", "categories": ["bearish_assets"], "category_details": {"bearish_assets": {"name": "下落している資産", "matched_keywords": ["下落"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "米国ETF", "display_name": "ハル", "text": "ウォーレン・バフェット「株に投資するなら、株価が50％以上下落するのを目の当たりにしても、冷静でいられるよう精神的な準備をしておく必要がある」", "url": "https://twitter.com/haru_tachibana8/status/2028770480287785120", "posted_at": "2026-03-03T09:52:29.000Z", "like_count": 4700, "retweet_count": 666, "reply_count": 79, "is_contrarian": false, "group": "group2", "group_name": "大型インフルエンサー", "categories": ["bearish_assets"], "category_details": {"bearish_assets": {"name": "下落している資産", "matched_keywords": ["下落"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "米国ETF", "display_name": "ハル", "text": "「S&P500」と「S&P1 」のパフォーマンス比較\n\n※S&P1 : ある時点でのS&P500構成銘柄の時価総額1位企業。", "url": "https://twitter.com/haru_tachibana8/status/2028752398945251798", "posted_at": "2026-03-03T08:40:38.000Z", "like_count": 341, "retweet_count": 27, "reply_count": 6, "is_contrarian": false, "group": "group2", "group_name": "大型インフルエンサー", "categories": ["winning_trades"], "category_details": {"winning_trades": {"name": "勝ちトレード・利益報告", "matched_keywords": ["パフォーマンス"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "kanpo_blog", "display_name": "官報ブログ", "text": "金融庁、首相名の仮想通貨を調査へ（共同通信） \n\nhttps://\nnews.yahoo.co.jp/articles/8781a\n5233f94eec6803923ca7cd5019cb51a6261\n…\n\n金融庁が高市早苗首相の名前入りの暗号資産「SANAE　TOKEN」に関し、関連業者への調査を検討していることが3日、分かった。携わったとされる企業は、仮想通貨の発行に必要な登録がなく、事実関係を確認する。", "url": "https://twitter.com/kanpo_blog/status/2028751123239284851", "posted_at": "2026-03-03T08:35:34.000Z", "like_count": 141, "retweet_count": 40, "reply_count": null, "is_contrarian": false, "group": "group2", "group_name": "大型インフルエンサー", "categories": ["purchased_assets"], "category_details": {"purchased_assets": {"name": "個人で購入・保有している資産", "matched_keywords": ["暗号資産", "仮想通貨"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "kanpo_blog", "display_name": "官報ブログ", "text": "Criteo、OpenAI の ChatGPT における広告パイロットに参画 \nhttps://\nrtbsquare.work/archives/59388\n\nCriteoは、米国においてOpenAIが実施するChatGPTの無料プランおよびPlusプラン（Goプラン）での広告パイロットプログラムに、最初の広告テクノロジーパートナーとして統合されたことを発表しました。", "url": "https://twitter.com/kanpo_blog/status/2028725198237954350", "posted_at": "2026-03-03T06:52:33.000Z", "like_count": 26, "retweet_count": 1, "reply_count": null, "is_contrarian": false, "group": "group2", "group_name": "大型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "yuki75868813751", "display_name": "ゆーき", "text": "不動産も昨日の株のように、一瞬大暴落するようなタイミングがあれば、今からでも不動産一つくらい買いたいんですけどね～(^^;)\n数千万くらいのよい中古分譲マンションが買いたいです！\nいつか、貸してもらえない年齢になってしまうかもなので(^^;)", "url": "https://twitter.com/yuki75868813751/status/2029328630820815342", "posted_at": "2026-03-04T22:50:23.000Z", "like_count": 16, "retweet_count": null, "reply_count": 2, "is_contrarian": false, "group": "group3", "group_name": "中型インフルエンサー", "categories": ["recommended_assets", "bearish_assets"], "category_details": {"recommended_assets": {"name": "オススメしている資産・セクター", "matched_keywords": ["買い"], "matched_patterns": [], "is_from_contrarian": false}, "bearish_assets": {"name": "下落している資産", "matched_keywords": ["暴落"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "miku919191", "display_name": "みくかぶ専業投資家", "text": "メモリ関連反発\n\nMicron $MU +6.77%\nSanDisk $SNDK +6.89%\nWestern Digital $WDC +8.37%\nSeagate $STX +8.77%\n\n安心したので寝ますw", "url": "https://twitter.com/miku919191/status/2029228321498906642", "posted_at": "2026-03-04T16:11:47.000Z", "like_count": 124, "retweet_count": 4, "reply_count": 1, "is_contrarian": false, "group": "group3", "group_name": "中型インフルエンサー", "categories": ["winning_trades", "bullish_assets"], "category_details": {"winning_trades": {"name": "勝ちトレード・利益報告", "matched_keywords": [], "matched_patterns": ["+6.77%"], "is_from_contrarian": false}, "bullish_assets": {"name": "高騰している資産", "matched_keywords": ["反発"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "miku919191", "display_name": "みくかぶ専業投資家", "text": "噂通りMacBook Neoでた〜\n\nA18 Pro搭載で99,800円から\n発売日：2026年3月11日（水）\n\n持ち歩きとサブモニターとしても使えそう", "url": "https://twitter.com/miku919191/status/2029223333359960545", "posted_at": "2026-03-04T15:51:58.000Z", "like_count": 53, "retweet_count": 2, "reply_count": 2, "is_contrarian": false, "group": "group3", "group_name": "中型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "miku919191", "display_name": "みくかぶ専業投資家", "text": "コインベースいえい\nやっと反発かな？高値まではまだだいぶ遠いw\n\n$COIN", "url": "https://twitter.com/miku919191/status/2029218045659631806", "posted_at": "2026-03-04T15:30:57.000Z", "like_count": 44, "retweet_count": 1, "reply_count": null, "is_contrarian": false, "group": "group3", "group_name": "中型インフルエンサー", "categories": ["bullish_assets"], "category_details": {"bullish_assets": {"name": "高騰している資産", "matched_keywords": ["反発"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "miku919191", "display_name": "みくかぶ専業投資家", "text": "ひろゆき続きで\n『あなたの睡眠知識、間違ってます！』\n　\n とにかく睡眠不足は悪影響がすぎる\n ダイエットや集中力にも睡眠が深く関係\n 日本人の平均睡眠時間は約6時間20分で世界的に短い\n 貯蓄できない、睡眠の質が大事\n\n本当睡眠は第一優先だなあと\n毎日8時間半寝てるけどw\n#みくBOOKS", "url": "https://twitter.com/miku919191/status/2029205701994983925", "posted_at": "2026-03-04T14:41:54.000Z", "like_count": 23, "retweet_count": 1, "reply_count": 3, "is_contrarian": false, "group": "group3", "group_name": "中型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "miku919191", "display_name": "みくかぶ専業投資家", "text": "サークルインターネット復活\nいや〜ほんと苦しめられたw\n仮想通貨の状況が悪い中で、好決算だったから大丈夫かな？\n\n$CRCL", "url": "https://twitter.com/miku919191/status/2029205610328379784", "posted_at": "2026-03-04T14:41:32.000Z", "like_count": 29, "retweet_count": 1, "reply_count": 1, "is_contrarian": false, "group": "group3", "group_name": "中型インフルエンサー", "categories": ["purchased_assets", "market_trend"], "category_details": {"purchased_assets": {"name": "個人で購入・保有している資産", "matched_keywords": ["仮想通貨"], "matched_patterns": [], "is_from_contrarian": false}, "market_trend": {"name": "市況トレンドに関する見解", "matched_keywords": ["決算"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "miku919191", "display_name": "みくかぶ専業投資家", "text": "四川料理の麻辣先生の汁なし担々麺美味しかった\n汁なし担々麺好きで、色々食べてるけど1.2位を競うくらい好みだった、本場の四川担々麺で花椒が痺れてクセになる味w\nほんとに麻辣先生ウソつかなかった", "url": "https://twitter.com/miku919191/status/2029179303880265998", "posted_at": "2026-03-04T12:57:01.000Z", "like_count": 95, "retweet_count": null, "reply_count": 3, "is_contrarian": false, "group": "group3", "group_name": "中型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "miku919191", "display_name": "みくかぶ専業投資家", "text": "わたしの底なし沼と化してたサークルがやっとプラ転したというのにw\n\nUSDCがAIエージェントの決済システムに本格的に使われるようになったらアツい", "url": "https://twitter.com/miku919191/status/2029157836463456684", "posted_at": "2026-03-04T11:31:42.000Z", "like_count": 51, "retweet_count": 4, "reply_count": 3, "is_contrarian": false, "group": "group3", "group_name": "中型インフルエンサー", "categories": ["winning_trades"], "category_details": {"winning_trades": {"name": "勝ちトレード・利益報告", "matched_keywords": ["プラ転"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "miku919191", "display_name": "みくかぶ専業投資家", "text": "YouTube要約、一時期使えなくなったけど、また再開して使えるようになりました！\n\nYouTube上で日本語字幕を表示→文字起こしを表示してコピペすると、もし要約使えなくなっても対応できます\n本当便利", "url": "https://twitter.com/miku919191/status/2029152423730901098", "posted_at": "2026-03-04T11:10:12.000Z", "like_count": 14, "retweet_count": 1, "reply_count": 1, "is_contrarian": false, "group": "group3", "group_name": "中型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "miku919191", "display_name": "みくかぶ専業投資家", "text": "ナスダック先物プラ転", "url": "https://twitter.com/miku919191/status/2029150220563734914", "posted_at": "2026-03-04T11:01:27.000Z", "like_count": 62, "retweet_count": 2, "reply_count": null, "is_contrarian": false, "group": "group3", "group_name": "中型インフルエンサー", "categories": ["winning_trades"], "category_details": {"winning_trades": {"name": "勝ちトレード・利益報告", "matched_keywords": ["プラ転"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "uehara_sato4", "display_name": "上原＠投資家", "text": "ホルムズ海峡の通航状況。数日遅れにはなりますが、イランの戦争状況を把握するデータとして参考になりそう。", "url": "https://twitter.com/uehara_sato4/status/2029115580230549545", "posted_at": "2026-03-04T08:43:48.000Z", "like_count": 92, "retweet_count": 10, "reply_count": 17, "is_contrarian": false, "group": "group3", "group_name": "中型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "miku919191", "display_name": "みくかぶ専業投資家", "text": "アップル、発表前に「MacBook Neo」情報をうっかり公開　10万円切る格安モデルか（CNET Japan） \n\nこれサブとして良さそう\niPhoneより安い", "url": "https://twitter.com/miku919191/status/2029112224242123164", "posted_at": "2026-03-04T08:30:27.000Z", "like_count": 72, "retweet_count": 7, "reply_count": 2, "is_contrarian": false, "group": "group3", "group_name": "中型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "miku919191", "display_name": "みくかぶ専業投資家", "text": "米国株先物ちょい下落\nまあもともと下げてたので、下げ幅すくないねw", "url": "https://twitter.com/miku919191/status/2029106933811298542", "posted_at": "2026-03-04T08:09:26.000Z", "like_count": 69, "retweet_count": 4, "reply_count": 2, "is_contrarian": false, "group": "group3", "group_name": "中型インフルエンサー", "categories": ["bearish_assets"], "category_details": {"bearish_assets": {"name": "下落している資産", "matched_keywords": ["下落"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "miku919191", "display_name": "みくかぶ専業投資家", "text": "「数学的優位性」が、AIによって完全に壊され、勝つのはストーリーテリング・交渉・人間の文脈を理解する「言葉の人」 データでもコミュニケーションスキルの需要が爆増中\n\nこれはそう思う\nAIに聞けばいいから、頭が良いだけの感じ悪い人wと話すの嫌だなと思うようになったなあ", "url": "https://twitter.com/miku919191/status/2029085479426248822", "posted_at": "2026-03-04T06:44:11.000Z", "like_count": 32, "retweet_count": 2, "reply_count": 1, "is_contrarian": false, "group": "group3", "group_name": "中型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "uehara_sato4", "display_name": "上原＠投資家", "text": "今日プラスで終えたの嬉しい。リスク管理うまくなった感じする。", "url": "https://twitter.com/uehara_sato4/status/2029083279748677875", "posted_at": "2026-03-04T06:35:27.000Z", "like_count": 36, "retweet_count": null, "reply_count": 4, "is_contrarian": false, "group": "group3", "group_name": "中型インフルエンサー", "categories": ["winning_trades"], "category_details": {"winning_trades": {"name": "勝ちトレード・利益報告", "matched_keywords": ["プラス"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "miku919191", "display_name": "みくかぶ専業投資家", "text": "アンソロピックは、年間売上高が200億ドル（約3兆1500億円）近くに達する見通し\n昨年終盤時点の年率換算予想から倍余りに拡大\n\n2021年に設立で売上3兆\n急拡大している企業の予測なんか立たないよw \nAIは儲からないなんて全く思わないけど", "url": "https://twitter.com/miku919191/status/2029078504126726460", "posted_at": "2026-03-04T06:16:28.000Z", "like_count": 54, "retweet_count": 4, "reply_count": 2, "is_contrarian": false, "group": "group3", "group_name": "中型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "uehara_sato4", "display_name": "上原＠投資家", "text": "日経VIはちょっと下がってきた。韓国KOSPIはまだ弱い。\n\nリアルタイム市況は以下で見れます\n\n・日経VI\n\nhttps://\nindexes.nikkei.co.jp/nkave/index/pr\nofile?cid=0&idx=nk225vi\n…\n\n・韓国KOSPI\n\nhttps://\nnikkei225jp.com/_ssi/if/?c=313", "url": "https://twitter.com/uehara_sato4/status/2029076974606676060", "posted_at": "2026-03-04T06:10:23.000Z", "like_count": 27, "retweet_count": 3, "reply_count": 5, "is_contrarian": false, "group": "group3", "group_name": "中型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "uehara_sato4", "display_name": "上原＠投資家", "text": "", "url": "https://twitter.com/uehara_sato4/status/2029075916291490184", "posted_at": "2026-03-04T06:06:11.000Z", "like_count": 50, "retweet_count": 1, "reply_count": 4, "is_contrarian": false, "group": "group3", "group_name": "中型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "uehara_sato4", "display_name": "上原＠投資家", "text": "こういう時に思い出したい相場格言。\n\n「落ちてくるナイフはつかむな」\n「頭と尻尾はくれてやれ」\n\nこの相場で逆張りするのはリスク高いですよ。", "url": "https://twitter.com/uehara_sato4/status/2029066104296096220", "posted_at": "2026-03-04T05:27:12.000Z", "like_count": 104, "retweet_count": 6, "reply_count": 5, "is_contrarian": false, "group": "group3", "group_name": "中型インフルエンサー", "categories": ["market_trend"], "category_details": {"market_trend": {"name": "市況トレンドに関する見解", "matched_keywords": ["相場"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "miku919191", "display_name": "みくかぶ専業投資家", "text": "「SANAE　TOKEN」に関し、携わったとされる企業は、仮想通貨の発行に必要な登録がなく、事実関係を確認\n\nそもそも登録なかったんかい\n勝手に首相の名前使う以前にアウトだったw\n過去において、有名人が宣伝とか名前を使った仮想通貨ってほぼ100%ロクな事ない", "url": "https://twitter.com/miku919191/status/2029065317239144472", "posted_at": "2026-03-04T05:24:04.000Z", "like_count": 113, "retweet_count": 12, "reply_count": 1, "is_contrarian": false, "group": "group3", "group_name": "中型インフルエンサー", "categories": ["purchased_assets"], "category_details": {"purchased_assets": {"name": "個人で購入・保有している資産", "matched_keywords": ["仮想通貨"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "momoblog0214", "display_name": "モモ米国株投資", "text": "爆益ではあったけど、引用元のポストにも書いた通り、そんなに多くは買ってなくて。\n「もっと買っておけばよかったな〜」って思ってるんだよね。\n\nでも、そう思ってるってことは、\nまた下がるかもしれない\n今月の美容代くらいは利確しておこうかな。\n\n美容への投資はプライスレス", "url": "https://twitter.com/momoblog0214/status/2029372355890622713", "posted_at": "2026-03-05T01:44:08.000Z", "like_count": 12, "retweet_count": null, "reply_count": null, "is_contrarian": false, "group": "group4", "group_name": "小型インフルエンサー", "categories": ["sold_assets", "winning_trades"], "category_details": {"sold_assets": {"name": "売却した資産", "matched_keywords": ["利確"], "matched_patterns": [], "is_from_contrarian": false}, "winning_trades": {"name": "勝ちトレード・利益報告", "matched_keywords": ["爆益"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "momoblog0214", "display_name": "モモ米国株投資", "text": "買った瞬間に爆益でラッキー  \n\n最近「買い煽りしてる」って言われることがあるけど、  \n日本株はこの1ヶ月、爆益報告なんてしてないんだよね。  \n\nそもそも有料商材もやってないし、  \n煽るメリットも特にない  \n\n私の感覚としては  \n「このラーメン美味しかったよ」", "url": "https://twitter.com/momoblog0214/status/2029356412846186949", "posted_at": "2026-03-05T00:40:47.000Z", "like_count": 88, "retweet_count": null, "reply_count": 6, "is_contrarian": false, "group": "group4", "group_name": "小型インフルエンサー", "categories": ["recommended_assets", "purchased_assets", "winning_trades"], "category_details": {"recommended_assets": {"name": "オススメしている資産・セクター", "matched_keywords": ["買い"], "matched_patterns": [], "is_from_contrarian": false}, "purchased_assets": {"name": "個人で購入・保有している資産", "matched_keywords": ["買った"], "matched_patterns": [], "is_from_contrarian": false}, "winning_trades": {"name": "勝ちトレード・利益報告", "matched_keywords": ["爆益"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "momoblog0214", "display_name": "モモ米国株投資", "text": "この値段で、Mac買えるの凄くない？\n\n子供が小学校で配布されたPCがダサくて…\nいっそ小学校〜高校まで全部MacBook Neoにしたらいいのに\n\n私も外に持ち歩きようにピンク買おうかな\nと思ったくらい、カラーも可愛いし、\niPad感覚で買えるのがいいよね", "url": "https://twitter.com/momoblog0214/status/2029323479569637717", "posted_at": "2026-03-04T22:29:55.000Z", "like_count": 39, "retweet_count": 2, "reply_count": 3, "is_contrarian": false, "group": "group4", "group_name": "小型インフルエンサー", "categories": ["recommended_assets"], "category_details": {"recommended_assets": {"name": "オススメしている資産・セクター", "matched_keywords": ["がいい"], "matched_patterns": ["感覚で買えるのがいい"], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "momoblog0214", "display_name": "モモ米国株投資", "text": "ブロードコム $AVGO\n前回の決算はこちら", "url": "https://twitter.com/momoblog0214/status/2029319880844165257", "posted_at": "2026-03-04T22:15:37.000Z", "like_count": 11, "retweet_count": null, "reply_count": null, "is_contrarian": false, "group": "group4", "group_name": "小型インフルエンサー", "categories": ["market_trend"], "category_details": {"market_trend": {"name": "市況トレンドに関する見解", "matched_keywords": ["決算"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "momoblog0214", "display_name": "モモ米国株投資", "text": "ヴィーバ・システムズ $VEEV\n前回の決算はこちら", "url": "https://twitter.com/momoblog0214/status/2029319605064495297", "posted_at": "2026-03-04T22:14:31.000Z", "like_count": 9, "retweet_count": null, "reply_count": null, "is_contrarian": false, "group": "group4", "group_name": "小型インフルエンサー", "categories": ["market_trend"], "category_details": {"market_trend": {"name": "市況トレンドに関する見解", "matched_keywords": ["決算"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "momoblog0214", "display_name": "モモ米国株投資", "text": "Apple プレリリース\n\nMacBook Neoが新登場", "url": "https://twitter.com/momoblog0214/status/2029318587454992530", "posted_at": "2026-03-04T22:10:28.000Z", "like_count": 8, "retweet_count": null, "reply_count": null, "is_contrarian": false, "group": "group4", "group_name": "小型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "momoblog0214", "display_name": "モモ米国株投資", "text": "99,800円の MacBook Neo が登場！\nAppleが贈る最もお手頃な新型ノートPC\n\n￼美しく頑丈なアルミニウムボディ\nMacBook Neoは、頑丈なアルミニウムのボディに、ブラッシュ・インディゴ・シルバー・シトラスの4色をそろえた、おしゃれな新型ノートPCです。", "url": "https://twitter.com/momoblog0214/status/2029318584388964693", "posted_at": "2026-03-04T22:10:28.000Z", "like_count": 47, "retweet_count": 9, "reply_count": 2, "is_contrarian": false, "group": "group4", "group_name": "小型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "momoblog0214", "display_name": "モモ米国株投資", "text": "ブロードコム $AVGO\n2026年度Q1決算を発表\nAI半導体売上が前年比106%増と爆発的成長\n株価は時間外で0.1%上昇\n\nFY26 Q1業績\nEPS: 2.05ドル(予想2.02ドル)\n売上高: 193.1億ドル(予想191.4億ドル)\n売上高成長率: +29% Y/Y\n\nFY26 Q2ガイダンス\n売上高: 約220億ドル(予想204.0億ドル)", "url": "https://twitter.com/momoblog0214/status/2029311525215977875", "posted_at": "2026-03-04T21:42:25.000Z", "like_count": 177, "retweet_count": 36, "reply_count": 4, "is_contrarian": false, "group": "group4", "group_name": "小型インフルエンサー", "categories": ["winning_trades", "market_trend", "bullish_assets"], "category_details": {"winning_trades": {"name": "勝ちトレード・利益報告", "matched_keywords": [], "matched_patterns": ["+29%"], "is_from_contrarian": false}, "market_trend": {"name": "市況トレンドに関する見解", "matched_keywords": ["決算", "業績"], "matched_patterns": [], "is_from_contrarian": false}, "bullish_assets": {"name": "高騰している資産", "matched_keywords": ["上昇"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "momoblog0214", "display_name": "モモ米国株投資", "text": "ヴィーバ・システムズ $VEEV\n2026年度Q4決算を発表\n全項目でガイダンスを上回る好決算\n株価は時間外で8%上昇\n\nFY26 Q4業績\nEPS: 2.06ドル(予想1.94ドル)\n売上高: 8.36億ドル(予想8.12億ドル)\n売上高成長率: +16% Y/Y\nサブスクリプション収益: 7.08億ドル(+16% Y/Y)", "url": "https://twitter.com/momoblog0214/status/2029307371718361595", "posted_at": "2026-03-04T21:25:54.000Z", "like_count": 48, "retweet_count": 6, "reply_count": 2, "is_contrarian": false, "group": "group4", "group_name": "小型インフルエンサー", "categories": ["winning_trades", "market_trend", "bullish_assets"], "category_details": {"winning_trades": {"name": "勝ちトレード・利益報告", "matched_keywords": [], "matched_patterns": ["+16%", "収益: 7.08億ドル(+16%"], "is_from_contrarian": false}, "market_trend": {"name": "市況トレンドに関する見解", "matched_keywords": ["決算", "業績"], "matched_patterns": [], "is_from_contrarian": false}, "bullish_assets": {"name": "高騰している資産", "matched_keywords": ["上昇"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "nobutaro_mane", "display_name": "信太郎米国株投資", "text": "どう考えても前者\n\n後者は老化による減少と、美への投資による増加がかち合ってるけど\n\n老化による現象は指数関数的に激しくなるから抗えない\n\nやはり男も女も会社で人を雇うか、子供を育ててるかという何かを背負ってないと35以降はお話にならない", "url": "https://twitter.com/nobutaro_mane/status/2029243128427999575", "posted_at": "2026-03-04T17:10:37.000Z", "like_count": 7, "retweet_count": null, "reply_count": null, "is_contrarian": false, "group": "group4", "group_name": "小型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "nobutaro_mane", "display_name": "信太郎米国株投資", "text": "トルコがNATO加盟国なのは今知ったわ、流石にNATO東に広げすぎやろ\n\nまぁNATOの主力米軍がそもそも先制攻撃してるんだけども...", "url": "https://twitter.com/nobutaro_mane/status/2029215869721837736", "posted_at": "2026-03-04T15:22:19.000Z", "like_count": 41, "retweet_count": null, "reply_count": 1, "is_contrarian": false, "group": "group4", "group_name": "小型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "お得情報ブロガー", "display_name": "ペイさん", "text": "楽天で5のつく日が開始｜PR\n\n5のつく日\n\nhttps://\na.r10.to/h6cE0U\n\n勝ったら倍\n\nhttps://\na.r10.to/hUSGcC\n\n楽モバの人限定で3倍\n\nhttps://\nnetwork.mobile.rakuten.co.jp/lp/link/event/\n20260305/\n…\n\n対象ショップ10倍\n\nhttps://\na.r10.to/hkK8pn\n\n対象ショップ1,000円オフ\n\nhttps://\na.r10.to/hFuG3c\n\n抽選で最大100%還元", "url": "https://twitter.com/pay_cashless/status/2029214024001544475", "posted_at": "2026-03-04T15:14:58.000Z", "like_count": 10, "retweet_count": 1, "reply_count": null, "is_contrarian": false, "group": "group4", "group_name": "小型インフルエンサー", "categories": ["winning_trades", "ipo", "bullish_assets"], "category_details": {"winning_trades": {"name": "勝ちトレード・利益報告", "matched_keywords": ["勝った"], "matched_patterns": [], "is_from_contrarian": false}, "ipo": {"name": "申し込んだIPO", "matched_keywords": ["抽選"], "matched_patterns": [], "is_from_contrarian": false}, "bullish_assets": {"name": "高騰している資産", "matched_keywords": [], "matched_patterns": ["3倍"], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "momoblog0214", "display_name": "モモ米国株投資", "text": "ARMの株価はなぜ上がらない？\n決算でわかった今後の懸念点と将来性", "url": "https://twitter.com/momoblog0214/status/2029166132809351245", "posted_at": "2026-03-04T12:04:40.000Z", "like_count": 13, "retweet_count": null, "reply_count": null, "is_contrarian": false, "group": "group4", "group_name": "小型インフルエンサー", "categories": ["market_trend"], "category_details": {"market_trend": {"name": "市況トレンドに関する見解", "matched_keywords": ["決算"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "momoblog0214", "display_name": "モモ米国株投資", "text": "Armアーキテクチャ基盤の「FUJITSU-MONAKA」\n富士通の次世代プロセッサーがデータセンターを変える\n\nスパコン「富岳」の技術を、データセンターへ\n富士通は、世界最速スーパーコンピュータ「富岳」で培った技術を土台に、次世代プロセッサー「FUJITSU-MONAKA」を開発しています。", "url": "https://twitter.com/momoblog0214/status/2029165919487094961", "posted_at": "2026-03-04T12:03:49.000Z", "like_count": 49, "retweet_count": 3, "reply_count": 3, "is_contrarian": false, "group": "group4", "group_name": "小型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "nobutaro_mane", "display_name": "信太郎米国株投資", "text": "おいおい米国さん暴れすぎやろ2026年\n\n>\n 中東が炎上している中、米国はエクアドルでひっそりと軍事作戦を開始した。", "url": "https://twitter.com/nobutaro_mane/status/2029155528862253245", "posted_at": "2026-03-04T11:22:32.000Z", "like_count": 418, "retweet_count": 106, "reply_count": 7, "is_contrarian": false, "group": "group4", "group_name": "小型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "nobutaro_mane", "display_name": "信太郎米国株投資", "text": "引用感謝の声が止まらないw", "url": "https://twitter.com/nobutaro_mane/status/2029155037218521265", "posted_at": "2026-03-04T11:20:35.000Z", "like_count": 33, "retweet_count": null, "reply_count": null, "is_contrarian": false, "group": "group4", "group_name": "小型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "momoblog0214", "display_name": "モモ米国株投資", "text": "優良株が安値で売られるのは、こんな時\n\n優良株が安くなる3つのタイミング\n\n市場全体が動揺している時\n例：リーマンショック、コロナショック\n→ 何でも売られる“総悲観”の局面\n\n市場は好調だが、特定の業界だけが不調な時\n例：ハイテクバブル期の石油業界\n→", "url": "https://twitter.com/momoblog0214/status/2029147361256325564", "posted_at": "2026-03-04T10:50:05.000Z", "like_count": 42, "retweet_count": 2, "reply_count": 2, "is_contrarian": false, "group": "group4", "group_name": "小型インフルエンサー", "categories": ["bullish_assets", "warning_signals"], "category_details": {"bullish_assets": {"name": "高騰している資産", "matched_keywords": ["好調"], "matched_patterns": [], "is_from_contrarian": false}, "warning_signals": {"name": "警戒すべき動き・逆指標シグナル", "matched_keywords": ["バブル"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "お得情報ブロガー", "display_name": "ペイさん", "text": "楽天で39ショップ2倍が追加｜PR\n\n39ショップ2倍\n\nhttps://\na.r10.to/hNtB8n\n\n<以下も20:00〜開始>\n対象ショップ5倍\n\nhttps://\na.r10.to/hkStJL\n対象ショップ7倍\n\nhttps://\na.r10.to/h5Hep5\n対象ショップ10倍\n\nhttps://\na.r10.to/hgP5dU\n対象ショップ10倍②\n\nhttps://\na.r10.to/hPAhQU", "url": "https://twitter.com/pay_cashless/status/2029143353158492199", "posted_at": "2026-03-04T10:34:09.000Z", "like_count": 10, "retweet_count": 1, "reply_count": null, "is_contrarian": false, "group": "group4", "group_name": "小型インフルエンサー", "categories": ["purchased_assets", "bullish_assets"], "category_details": {"purchased_assets": {"name": "個人で購入・保有している資産", "matched_keywords": ["追加"], "matched_patterns": [], "is_from_contrarian": false}, "bullish_assets": {"name": "高騰している資産", "matched_keywords": [], "matched_patterns": ["2倍"], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "nobutaro_mane", "display_name": "信太郎米国株投資", "text": "見せしめ、、てか今これ誰が指揮してるんだろうか、、現場のリーダーシップ強い部長格？", "url": "https://twitter.com/nobutaro_mane/status/2029134637969359216", "posted_at": "2026-03-04T09:59:31.000Z", "like_count": 39, "retweet_count": null, "reply_count": 2, "is_contrarian": false, "group": "group4", "group_name": "小型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "yys87495867", "display_name": "YS | FX億トレ専業トレーダー", "text": "2月は100万円で始めたデイトレ口座を284万円まで増やすことができました！月利184%でしたね！読者の方も利益がでてて嬉しい限りです！\n\n結果は出来すぎですが、やっていることは常にマイルールの徹底です。私が、どこに注目し、立ち回っているかFXnoteで体感して頂ければと思います！", "url": "https://twitter.com/yys87495867/status/2029401174257090744", "posted_at": "2026-03-05T03:38:39.000Z", "like_count": 23, "retweet_count": 4, "reply_count": 1, "is_contrarian": false, "group": "group5", "group_name": "極小型インフルエンサー", "categories": ["recommended_assets"], "category_details": {"recommended_assets": {"name": "オススメしている資産・セクター", "matched_keywords": ["注目"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "YasLovesTech", "display_name": "やす  ベンチャーキャピタル", "text": "Anthropicが再びペンタゴンとAIの契約に関する協議を行っている", "url": "https://twitter.com/YasLovesTech/status/2029393381638500635", "posted_at": "2026-03-05T03:07:41.000Z", "like_count": 37, "retweet_count": 2, "reply_count": null, "is_contrarian": false, "group": "group5", "group_name": "極小型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "YasLovesTech", "display_name": "やす  ベンチャーキャピタル", "text": "イスラエルのテルアビブがイランのミサイルに爆撃されてます\n\n\n@grok\n  ファクトチェックよろしく", "url": "https://twitter.com/YasLovesTech/status/2029391174104969268", "posted_at": "2026-03-05T02:58:54.000Z", "like_count": 63, "retweet_count": 3, "reply_count": 1, "is_contrarian": false, "group": "group5", "group_name": "極小型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "yys87495867", "display_name": "YS | FX億トレ専業トレーダー", "text": "ホルムズ海峡だけの問題ではなくなってきてる...", "url": "https://twitter.com/yys87495867/status/2029384658870526058", "posted_at": "2026-03-05T02:33:01.000Z", "like_count": 38, "retweet_count": 3, "reply_count": null, "is_contrarian": false, "group": "group5", "group_name": "極小型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "yys87495867", "display_name": "YS | FX億トレ専業トレーダー", "text": "日米金融相場の振り返り（3/4 6:00 - 3/5 05:59）", "url": "https://twitter.com/yys87495867/status/2029380342013178093", "posted_at": "2026-03-05T02:15:52.000Z", "like_count": 11, "retweet_count": 1, "reply_count": null, "is_contrarian": false, "group": "group5", "group_name": "極小型インフルエンサー", "categories": ["market_trend"], "category_details": {"market_trend": {"name": "市況トレンドに関する見解", "matched_keywords": ["相場"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "yys87495867", "display_name": "YS | FX億トレ専業トレーダー", "text": "FXnote 更新しました。\nいつもありがとうございます！", "url": "https://twitter.com/yys87495867/status/2029379602939060587", "posted_at": "2026-03-05T02:12:56.000Z", "like_count": 15, "retweet_count": 2, "reply_count": 1, "is_contrarian": false, "group": "group5", "group_name": "極小型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "YasLovesTech", "display_name": "やす  ベンチャーキャピタル", "text": "はい、相場的には、それもあるんだろうなと見てると思います。最悪期は過ぎたと思います\n\nただ、イラン情勢自体は長引くので、次は原油高などによるインフレがじわじわと中期的に痛めつけるかなと思います", "url": "https://twitter.com/YasLovesTech/status/2029374277531611529", "posted_at": "2026-03-05T01:51:46.000Z", "like_count": 4, "retweet_count": null, "reply_count": null, "is_contrarian": false, "group": "group5", "group_name": "極小型インフルエンサー", "categories": ["market_trend"], "category_details": {"market_trend": {"name": "市況トレンドに関する見解", "matched_keywords": ["相場", "インフレ"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "YasLovesTech", "display_name": "やす  ベンチャーキャピタル", "text": "昨晩の米国市場の朝刊を書いてます！基本的にはイラン情勢の短期的な収束が見えたことで相場は反発してるかと思います\n\nよろしければ、お昼・通勤に読んでもらえると", "url": "https://twitter.com/YasLovesTech/status/2029371172438049052", "posted_at": "2026-03-05T01:39:26.000Z", "like_count": 27, "retweet_count": 2, "reply_count": null, "is_contrarian": false, "group": "group5", "group_name": "極小型インフルエンサー", "categories": ["market_trend", "bullish_assets"], "category_details": {"market_trend": {"name": "市況トレンドに関する見解", "matched_keywords": ["相場"], "matched_patterns": [], "is_from_contrarian": false}, "bullish_assets": {"name": "高騰している資産", "matched_keywords": ["反発"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "YasLovesTech", "display_name": "やす  ベンチャーキャピタル", "text": "本日+4%超の爆上げの日経ですが\n\n・ショート勢の買い戻しによる上昇(ショートカバー)\n・今回の下げで大儲けした集団は当然次の機会を狙う\n\nこの視点で見ると相場の見え方も変わってきます\n\n値動きが極端になってるので、日本株は長期上昇でもボラの高い相場になるかもしれませんね ", "url": "https://twitter.com/YasLovesTech/status/2029370425570947214", "posted_at": "2026-03-05T01:36:27.000Z", "like_count": 93, "retweet_count": 9, "reply_count": 2, "is_contrarian": false, "group": "group5", "group_name": "極小型インフルエンサー", "categories": ["recommended_assets", "winning_trades", "market_trend", "bullish_assets"], "category_details": {"recommended_assets": {"name": "オススメしている資産・セクター", "matched_keywords": ["買い"], "matched_patterns": [], "is_from_contrarian": false}, "winning_trades": {"name": "勝ちトレード・利益報告", "matched_keywords": [], "matched_patterns": ["+4%"], "is_from_contrarian": false}, "market_trend": {"name": "市況トレンドに関する見解", "matched_keywords": ["相場"], "matched_patterns": [], "is_from_contrarian": false}, "bullish_assets": {"name": "高騰している資産", "matched_keywords": ["爆上げ", "上昇"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "YasLovesTech", "display_name": "やす  ベンチャーキャピタル", "text": "マーケット耐性というか、ミサイルを打てば打つほど弱体化していってるので、むしろプラス材料なんじゃないかなと思ってますw\n\nもうあと1−2週間したら１発も打てなくなるすらあります", "url": "https://twitter.com/YasLovesTech/status/2029368379274911843", "posted_at": "2026-03-05T01:28:20.000Z", "like_count": 9, "retweet_count": 1, "reply_count": 1, "is_contrarian": false, "group": "group5", "group_name": "極小型インフルエンサー", "categories": ["winning_trades"], "category_details": {"winning_trades": {"name": "勝ちトレード・利益報告", "matched_keywords": ["プラス"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "YasLovesTech", "display_name": "やす  ベンチャーキャピタル", "text": "【速報】イランがイスラエルに向けてミサイルを発射  \n\n＊また基地が特定されて、一瞬で破壊されて、継戦能力がどんどんなくなっていきます\n\n\n@grok\n ファクトチェックお願いします", "url": "https://twitter.com/YasLovesTech/status/2029365009428496472", "posted_at": "2026-03-05T01:14:56.000Z", "like_count": 130, "retweet_count": 10, "reply_count": 5, "is_contrarian": false, "group": "group5", "group_name": "極小型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "YasLovesTech", "display_name": "やす  ベンチャーキャピタル", "text": "韓国の株式市場は本日12%上昇(笑)\n極端すぎるでしょww", "url": "https://twitter.com/YasLovesTech/status/2029364200040992857", "posted_at": "2026-03-05T01:11:43.000Z", "like_count": 77, "retweet_count": 6, "reply_count": 4, "is_contrarian": false, "group": "group5", "group_name": "極小型インフルエンサー", "categories": ["bullish_assets"], "category_details": {"bullish_assets": {"name": "高騰している資産", "matched_keywords": ["上昇"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "YasLovesTech", "display_name": "やす  ベンチャーキャピタル", "text": "$AVGO があの程度のビートで時間外で+4%も伸びてるからやっぱモメンタム変わったかなと思ってます\n1月・2月ならメタメタに売られてた", "url": "https://twitter.com/YasLovesTech/status/2029348324080243078", "posted_at": "2026-03-05T00:08:38.000Z", "like_count": 7, "retweet_count": null, "reply_count": 1, "is_contrarian": false, "group": "group5", "group_name": "極小型インフルエンサー", "categories": ["winning_trades"], "category_details": {"winning_trades": {"name": "勝ちトレード・利益報告", "matched_keywords": [], "matched_patterns": ["+4%"], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "YasLovesTech", "display_name": "やす  ベンチャーキャピタル", "text": "$AVGO 結局アフターで+4%まで上昇\n\nちょっと前まではこの程度の決算では爆下げだったのが、モメンタムが変わったのを感じますよね\n\nM7やFANG+は底打ちしてるかもしれませんね\nヒタヒタ上げていきましょう", "url": "https://twitter.com/YasLovesTech/status/2029339563152343324", "posted_at": "2026-03-04T23:33:49.000Z", "like_count": 132, "retweet_count": 8, "reply_count": null, "is_contrarian": false, "group": "group5", "group_name": "極小型インフルエンサー", "categories": ["winning_trades", "market_trend", "bullish_assets", "warning_signals"], "category_details": {"winning_trades": {"name": "勝ちトレード・利益報告", "matched_keywords": [], "matched_patterns": ["+4%"], "is_from_contrarian": false}, "market_trend": {"name": "市況トレンドに関する見解", "matched_keywords": ["決算"], "matched_patterns": [], "is_from_contrarian": false}, "bullish_assets": {"name": "高騰している資産", "matched_keywords": ["上昇"], "matched_patterns": [], "is_from_contrarian": false}, "warning_signals": {"name": "警戒すべき動き・逆指標シグナル", "matched_keywords": ["底打ち"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "YasLovesTech", "display_name": "やす  ベンチャーキャピタル", "text": "まぁ、ナス100 ( $QQQ )や FANG+ ( $FGNS ), M7 ( $MAGS )持っておけば、長期的には良い相場だと思ってます\n\n米国株から流れた韓国や日本が一気にやられましたよね。PERだけが伸びてふわふわしてる日本株よりこっちのがいいと個人的には思いますよ", "url": "https://twitter.com/YasLovesTech/status/2029321697229230401", "posted_at": "2026-03-04T22:22:50.000Z", "like_count": 158, "retweet_count": 12, "reply_count": null, "is_contrarian": false, "group": "group5", "group_name": "極小型インフルエンサー", "categories": ["recommended_assets", "market_trend"], "category_details": {"recommended_assets": {"name": "オススメしている資産・セクター", "matched_keywords": ["がいい"], "matched_patterns": ["だけが伸びてふわふわしてる日本株よりこっちのがいい"], "is_from_contrarian": false}, "market_trend": {"name": "市況トレンドに関する見解", "matched_keywords": ["相場"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "YasLovesTech", "display_name": "やす  ベンチャーキャピタル", "text": "本日はテック株や半導体を中心に３指数とも上昇\n金やビットコインも広く買われてます。VIXも大きく低下しボラティリティは低下してます\n\n一方、原油は高止まりしており、金利も４％維持なので引き続きインフレ＆利下げ後退でマクロ環境は厳しいかと思われます\n\nドル円も157円維持です", "url": "https://twitter.com/YasLovesTech/status/2029321104028799038", "posted_at": "2026-03-04T22:20:28.000Z", "like_count": 72, "retweet_count": 3, "reply_count": null, "is_contrarian": false, "group": "group5", "group_name": "極小型インフルエンサー", "categories": ["recommended_assets", "market_trend", "bullish_assets"], "category_details": {"recommended_assets": {"name": "オススメしている資産・セクター", "matched_keywords": ["ビットコイン"], "matched_patterns": [], "is_from_contrarian": false}, "market_trend": {"name": "市況トレンドに関する見解", "matched_keywords": ["利下げ", "インフレ", "金利", "VIX", "マクロ"], "matched_patterns": [], "is_from_contrarian": false}, "bullish_assets": {"name": "高騰している資産", "matched_keywords": ["上昇"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "YasLovesTech", "display_name": "やす  ベンチャーキャピタル", "text": "おはようございます。本日の朝刊です\n\nイラン情勢の最悪期を脱した思惑で米国は大きく上昇VIXも大きく低下し、短期的にはイラン戦争をきっかけとする調整相場は終焉\n\nただ、原油高やインフレ懸念が残り中期的に株価が伸びるかは見極めが必要そうです\n\n詳細はこちら", "url": "https://twitter.com/YasLovesTech/status/2029320318360190977", "posted_at": "2026-03-04T22:17:21.000Z", "like_count": 59, "retweet_count": 4, "reply_count": null, "is_contrarian": false, "group": "group5", "group_name": "極小型インフルエンサー", "categories": ["market_trend", "bullish_assets"], "category_details": {"market_trend": {"name": "市況トレンドに関する見解", "matched_keywords": ["相場", "インフレ", "VIX"], "matched_patterns": [], "is_from_contrarian": false}, "bullish_assets": {"name": "高騰している資産", "matched_keywords": ["上昇"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "YasLovesTech", "display_name": "やす  ベンチャーキャピタル", "text": "どうやって男女が出会ったかの1930年から2024年までの推移。昔は学校や友達経由が多かったですよね...", "url": "https://twitter.com/YasLovesTech/status/2029315834670149917", "posted_at": "2026-03-04T21:59:32.000Z", "like_count": 346, "retweet_count": 95, "reply_count": 5, "is_contrarian": false, "group": "group5", "group_name": "極小型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "YasLovesTech", "display_name": "やす  ベンチャーキャピタル", "text": "【速報】\n米国政府関係者がFox Newsに語ったところによると、数千人のイラク系クルド人戦闘員がイラン国内に対して地上攻勢（地上戦）を開始した\n\n\n@grok\n ファクトチェックよろしくお願いします", "url": "https://twitter.com/YasLovesTech/status/2029315423376756958", "posted_at": "2026-03-04T21:57:54.000Z", "like_count": 64, "retweet_count": 13, "reply_count": 2, "is_contrarian": false, "group": "group5", "group_name": "極小型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "YasLovesTech", "display_name": "やす  ベンチャーキャピタル", "text": "$AVGO ブロードコム\n\n売上：$19.31B（予想 $19.18B）\nEPS：$2.05vs$2.03\nQ2ガイダンス：$22B (予想 $20.5B)\n純利益：$7.35B\nQ2 AI半導体売上：$10.7B\n\n自社株/配当\n$10Bの自社株買い\n四半期配当：$0.65/株\n\n時間外ではほぼ横ばいの反応\n決算クリアできたみたいで良かったですね", "url": "https://twitter.com/YasLovesTech/status/2029309904947953741", "posted_at": "2026-03-04T21:35:58.000Z", "like_count": 108, "retweet_count": 6, "reply_count": 1, "is_contrarian": false, "group": "group5", "group_name": "極小型インフルエンサー", "categories": ["recommended_assets", "market_trend"], "category_details": {"recommended_assets": {"name": "オススメしている資産・セクター", "matched_keywords": ["買い"], "matched_patterns": [], "is_from_contrarian": false}, "market_trend": {"name": "市況トレンドに関する見解", "matched_keywords": ["決算"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "gihuboy", "display_name": "岐阜暴威", "text": "キックの担当者の人とやり取りしてたらすでに俺のアカウントは収益化できるようにしてもらえてるらしい。\n外配信は画質がいいのと収益率がYouTubeの1.4倍ほどあるキックでやります、東京やらの観光所巡りします", "url": "https://twitter.com/gihuboy/status/2029395581685383570", "posted_at": "2026-03-05T03:16:25.000Z", "like_count": 110, "retweet_count": 14, "reply_count": 33, "is_contrarian": true, "group": "group6", "group_name": "逆指標インフルエンサー", "categories": ["recommended_assets", "bullish_assets", "warning_signals"], "category_details": {"recommended_assets": {"name": "オススメしている資産・セクター", "matched_keywords": ["がいい"], "matched_patterns": ["外配信は画質がいい"], "is_from_contrarian": false}, "bullish_assets": {"name": "高騰している資産", "matched_keywords": [], "matched_patterns": ["4倍"], "is_from_contrarian": false}, "warning_signals": {"name": "警戒すべき動き・逆指標シグナル", "matched_keywords": [], "matched_patterns": [], "is_from_contrarian": true, "note": "逆指標インフルエンサーからの投稿（投資関連カテゴリあり）"}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "gihuboy", "display_name": "岐阜暴威", "text": "たびん今日また55000われくらいはありと思う。明日の寄りはすんごい弱そう。岐阜スカウターによるとね。", "url": "https://twitter.com/gihuboy/status/2029391610312835568", "posted_at": "2026-03-05T03:00:38.000Z", "like_count": 647, "retweet_count": 163, "reply_count": 112, "is_contrarian": true, "group": "group6", "group_name": "逆指標インフルエンサー", "categories": ["warning_signals"], "category_details": {"warning_signals": {"name": "警戒すべき動き・逆指標シグナル", "matched_keywords": ["岐阜"], "matched_patterns": [], "is_from_contrarian": true}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "gihuboy", "display_name": "岐阜暴威", "text": "か、かんこく兄さん！？！？！？", "url": "https://twitter.com/gihuboy/status/2029347525728321915", "posted_at": "2026-03-05T00:05:28.000Z", "like_count": 899, "retweet_count": 129, "reply_count": 75, "is_contrarian": true, "group": "group6", "group_name": "逆指標インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "gihuboy", "display_name": "岐阜暴威", "text": "俺は歩かんぞ\n東京までなんか歩かない", "url": "https://twitter.com/gihuboy/status/2029344059312226422", "posted_at": "2026-03-04T23:51:41.000Z", "like_count": 1400, "retweet_count": 209, "reply_count": 261, "is_contrarian": true, "group": "group6", "group_name": "逆指標インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "gihuboy", "display_name": "岐阜暴威", "text": "【FX,CFD,株配信】それでもおっれは損切りをする漢　２０２６年３月５日 \nhttps://\nyoutube.com/live/G0USWd6I6\nRs?si=qQI00vGHoyLX1cQf\n… \n@YouTube\nより", "url": "https://twitter.com/gihuboy/status/2029342850572533935", "posted_at": "2026-03-04T23:46:53.000Z", "like_count": 30, "retweet_count": 4, "reply_count": 5, "is_contrarian": true, "group": "group6", "group_name": "逆指標インフルエンサー", "categories": ["sold_assets", "warning_signals"], "category_details": {"sold_assets": {"name": "売却した資産", "matched_keywords": ["損切り"], "matched_patterns": [], "is_from_contrarian": false}, "warning_signals": {"name": "警戒すべき動き・逆指標シグナル", "matched_keywords": [], "matched_patterns": [], "is_from_contrarian": true, "note": "逆指標インフルエンサーからの投稿（投資関連カテゴリあり）"}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "gihuboy", "display_name": "岐阜暴威", "text": "誰も言わないから言うよ。\n今日損切りしたやつは偉い。\n5年10年持つポジションならともかくスイングくらいのつもりなら今日の損切りは必須。引け後に戦争終結するかなんかよめない。続落の可能性、さらにひどい下落になる可能性もあった。持ち越した人で傍観者になった自覚があるのなら焦るべきだよ。", "url": "https://twitter.com/gihuboy/status/2029195399018496306", "posted_at": "2026-03-04T14:00:58.000Z", "like_count": 1700, "retweet_count": 224, "reply_count": 236, "is_contrarian": true, "group": "group6", "group_name": "逆指標インフルエンサー", "categories": ["sold_assets", "bearish_assets", "warning_signals"], "category_details": {"sold_assets": {"name": "売却した資産", "matched_keywords": ["損切り"], "matched_patterns": ["損切りした"], "is_from_contrarian": false}, "bearish_assets": {"name": "下落している資産", "matched_keywords": ["下落", "続落"], "matched_patterns": [], "is_from_contrarian": false}, "warning_signals": {"name": "警戒すべき動き・逆指標シグナル", "matched_keywords": [], "matched_patterns": [], "is_from_contrarian": true, "note": "逆指標インフルエンサーからの投稿（投資関連カテゴリあり）"}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "gihuboy", "display_name": "岐阜暴威", "text": "もう本当に相場がわからん\n勝てる気しない\nどうしようかなぁ", "url": "https://twitter.com/gihuboy/status/2029144135966584965", "posted_at": "2026-03-04T10:37:16.000Z", "like_count": 1100, "retweet_count": 85, "reply_count": 268, "is_contrarian": true, "group": "group6", "group_name": "逆指標インフルエンサー", "categories": ["market_trend", "warning_signals"], "category_details": {"market_trend": {"name": "市況トレンドに関する見解", "matched_keywords": ["相場"], "matched_patterns": [], "is_from_contrarian": false}, "warning_signals": {"name": "警戒すべき動き・逆指標シグナル", "matched_keywords": [], "matched_patterns": [], "is_from_contrarian": true, "note": "逆指標インフルエンサーからの投稿（投資関連カテゴリあり）"}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "gihuboy", "display_name": "岐阜暴威", "text": "岐阜駅きた", "url": "https://twitter.com/gihuboy/status/2029120183248601366", "posted_at": "2026-03-04T09:02:05.000Z", "like_count": 823, "retweet_count": 51, "reply_count": 88, "is_contrarian": true, "group": "group6", "group_name": "逆指標インフルエンサー", "categories": ["warning_signals"], "category_details": {"warning_signals": {"name": "警戒すべき動き・逆指標シグナル", "matched_keywords": ["岐阜"], "matched_patterns": [], "is_from_contrarian": true}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "gihuboy", "display_name": "岐阜暴威", "text": "哲也さん切込さんさきさんの東海ブロック会合してきました、いやぁーすごいわ、めちゃくちゃ勉強になった…夜には忘れてると思う", "url": "https://twitter.com/gihuboy/status/2029084645095293287", "posted_at": "2026-03-04T06:40:52.000Z", "like_count": 1300, "retweet_count": 36, "reply_count": 93, "is_contrarian": true, "group": "group6", "group_name": "逆指標インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "gihuboy", "display_name": "岐阜暴威", "text": "某哲也ニキの本ゲットしたど！\nそして哲也ニキにうなぎ奢ってもらった！5歳まで戻らなきゃ！！うおおお！", "url": "https://twitter.com/gihuboy/status/2029043277308322072", "posted_at": "2026-03-04T03:56:29.000Z", "like_count": 222, "retweet_count": 13, "reply_count": 42, "is_contrarian": true, "group": "group6", "group_name": "逆指標インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "gihuboy", "display_name": "岐阜暴威", "text": "持って耐えてたらとんでもないことになっていた、、、あと個人的にこの個人の押し目買いが入りながら下落していく感じ、、、これはまだまだ下げる予感する\n個人狙われてる", "url": "https://twitter.com/gihuboy/status/2029016435721384283", "posted_at": "2026-03-04T02:09:50.000Z", "like_count": 1000, "retweet_count": 121, "reply_count": 111, "is_contrarian": true, "group": "group6", "group_name": "逆指標インフルエンサー", "categories": ["recommended_assets", "bearish_assets", "warning_signals"], "category_details": {"recommended_assets": {"name": "オススメしている資産・セクター", "matched_keywords": ["買い"], "matched_patterns": [], "is_from_contrarian": false}, "bearish_assets": {"name": "下落している資産", "matched_keywords": ["下落"], "matched_patterns": [], "is_from_contrarian": false}, "warning_signals": {"name": "警戒すべき動き・逆指標シグナル", "matched_keywords": [], "matched_patterns": [], "is_from_contrarian": true, "note": "逆指標インフルエンサーからの投稿（投資関連カテゴリあり）"}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "gihuboy", "display_name": "岐阜暴威", "text": "全部損切りしておいてよかった、、、\n俺にはムラリヤ", "url": "https://twitter.com/gihuboy/status/2029003601105092786", "posted_at": "2026-03-04T01:18:50.000Z", "like_count": 1600, "retweet_count": 373, "reply_count": 152, "is_contrarian": true, "group": "group6", "group_name": "逆指標インフルエンサー", "categories": ["sold_assets", "warning_signals"], "category_details": {"sold_assets": {"name": "売却した資産", "matched_keywords": ["損切り"], "matched_patterns": [], "is_from_contrarian": false}, "warning_signals": {"name": "警戒すべき動き・逆指標シグナル", "matched_keywords": [], "matched_patterns": [], "is_from_contrarian": true, "note": "逆指標インフルエンサーからの投稿（投資関連カテゴリあり）"}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "gihuboy", "display_name": "岐阜暴威", "text": "しぶとねぽずせゃうんくぢしうすめすと", "url": "https://twitter.com/gihuboy/status/2029001943226712525", "posted_at": "2026-03-04T01:12:14.000Z", "like_count": 115, "retweet_count": 7, "reply_count": 21, "is_contrarian": true, "group": "group6", "group_name": "逆指標インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "gihuboy", "display_name": "岐阜暴威", "text": "【FX,CFD,株配信】資産最安値更新漢　２０２６年３月４日 \nhttps://\nyoutube.com/live/aiUljQWHe\nd0?si=r1RE0MvG8hdUElq8\n… \n@YouTube\nより", "url": "https://twitter.com/gihuboy/status/2028979183096086819", "posted_at": "2026-03-03T23:41:48.000Z", "like_count": 68, "retweet_count": 3, "reply_count": 17, "is_contrarian": true, "group": "group6", "group_name": "逆指標インフルエンサー", "categories": ["bearish_assets", "warning_signals"], "category_details": {"bearish_assets": {"name": "下落している資産", "matched_keywords": ["安値更新"], "matched_patterns": [], "is_from_contrarian": false}, "warning_signals": {"name": "警戒すべき動き・逆指標シグナル", "matched_keywords": [], "matched_patterns": [], "is_from_contrarian": true, "note": "逆指標インフルエンサーからの投稿（投資関連カテゴリあり）"}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "gihuboy", "display_name": "岐阜暴威", "text": "ｶﾐﾀﾏ！ｶﾐﾀﾏｧｧｧｧｧ！ﾜｧｧｧｧ", "url": "https://twitter.com/gihuboy/status/2028927154428563680", "posted_at": "2026-03-03T20:15:03.000Z", "like_count": 1200, "retweet_count": 139, "reply_count": 96, "is_contrarian": true, "group": "group6", "group_name": "逆指標インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "gihuboy", "display_name": "岐阜暴威", "text": "さっき54700あたりまであがったのになぁ、、、なんで損切り後に取り直したんだろう、、、資産めちゃくちゃなくなるおわり", "url": "https://twitter.com/gihuboy/status/2028844272091586725", "posted_at": "2026-03-03T14:45:43.000Z", "like_count": 763, "retweet_count": 81, "reply_count": 52, "is_contrarian": true, "group": "group6", "group_name": "逆指標インフルエンサー", "categories": ["sold_assets", "warning_signals"], "category_details": {"sold_assets": {"name": "売却した資産", "matched_keywords": ["損切り"], "matched_patterns": ["損切り後に取り直した"], "is_from_contrarian": false}, "warning_signals": {"name": "警戒すべき動き・逆指標シグナル", "matched_keywords": [], "matched_patterns": [], "is_from_contrarian": true, "note": "逆指標インフルエンサーからの投稿（投資関連カテゴリあり）"}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "gihuboy", "display_name": "岐阜暴威", "text": "これやべぇ、、、臨界点までいくと韓国個人の大量の追証、ぶん投げがありえる…", "url": "https://twitter.com/gihuboy/status/2028842757226426629", "posted_at": "2026-03-03T14:39:42.000Z", "like_count": 368, "retweet_count": 58, "reply_count": 12, "is_contrarian": true, "group": "group6", "group_name": "逆指標インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "gihuboy", "display_name": "岐阜暴威", "text": "たのむクソリバウンドしてくれ\nアメリカの強さ見せてくれ", "url": "https://twitter.com/gihuboy/status/2028840615656792365", "posted_at": "2026-03-03T14:31:11.000Z", "like_count": 329, "retweet_count": 31, "reply_count": 32, "is_contrarian": true, "group": "group6", "group_name": "逆指標インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "gihuboy", "display_name": "岐阜暴威", "text": "明日が怖い、、、\nお金がまたなくなる、、、", "url": "https://twitter.com/gihuboy/status/2028838537697865949", "posted_at": "2026-03-03T14:22:56.000Z", "like_count": 496, "retweet_count": 25, "reply_count": 46, "is_contrarian": true, "group": "group6", "group_name": "逆指標インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "gihuboy", "display_name": "岐阜暴威", "text": "もし明日の朝までに日経55555超えてたら東京まで歩いていきますよ", "url": "https://twitter.com/gihuboy/status/2028808371072319934", "posted_at": "2026-03-03T12:23:03.000Z", "like_count": 3400, "retweet_count": 1000, "reply_count": 258, "is_contrarian": true, "group": "group6", "group_name": "逆指標インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "gihuboy", "display_name": "岐阜暴威", "text": "全部損切りします\n明日はノーポジの可能性あります", "url": "https://twitter.com/gihuboy/status/2028800094779384205", "posted_at": "2026-03-03T11:50:10.000Z", "like_count": 3000, "retweet_count": 950, "reply_count": 282, "is_contrarian": true, "group": "group6", "group_name": "逆指標インフルエンサー", "categories": ["sold_assets", "warning_signals"], "category_details": {"sold_assets": {"name": "売却した資産", "matched_keywords": ["損切り"], "matched_patterns": [], "is_from_contrarian": false}, "warning_signals": {"name": "警戒すべき動き・逆指標シグナル", "matched_keywords": [], "matched_patterns": [], "is_from_contrarian": true, "note": "逆指標インフルエンサーからの投稿（投資関連カテゴリあり）"}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "gihuboy", "display_name": "岐阜暴威", "text": "典型的な身内暴露の流れきたね溝口さん\n\nいい流れの時は全員のっかるけど、逆回転しだすと今まで気に入らなかった人らが途端に裏切りだす。\nこっから身内暴露でひどいことになるんだろうな。", "url": "https://twitter.com/gihuboy/status/2028794505911235066", "posted_at": "2026-03-03T11:27:58.000Z", "like_count": 813, "retweet_count": 115, "reply_count": 16, "is_contrarian": true, "group": "group6", "group_name": "逆指標インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "gihuboy", "display_name": "岐阜暴威", "text": "何がホルムズだよ\n日経がホルズルンしてんじゃねーか", "url": "https://twitter.com/gihuboy/status/2028787721893023747", "posted_at": "2026-03-03T11:01:00.000Z", "like_count": 312, "retweet_count": 28, "reply_count": 50, "is_contrarian": true, "group": "group6", "group_name": "逆指標インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "gihuboy", "display_name": "岐阜暴威", "text": "ここ2年で大量に現れた株の先生たちが真価を問われる地合いがきている。直近2回の下げは耐えれば助かった。今回はどうだろうか？GDP下押しリスクもある。", "url": "https://twitter.com/gihuboy/status/2028784785586594234", "posted_at": "2026-03-03T10:49:20.000Z", "like_count": 374, "retweet_count": 31, "reply_count": 26, "is_contrarian": true, "group": "group6", "group_name": "逆指標インフルエンサー", "categories": ["market_trend", "warning_signals"], "category_details": {"market_trend": {"name": "市況トレンドに関する見解", "matched_keywords": ["地合い", "GDP"], "matched_patterns": [], "is_from_contrarian": false}, "warning_signals": {"name": "警戒すべき動き・逆指標シグナル", "matched_keywords": [], "matched_patterns": [], "is_from_contrarian": true, "note": "逆指標インフルエンサーからの投稿（投資関連カテゴリあり）"}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "gihuboy", "display_name": "岐阜暴威", "text": "こういう相場を見ると古参の人らの防御力の高さに驚くし感服する。今日ポジ減らした人めちゃ多い。相場上昇してるときに攻めまくって資金を増やすのはもしかしたら初心者の方が有利かもしれない。だけどそういう人らはほぼ急落か下落相場で上げ相場と同じことして消えていく。", "url": "https://twitter.com/gihuboy/status/2028779613208658190", "posted_at": "2026-03-03T10:28:47.000Z", "like_count": 357, "retweet_count": 33, "reply_count": 24, "is_contrarian": true, "group": "group6", "group_name": "逆指標インフルエンサー", "categories": ["market_trend", "bullish_assets", "bearish_assets", "warning_signals"], "category_details": {"market_trend": {"name": "市況トレンドに関する見解", "matched_keywords": ["相場"], "matched_patterns": [], "is_from_contrarian": false}, "bullish_assets": {"name": "高騰している資産", "matched_keywords": ["上昇"], "matched_patterns": [], "is_from_contrarian": false}, "bearish_assets": {"name": "下落している資産", "matched_keywords": ["急落", "下落"], "matched_patterns": [], "is_from_contrarian": false}, "warning_signals": {"name": "警戒すべき動き・逆指標シグナル", "matched_keywords": [], "matched_patterns": [], "is_from_contrarian": true, "note": "逆指標インフルエンサーからの投稿（投資関連カテゴリあり）"}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "gihuboy", "display_name": "岐阜暴威", "text": "【FX,CFD,株配信】ちゃんと損切りすべきだった漢　２０２６年３月３日 \nhttps://\nyoutube.com/live/B8IydxSy_\ns8?si=H2H3PmbeRjlsp7xr\n… \n@YouTube\nより", "url": "https://twitter.com/gihuboy/status/2028773650737037731", "posted_at": "2026-03-03T10:05:05.000Z", "like_count": 57, "retweet_count": 7, "reply_count": 3, "is_contrarian": true, "group": "group6", "group_name": "逆指標インフルエンサー", "categories": ["sold_assets", "warning_signals"], "category_details": {"sold_assets": {"name": "売却した資産", "matched_keywords": ["損切り"], "matched_patterns": [], "is_from_contrarian": false}, "warning_signals": {"name": "警戒すべき動き・逆指標シグナル", "matched_keywords": [], "matched_patterns": [], "is_from_contrarian": true, "note": "逆指標インフルエンサーからの投稿（投資関連カテゴリあり）"}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "gihuboy", "display_name": "岐阜暴威", "text": "完全に死んだ\n明日、おそらく日経3000円安とか一番酷いと5000円安とかありえる、、、おれたぶんもう完全に終わる", "url": "https://twitter.com/gihuboy/status/2028752400635588926", "posted_at": "2026-03-03T08:40:39.000Z", "like_count": 4900, "retweet_count": 580, "reply_count": 418, "is_contrarian": true, "group": "group6", "group_name": "逆指標インフルエンサー", "categories": ["market_trend", "warning_signals"], "category_details": {"market_trend": {"name": "市況トレンドに関する見解", "matched_keywords": ["円安"], "matched_patterns": [], "is_from_contrarian": false}, "warning_signals": {"name": "警戒すべき動き・逆指標シグナル", "matched_keywords": [], "matched_patterns": [], "is_from_contrarian": true, "note": "逆指標インフルエンサーからの投稿（投資関連カテゴリあり）"}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "gihuboy", "display_name": "岐阜暴威", "text": "日経下げすぎてて泣いた\n今日含み損142万\n明日は250万までいくかもしれないおわったなぁ、、、", "url": "https://twitter.com/gihuboy/status/2028749641660215684", "posted_at": "2026-03-03T08:29:41.000Z", "like_count": 931, "retweet_count": 96, "reply_count": 78, "is_contrarian": true, "group": "group6", "group_name": "逆指標インフルエンサー", "categories": ["purchased_assets", "warning_signals"], "category_details": {"purchased_assets": {"name": "個人で購入・保有している資産", "matched_keywords": ["含み損"], "matched_patterns": [], "is_from_contrarian": false}, "warning_signals": {"name": "警戒すべき動き・逆指標シグナル", "matched_keywords": [], "matched_patterns": [], "is_from_contrarian": true, "note": "逆指標インフルエンサーからの投稿（投資関連カテゴリあり）"}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "gihuboy", "display_name": "岐阜暴威", "text": "いったああああああああああああ\n\n溝口、証人喚問いけやああああああああああああ", "url": "https://twitter.com/gihuboy/status/2028721178702205340", "posted_at": "2026-03-03T06:36:35.000Z", "like_count": 6700, "retweet_count": 514, "reply_count": 86, "is_contrarian": true, "group": "group6", "group_name": "逆指標インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "gihuboy", "display_name": "岐阜暴威", "text": "暴落しても大丈夫\nそばにいてくれるから", "url": "https://twitter.com/gihuboy/status/2028719849271328805", "posted_at": "2026-03-03T06:31:18.000Z", "like_count": 239, "retweet_count": 18, "reply_count": 25, "is_contrarian": true, "group": "group6", "group_name": "逆指標インフルエンサー", "categories": ["bearish_assets", "warning_signals"], "category_details": {"bearish_assets": {"name": "下落している資産", "matched_keywords": ["暴落"], "matched_patterns": [], "is_from_contrarian": false}, "warning_signals": {"name": "警戒すべき動き・逆指標シグナル", "matched_keywords": [], "matched_patterns": [], "is_from_contrarian": true, "note": "逆指標インフルエンサーからの投稿（投資関連カテゴリあり）"}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "gihuboy", "display_name": "岐阜暴威", "text": "【FX,CFD,株配信】完全に終わった含み損今日だけで100万漢　２０２６年３月３日 \nhttps://\nyoutube.com/live/Cgd9k3Kih\nig?si=Gn7qstcK77btwqGy\n… \n@YouTube\nより", "url": "https://twitter.com/gihuboy/status/2028698107358388684", "posted_at": "2026-03-03T05:04:54.000Z", "like_count": 53, "retweet_count": 6, "reply_count": 5, "is_contrarian": true, "group": "group6", "group_name": "逆指標インフルエンサー", "categories": ["purchased_assets", "bearish_assets", "warning_signals"], "category_details": {"purchased_assets": {"name": "個人で購入・保有している資産", "matched_keywords": ["含み損"], "matched_patterns": [], "is_from_contrarian": false}, "bearish_assets": {"name": "下落している資産", "matched_keywords": ["終わった"], "matched_patterns": ["完全に終わった"], "is_from_contrarian": false}, "warning_signals": {"name": "警戒すべき動き・逆指標シグナル", "matched_keywords": [], "matched_patterns": [], "is_from_contrarian": true, "note": "逆指標インフルエンサーからの投稿（投資関連カテゴリあり）"}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "gihuboy", "display_name": "岐阜暴威", "text": "含み損100万　おわった", "url": "https://twitter.com/gihuboy/status/2028696265622704575", "posted_at": "2026-03-03T04:57:35.000Z", "like_count": 792, "retweet_count": 54, "reply_count": 62, "is_contrarian": true, "group": "group6", "group_name": "逆指標インフルエンサー", "categories": ["purchased_assets", "warning_signals"], "category_details": {"purchased_assets": {"name": "個人で購入・保有している資産", "matched_keywords": ["含み損"], "matched_patterns": [], "is_from_contrarian": false}, "warning_signals": {"name": "警戒すべき動き・逆指標シグナル", "matched_keywords": [], "matched_patterns": [], "is_from_contrarian": true, "note": "逆指標インフルエンサーからの投稿（投資関連カテゴリあり）"}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "gihuboy", "display_name": "岐阜暴威", "text": "午前中は含み益65万だったんふぁぜ\nそれがこれよ", "url": "https://twitter.com/gihuboy/status/2028690583603310817", "posted_at": "2026-03-03T04:35:01.000Z", "like_count": 658, "retweet_count": 55, "reply_count": 67, "is_contrarian": true, "group": "group6", "group_name": "逆指標インフルエンサー", "categories": ["purchased_assets", "winning_trades", "warning_signals"], "category_details": {"purchased_assets": {"name": "個人で購入・保有している資産", "matched_keywords": ["含み益"], "matched_patterns": [], "is_from_contrarian": false}, "winning_trades": {"name": "勝ちトレード・利益報告", "matched_keywords": ["含み益"], "matched_patterns": [], "is_from_contrarian": false}, "warning_signals": {"name": "警戒すべき動き・逆指標シグナル", "matched_keywords": [], "matched_patterns": [], "is_from_contrarian": true, "note": "逆指標インフルエンサーからの投稿（投資関連カテゴリあり）"}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "gihuboy", "display_name": "岐阜暴威", "text": "なんでこんなに下手なんだろう、、、クッソ高音でめちゃくちゃかったわ\nおわった", "url": "https://twitter.com/gihuboy/status/2028674454185013441", "posted_at": "2026-03-03T03:30:55.000Z", "like_count": 344, "retweet_count": 38, "reply_count": 59, "is_contrarian": true, "group": "group6", "group_name": "逆指標インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "gihuboy", "display_name": "岐阜暴威", "text": "3月2日で130万なくなった独身41歳実家子供部屋無職禿おじさんのひるごはん", "url": "https://twitter.com/gihuboy/status/2028673032374669578", "posted_at": "2026-03-03T03:25:16.000Z", "like_count": 592, "retweet_count": 26, "reply_count": 50, "is_contrarian": true, "group": "group6", "group_name": "逆指標インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "goto_finance", "display_name": "後藤達也", "text": "◆ 穴埋め\n昨日急落した日経平均（2033円安）ですが、昨夕以降、先物が急速にリバウンドし、昨日の下落を穴埋めしました。原油価格が落ち着く兆しがあり、悲観に大きく傾いた市場心理がいったん持ち直しています。S&P500はイラン攻撃前の水準をほぼ回復しました", "url": "https://twitter.com/goto_finance/status/2029316687011713176", "posted_at": "2026-03-04T22:02:55.000Z", "like_count": 1300, "retweet_count": 191, "reply_count": 10, "is_contrarian": false, "group": "group1", "group_name": "超大型インフルエンサー", "categories": ["market_trend", "bearish_assets"], "category_details": {"market_trend": {"name": "市況トレンドに関する見解", "matched_keywords": ["円安"], "matched_patterns": [], "is_from_contrarian": false}, "bearish_assets": {"name": "下落している資産", "matched_keywords": ["急落", "下落"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "株", "display_name": "cis", "text": "深夜の先物56400売り", "url": "https://twitter.com/cissan_9984/status/2029271499853709528", "posted_at": "2026-03-04T19:03:22.000Z", "like_count": 925, "retweet_count": 70, "reply_count": 93, "is_contrarian": false, "group": "group1", "group_name": "超大型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "株", "display_name": "cis", "text": "日経+2000か\nまた結局戦争下げは買い爆益か、、、\n俺は損切り済だが", "url": "https://twitter.com/cissan_9984/status/2029264145502355880", "posted_at": "2026-03-04T18:34:08.000Z", "like_count": 1800, "retweet_count": 88, "reply_count": 80, "is_contrarian": false, "group": "group1", "group_name": "超大型インフルエンサー", "categories": ["recommended_assets", "sold_assets", "winning_trades"], "category_details": {"recommended_assets": {"name": "オススメしている資産・セクター", "matched_keywords": ["買い"], "matched_patterns": [], "is_from_contrarian": false}, "sold_assets": {"name": "売却した資産", "matched_keywords": ["損切り"], "matched_patterns": [], "is_from_contrarian": false}, "winning_trades": {"name": "勝ちトレード・利益報告", "matched_keywords": ["爆益"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "goto_finance", "display_name": "後藤達也", "text": "◆ 一転 ほぼ穴埋め\nきょう2000円あまり下落した日経平均ですが、夕方以降、先物は大きく反発しています。いま2000円ほど上昇し56200円前後と、日中の下落分をほぼ穴埋めしています。S&P500先物は前日比で小幅上昇しています", "url": "https://twitter.com/goto_finance/status/2029151016772616488", "posted_at": "2026-03-04T11:04:36.000Z", "like_count": 1400, "retweet_count": 181, "reply_count": 21, "is_contrarian": false, "group": "group1", "group_name": "超大型インフルエンサー", "categories": ["bullish_assets", "bearish_assets"], "category_details": {"bullish_assets": {"name": "高騰している資産", "matched_keywords": ["上昇", "反発"], "matched_patterns": [], "is_from_contrarian": false}, "bearish_assets": {"name": "下落している資産", "matched_keywords": ["下落"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "株", "display_name": "cis", "text": "トランプサイダーし過ぎだろうに、、、\n発表前に+1000とか常識的に考えて", "url": "https://twitter.com/cissan_9984/status/2029147923846697188", "posted_at": "2026-03-04T10:52:19.000Z", "like_count": 2100, "retweet_count": 154, "reply_count": 157, "is_contrarian": false, "group": "group1", "group_name": "超大型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "株", "display_name": "cis", "text": "イラン停戦協議か\nやはり毎回漏れてるだろうに", "url": "https://twitter.com/cissan_9984/status/2029140629146734996", "posted_at": "2026-03-04T10:23:20.000Z", "like_count": 3900, "retweet_count": 491, "reply_count": 212, "is_contrarian": false, "group": "group1", "group_name": "超大型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "goto_finance", "display_name": "後藤達也", "text": "◆ 3日で4604円安\n日経平均は連日で記録的な急落となりました。イラン情勢の緊迫が長期化するとの懸念が主因です。インフレ再加速や経済活動の停滞が意識され、景気敏感株や金融株を中心に売りが強まりました。", "url": "https://twitter.com/goto_finance/status/2029095182965326077", "posted_at": "2026-03-04T07:22:45.000Z", "like_count": 1200, "retweet_count": 251, "reply_count": 17, "is_contrarian": false, "group": "group1", "group_name": "超大型インフルエンサー", "categories": ["sold_assets", "market_trend", "bearish_assets"], "category_details": {"sold_assets": {"name": "売却した資産", "matched_keywords": [], "matched_patterns": ["売りが強まりました"], "is_from_contrarian": false}, "market_trend": {"name": "市況トレンドに関する見解", "matched_keywords": ["インフレ", "円安", "景気"], "matched_patterns": [], "is_from_contrarian": false}, "bearish_assets": {"name": "下落している資産", "matched_keywords": ["急落"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "goto_finance", "display_name": "後藤達也", "text": " 先週末比、どの銘柄が\n日経平均、午前は2188円安（3.9%安）と急落しました。週初からの累計で4700円以上下落しています。\nどういった銘柄の下落がきついのか。時価総額上位30社で先週末比の下落率ランキングをつくりました", "url": "https://twitter.com/goto_finance/status/2029024905472426288", "posted_at": "2026-03-04T02:43:29.000Z", "like_count": 4300, "retweet_count": 928, "reply_count": 66, "is_contrarian": false, "group": "group1", "group_name": "超大型インフルエンサー", "categories": ["market_trend", "bearish_assets"], "category_details": {"market_trend": {"name": "市況トレンドに関する見解", "matched_keywords": ["円安"], "matched_patterns": [], "is_from_contrarian": false}, "bearish_assets": {"name": "下落している資産", "matched_keywords": ["急落", "下落"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "goto_finance", "display_name": "後藤達也", "text": "市況メモ\nきょうもClaudeをいじりながら、スライドのデザインに少し手を入れました。改善の余地はまだいろいろありそうなので、引き続き奮闘します。", "url": "https://twitter.com/goto_finance/status/2028974597606129849", "posted_at": "2026-03-03T23:23:35.000Z", "like_count": 1200, "retweet_count": 111, "reply_count": 10, "is_contrarian": false, "group": "group1", "group_name": "超大型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "goto_finance", "display_name": "後藤達也", "text": "【速報】株急落\n日経平均先物が夕方以降2200円ほど下落し、54000円を割り込んでいます。今日の日中の取引とあわせると4000円近くの下落です", "url": "https://twitter.com/goto_finance/status/2028775722605850927", "posted_at": "2026-03-03T10:13:19.000Z", "like_count": 4800, "retweet_count": 607, "reply_count": 130, "is_contrarian": false, "group": "group1", "group_name": "超大型インフルエンサー", "categories": ["bearish_assets"], "category_details": {"bearish_assets": {"name": "下落している資産", "matched_keywords": ["急落", "下落"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "株", "display_name": "cis", "text": "エヌビディアの決算の朝から日経5000下げか\n\nトランプの掌返しも信用ならないし\nイランが核をなんならの手段で手に入れたらナスは半額以下になるだろうし\n\nしばらくおやすみかな、、、", "url": "https://twitter.com/cissan_9984/status/2028755206620754070", "posted_at": "2026-03-03T08:51:48.000Z", "like_count": 2300, "retweet_count": 176, "reply_count": 101, "is_contrarian": false, "group": "group1", "group_name": "超大型インフルエンサー", "categories": ["market_trend"], "category_details": {"market_trend": {"name": "市況トレンドに関する見解", "matched_keywords": ["決算"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "株", "display_name": "cis", "text": "戦争下げ買い昨日の夜間の下げスピードにビビって損切り\nだいたいこういうの漏れてる", "url": "https://twitter.com/cissan_9984/status/2028722566425419965", "posted_at": "2026-03-03T06:42:06.000Z", "like_count": 2300, "retweet_count": 133, "reply_count": 141, "is_contrarian": false, "group": "group1", "group_name": "超大型インフルエンサー", "categories": ["recommended_assets", "sold_assets"], "category_details": {"recommended_assets": {"name": "オススメしている資産・セクター", "matched_keywords": ["買い"], "matched_patterns": [], "is_from_contrarian": false}, "sold_assets": {"name": "売却した資産", "matched_keywords": ["損切り"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "goto_finance", "display_name": "後藤達也", "text": "NY市況\nスライド、改善を重ねています。\n・チャートを4本に\n・原油をトップ、「1年」チャートにするなど柔軟運用\n・「きょうのニュース」を下半分に\n\n「いいね」が多いとモチベーションがあがるので、投稿頻度を上げていこうと思います（デザイン改善も）", "url": "https://twitter.com/goto_finance/status/2028595544617341107", "posted_at": "2026-03-02T22:17:21.000Z", "like_count": 3000, "retweet_count": 192, "reply_count": 11, "is_contrarian": false, "group": "group1", "group_name": "超大型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "株", "display_name": "cis", "text": "戦争暴落は買えば毎回爆益だが果たして今回は？\n俺はもちろんいつものようにビビりながら買い", "url": "https://twitter.com/cissan_9984/status/2028344500201140420", "posted_at": "2026-03-02T05:39:48.000Z", "like_count": 3700, "retweet_count": 242, "reply_count": 179, "is_contrarian": false, "group": "group1", "group_name": "超大型インフルエンサー", "categories": ["recommended_assets", "winning_trades", "bearish_assets"], "category_details": {"recommended_assets": {"name": "オススメしている資産・セクター", "matched_keywords": ["買い"], "matched_patterns": [], "is_from_contrarian": false}, "winning_trades": {"name": "勝ちトレード・利益報告", "matched_keywords": ["爆益"], "matched_patterns": [], "is_from_contrarian": false}, "bearish_assets": {"name": "下落している資産", "matched_keywords": ["暴落"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "2okutameo", "display_name": "弐億貯男", "text": "ブログ更新しました：資産のリバランスに対する私の考え方", "url": "https://twitter.com/2okutameo/status/2029301355005788186", "posted_at": "2026-03-04T21:02:00.000Z", "like_count": 49, "retweet_count": 1, "reply_count": null, "is_contrarian": false, "group": "group2", "group_name": "大型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "2okutameo", "display_name": "弐億貯男", "text": "暴落もつらいが、日経平均株価が爆戻ししてる日に保有株は小幅高だったりすると精神的にえぐられる\n中小型株持ってるとそれが意外に多い。\nいつ上がるねん！と言いたくなる", "url": "https://twitter.com/2okutameo/status/2029163648787284133", "posted_at": "2026-03-04T11:54:48.000Z", "like_count": 877, "retweet_count": 6, "reply_count": 23, "is_contrarian": false, "group": "group2", "group_name": "大型インフルエンサー", "categories": ["purchased_assets", "bearish_assets"], "category_details": {"purchased_assets": {"name": "個人で購入・保有している資産", "matched_keywords": ["保有"], "matched_patterns": [], "is_from_contrarian": false}, "bearish_assets": {"name": "下落している資産", "matched_keywords": ["暴落"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "2okutameo", "display_name": "弐億貯男", "text": "株式市場の暴落は大抵のケース、一回では終わらずに、もう一回や二回ありますので、リバウンド狙いはもう一回辛抱してからくらいの方が安全だと思います\n\n（経験者は語る）", "url": "https://twitter.com/2okutameo/status/2029130641082814763", "posted_at": "2026-03-04T09:43:38.000Z", "like_count": 2800, "retweet_count": 171, "reply_count": 77, "is_contrarian": false, "group": "group2", "group_name": "大型インフルエンサー", "categories": ["bearish_assets"], "category_details": {"bearish_assets": {"name": "下落している資産", "matched_keywords": ["暴落"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "2okutameo", "display_name": "弐億貯男", "text": "明日の相場は朝一大幅に反発して1,000円近く上昇するも、その後急速に上げ幅を縮めて一時はマイナス圏に突入し、最終的に小幅高で終わりそう…\n\nこんな具体的に書いたらきっと外れるけど、これまでの投資経験上はこう言う嫌な展開になりがち", "url": "https://twitter.com/2okutameo/status/2029128813653966854", "posted_at": "2026-03-04T09:36:23.000Z", "like_count": 1800, "retweet_count": 74, "reply_count": 74, "is_contrarian": false, "group": "group2", "group_name": "大型インフルエンサー", "categories": ["market_trend", "bullish_assets"], "category_details": {"market_trend": {"name": "市況トレンドに関する見解", "matched_keywords": ["相場"], "matched_patterns": [], "is_from_contrarian": false}, "bullish_assets": {"name": "高騰している資産", "matched_keywords": ["上昇", "反発"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "2okutameo", "display_name": "弐億貯男", "text": "私が運営する「割安成長株コミュニティ」に楽天モバイル社員の方が社割投稿をされたので、この楽天モバイル社員の方のアカウントをコミュニティからBANいたしました\n楽天モバイル社員の皆様\nこのようなことはお控えください", "url": "https://twitter.com/2okutameo/status/2029127466326081551", "posted_at": "2026-03-04T09:31:01.000Z", "like_count": 719, "retweet_count": 23, "reply_count": 11, "is_contrarian": false, "group": "group2", "group_name": "大型インフルエンサー", "categories": ["recommended_assets"], "category_details": {"recommended_assets": {"name": "オススメしている資産・セクター", "matched_keywords": ["割安"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "2okutameo", "display_name": "弐億貯男", "text": "", "url": "https://twitter.com/2okutameo/status/2029124810949730578", "posted_at": "2026-03-04T09:20:28.000Z", "like_count": 232, "retweet_count": 6, "reply_count": 16, "is_contrarian": false, "group": "group2", "group_name": "大型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "2okutameo", "display_name": "弐億貯男", "text": "夢ならばどれほど…", "url": "https://twitter.com/2okutameo/status/2029113398257172801", "posted_at": "2026-03-04T08:35:07.000Z", "like_count": 354, "retweet_count": 8, "reply_count": 9, "is_contrarian": false, "group": "group2", "group_name": "大型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "tapazou29", "display_name": "たぱぞう/米国株/不動産", "text": "日経平均だけでなく、韓国KOSPIはサーキットブレーカー発動、欧州DAXは3%超の急落。最近まで資金が入っていた市場から、お金が抜けている。", "url": "https://twitter.com/tapazou29/status/2029106482709709247", "posted_at": "2026-03-04T08:07:39.000Z", "like_count": 472, "retweet_count": 30, "reply_count": 21, "is_contrarian": false, "group": "group2", "group_name": "大型インフルエンサー", "categories": ["bearish_assets"], "category_details": {"bearish_assets": {"name": "下落している資産", "matched_keywords": ["急落"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "2okutameo", "display_name": "弐億貯男", "text": "株つらい", "url": "https://twitter.com/2okutameo/status/2029039133247807948", "posted_at": "2026-03-04T03:40:01.000Z", "like_count": 497, "retweet_count": 12, "reply_count": 23, "is_contrarian": false, "group": "group2", "group_name": "大型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "2okutameo", "display_name": "弐億貯男", "text": "年収を超えた", "url": "https://twitter.com/2okutameo/status/2029025754592555009", "posted_at": "2026-03-04T02:46:52.000Z", "like_count": 1700, "retweet_count": 63, "reply_count": 54, "is_contrarian": false, "group": "group2", "group_name": "大型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "2okutameo", "display_name": "弐億貯男", "text": "今日は暴落はなく、昨日に引き続いてダラダラと下げ続けるのかな。\nこうやってライフゲージを削られていくのは辛いですねー。", "url": "https://twitter.com/2okutameo/status/2028955353845797250", "posted_at": "2026-03-03T22:07:07.000Z", "like_count": 380, "retweet_count": 5, "reply_count": 17, "is_contrarian": false, "group": "group2", "group_name": "大型インフルエンサー", "categories": ["bearish_assets"], "category_details": {"bearish_assets": {"name": "下落している資産", "matched_keywords": ["暴落"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "2okutameo", "display_name": "弐億貯男", "text": "ブログ更新しました：ナンピン買いのタイミングとコツ", "url": "https://twitter.com/2okutameo/status/2028938967429619938", "posted_at": "2026-03-03T21:02:00.000Z", "like_count": 91, "retweet_count": 4, "reply_count": null, "is_contrarian": false, "group": "group2", "group_name": "大型インフルエンサー", "categories": ["recommended_assets", "purchased_assets"], "category_details": {"recommended_assets": {"name": "オススメしている資産・セクター", "matched_keywords": ["買い"], "matched_patterns": [], "is_from_contrarian": false}, "purchased_assets": {"name": "個人で購入・保有している資産", "matched_keywords": ["ナンピン"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "2okutameo", "display_name": "弐億貯男", "text": "やっぱり金価格は下げてるといってもかなり底堅い", "url": "https://twitter.com/2okutameo/status/2028808318391836897", "posted_at": "2026-03-03T12:22:51.000Z", "like_count": 49, "retweet_count": null, "reply_count": null, "is_contrarian": false, "group": "group2", "group_name": "大型インフルエンサー", "categories": ["recommended_assets"], "category_details": {"recommended_assets": {"name": "オススメしている資産・セクター", "matched_keywords": [], "matched_patterns": ["金価格"], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "2okutameo", "display_name": "弐億貯男", "text": "いまPTSの下げが大きくなっています。\nここだけの話、優良銘柄をストップ安で買い指値しておくと、ワンチャン買えちゃうかもしれません。\n\n知らんけど", "url": "https://twitter.com/2okutameo/status/2028803146781528122", "posted_at": "2026-03-03T12:02:18.000Z", "like_count": 731, "retweet_count": 8, "reply_count": 12, "is_contrarian": false, "group": "group2", "group_name": "大型インフルエンサー", "categories": ["recommended_assets", "purchased_assets", "bearish_assets"], "category_details": {"recommended_assets": {"name": "オススメしている資産・セクター", "matched_keywords": ["買い"], "matched_patterns": [], "is_from_contrarian": false}, "purchased_assets": {"name": "個人で購入・保有している資産", "matched_keywords": ["指値"], "matched_patterns": [], "is_from_contrarian": false}, "bearish_assets": {"name": "下落している資産", "matched_keywords": ["ストップ安"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "2okutameo", "display_name": "弐億貯男", "text": "「焼死いたしました」と返したことならある", "url": "https://twitter.com/2okutameo/status/2028799021578641625", "posted_at": "2026-03-03T11:45:54.000Z", "like_count": 172, "retweet_count": 10, "reply_count": null, "is_contrarian": false, "group": "group2", "group_name": "大型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "2okutameo", "display_name": "弐億貯男", "text": "のちに株式市場の暴落を人々は\nこう語ります\n「アンソロピック・トランプショック」と", "url": "https://twitter.com/2okutameo/status/2028797853934768320", "posted_at": "2026-03-03T11:41:16.000Z", "like_count": 158, "retweet_count": 3, "reply_count": 3, "is_contrarian": false, "group": "group2", "group_name": "大型インフルエンサー", "categories": ["bearish_assets"], "category_details": {"bearish_assets": {"name": "下落している資産", "matched_keywords": ["暴落"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "2okutameo", "display_name": "弐億貯男", "text": "", "url": "https://twitter.com/2okutameo/status/2028791776534991075", "posted_at": "2026-03-03T11:17:07.000Z", "like_count": 56, "retweet_count": 3, "reply_count": 2, "is_contrarian": false, "group": "group2", "group_name": "大型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "2okutameo", "display_name": "弐億貯男", "text": "ボ・ボボボーボ暴落来るー", "url": "https://twitter.com/2okutameo/status/2028787902944297178", "posted_at": "2026-03-03T11:01:43.000Z", "like_count": 626, "retweet_count": 32, "reply_count": 20, "is_contrarian": false, "group": "group2", "group_name": "大型インフルエンサー", "categories": ["bearish_assets"], "category_details": {"bearish_assets": {"name": "下落している資産", "matched_keywords": ["暴落"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "2okutameo", "display_name": "弐億貯男", "text": "イキって参億貯男にしなくて良かった", "url": "https://twitter.com/2okutameo/status/2028778554985767230", "posted_at": "2026-03-03T10:24:35.000Z", "like_count": 539, "retweet_count": 8, "reply_count": 5, "is_contrarian": false, "group": "group2", "group_name": "大型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "2okutameo", "display_name": "弐億貯男", "text": "今こそ思い出したい。\n \n現金買付余力は精神安定剤\n", "url": "https://twitter.com/2okutameo/status/2028772395310596143", "posted_at": "2026-03-03T10:00:06.000Z", "like_count": 924, "retweet_count": 16, "reply_count": 20, "is_contrarian": false, "group": "group2", "group_name": "大型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "2okutameo", "display_name": "弐億貯男", "text": "手加減してー", "url": "https://twitter.com/2okutameo/status/2028769098281443643", "posted_at": "2026-03-03T09:47:00.000Z", "like_count": 314, "retweet_count": 4, "reply_count": 15, "is_contrarian": false, "group": "group2", "group_name": "大型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "2okutameo", "display_name": "弐億貯男", "text": "私は吸わないんで分からないのですが、煙やにおいがなかったら物足りなかったりするのかな…", "url": "https://twitter.com/2okutameo/status/2028768830277972319", "posted_at": "2026-03-03T09:45:56.000Z", "like_count": 66, "retweet_count": 2, "reply_count": 8, "is_contrarian": false, "group": "group2", "group_name": "大型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "2okutameo", "display_name": "弐億貯男", "text": "金相場だけ眺めていたい", "url": "https://twitter.com/2okutameo/status/2028763291632414937", "posted_at": "2026-03-03T09:23:55.000Z", "like_count": 426, "retweet_count": 11, "reply_count": 7, "is_contrarian": false, "group": "group2", "group_name": "大型インフルエンサー", "categories": ["recommended_assets", "market_trend"], "category_details": {"recommended_assets": {"name": "オススメしている資産・セクター", "matched_keywords": [], "matched_patterns": ["金相場"], "is_from_contrarian": false}, "market_trend": {"name": "市況トレンドに関する見解", "matched_keywords": ["相場"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "2okutameo", "display_name": "弐億貯男", "text": "明日もおはぎゃーくる？", "url": "https://twitter.com/2okutameo/status/2028762532157284560", "posted_at": "2026-03-03T09:20:54.000Z", "like_count": 179, "retweet_count": 5, "reply_count": 15, "is_contrarian": false, "group": "group2", "group_name": "大型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "2okutameo", "display_name": "弐億貯男", "text": "", "url": "https://twitter.com/2okutameo/status/2028757465349665066", "posted_at": "2026-03-03T09:00:46.000Z", "like_count": 250, "retweet_count": 7, "reply_count": 10, "is_contrarian": false, "group": "group2", "group_name": "大型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "2okutameo", "display_name": "弐億貯男", "text": "「SaaSの死」の懸念で売られている上場企業各社は、問い合わせも受けてるでしょうから、AIが自社の業績にプラスかマイナスか見解を開示してほしいですね。\n\n正直ベースの内容で。", "url": "https://twitter.com/2okutameo/status/2028739981767004484", "posted_at": "2026-03-03T07:51:18.000Z", "like_count": 136, "retweet_count": 3, "reply_count": 3, "is_contrarian": false, "group": "group2", "group_name": "大型インフルエンサー", "categories": ["winning_trades", "market_trend"], "category_details": {"winning_trades": {"name": "勝ちトレード・利益報告", "matched_keywords": ["プラス"], "matched_patterns": [], "is_from_contrarian": false}, "market_trend": {"name": "市況トレンドに関する見解", "matched_keywords": ["業績"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "2okutameo", "display_name": "弐億貯男", "text": "私が保有するサイバートラスト（4498）がAI進展に伴う業績影響についての見解を発表\n\nAIの普及は同社事業にとって大きな成長機会。AI基盤に不可欠なLinuxの需要増や、C2P2準拠の「iTrust」による生成データの真偽証明、AIエージェント間の信頼性確保などの役割が今後さらに高まると分析。", "url": "https://twitter.com/2okutameo/status/2028737505441562982", "posted_at": "2026-03-03T07:41:28.000Z", "like_count": 94, "retweet_count": 2, "reply_count": 5, "is_contrarian": false, "group": "group2", "group_name": "大型インフルエンサー", "categories": ["purchased_assets", "market_trend"], "category_details": {"purchased_assets": {"name": "個人で購入・保有している資産", "matched_keywords": ["保有"], "matched_patterns": [], "is_from_contrarian": false}, "market_trend": {"name": "市況トレンドに関する見解", "matched_keywords": ["業績"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "2okutameo", "display_name": "弐億貯男", "text": "なかなかにアグレッシブな下落ですね\n※保有株↓", "url": "https://twitter.com/2okutameo/status/2028695191075578003", "posted_at": "2026-03-03T04:53:19.000Z", "like_count": 574, "retweet_count": 9, "reply_count": 25, "is_contrarian": false, "group": "group2", "group_name": "大型インフルエンサー", "categories": ["purchased_assets", "bearish_assets"], "category_details": {"purchased_assets": {"name": "個人で購入・保有している資産", "matched_keywords": ["保有"], "matched_patterns": [], "is_from_contrarian": false}, "bearish_assets": {"name": "下落している資産", "matched_keywords": ["下落"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "yukimamax", "display_name": "ゆきママ", "text": "はい。まさにおっしゃる通りだと思います。新興国株が米国株をアウトパフォームするのは、10年に1〜2回なので、どちらかというと警戒アラートですからね。\n一般の人は、世界最強国に投資を続けるのがベターだと思います。変に浮気しないことが大事ですね。", "url": "https://twitter.com/yukimamax/status/2029411180029362460", "posted_at": "2026-03-05T04:18:24.000Z", "like_count": 25, "retweet_count": 1, "reply_count": 1, "is_contrarian": false, "group": "group3", "group_name": "中型インフルエンサー", "categories": ["recommended_assets", "warning_signals"], "category_details": {"recommended_assets": {"name": "オススメしている資産・セクター", "matched_keywords": ["最強"], "matched_patterns": [], "is_from_contrarian": false}, "warning_signals": {"name": "警戒すべき動き・逆指標シグナル", "matched_keywords": ["警戒"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "yukimamax", "display_name": "ゆきママ", "text": "クウェート沖で停泊中のタンカーが大規模爆発に遭い油流出が発生したと英国海事セキュリティ機関UKMTOが報告。\n\n乗組員無事で小型艇の逃走が目撃された\n\n中東の米・イスラエル・イラン緊張の高まりに伴うホルムズ海峡周辺の船舶攻撃の一環と見られている。\n\nまだまだ荒れる中東情勢！", "url": "https://twitter.com/yukimamax/status/2029410679468483053", "posted_at": "2026-03-05T04:16:25.000Z", "like_count": 29, "retweet_count": 4, "reply_count": 6, "is_contrarian": false, "group": "group3", "group_name": "中型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "yukimamax", "display_name": "ゆきママ", "text": "円安インフレで日本株も上がる。特定のAI半導体株はもっと上がる。\n\n持つものと持たざる者で格差が無限に拡大する。そういう世の中になりますね。\n\n日本国内においては、プライシングパワーのないBtoCビジネスは厳しいと思います。\n\n観光客、海外に販路を持ってるなら別ですけど。", "url": "https://twitter.com/yukimamax/status/2029409677784817887", "posted_at": "2026-03-05T04:12:26.000Z", "like_count": 16, "retweet_count": null, "reply_count": 4, "is_contrarian": false, "group": "group3", "group_name": "中型インフルエンサー", "categories": ["market_trend"], "category_details": {"market_trend": {"name": "市況トレンドに関する見解", "matched_keywords": ["インフレ", "円安"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "yukimamax", "display_name": "ゆきママ", "text": "また日本を救ったのか？\n\nでもポジってない時の岐阜さんの的中率は半減以下だからなぁ…", "url": "https://twitter.com/yukimamax/status/2029409357268725984", "posted_at": "2026-03-05T04:11:10.000Z", "like_count": 27, "retweet_count": 1, "reply_count": 3, "is_contrarian": false, "group": "group3", "group_name": "中型インフルエンサー", "categories": ["warning_signals"], "category_details": {"warning_signals": {"name": "警戒すべき動き・逆指標シグナル", "matched_keywords": ["岐阜"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "paurooteri", "display_name": "パウロ", "text": "本日も元気に年初来高値を更新\n精工技研のnoteになります\nNvidaのCPOには必須な研磨で是非、読んでみてください\n拡散もよろしくお願いして", "url": "https://twitter.com/paurooteri/status/2029408292284649612", "posted_at": "2026-03-05T04:06:56.000Z", "like_count": 20, "retweet_count": null, "reply_count": 1, "is_contrarian": false, "group": "group3", "group_name": "中型インフルエンサー", "categories": ["bullish_assets"], "category_details": {"bullish_assets": {"name": "高騰している資産", "matched_keywords": ["年初来高値"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "paurooteri", "display_name": "パウロ", "text": "中古市場が活況になると言っている人もいるけど\nあそこは人選ぶだろうね\nそりゃ安いけど、悲しい気分になる人も割と多いよ", "url": "https://twitter.com/paurooteri/status/2029404342265233503", "posted_at": "2026-03-05T03:51:14.000Z", "like_count": 24, "retweet_count": 1, "reply_count": 3, "is_contrarian": false, "group": "group3", "group_name": "中型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "paurooteri", "display_name": "パウロ", "text": "パソコンの先生\nパニックバイなのでメモリは高騰は一過性\n\n2028年末まで待てば良いんですねっ", "url": "https://twitter.com/paurooteri/status/2029403820175048968", "posted_at": "2026-03-05T03:49:09.000Z", "like_count": 22, "retweet_count": null, "reply_count": 1, "is_contrarian": false, "group": "group3", "group_name": "中型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "paurooteri", "display_name": "パウロ", "text": "ついにこんな予想も\n2028年末まで待ってねっつ\n\n価格は2028年後半まで高止まりが予想されます。", "url": "https://twitter.com/paurooteri/status/2029403528759001601", "posted_at": "2026-03-05T03:48:00.000Z", "like_count": 25, "retweet_count": 1, "reply_count": 1, "is_contrarian": false, "group": "group3", "group_name": "中型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "paurooteri", "display_name": "パウロ", "text": "精工技研っつ", "url": "https://twitter.com/paurooteri/status/2029400140684173393", "posted_at": "2026-03-05T03:34:32.000Z", "like_count": 18, "retweet_count": null, "reply_count": 5, "is_contrarian": false, "group": "group3", "group_name": "中型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "paurooteri", "display_name": "パウロ", "text": "Apple新製品の勝ち組はTSMC筆頭\n\nAppleの新製品発表でTSMCとFoxconnの4大サプライチェーン企業が躍進！2万元以下を含むノートパソコン3機種の価格とスペック表。\n\nAppleは、10月2日遅くにiPhone 17eとM4チップを搭載した新型iPad", "url": "https://twitter.com/paurooteri/status/2029399612126331023", "posted_at": "2026-03-05T03:32:26.000Z", "like_count": 12, "retweet_count": 2, "reply_count": 4, "is_contrarian": false, "group": "group3", "group_name": "中型インフルエンサー", "categories": ["winning_trades"], "category_details": {"winning_trades": {"name": "勝ちトレード・利益報告", "matched_keywords": ["勝ち"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "yukimamax", "display_name": "ゆきママ", "text": "3/5 お昼休みはこれだけ読んどけ！ #ゆきママ投資メモ\n\n✔︎【前引け速報】日経は+1400円超の急反発TOPIXも上昇で『とりあえず安心感』が先行\n\n→", "url": "https://twitter.com/yukimamax/status/2029399597098185170", "posted_at": "2026-03-05T03:32:23.000Z", "like_count": 22, "retweet_count": 5, "reply_count": 4, "is_contrarian": false, "group": "group3", "group_name": "中型インフルエンサー", "categories": ["winning_trades", "bullish_assets"], "category_details": {"winning_trades": {"name": "勝ちトレード・利益報告", "matched_keywords": [], "matched_patterns": ["+1400円"], "is_from_contrarian": false}, "bullish_assets": {"name": "高騰している資産", "matched_keywords": ["上昇", "反発"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "paurooteri", "display_name": "パウロ", "text": "光は光の良さがある\n電気には電気の良さがある\n原理原則を理解し、定量的に丁寧に追わないといけない\n\n革ジャンがなぜスケールアップに光を使おうとしているか\nちゃんとVera Rubin、そしてVera Rubin Ultraのラックで何をしようとしているのか理解しないといけない", "url": "https://twitter.com/paurooteri/status/2029396533934998021", "posted_at": "2026-03-05T03:20:12.000Z", "like_count": 100, "retweet_count": 2, "reply_count": 6, "is_contrarian": false, "group": "group3", "group_name": "中型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "paurooteri", "display_name": "パウロ", "text": "ありがとうございますっ\n厳しい時こそ買い増しチャンスっ", "url": "https://twitter.com/paurooteri/status/2029394714227798501", "posted_at": "2026-03-05T03:12:58.000Z", "like_count": 39, "retweet_count": 2, "reply_count": 7, "is_contrarian": false, "group": "group3", "group_name": "中型インフルエンサー", "categories": ["recommended_assets", "purchased_assets"], "category_details": {"recommended_assets": {"name": "オススメしている資産・セクター", "matched_keywords": ["買い", "チャンス"], "matched_patterns": [], "is_from_contrarian": false}, "purchased_assets": {"name": "個人で購入・保有している資産", "matched_keywords": ["買い増し"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "paurooteri", "display_name": "パウロ", "text": "ぺ、ぺ、ペロリっ", "url": "https://twitter.com/paurooteri/status/2029394362233418062", "posted_at": "2026-03-05T03:11:34.000Z", "like_count": 27, "retweet_count": 1, "reply_count": 3, "is_contrarian": false, "group": "group3", "group_name": "中型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "yukimamax", "display_name": "ゆきママ", "text": "これこれ。つまりもう、ホックタンCEOを信じられるかどうかにかかってる。ワイ？もちろんワイは信じてるで！！", "url": "https://twitter.com/yukimamax/status/2029394098378162341", "posted_at": "2026-03-05T03:10:32.000Z", "like_count": 24, "retweet_count": 3, "reply_count": 2, "is_contrarian": false, "group": "group3", "group_name": "中型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "paurooteri", "display_name": "パウロ", "text": "決算至上主義になり過ぎましたよね\n謎のアナリストのコンセンサス平均がそもそも疑わしいのに決算を基準にするのがナンセンス", "url": "https://twitter.com/paurooteri/status/2029393979675160956", "posted_at": "2026-03-05T03:10:03.000Z", "like_count": 85, "retweet_count": 1, "reply_count": 5, "is_contrarian": false, "group": "group3", "group_name": "中型インフルエンサー", "categories": ["market_trend"], "category_details": {"market_trend": {"name": "市況トレンドに関する見解", "matched_keywords": ["決算"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "paurooteri", "display_name": "パウロ", "text": "TSMCのウェハバンクやOSATの緩衝機構含めて、四半期決算の数字を調節するもの半導体企業には必要ですよね", "url": "https://twitter.com/paurooteri/status/2029393198125338643", "posted_at": "2026-03-05T03:06:57.000Z", "like_count": 26, "retweet_count": null, "reply_count": 3, "is_contrarian": false, "group": "group3", "group_name": "中型インフルエンサー", "categories": ["market_trend"], "category_details": {"market_trend": {"name": "市況トレンドに関する見解", "matched_keywords": ["決算"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "paurooteri", "display_name": "パウロ", "text": "はい、Broadcomは特に意味ないです\nめちゃくちゃプッシュアウト、プルイン駆使して調整していますので", "url": "https://twitter.com/paurooteri/status/2029392835947167997", "posted_at": "2026-03-05T03:05:31.000Z", "like_count": 39, "retweet_count": 4, "reply_count": 4, "is_contrarian": false, "group": "group3", "group_name": "中型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "yukimamax", "display_name": "ゆきママ", "text": "何もできない植田。\n\nというか、マジでインフレやばそうだな。ホルムズ海峡の混乱はしばらく続くし、原油はそうそう下がらんと思う。\n\nそれで高市支援金が庶民にばら撒かれて、財政悪化で円売りだろ？\n\n詰んでる。なのでやっぱり米国株最強。1ドル＝200円の扉が開いている。", "url": "https://twitter.com/yukimamax/status/2029380893975167472", "posted_at": "2026-03-05T02:18:03.000Z", "like_count": 131, "retweet_count": 17, "reply_count": 16, "is_contrarian": false, "group": "group3", "group_name": "中型インフルエンサー", "categories": ["recommended_assets", "market_trend"], "category_details": {"recommended_assets": {"name": "オススメしている資産・セクター", "matched_keywords": ["最強"], "matched_patterns": [], "is_from_contrarian": false}, "market_trend": {"name": "市況トレンドに関する見解", "matched_keywords": ["インフレ"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "yukimamax", "display_name": "ゆきママ", "text": "じゃあGACKTコイン配ろうぜ。\n\n\nhttps://\nja.wikipedia.org/wiki/SPINDLE", "url": "https://twitter.com/yukimamax/status/2029378433223147716", "posted_at": "2026-03-05T02:08:17.000Z", "like_count": 152, "retweet_count": 8, "reply_count": 7, "is_contrarian": false, "group": "group3", "group_name": "中型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "yukimamax", "display_name": "ゆきママ", "text": "確かにそれはある。じゃあ最高値を更新できるかというと、おそらくFRBの利下げ待ち…", "url": "https://twitter.com/yukimamax/status/2029377098847273370", "posted_at": "2026-03-05T02:02:59.000Z", "like_count": 46, "retweet_count": 1, "reply_count": 2, "is_contrarian": false, "group": "group3", "group_name": "中型インフルエンサー", "categories": ["market_trend", "bullish_assets"], "category_details": {"market_trend": {"name": "市況トレンドに関する見解", "matched_keywords": ["利下げ"], "matched_patterns": [], "is_from_contrarian": false}, "bullish_assets": {"name": "高騰している資産", "matched_keywords": ["最高値"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "_teeeeest", "display_name": "ななし＠氷河期ブログの人", "text": "ワイは自分の努力不足過ぎるのでハイパー自己責任です\n\n今思ったらしんどいと思った時にこそ死ぬほど頑張るべきでした\n\nなので今頑張るしかない！", "url": "https://twitter.com/_teeeeest/status/2029376349274816995", "posted_at": "2026-03-05T02:00:00.000Z", "like_count": 12, "retweet_count": null, "reply_count": 1, "is_contrarian": false, "group": "group3", "group_name": "中型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "yukimamax", "display_name": "ゆきママ", "text": "韓国株、史上最大の上昇\n\nこういうもんです。買った人ナイスです\n\nそしてまだ安いです", "url": "https://twitter.com/yukimamax/status/2029373365266596153", "posted_at": "2026-03-05T01:48:08.000Z", "like_count": 91, "retweet_count": null, "reply_count": 4, "is_contrarian": false, "group": "group3", "group_name": "中型インフルエンサー", "categories": ["purchased_assets", "bullish_assets"], "category_details": {"purchased_assets": {"name": "個人で購入・保有している資産", "matched_keywords": ["買った"], "matched_patterns": [], "is_from_contrarian": false}, "bullish_assets": {"name": "高騰している資産", "matched_keywords": ["上昇"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "yukimamax", "display_name": "ゆきママ", "text": "再起戦が一旦の天井だな", "url": "https://twitter.com/yukimamax/status/2029364925328728514", "posted_at": "2026-03-05T01:14:36.000Z", "like_count": 44, "retweet_count": 4, "reply_count": 4, "is_contrarian": false, "group": "group3", "group_name": "中型インフルエンサー", "categories": ["warning_signals"], "category_details": {"warning_signals": {"name": "警戒すべき動き・逆指標シグナル", "matched_keywords": ["天井"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "yukimamax", "display_name": "ゆきママ", "text": "【ブクマ保存】\n株価が下がって苦しい時はパウロさんのnoteを見なさい\n▶︎\nhttps://\nnote.com/paul1211\n\nあ、口座開設は私のブログでよろしく\n\n日米国株＆NISAなら（ツール超優秀）  ▶︎\nhttps://\nyukimama.net/fks/matsui-kai\nsetsu/\n…\n\nFXなど短期トレード（迷ったらこれ） ▶︎\nhttps://\nyukimama.net/fks/gmo-accoun\nt-open/\n…", "url": "https://twitter.com/yukimamax/status/2029352601268175171", "posted_at": "2026-03-05T00:25:38.000Z", "like_count": 38, "retweet_count": 2, "reply_count": 1, "is_contrarian": false, "group": "group3", "group_name": "中型インフルエンサー", "categories": ["purchased_assets"], "category_details": {"purchased_assets": {"name": "個人で購入・保有している資産", "matched_keywords": ["NISA"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "yukimamax", "display_name": "ゆきママ", "text": "おはプラネット！\n\nネット上のみいちゃんたちを相手にする素晴らしいビジネス", "url": "https://twitter.com/yukimamax/status/2029350334980866403", "posted_at": "2026-03-05T00:16:38.000Z", "like_count": 35, "retweet_count": 2, "reply_count": 2, "is_contrarian": false, "group": "group3", "group_name": "中型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "Adscience12000", "display_name": "サん", "text": "$TTD\n凄い額だな。\nTTDのCEO、1.48億ドルもの巨額インサイダー買い。現在TTDはS&P500銘柄ワーストパフォーマンスランキング1、2位を争うほど株価低調。", "url": "https://twitter.com/Adscience12000/status/2029406075708162261", "posted_at": "2026-03-05T03:58:07.000Z", "like_count": 15, "retweet_count": null, "reply_count": 2, "is_contrarian": false, "group": "group5", "group_name": "極小型インフルエンサー", "categories": ["recommended_assets", "winning_trades"], "category_details": {"recommended_assets": {"name": "オススメしている資産・セクター", "matched_keywords": ["買い"], "matched_patterns": [], "is_from_contrarian": false}, "winning_trades": {"name": "勝ちトレード・利益報告", "matched_keywords": ["パフォーマンス"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "hd_qu8", "display_name": "米国株いつかは爆益予定ママ", "text": "ROBN（ロビンフッドブル2倍ETF）も、あと1%でプラ転する", "url": "https://twitter.com/hd_qu8/status/2029369950788632660", "posted_at": "2026-03-05T01:34:34.000Z", "like_count": 31, "retweet_count": null, "reply_count": 5, "is_contrarian": false, "group": "group5", "group_name": "極小型インフルエンサー", "categories": ["recommended_assets", "winning_trades", "bullish_assets"], "category_details": {"recommended_assets": {"name": "オススメしている資産・セクター", "matched_keywords": ["ETF"], "matched_patterns": [], "is_from_contrarian": false}, "winning_trades": {"name": "勝ちトレード・利益報告", "matched_keywords": ["プラ転"], "matched_patterns": [], "is_from_contrarian": false}, "bullish_assets": {"name": "高騰している資産", "matched_keywords": [], "matched_patterns": ["2倍"], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "Adscience12000", "display_name": "サん", "text": "", "url": "https://twitter.com/Adscience12000/status/2029358246994297141", "posted_at": "2026-03-05T00:48:04.000Z", "like_count": 24, "retweet_count": null, "reply_count": null, "is_contrarian": false, "group": "group5", "group_name": "極小型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "hd_qu8", "display_name": "米国株いつかは爆益予定ママ", "text": "おはようございます！\n来週から、サマータイムですね\n重要指標の発表時間が早くなるのが、嬉しい", "url": "https://twitter.com/hd_qu8/status/2029332368826474775", "posted_at": "2026-03-04T23:05:14.000Z", "like_count": 49, "retweet_count": 1, "reply_count": 2, "is_contrarian": false, "group": "group5", "group_name": "極小型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "Adscience12000", "display_name": "サん", "text": "↑ホルムズ海峡封鎖で天然ガスの値段がぁぁぁぁ\n\n↓引きのチャート", "url": "https://twitter.com/Adscience12000/status/2029329059403170146", "posted_at": "2026-03-04T22:52:05.000Z", "like_count": 44, "retweet_count": 2, "reply_count": 2, "is_contrarian": false, "group": "group5", "group_name": "極小型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "Adscience12000", "display_name": "サん", "text": "これ今日の韓国市場はショートした馬鹿が捕まって10％くらい上がるだろ。韓国の株式戦士たちよ、夜明けは近いぞ。しかし逆サーキットブレーカーってないのかね。取引停止の代わりにBotが買いまくってボーナス5％上乗せとかw", "url": "https://twitter.com/Adscience12000/status/2029322548140491248", "posted_at": "2026-03-04T22:26:13.000Z", "like_count": 30, "retweet_count": 1, "reply_count": 1, "is_contrarian": false, "group": "group5", "group_name": "極小型インフルエンサー", "categories": ["recommended_assets"], "category_details": {"recommended_assets": {"name": "オススメしている資産・セクター", "matched_keywords": ["買い"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "Adscience12000", "display_name": "サん", "text": "$AVGO", "url": "https://twitter.com/Adscience12000/status/2029309446560883097", "posted_at": "2026-03-04T21:34:09.000Z", "like_count": 36, "retweet_count": null, "reply_count": 2, "is_contrarian": false, "group": "group5", "group_name": "極小型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "Adscience12000", "display_name": "サん", "text": "彼はPLTRをめぐってマイケルバーリとレスバしてた漢。バーリがきれちらかしてたw", "url": "https://twitter.com/Adscience12000/status/2029308330897002712", "posted_at": "2026-03-04T21:29:43.000Z", "like_count": 5, "retweet_count": null, "reply_count": 1, "is_contrarian": false, "group": "group5", "group_name": "極小型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "Adscience12000", "display_name": "サん", "text": "$NVDA\nよく分かんねえ値動き解説マンより俺は革ジャンが確信する未来を信じるぞ！\n\n\"Compute equals revenues for company\"\n\"Compute equals GDP. Every country needs it\"\n\"We are at the beginning of this journey\"", "url": "https://twitter.com/Adscience12000/status/2029285794222162160", "posted_at": "2026-03-04T20:00:10.000Z", "like_count": 113, "retweet_count": 5, "reply_count": 1, "is_contrarian": false, "group": "group5", "group_name": "極小型インフルエンサー", "categories": ["market_trend"], "category_details": {"market_trend": {"name": "市況トレンドに関する見解", "matched_keywords": ["GDP"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "Adscience12000", "display_name": "サん", "text": "最近のシリコンバレー看板広告事情\n$SNOW よく見る\n$NVDA よく見る　\n$CRWV 消えた。。。\n$NBIS よく見る　\n$AI よく見る　\n$BLSH 消えた。。。\n\nここ数ヶ月で\n$IREN めっちゃ見る　AIがどうのこうの\n\nあとはiPhone、Geminiが多い。んで、今日初めてOpenAI の広告を見た。ChatGPTとだけ書いてあった。", "url": "https://twitter.com/Adscience12000/status/2029263800705401170", "posted_at": "2026-03-04T18:32:46.000Z", "like_count": 147, "retweet_count": 11, "reply_count": null, "is_contrarian": false, "group": "group5", "group_name": "極小型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "Adscience12000", "display_name": "サん", "text": "$EWY\n韓国株ETF、本国の韓国市場が大暴落してた米国夜間セッションでは-10%くらいだったんだよ。今日はプラス推移。こういうボラが高いやつはショートもムズいから俺たち素人は急落を黙って受け止める。(もしくは高速損切り)", "url": "https://twitter.com/Adscience12000/status/2029224078142529585", "posted_at": "2026-03-04T15:54:56.000Z", "like_count": 35, "retweet_count": null, "reply_count": 1, "is_contrarian": false, "group": "group5", "group_name": "極小型インフルエンサー", "categories": ["recommended_assets", "sold_assets", "winning_trades", "bearish_assets"], "category_details": {"recommended_assets": {"name": "オススメしている資産・セクター", "matched_keywords": ["ETF"], "matched_patterns": [], "is_from_contrarian": false}, "sold_assets": {"name": "売却した資産", "matched_keywords": ["損切り"], "matched_patterns": [], "is_from_contrarian": false}, "winning_trades": {"name": "勝ちトレード・利益報告", "matched_keywords": ["プラス"], "matched_patterns": [], "is_from_contrarian": false}, "bearish_assets": {"name": "下落している資産", "matched_keywords": ["暴落", "急落"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "hd_qu8", "display_name": "米国株いつかは爆益予定ママ", "text": "2月6日くらい、CONLとROBNの含み損で−600万円とかだったんだよね\nこれ、IONLとかだと絶対しないよ〜w\nCONLと、ROBNは下値追いながら買い増ししてるときワクワクしたんだよね", "url": "https://twitter.com/hd_qu8/status/2029212407751688545", "posted_at": "2026-03-04T15:08:33.000Z", "like_count": 48, "retweet_count": null, "reply_count": 3, "is_contrarian": false, "group": "group5", "group_name": "極小型インフルエンサー", "categories": ["recommended_assets", "purchased_assets"], "category_details": {"recommended_assets": {"name": "オススメしている資産・セクター", "matched_keywords": ["買い"], "matched_patterns": [], "is_from_contrarian": false}, "purchased_assets": {"name": "個人で購入・保有している資産", "matched_keywords": ["買い増し", "含み損"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "hd_qu8", "display_name": "米国株いつかは爆益予定ママ", "text": "CONLプラ転は、まだお預けでもいい！\n取得単価より下で買い増しのほうが、好きだから", "url": "https://twitter.com/hd_qu8/status/2029170152307343852", "posted_at": "2026-03-04T12:20:39.000Z", "like_count": 34, "retweet_count": null, "reply_count": 2, "is_contrarian": false, "group": "group5", "group_name": "極小型インフルエンサー", "categories": ["recommended_assets", "purchased_assets", "winning_trades"], "category_details": {"recommended_assets": {"name": "オススメしている資産・セクター", "matched_keywords": ["買い"], "matched_patterns": [], "is_from_contrarian": false}, "purchased_assets": {"name": "個人で購入・保有している資産", "matched_keywords": ["買い増し"], "matched_patterns": [], "is_from_contrarian": false}, "winning_trades": {"name": "勝ちトレード・利益報告", "matched_keywords": ["プラ転"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "hd_qu8", "display_name": "米国株いつかは爆益予定ママ", "text": "私のCONL…\nあと、−1%でプラ転するんですけど\n含み損との長い戦いを覚悟してたから、嬉しい", "url": "https://twitter.com/hd_qu8/status/2029138760181661933", "posted_at": "2026-03-04T10:15:54.000Z", "like_count": 65, "retweet_count": 1, "reply_count": 4, "is_contrarian": false, "group": "group5", "group_name": "極小型インフルエンサー", "categories": ["purchased_assets", "winning_trades"], "category_details": {"purchased_assets": {"name": "個人で購入・保有している資産", "matched_keywords": ["含み損"], "matched_patterns": [], "is_from_contrarian": false}, "winning_trades": {"name": "勝ちトレード・利益報告", "matched_keywords": ["プラ転"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "hd_qu8", "display_name": "米国株いつかは爆益予定ママ", "text": "株クラおばさん、たくさんいる〜\nもちろん、私もしましたw", "url": "https://twitter.com/hd_qu8/status/2029132312575918307", "posted_at": "2026-03-04T09:50:17.000Z", "like_count": 28, "retweet_count": null, "reply_count": 2, "is_contrarian": false, "group": "group5", "group_name": "極小型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "hd_qu8", "display_name": "米国株いつかは爆益予定ママ", "text": "moomoo証券 CONL5.85＄、800株\n楽天証券 ROBN19.86＄、160株\nこちらは、ド底追いかけ中でした！", "url": "https://twitter.com/hd_qu8/status/2029129148380397645", "posted_at": "2026-03-04T09:37:43.000Z", "like_count": 7, "retweet_count": null, "reply_count": null, "is_contrarian": false, "group": "group5", "group_name": "極小型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "hd_qu8", "display_name": "米国株いつかは爆益予定ママ", "text": "うわぁ～、寝不足すぎてウトウトしてる間にビットコインが〜\n信じてたよ〜！！\nコツコツ仕込んだCONL（含み損！）、ROBN（含み損！）の力を見せて〜", "url": "https://twitter.com/hd_qu8/status/2029124701914841106", "posted_at": "2026-03-04T09:20:02.000Z", "like_count": 64, "retweet_count": null, "reply_count": 4, "is_contrarian": false, "group": "group5", "group_name": "極小型インフルエンサー", "categories": ["recommended_assets", "purchased_assets"], "category_details": {"recommended_assets": {"name": "オススメしている資産・セクター", "matched_keywords": ["ビットコイン"], "matched_patterns": [], "is_from_contrarian": false}, "purchased_assets": {"name": "個人で購入・保有している資産", "matched_keywords": ["仕込んだ", "含み損"], "matched_patterns": ["コツコツ仕込んだ"], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "Adscience12000", "display_name": "サん", "text": "前回決算発表後は過去イチレベルで喰らっていたのである。", "url": "https://twitter.com/Adscience12000/status/2029091093825110533", "posted_at": "2026-03-04T07:06:30.000Z", "like_count": 20, "retweet_count": null, "reply_count": null, "is_contrarian": false, "group": "group5", "group_name": "極小型インフルエンサー", "categories": ["market_trend"], "category_details": {"market_trend": {"name": "市況トレンドに関する見解", "matched_keywords": ["決算"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "Adscience12000", "display_name": "サん", "text": "$AVGO\n前回決算発表後に他のAI銘柄も巻き込んで大暴落したあのBroadcomが、なんと！この不穏な相場環境のなか明日決算発表なのである。日和ってる奴いる?", "url": "https://twitter.com/Adscience12000/status/2029088722537594953", "posted_at": "2026-03-04T06:57:04.000Z", "like_count": 160, "retweet_count": 6, "reply_count": 3, "is_contrarian": false, "group": "group5", "group_name": "極小型インフルエンサー", "categories": ["market_trend", "bearish_assets"], "category_details": {"market_trend": {"name": "市況トレンドに関する見解", "matched_keywords": ["相場", "決算"], "matched_patterns": [], "is_from_contrarian": false}, "bearish_assets": {"name": "下落している資産", "matched_keywords": ["暴落"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "Adscience12000", "display_name": "サん", "text": "韓国市場版のVIX (VKOSPI）無事ぶっ壊れる。コロナショックの時より高くねえかこれw\nおい韓国の株式戦士たちよ、ガクブルの時はチャンスだぞ。諦めんな！", "url": "https://twitter.com/Adscience12000/status/2029062411651826037", "posted_at": "2026-03-04T05:12:31.000Z", "like_count": 208, "retweet_count": 35, "reply_count": 2, "is_contrarian": false, "group": "group5", "group_name": "極小型インフルエンサー", "categories": ["recommended_assets", "market_trend"], "category_details": {"recommended_assets": {"name": "オススメしている資産・セクター", "matched_keywords": ["チャンス"], "matched_patterns": [], "is_from_contrarian": false}, "market_trend": {"name": "市況トレンドに関する見解", "matched_keywords": ["VIX"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "米国ETF", "display_name": "ハル", "text": "速報：AIがゴールドマン・サックスのアナリスト並みの財務モデルを構築できるようになった（しかも無料）。\n\n年収約2,300万円相当の投資銀行業務を代替する12のClaudeプロンプトを紹介する（保存推奨）", "url": "https://twitter.com/haru_tachibana8/status/2029397992814592236", "posted_at": "2026-03-05T03:26:00.000Z", "like_count": 534, "retweet_count": 54, "reply_count": 2, "is_contrarian": false, "group": "group2", "group_name": "大型インフルエンサー", "categories": ["recommended_assets"], "category_details": {"recommended_assets": {"name": "オススメしている資産・セクター", "matched_keywords": ["ゴールド"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "米国ETF", "display_name": "ハル", "text": "ウォーレン・バフェット「株に投資するなら、株価が50％以上下落するのを目の当たりにしても、冷静でいられるよう精神的な準備をしておく必要がある」", "url": "https://twitter.com/haru_tachibana8/status/2028965336381546938", "posted_at": "2026-03-03T22:46:47.000Z", "like_count": 11, "retweet_count": null, "reply_count": null, "is_contrarian": false, "group": "group2", "group_name": "大型インフルエンサー", "categories": ["bearish_assets"], "category_details": {"bearish_assets": {"name": "下落している資産", "matched_keywords": ["下落"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "米国ETF", "display_name": "ハル", "text": "S&P500は、戦争に負けたことがありません。 x.com/cryptorand/sta…", "url": "https://twitter.com/haru_tachibana8/status/2028934825311388104", "posted_at": "2026-03-03T20:45:32.000Z", "like_count": 6, "retweet_count": null, "reply_count": null, "is_contrarian": false, "group": "group2", "group_name": "大型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "米国ETF", "display_name": "ハル", "text": "ウォーレン・バフェット「第三次世界大戦が起こるとわかっていても、私は株式を保有し続けるだろう」", "url": "https://twitter.com/haru_tachibana8/status/2028934671107801498", "posted_at": "2026-03-03T20:44:56.000Z", "like_count": 6, "retweet_count": null, "reply_count": 1, "is_contrarian": false, "group": "group2", "group_name": "大型インフルエンサー", "categories": ["purchased_assets"], "category_details": {"purchased_assets": {"name": "個人で購入・保有している資産", "matched_keywords": ["保有"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "米国ETF", "display_name": "ハル", "text": "【重版決定！！】なんと「世界一やさしい 米国ETFの教科書 1年生」の重版が決定しました！！\n\nご購入頂いた皆さま大変ありがとうございます\n\n引き続きよろしくお願いいたします\n\n\nhttps://\namzn.to/3AdxEcd", "url": "https://twitter.com/haru_tachibana8/status/2028786562625151109", "posted_at": "2026-03-03T10:56:24.000Z", "like_count": 10, "retweet_count": null, "reply_count": 1, "is_contrarian": false, "group": "group2", "group_name": "大型インフルエンサー", "categories": ["recommended_assets", "purchased_assets"], "category_details": {"recommended_assets": {"name": "オススメしている資産・セクター", "matched_keywords": ["ETF"], "matched_patterns": [], "is_from_contrarian": false}, "purchased_assets": {"name": "個人で購入・保有している資産", "matched_keywords": ["購入"], "matched_patterns": [], "is_from_contrarian": false}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "米国ETF", "display_name": "ハル", "text": "YouTubeデビューしてみました\n\n内容は間近またも論争が巻き起こっている「高配当株投資」についてです。\n\n良かったらコメント・いいねや、今後もマイペースに動画を投稿していこうと思いますのでチャンネル登録もお願いします\n\n高配当投資は有効な投資戦略なのか？\n\nhttps://\nyoutube.com/watch?v=YPSLLY\nTzUG8\n…", "url": "https://twitter.com/haru_tachibana8/status/2028784390206263722", "posted_at": "2026-03-03T10:47:46.000Z", "like_count": 13, "retweet_count": null, "reply_count": 1, "is_contrarian": false, "group": "group2", "group_name": "大型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "gihuboy", "display_name": "岐阜暴威", "text": "はじめまして\n株の話しませんか？\nおすすめはメタプラネットです", "url": "https://twitter.com/gihuboy/status/2029419778918760839", "posted_at": "2026-03-05T04:52:34.000Z", "like_count": 189, "retweet_count": 33, "reply_count": 16, "is_contrarian": true, "group": "group6", "group_name": "逆指標インフルエンサー", "categories": ["recommended_assets", "warning_signals"], "category_details": {"recommended_assets": {"name": "オススメしている資産・セクター", "matched_keywords": ["おすすめ"], "matched_patterns": [], "is_from_contrarian": false}, "warning_signals": {"name": "警戒すべき動き・逆指標シグナル", "matched_keywords": [], "matched_patterns": [], "is_from_contrarian": true, "note": "逆指標インフルエンサーからの投稿（投資関連カテゴリあり）"}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "gihuboy", "display_name": "岐阜暴威", "text": "やはり割れましたね\nリバウンド見てから利確しました\nミニ1枚で12万勝ち\n1200円も取れた、おそらく明日まで下げて54400とかはありそ", "url": "https://twitter.com/gihuboy/status/2029409968294904043", "posted_at": "2026-03-05T04:13:35.000Z", "like_count": 214, "retweet_count": 27, "reply_count": 37, "is_contrarian": true, "group": "group6", "group_name": "逆指標インフルエンサー", "categories": ["sold_assets", "winning_trades", "warning_signals"], "category_details": {"sold_assets": {"name": "売却した資産", "matched_keywords": ["利確"], "matched_patterns": ["利確しました"], "is_from_contrarian": false}, "winning_trades": {"name": "勝ちトレード・利益報告", "matched_keywords": ["勝ち"], "matched_patterns": [], "is_from_contrarian": false}, "warning_signals": {"name": "警戒すべき動き・逆指標シグナル", "matched_keywords": [], "matched_patterns": [], "is_from_contrarian": true, "note": "逆指標インフルエンサーからの投稿（投資関連カテゴリあり）"}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "gihuboy", "display_name": "岐阜暴威", "text": "なんなん、全部嘘やん\n全く信用できん、、、はめ込み\nこんな連中、表から追い出した方がいいわ", "url": "https://twitter.com/gihuboy/status/2028475029160382745", "posted_at": "2026-03-02T14:18:28.000Z", "like_count": 2600, "retweet_count": 265, "reply_count": 62, "is_contrarian": true, "group": "group6", "group_name": "逆指標インフルエンサー", "categories": ["recommended_assets", "warning_signals"], "category_details": {"recommended_assets": {"name": "オススメしている資産・セクター", "matched_keywords": ["がいい"], "matched_patterns": ["表から追い出した方がいい"], "is_from_contrarian": false}, "warning_signals": {"name": "警戒すべき動き・逆指標シグナル", "matched_keywords": [], "matched_patterns": [], "is_from_contrarian": true, "note": "逆指標インフルエンサーからの投稿（投資関連カテゴリあり）"}}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "yukimamax", "display_name": "ゆきママ", "text": "あーあ…", "url": "https://twitter.com/yukimamax/status/2029429771994841537", "posted_at": "2026-03-05T05:32:17.000Z", "like_count": 11, "retweet_count": 1, "reply_count": 3, "is_contrarian": false, "group": "group3", "group_name": "中型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}, {"username": "yukimamax", "display_name": "ゆきママ", "text": ">旅行会社JCIT（東京都中央区）社長の坂川馨（かおる）（56）と、中国籍の夫で取締役の孟偉（モンウェイ）（53）の両容疑者\n\nはいはい、また中国人。日本の補助金、私たちが納めた税金のほとんどは外国人に吸い取られます。良かったね", "url": "https://twitter.com/yukimamax/status/2029420990732878316", "posted_at": "2026-03-05T04:57:23.000Z", "like_count": 63, "retweet_count": 10, "reply_count": 4, "is_contrarian": false, "group": "group3", "group_name": "中型インフルエンサー", "categories": [], "category_details": {}, "llm_categories": null, "llm_reasoning": null, "llm_confidence": null}];
+
+
+var CATEGORIES = [
+  { key: "recommended_assets", label: "オススメ資産", short: "オススメ", color: "#4CAF50" },
+  { key: "purchased_assets",   label: "購入・保有",   short: "購入",     color: "#2196F3" },
+  { key: "sold_assets",        label: "売却済み",     short: "売却",     color: "#00BCD4" },
+  { key: "winning_trades",     label: "勝ちトレード", short: "勝ち",     color: "#CDDC39" },
+  { key: "ipo",                label: "IPO",          short: "IPO",      color: "#FF9800" },
+  { key: "market_trend",       label: "市況トレンド", short: "市況",     color: "#9C27B0" },
+  { key: "bullish_assets",     label: "高騰",         short: "高騰",     color: "#F44336" },
+  { key: "bearish_assets",     label: "下落",         short: "下落",     color: "#607D8B" },
+  { key: "warning_signals",    label: "警戒シグナル", short: "警戒",     color: "#FF5722" }
+];
+
+var NONE_KEY = "__none__";
+var TRASH_KEY = "__trash__";
+var STORAGE_KEY = "human_annotations_v1";
+
+var annotations = {};
+var draggedUrl = null;
+var dragSourceSection = null;
+
+// Section display order and definitions
+var SECTION_DEFS = [
+  { key: "unannotated",       label: "未分類",         color: "#888"    },
+  { key: "recommended_assets",label: "オススメ資産",   color: "#4CAF50" },
+  { key: "purchased_assets",  label: "購入・保有",     color: "#2196F3" },
+  { key: "sold_assets",       label: "売却済み",      color: "#00BCD4" },
+  { key: "winning_trades",    label: "勝ちトレード",  color: "#CDDC39" },
+  { key: "ipo",               label: "IPO",            color: "#FF9800" },
+  { key: "market_trend",      label: "市況トレンド",   color: "#9C27B0" },
+  { key: "warning_signals",   label: "警戒シグナル",   color: "#FF5722" },
+  { key: "bullish_assets",    label: "高騰",           color: "#F44336" },
+  { key: "bearish_assets",    label: "下落",           color: "#607D8B" },
+  { key: TRASH_KEY,           label: "対象外",         color: "#555"    }
+];
+
+// --- LocalStorage ---
+function loadAnnotations() {
+  try {
+    var raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) annotations = JSON.parse(raw);
+  } catch(e) { annotations = {}; }
+}
+
+function saveAnnotations() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(annotations));
+  } catch(e) {}
+}
+
+function getAnnotation(url) {
+  return annotations[url] || null;
+}
+
+function setAnnotation(url, cats, isNone) {
+  annotations[url] = {
+    human_categories: cats.slice(),
+    is_none: !!isNone,
+    annotated_at: new Date().toISOString()
+  };
+  saveAnnotations();
+}
+
+function isAnnotated(url) {
+  return !!annotations[url];
+}
+
+function getHumanCategories(url) {
+  var a = annotations[url];
+  if (!a) return [];
+  return a.human_categories || [];
+}
+
+function getIsNone(url) {
+  var a = annotations[url];
+  if (!a) return false;
+  return !!a.is_none;
+}
+
+// --- Helpers ---
+function truncateText(text, maxLen) {
+  if (!text) return "";
+  if (text.length <= maxLen) return text;
+  return text.substring(0, maxLen) + "...";
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return "";
+  try {
+    var d = new Date(dateStr);
+    var y = d.getFullYear();
+    var m = ("0" + (d.getMonth()+1)).slice(-2);
+    var day = ("0" + d.getDate()).slice(-2);
+    return y + "-" + m + "-" + day;
+  } catch(e) { return ""; }
+}
+
+function getCategoryColor(key) {
+  for (var i = 0; i < CATEGORIES.length; i++) {
+    if (CATEGORIES[i].key === key) return CATEGORIES[i].color;
+  }
+  return "#555";
+}
+
+function getCategoryShort(key) {
+  for (var i = 0; i < CATEGORIES.length; i++) {
+    if (CATEGORIES[i].key === key) return CATEGORIES[i].short;
+  }
+  return key;
+}
+
+function escapeHtml(str) {
+  if (!str) return "";
+  return str.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+// --- Header ---
+function updateHeader() {
+  var total = EMBEDDED_DATA.length;
+  var annotated = 0;
+  EMBEDDED_DATA.forEach(function(tw) { if (isAnnotated(tw.url)) annotated++; });
+  document.getElementById("annotatedCount").textContent = annotated;
+  document.getElementById("totalCount").textContent = total;
+  var pct = total > 0 ? (annotated / total * 100) : 0;
+  document.getElementById("progressBar").style.width = pct + "%";
+}
+
+// --- Categorize tweets into sections ---
+function categorizeTweets() {
+  var sections = {};
+  SECTION_DEFS.forEach(function(sec) {
+    sections[sec.key] = [];
+  });
+
+  EMBEDDED_DATA.forEach(function(tw) {
+    var annotated = isAnnotated(tw.url);
+    if (!annotated) {
+      sections["unannotated"].push(tw);
+      return;
+    }
+    var a = getAnnotation(tw.url);
+    if (a && (a.is_trash || a.is_none)) {
+      sections[TRASH_KEY].push(tw);
+      return;
+    }
+    var cats = getHumanCategories(tw.url);
+    if (cats.length === 0) {
+      sections["unannotated"].push(tw);
+      return;
+    }
+    cats.forEach(function(catKey) {
+      if (sections[catKey]) {
+        sections[catKey].push(tw);
+      }
+    });
+  });
+
+  return sections;
+}
+
+// --- Badges HTML ---
+function buildBadgesHTML(url) {
+  var cats = getHumanCategories(url);
+  var isNone = getIsNone(url);
+  if (isNone) {
+    return '<span class="badge badge-none">対象外</span>';
+  }
+  if (cats.length === 0) return "";
+  var html = "";
+  cats.forEach(function(key) {
+    html += '<span class="badge" style="background:' + getCategoryColor(key) + '">' + getCategoryShort(key) + '</span>';
+  });
+  return html;
+}
+
+// --- Build card HTML ---
+function buildCardHTML(tweet, sectionKey) {
+  var likes = (tweet.like_count != null) ? ("&#9829; " + tweet.like_count) : "";
+  var textPreview = escapeHtml(tweet.text || "");
+  var badgesHTML = buildBadgesHTML(tweet.url);
+  var isInTrash = sectionKey === TRASH_KEY;
+  var actionBtn = isInTrash
+    ? '<button class="card-trash-btn card-restore-btn" title="復元">&#8617;</button>'
+    : '<button class="card-trash-btn" title="対象外へ">&#10005;</button>';
+
+  return actionBtn +
+    '<div class="card-header">' +
+    '<span class="card-username">@' + escapeHtml(tweet.username) + '</span>' +
+    '<span class="card-likes">' + likes + '</span>' +
+    '</div>' +
+    '<div class="card-text">' + textPreview + '</div>' +
+    (badgesHTML ? '<div class="card-badges">' + badgesHTML + '</div>' : '') +
+    '<div class="card-meta">' + formatDate(tweet.posted_at) + '</div>';
+}
+
+// --- Create draggable card ---
+function createCard(tweet, sectionKey) {
+  var card = document.createElement("div");
+  card.className = "card";
+  card.setAttribute("data-url", tweet.url);
+  card.setAttribute("draggable", "true");
+  card.innerHTML = buildCardHTML(tweet, sectionKey);
+
+  // Track drag state for click vs drag detection
+  var didDrag = false;
+
+  card.addEventListener("dragstart", function(e) {
+    e.dataTransfer.setData("text/plain", tweet.url);
+    e.dataTransfer.effectAllowed = "move";
+    card.classList.add("dragging");
+    document.getElementById("board").classList.add("dragging-active");
+    draggedUrl = tweet.url;
+    dragSourceSection = sectionKey;
+    didDrag = true;
+  });
+
+  card.addEventListener("dragend", function(e) {
+    card.classList.remove("dragging");
+    document.getElementById("board").classList.remove("dragging-active");
+    stopAutoScroll();
+    draggedUrl = null;
+    dragSourceSection = null;
+  });
+
+  // Trash / Restore button
+  var trashBtn = card.querySelector(".card-trash-btn");
+  if (trashBtn) {
+    trashBtn.addEventListener("click", function(e) {
+      e.stopPropagation();
+      if (sectionKey === TRASH_KEY) {
+        // Restore: delete annotation → back to unannotated
+        delete annotations[tweet.url];
+        saveAnnotations();
+        updateHeader();
+        renderAllColumns();
+      } else {
+        moveToColumn(tweet.url, TRASH_KEY, sectionKey);
+      }
+    });
+  }
+
+  card.addEventListener("click", function(e) {
+    if (didDrag) {
+      didDrag = false;
+      return;
+    }
+    if (e.target.closest(".card-trash-btn")) return;
+    openModal(tweet);
+  });
+
+  // Reset didDrag on mousedown for next interaction
+  card.addEventListener("mousedown", function() {
+    didDrag = false;
+  });
+
+  return card;
+}
+
+// --- Render all columns ---
+function renderAllColumns() {
+  var board = document.getElementById("board");
+  board.innerHTML = "";
+
+  var sections = categorizeTweets();
+
+  SECTION_DEFS.forEach(function(secDef) {
+    var tweets = sections[secDef.key] || [];
+
+    var column = document.createElement("div");
+    column.className = "column";
+    column.setAttribute("data-section", secDef.key);
+
+    // Column header
+    var header = document.createElement("div");
+    header.className = "column-header";
+
+    var dot = document.createElement("span");
+    dot.className = "column-dot";
+    dot.style.backgroundColor = secDef.color;
+    header.appendChild(dot);
+
+    var title = document.createElement("span");
+    title.className = "column-title";
+    title.textContent = secDef.label;
+    header.appendChild(title);
+
+    var count = document.createElement("span");
+    count.className = "column-count";
+    count.textContent = tweets.length;
+    header.appendChild(count);
+
+    column.appendChild(header);
+
+    // Column body (drop zone)
+    var body = document.createElement("div");
+    body.className = "column-body";
+
+    // Drop zone events
+    (function(columnBody, sectionKey) {
+      columnBody.addEventListener("dragover", function(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+        columnBody.classList.add("drag-over");
+      });
+      columnBody.addEventListener("dragleave", function(e) {
+        // Only remove if actually leaving the column body
+        if (!columnBody.contains(e.relatedTarget)) {
+          columnBody.classList.remove("drag-over");
+        }
+      });
+      columnBody.addEventListener("drop", function(e) {
+        e.preventDefault();
+        columnBody.classList.remove("drag-over");
+        var url = e.dataTransfer.getData("text/plain") || draggedUrl;
+        if (url) {
+          moveToColumn(url, sectionKey, dragSourceSection);
+        }
+      });
+    })(body, secDef.key);
+
+    if (tweets.length === 0) {
+      var emptyMsg = document.createElement("div");
+      emptyMsg.className = "column-empty";
+      emptyMsg.textContent = "ドロップして追加";
+      body.appendChild(emptyMsg);
+    } else {
+      tweets.forEach(function(tw) {
+        body.appendChild(createCard(tw, secDef.key));
+      });
+    }
+
+    column.appendChild(body);
+    board.appendChild(column);
+  });
+
+  // Show empty state if no data at all
+  var emptyState = document.getElementById("emptyState");
+  emptyState.style.display = EMBEDDED_DATA.length === 0 ? "block" : "none";
+}
+
+// --- Auto-scroll during drag ---
+var autoScrollInterval = null;
+var autoScrollSpeed = 0;
+
+function startAutoScroll() {
+  if (autoScrollInterval) return;
+  var board = document.getElementById('board');
+  autoScrollInterval = setInterval(function() {
+    if (autoScrollSpeed !== 0) {
+      board.scrollLeft += autoScrollSpeed;
+    }
+  }, 16);
+}
+
+function stopAutoScroll() {
+  if (autoScrollInterval) {
+    clearInterval(autoScrollInterval);
+    autoScrollInterval = null;
+  }
+  autoScrollSpeed = 0;
+  if (typeof hintLeft !== 'undefined') hintLeft.classList.remove('visible');
+  if (typeof hintRight !== 'undefined') hintRight.classList.remove('visible');
+}
+
+// --- Scroll hint arrows ---
+var hintLeft = document.createElement('div');
+hintLeft.className = 'scroll-hint left';
+hintLeft.innerHTML = '&#9664;';
+document.body.appendChild(hintLeft);
+
+var hintRight = document.createElement('div');
+hintRight.className = 'scroll-hint right';
+hintRight.innerHTML = '&#9654;';
+document.body.appendChild(hintRight);
+
+// --- Board-level dragover for auto-scroll ---
+document.getElementById('board').addEventListener('dragover', function(e) {
+  var board = this;
+  var rect = board.getBoundingClientRect();
+  var edgeZone = 80;
+  var maxSpeed = 15;
+  var mouseX = e.clientX;
+
+  if (mouseX < rect.left + edgeZone) {
+    var proximity = 1 - (mouseX - rect.left) / edgeZone;
+    autoScrollSpeed = -maxSpeed * Math.max(0, Math.min(1, proximity));
+    startAutoScroll();
+    hintLeft.classList.add('visible');
+    hintRight.classList.remove('visible');
+  } else if (mouseX > rect.right - edgeZone) {
+    var proximity = 1 - (rect.right - mouseX) / edgeZone;
+    autoScrollSpeed = maxSpeed * Math.max(0, Math.min(1, proximity));
+    startAutoScroll();
+    hintRight.classList.add('visible');
+    hintLeft.classList.remove('visible');
+  } else {
+    autoScrollSpeed = 0;
+    hintLeft.classList.remove('visible');
+    hintRight.classList.remove('visible');
+  }
+});
+
+// --- Drag & Drop: move tweet to column ---
+function moveToColumn(url, targetSectionKey, fromSection) {
+  if (targetSectionKey === "unannotated") {
+    delete annotations[url];
+  } else if (targetSectionKey === TRASH_KEY) {
+    annotations[url] = {
+      human_categories: [],
+      is_none: false,
+      is_trash: true,
+      annotated_at: new Date().toISOString()
+    };
+  } else {
+    var cats = getHumanCategories(url).slice();
+    // Remove from source category if moving between categories
+    if (fromSection && fromSection !== "unannotated" && fromSection !== TRASH_KEY) {
+      var idx = cats.indexOf(fromSection);
+      if (idx >= 0) {
+        cats.splice(idx, 1);
+      }
+    }
+    // Add target category
+    if (cats.indexOf(targetSectionKey) < 0) {
+      cats.push(targetSectionKey);
+    }
+    annotations[url] = {
+      human_categories: cats,
+      is_none: false,
+      is_trash: false,
+      annotated_at: new Date().toISOString()
+    };
+  }
+  saveAnnotations();
+  updateHeader();
+  renderAllColumns();
+}
+
+// --- Modal ---
+function openModal(tweet) {
+  var container = document.getElementById("modalContainer");
+  container.innerHTML = "";
+
+  var overlay = document.createElement("div");
+  overlay.className = "modal-overlay";
+  overlay.addEventListener("click", function(e) {
+    if (e.target === overlay) closeModal();
+  });
+
+  var modal = document.createElement("div");
+  modal.className = "modal";
+  modal.innerHTML = buildModalHTML(tweet);
+  overlay.appendChild(modal);
+  container.appendChild(overlay);
+
+  // Wire up close button
+  var closeBtn = modal.querySelector(".modal-close");
+  if (closeBtn) {
+    closeBtn.addEventListener("click", function(e) {
+      e.stopPropagation();
+      closeModal();
+    });
+  }
+
+  // Wire up chips
+  var chips = modal.querySelectorAll(".chip");
+  chips.forEach(function(chip) {
+    chip.addEventListener("click", function(e) {
+      e.stopPropagation();
+      handleModalChipClick(tweet.url, chip, modal);
+    });
+  });
+}
+
+function closeModal() {
+  var container = document.getElementById("modalContainer");
+  container.innerHTML = "";
+  updateHeader();
+  renderAllColumns();
+}
+
+function buildModalHTML(tweet) {
+  var displayName = escapeHtml(tweet.display_name || "");
+  var username = escapeHtml(tweet.username || "");
+  var dateStr = formatDate(tweet.posted_at);
+  var likes = (tweet.like_count != null) ? ("&#9829; " + tweet.like_count) : "";
+  var contrarianHTML = tweet.is_contrarian ? '<div class="modal-contrarian">&#128260; 逆指標</div>' : "";
+  var fullText = escapeHtml(tweet.text || "");
+
+  var cats = getHumanCategories(tweet.url);
+  var isNone = getIsNone(tweet.url);
+
+  var chipsHTML = "";
+  CATEGORIES.forEach(function(c) {
+    var isOn = cats.indexOf(c.key) >= 0;
+    chipsHTML += '<span class="chip ' + (isOn ? "on" : "off") + '" data-cat="' + c.key + '" ' +
+      'style="border-color:' + c.color + ';' +
+      (isOn ? 'background:' + c.color + ';color:#fff;' : 'color:' + c.color + ';') +
+      '">' + c.short + '</span>';
+  });
+  // Trash chip (対象外)
+  var a = getAnnotation(tweet.url);
+  var isTrash = a && (a.is_trash || a.is_none);
+  chipsHTML += '<span class="chip ' + (isTrash ? "on" : "off") + '" data-cat="' + TRASH_KEY + '" ' +
+    'style="border-color:#555;' +
+    (isTrash ? 'background:#555;color:#fff;' : 'color:#888;') +
+    '">対象外</span>';
+
+  // Reference info
+  var kwCats = tweet.categories || [];
+  var llmCats = tweet.llm_categories || [];
+  var refHTML = '<div class="card-ref">KW: [' + kwCats.map(getCategoryShort).join(", ") + ']</div>' +
+    '<div class="card-ref">LLM: [' + llmCats.map(getCategoryShort).join(", ") + ']</div>';
+
+  return '<button class="modal-close">&#10005; 閉じる</button>' +
+    '<div class="modal-username">' + displayName + ' <span style="color:#1d9bf0;font-weight:400;font-size:13px;">@' + username + '</span></div>' +
+    '<div class="modal-meta">' + dateStr + '  ' + likes + '</div>' +
+    contrarianHTML +
+    '<div class="modal-text">' + fullText + '</div>' +
+    '<div class="chips-area">' + chipsHTML + '</div>' +
+    refHTML;
+}
+
+function handleModalChipClick(url, chipEl, modalEl) {
+  var catKey = chipEl.getAttribute("data-cat");
+  var cats = getHumanCategories(url).slice();
+  var isNone = getIsNone(url);
+
+  if (catKey === TRASH_KEY) {
+    // Toggle trash
+    var a = getAnnotation(url);
+    var wasTrash = a && a.is_trash;
+    if (wasTrash) {
+      // Untrash → back to unannotated
+      delete annotations[url];
+      saveAnnotations();
+    } else {
+      // Trash it
+      annotations[url] = {
+        human_categories: [],
+        is_none: false,
+        is_trash: true,
+        annotated_at: new Date().toISOString()
+      };
+      saveAnnotations();
+    }
+  } else {
+    var idx = cats.indexOf(catKey);
+    if (idx >= 0) {
+      cats.splice(idx, 1);
+    } else {
+      cats.push(catKey);
+    }
+    setAnnotation(url, cats, false);
+  }
+
+  // Re-render chips in modal
+  refreshModalChips(url, modalEl);
+  updateHeader();
+}
+
+function refreshModalChips(url, modalEl) {
+  var cats = getHumanCategories(url);
+  var isNone = getIsNone(url);
+  var a = getAnnotation(url);
+  var isTrash = a && (a.is_trash || a.is_none);
+  var chips = modalEl.querySelectorAll(".chip");
+  chips.forEach(function(chip) {
+    var key = chip.getAttribute("data-cat");
+    var isOn = false;
+    if (key === TRASH_KEY) {
+      isOn = isTrash;
+      chip.style.borderColor = "#555";
+      if (isOn) {
+        chip.style.background = "#555";
+        chip.style.color = "#fff";
+        chip.className = "chip on";
+      } else {
+        chip.style.background = "transparent";
+        chip.style.color = "#888";
+        chip.className = "chip off";
+      }
+    } else {
+      isOn = cats.indexOf(key) >= 0;
+      var color = getCategoryColor(key);
+      chip.style.borderColor = color;
+      if (isOn) {
+        chip.style.background = color;
+        chip.style.color = "#fff";
+        chip.className = "chip on";
+      } else {
+        chip.style.background = "transparent";
+        chip.style.color = color;
+        chip.className = "chip off";
+      }
+    }
+  });
+}
+
+// --- Export ---
+function exportAnnotations() {
+  var total = EMBEDDED_DATA.length;
+  var annotated = 0;
+  EMBEDDED_DATA.forEach(function(tw) { if (isAnnotated(tw.url)) annotated++; });
+  var unannotated = total - annotated;
+
+  var msg = "分類済み: " + annotated + "/" + total + " 件\n未分類: " + unannotated + " 件\n\nエクスポートしますか？";
+  if (!confirm(msg)) return;
+
+  var annList = [];
+  EMBEDDED_DATA.forEach(function(tw) {
+    var a = getAnnotation(tw.url);
+    if (a) {
+      annList.push({
+        url: tw.url,
+        human_categories: (a.is_trash || a.is_none) ? [] : (a.human_categories || []),
+        annotated_at: a.annotated_at || ""
+      });
+    }
+  });
+
+  var output = {
+    annotator: "human",
+    created_at: new Date().toISOString(),
+    version: "1.0",
+    total: total,
+    annotated: annotated,
+    annotations: annList
+  };
+
+  var blob = new Blob([JSON.stringify(output, null, 2)], { type: "application/json" });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement("a");
+  var now = new Date();
+  var dateStr = now.getFullYear() +
+    ("0" + (now.getMonth()+1)).slice(-2) +
+    ("0" + now.getDate()).slice(-2);
+  a.href = url;
+  a.download = "human_annotations_" + dateStr + ".json";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// --- Import ---
+function importAnnotations(event) {
+  var file = event.target.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var data = JSON.parse(e.target.result);
+      var annList = data.annotations || [];
+      var imported = 0;
+      annList.forEach(function(a) {
+        var url = a.url;
+        if (!url) return;
+        var cats = a.human_categories || [];
+        annotations[url] = {
+          human_categories: cats,
+          is_none: false,
+          is_trash: cats.length === 0,
+          annotated_at: a.annotated_at || new Date().toISOString()
+        };
+        imported++;
+      });
+      saveAnnotations();
+      updateHeader();
+      renderAllColumns();
+      alert("インポート完了: " + imported + "件の分類データを復元しました");
+    } catch(err) {
+      alert("インポートエラー: " + err.message);
+    }
+    event.target.value = "";
+  };
+  reader.readAsText(file);
+}
+
+// --- Init ---
+function prefillFromExisting() {
+  var count = 0;
+  EMBEDDED_DATA.forEach(function(tw) {
+    if (annotations[tw.url]) return;
+    var llm = tw.llm_categories || [];
+    var kw = tw.categories || [];
+    var cats = llm.length > 0 ? llm : kw;
+    if (cats.length > 0) {
+      annotations[tw.url] = {
+        human_categories: cats.slice(),
+        is_none: false,
+        annotated_at: new Date().toISOString()
+      };
+      count++;
+    }
+  });
+  if (count > 0) saveAnnotations();
+}
+
+function init() {
+  loadAnnotations();
+
+  if (EMBEDDED_DATA.length === 0) {
+    document.getElementById("emptyState").style.display = "block";
+    document.getElementById("emptyState").textContent = "データが埋め込まれていません。collect_tweets.py で収集してください。";
+    updateHeader();
+    return;
+  }
+
+  prefillFromExisting();
+  updateHeader();
+  renderAllColumns();
+}
+
+init();
+</script>
+</body>
+</html>

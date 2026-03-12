@@ -1,0 +1,2509 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>インフルエンサー推奨銘柄パフォーマンスレポート</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: #0a0a0a; color: #e7e9ea;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  line-height: 1.5; padding: 20px;
+}
+a { color: #1d9bf0; text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.container { max-width: 1000px; margin: 0 auto; }
+h1 { font-size: 24px; margin-bottom: 8px; }
+.subtitle { color: #71767b; font-size: 14px; margin-bottom: 24px; }
+
+/* Dashboard cards */
+.dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 32px; }
+.card {
+  background: #16181c; border: 1px solid #2f3336; border-radius: 12px;
+  padding: 20px; text-align: center;
+}
+.card-value { font-size: 36px; font-weight: 700; }
+.card-label { font-size: 13px; color: #71767b; margin-top: 4px; }
+.positive { color: #00ba7c; }
+.negative { color: #f4212e; }
+.neutral { color: #ffd700; }
+
+/* Section */
+.section { margin-bottom: 32px; }
+.section-title { font-size: 18px; font-weight: 700; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #2f3336; }
+
+/* Table */
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th { background: #16181c; padding: 10px 12px; text-align: left; font-weight: 600; border-bottom: 2px solid #2f3336; cursor: pointer; white-space: nowrap; }
+th:hover { background: #1e2024; }
+td { padding: 10px 12px; border-bottom: 1px solid #2f3336; }
+tr:hover { background: rgba(231,233,234,0.03); }
+.win { color: #00ba7c; font-weight: 600; }
+.lose { color: #f4212e; font-weight: 600; }
+.ticker { font-weight: 700; color: #1d9bf0; }
+.influencer { color: #e7e9ea; }
+.tweet-preview { color: #71767b; font-size: 12px; max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Influencer cards */
+.inf-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
+.inf-card {
+  background: #16181c; border: 1px solid #2f3336; border-radius: 8px;
+  padding: 16px; display: flex; justify-content: space-between; align-items: center;
+}
+.inf-name { font-weight: 700; font-size: 15px; }
+.inf-stats { text-align: right; font-size: 13px; color: #71767b; }
+.inf-winrate { font-size: 20px; font-weight: 700; }
+
+/* Untrackable */
+.untrackable-item {
+  background: #16181c; border: 1px solid #2f3336; border-radius: 8px;
+  padding: 12px 16px; margin-bottom: 8px; font-size: 13px;
+}
+.untrackable-user { color: #1d9bf0; font-weight: 600; }
+.untrackable-text { color: #71767b; margin-top: 4px; }
+
+/* Tab nav */
+.tabs { display: flex; gap: 0; margin-bottom: 24px; border-bottom: 1px solid #2f3336; }
+.tab {
+  padding: 12px 20px; cursor: pointer; font-size: 15px; font-weight: 500;
+  color: #71767b; border: none; background: none; position: relative;
+}
+.tab:hover { background: rgba(231,233,234,0.06); }
+.tab.active { color: #e7e9ea; font-weight: 700; }
+.tab.active::after {
+  content: ''; position: absolute; bottom: -1px; left: 50%; transform: translateX(-50%);
+  width: 56px; height: 4px; background: #1d9bf0; border-radius: 2px;
+}
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>インフルエンサー推奨銘柄パフォーマンスレポート</h1>
+  <div class="subtitle" id="subtitle"></div>
+
+  <!-- Dashboard -->
+  <div class="dashboard" id="dashboard"></div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('picks')">銘柄別</button>
+    <button class="tab" onclick="showTab('influencers')">インフルエンサー別</button>
+    <button class="tab" onclick="showTab('contrarian')">逆指標</button>
+    <button class="tab" onclick="showTab('untrackable')">追跡不能</button>
+  </div>
+
+  <div id="tab-picks" class="tab-content active"></div>
+  <div id="tab-influencers" class="tab-content"></div>
+  <div id="tab-contrarian" class="tab-content"></div>
+  <div id="tab-untrackable" class="tab-content"></div>
+</div>
+
+<script>
+const EMBEDDED_DATA = {
+  "summary": {
+    "generated_at": "2026-03-07T04:14:36.771673",
+    "data_period": {
+      "from": "2026-02-08",
+      "to": "2026-03-05"
+    },
+    "total_tweets_analyzed": 710,
+    "recommendation_tweets": 176,
+    "trackable_recommendations": 52,
+    "total_extracted": 53,
+    "winners": 22,
+    "losers": 30,
+    "win_rate": 42.3,
+    "avg_return_pct": -0.86,
+    "total_return_pct": -44.55,
+    "best_pick": {
+      "ticker": "GC=F",
+      "return_pct": 4.13,
+      "influencer": "_teeeeest"
+    },
+    "worst_pick": {
+      "ticker": "SNDK",
+      "return_pct": -18.87,
+      "influencer": "yukimamax"
+    },
+    "by_influencer": {
+      "goto_finance": {
+        "win_rate": 100.0,
+        "avg_return": 2.52,
+        "picks": 1
+      },
+      "yuki75868813751": {
+        "win_rate": 100.0,
+        "avg_return": 2.52,
+        "picks": 1
+      },
+      "yukimamax": {
+        "win_rate": 38.5,
+        "avg_return": -2.22,
+        "picks": 13
+      },
+      "gihuboy": {
+        "win_rate": 33.3,
+        "avg_return": -1.03,
+        "picks": 9
+      },
+      "米国ETF": {
+        "win_rate": 33.3,
+        "avg_return": -0.76,
+        "picks": 3
+      },
+      "heihachiro888": {
+        "win_rate": 100.0,
+        "avg_return": 3.49,
+        "picks": 1
+      },
+      "2okutameo": {
+        "win_rate": 100.0,
+        "avg_return": 2.65,
+        "picks": 3
+      },
+      "miku919191": {
+        "win_rate": 0.0,
+        "avg_return": -1.64,
+        "picks": 2
+      },
+      "tesuta001": {
+        "win_rate": 50.0,
+        "avg_return": -0.92,
+        "picks": 4
+      },
+      "yurumazu": {
+        "win_rate": 0.0,
+        "avg_return": -2.12,
+        "picks": 1
+      },
+      "YasLovesTech": {
+        "win_rate": 28.6,
+        "avg_return": -0.95,
+        "picks": 7
+      },
+      "_teeeeest": {
+        "win_rate": 100.0,
+        "avg_return": 3.88,
+        "picks": 2
+      },
+      "株": {
+        "win_rate": 100.0,
+        "avg_return": 2.54,
+        "picks": 1
+      },
+      "Adscience12000": {
+        "win_rate": 0.0,
+        "avg_return": -2.91,
+        "picks": 3
+      },
+      "hd_qu8": {
+        "win_rate": 0.0,
+        "avg_return": -6.54,
+        "picks": 1
+      }
+    },
+    "contrarian_performance": {
+      "total": 9,
+      "reverse_return_pct": 1.03
+    },
+    "untrackable_count": 136
+  },
+  "recommendations": [
+    {
+      "ticker": "^N225",
+      "matched_text": "日経平均",
+      "influencer": "goto_finance",
+      "display_name": "後藤達也",
+      "tweet_text": "◆ 株 急上昇\n日経平均先物が57800円台で取引されています。金曜の日中終値より3500円ほど上昇する大幅高です。衆院選で自民党が圧勝し、高市政権の経済政策の推進力が高まるとの見方が広がっています",
+      "tweet_url": "https://twitter.com/goto_finance/status/2020646490096672773",
+      "category": "推奨/高騰",
+      "recommended_at": "2026-02-08",
+      "price_at_recommendation": 54253.68,
+      "current_price": 55620.84,
+      "price_date": "2026-03-06",
+      "return_pct": 2.52,
+      "is_winner": true,
+      "is_contrarian": false
+    },
+    {
+      "ticker": "^N225",
+      "matched_text": "日経平均",
+      "influencer": "yuki75868813751",
+      "display_name": "ゆーき",
+      "tweet_text": "高市自民大勝利！\n日本株を持っているだけで報われる時代到来。\nまずは明日の日経平均楽しみですね。\n僕は年初に今年の日経平均6万円と予想しましたが、弱気すぎたなと反省しています。\nより騰がる方向に自分の予測が外れる気しかしない。\n昨週の東証の売買代金が１日9億超えしたことも爆上げの予兆。",
+      "tweet_url": "https://twitter.com/yuki75868813751/status/2020452611070021973",
+      "category": "推奨/高騰",
+      "recommended_at": "2026-02-08",
+      "price_at_recommendation": 54253.68,
+      "current_price": 55620.84,
+      "price_date": "2026-03-06",
+      "return_pct": 2.52,
+      "is_winner": true,
+      "is_contrarian": false
+    },
+    {
+      "ticker": "GC=F",
+      "matched_text": "ゴールド",
+      "influencer": "yukimamax",
+      "display_name": "ゆきママ",
+      "tweet_text": "そうですね。結局、暴落した時に金は長期低迷するとか言われましたが、なんだかんだ世界の中銀が買い支えるので、下値にも限界があるというか。上値は重いでしょうが、現金で持つぐらいならゴールドが良いと考えています。\n\n【ゴールド サンデー】+0.40％\n5,011.84 \n  #xau",
+      "tweet_url": "https://twitter.com/yukimamax/status/2020801949151482159",
+      "category": "推奨/下落",
+      "recommended_at": "2026-02-09",
+      "price_at_recommendation": 5050.9,
+      "current_price": 5181.3,
+      "price_date": "2026-03-06",
+      "return_pct": 2.58,
+      "is_winner": true,
+      "is_contrarian": false
+    },
+    {
+      "ticker": "^N225",
+      "matched_text": "日経平均",
+      "influencer": "yukimamax",
+      "display_name": "ゆきママ",
+      "tweet_text": "流石に58,000円では一旦換金か。56,000円から上では強気、55,000円から下で標準かな。\n\n\n【日経時間外 】+5.39％\n57,179.66 （+2925.98）\n  #日経平均株価",
+      "tweet_url": "https://twitter.com/yukimamax/status/2020651163084058628",
+      "category": "推奨",
+      "recommended_at": "2026-02-09",
+      "price_at_recommendation": 56363.94,
+      "current_price": 55620.84,
+      "price_date": "2026-03-06",
+      "return_pct": -1.32,
+      "is_winner": false,
+      "is_contrarian": false
+    },
+    {
+      "ticker": "^DJI",
+      "matched_text": "ダウ",
+      "influencer": "gihuboy",
+      "display_name": "岐阜暴威",
+      "tweet_text": "これはすごくわかる\nXも収益化始まってバズ狙いのコンプレックス刺激や、やじうま目当てのポスト増えた。バズ全盛期。バズは喧嘩や揉め事が楽だから。\nプレイキングダウンがまさにその始まり。試合よりも揉め事や言い争いで注目される。溝口さんがXで喧嘩するのを見せるのもそれやろね。疲れるね。",
+      "tweet_url": "https://twitter.com/gihuboy/status/2024355169933357444",
+      "category": "推奨/警戒",
+      "recommended_at": "2026-02-19",
+      "price_at_recommendation": 49395.16,
+      "current_price": 47501.55,
+      "price_date": "2026-03-06",
+      "return_pct": -3.83,
+      "is_winner": false,
+      "is_contrarian": true
+    },
+    {
+      "ticker": "^GSPC",
+      "matched_text": "S&P500",
+      "influencer": "米国ETF",
+      "display_name": "ハル",
+      "tweet_text": "日経新聞に掲載されたこのグラフ、日本株批判の米国株信者や、高配当株批判の人たちが多い中で、中々興味深い。\n\n2002年からの比較で、日経平均高配当株50指数はS&P500を大きく上回るパフォーマンス。",
+      "tweet_url": "https://twitter.com/haru_tachibana8/status/2024760844018725261",
+      "category": "推奨",
+      "recommended_at": "2026-02-20",
+      "price_at_recommendation": 6909.51,
+      "current_price": 6740.02,
+      "price_date": "2026-03-06",
+      "return_pct": -2.45,
+      "is_winner": false,
+      "is_contrarian": false
+    },
+    {
+      "ticker": "^N225",
+      "matched_text": "日経平均",
+      "influencer": "米国ETF",
+      "display_name": "ハル",
+      "tweet_text": "日経新聞に掲載されたこのグラフ、日本株批判の米国株信者や、高配当株批判の人たちが多い中で、中々興味深い。\n\n2002年からの比較で、日経平均高配当株50指数はS&P500を大きく上回るパフォーマンス。",
+      "tweet_url": "https://twitter.com/haru_tachibana8/status/2024760844018725261",
+      "category": "推奨",
+      "recommended_at": "2026-02-20",
+      "price_at_recommendation": 56825.7,
+      "current_price": 55620.84,
+      "price_date": "2026-03-06",
+      "return_pct": -2.12,
+      "is_winner": false,
+      "is_contrarian": false
+    },
+    {
+      "ticker": "FNGS",
+      "matched_text": "FANG+",
+      "influencer": "heihachiro888",
+      "display_name": "HUTCH ハッチ (岡元兵八郎)",
+      "tweet_text": "FANG+に対しては足元で弱気な見方が増えているようですが、FANG+指数を構成する10銘柄を個別に精査し、ボトムアップで積み上げたアナリストのファンダメンタル分析では、指数全体で約35％のアップサイドが示唆されています。過去2年間の推移を振り返ると、現在の株価と企業の本源的価値との乖離水準",
+      "tweet_url": "https://twitter.com/heihachiro888/status/2024139913940402214",
+      "category": "市況/推奨",
+      "recommended_at": "2026-02-18",
+      "price_at_recommendation": 61.84,
+      "current_price": 64.0,
+      "price_date": "2026-03-06",
+      "return_pct": 3.49,
+      "is_winner": true,
+      "is_contrarian": false
+    },
+    {
+      "ticker": "7974.T",
+      "matched_text": "任天堂",
+      "influencer": "2okutameo",
+      "display_name": "弐億貯男",
+      "tweet_text": "任天堂（7974）はサンリオ（8136）を見ているとIP（知的財産）ビジネスの伸び代がまだまだありそう。\nその観点でいまの調整局面は買い時かなあ",
+      "tweet_url": "https://twitter.com/2okutameo/status/2022609345356448061",
+      "category": "推奨",
+      "recommended_at": "2026-02-14",
+      "price_at_recommendation": 8350.0,
+      "current_price": 8680.0,
+      "price_date": "2026-03-06",
+      "return_pct": 3.95,
+      "is_winner": true,
+      "is_contrarian": false
+    },
+    {
+      "ticker": "7974.T",
+      "matched_text": "任天堂",
+      "influencer": "yukimamax",
+      "display_name": "ゆきママ",
+      "tweet_text": "任天堂は搾取される側だから、やっぱりラッキーな銘柄ではないね。その理論だとメガテックもそうなんだけど、腐ってもメガテックだから押し目かなぁというだけで。\n今はAI半導体、特にメモリ関連が強いので、短期トレードならそこに寄せるしかないかなぁと",
+      "tweet_url": "https://twitter.com/yukimamax/status/2024991476816773328",
+      "category": "推奨/市況",
+      "recommended_at": "2026-02-20",
+      "price_at_recommendation": 8587.0,
+      "current_price": 8680.0,
+      "price_date": "2026-03-06",
+      "return_pct": 1.08,
+      "is_winner": true,
+      "is_contrarian": false
+    },
+    {
+      "ticker": "GC=F",
+      "matched_text": "ゴールド",
+      "influencer": "gihuboy",
+      "display_name": "岐阜暴威",
+      "tweet_text": "おかしいな、、、昨日までゴールド、日本時間は強くなかったか？",
+      "tweet_url": "https://twitter.com/gihuboy/status/2021103262469062999",
+      "category": "不明",
+      "recommended_at": "2026-02-10",
+      "price_at_recommendation": 5003.8,
+      "current_price": 5181.3,
+      "price_date": "2026-03-06",
+      "return_pct": 3.55,
+      "is_winner": true,
+      "is_contrarian": true
+    },
+    {
+      "ticker": "GC=F",
+      "matched_text": "ゴールド",
+      "influencer": "gihuboy",
+      "display_name": "岐阜暴威",
+      "tweet_text": "買い増ししておいてよかった！\nとりあえず新資金はまだまだ上をめざしてるように見える！\nゴールドも上がってて嬉しいなり！",
+      "tweet_url": "https://twitter.com/gihuboy/status/2020965622616817813",
+      "category": "警戒/購入",
+      "recommended_at": "2026-02-09",
+      "price_at_recommendation": 5050.9,
+      "current_price": 5181.3,
+      "price_date": "2026-03-06",
+      "return_pct": 2.58,
+      "is_winner": true,
+      "is_contrarian": true
+    },
+    {
+      "ticker": "GC=F",
+      "matched_text": "ゴールド",
+      "influencer": "gihuboy",
+      "display_name": "岐阜暴威",
+      "tweet_text": "一応ゴールド少し買ってみた\n中国の米国債発言もあるから、ゴールドは買われていくだろうと思う。といっても5200いって10万くらいの豆ポジ。\nおやすみなさい。",
+      "tweet_url": "https://twitter.com/gihuboy/status/2020885338412167541",
+      "category": "購入",
+      "recommended_at": "2026-02-09",
+      "price_at_recommendation": 5050.9,
+      "current_price": 5181.3,
+      "price_date": "2026-03-06",
+      "return_pct": 2.58,
+      "is_winner": true,
+      "is_contrarian": true
+    },
+    {
+      "ticker": "BTC-USD",
+      "matched_text": "ビットコイン",
+      "influencer": "yukimamax",
+      "display_name": "ゆきママ",
+      "tweet_text": "長期で見ると尚更ビットコインの魅力が薄れてしまう\n\n今はAI半導体みたいにお金が集まる場所にお金を置いておくのが良さそうやね。\n\nお金はお金が大好き。お金はお金があるところに集まる。\n\nラッキーな場所を探しなさいというのは、そういうことです。\n\nラッキーじゃないなら？ハナクソピーン！",
+      "tweet_url": "https://twitter.com/yukimamax/status/2025106392252907556",
+      "category": "推奨/購入",
+      "recommended_at": "2026-02-21",
+      "price_at_recommendation": 68003.77,
+      "current_price": 67953.23,
+      "price_date": "2026-03-07",
+      "return_pct": -0.07,
+      "is_winner": false,
+      "is_contrarian": false
+    },
+    {
+      "ticker": "BTC-USD",
+      "matched_text": "ビットコイン",
+      "influencer": "yukimamax",
+      "display_name": "ゆきママ",
+      "tweet_text": "ビットコインが終わりとは言ってない。今、ラッキーな場所じゃないし、しばらくそれは変わらないだろうから優先度は極めて低いという話。",
+      "tweet_url": "https://twitter.com/yukimamax/status/2025090954307534981",
+      "category": "推奨/購入",
+      "recommended_at": "2026-02-21",
+      "price_at_recommendation": 68003.77,
+      "current_price": 67953.23,
+      "price_date": "2026-03-07",
+      "return_pct": -0.07,
+      "is_winner": false,
+      "is_contrarian": false
+    },
+    {
+      "ticker": "BTC-USD",
+      "matched_text": "ビットコイン",
+      "influencer": "miku919191",
+      "display_name": "みくかぶ専業投資家",
+      "tweet_text": "ビットコイン価格、ついに４年前に戻ったのか\nしんどすぎる",
+      "tweet_url": "https://twitter.com/miku919191/status/2024869588677370179",
+      "category": "推奨/購入",
+      "recommended_at": "2026-02-20",
+      "price_at_recommendation": 68005.42,
+      "current_price": 67953.23,
+      "price_date": "2026-03-07",
+      "return_pct": -0.08,
+      "is_winner": false,
+      "is_contrarian": false
+    },
+    {
+      "ticker": "GC=F",
+      "matched_text": "ゴールド",
+      "influencer": "yukimamax",
+      "display_name": "ゆきママ",
+      "tweet_text": "ゴールドは全キャッシュにしたり、忙しく戻したりしてます。今キャッシュとゴールド合わせて10％ぐらいです。\n緊急用ですね。日本株は5％もないっす\n\nお金がないっすお金が。",
+      "tweet_url": "https://twitter.com/yukimamax/status/2025477076888035464",
+      "category": "推奨",
+      "recommended_at": "2026-02-22",
+      "price_at_recommendation": 5059.3,
+      "current_price": 5181.3,
+      "price_date": "2026-03-06",
+      "return_pct": 2.41,
+      "is_winner": true,
+      "is_contrarian": false
+    },
+    {
+      "ticker": "7974.T",
+      "matched_text": "任天堂",
+      "influencer": "tesuta001",
+      "display_name": "テスタ",
+      "tweet_text": "任天堂は超長期で買ったので短期の上げ下げは無関係なのです。\nわかりやすく言うとオルカンを毎年積み立てて◯十年持つぞと買って\n１年目に含み損だから売らなきゃ〜\nとはならない\nと説明すればわかりやすいでしょうか",
+      "tweet_url": "https://twitter.com/tesuta001/status/2025792316737495193",
+      "category": "購入",
+      "recommended_at": "2026-02-23",
+      "price_at_recommendation": 8587.0,
+      "current_price": 8680.0,
+      "price_date": "2026-03-06",
+      "return_pct": 1.08,
+      "is_winner": true,
+      "is_contrarian": false
+    },
+    {
+      "ticker": "ACWI",
+      "matched_text": "オルカン",
+      "influencer": "tesuta001",
+      "display_name": "テスタ",
+      "tweet_text": "任天堂は超長期で買ったので短期の上げ下げは無関係なのです。\nわかりやすく言うとオルカンを毎年積み立てて◯十年持つぞと買って\n１年目に含み損だから売らなきゃ〜\nとはならない\nと説明すればわかりやすいでしょうか",
+      "tweet_url": "https://twitter.com/tesuta001/status/2025792316737495193",
+      "category": "購入",
+      "recommended_at": "2026-02-23",
+      "price_at_recommendation": 146.26,
+      "current_price": 141.68,
+      "price_date": "2026-03-06",
+      "return_pct": -3.13,
+      "is_winner": false,
+      "is_contrarian": false
+    },
+    {
+      "ticker": "^N225",
+      "matched_text": "日経平均",
+      "influencer": "yurumazu",
+      "display_name": "Emin Yurumazu (エミンユルマズ)",
+      "tweet_text": "日経平均30万円は現実か？プロが語るインフレ時代の投資戦略とは！？ \nhttps://\nyoutu.be/OpLntwkkU7U?si\n=ELSuj7mipIu5JzeC\n… via \n@YouTube",
+      "tweet_url": "https://twitter.com/yurumazu/status/2025445916044640421",
+      "category": "購入/市況",
+      "recommended_at": "2026-02-22",
+      "price_at_recommendation": 56825.7,
+      "current_price": 55620.84,
+      "price_date": "2026-03-06",
+      "return_pct": -2.12,
+      "is_winner": false,
+      "is_contrarian": false
+    },
+    {
+      "ticker": "GC=F",
+      "matched_text": "金ETF",
+      "influencer": "tesuta001",
+      "display_name": "テスタ",
+      "tweet_text": "スーパー長期ほったらかし口座  定期的観察その11\n\nアメリカ株       605,746,069  (+405,746,069）\n金ETF 　　　　 378,817,500  (+178,817,500）\n井村ファンド    338,240,000  (+138,240,000）\nオルカン           251,925,548    (+51,925,548）\nS＆P500　　　 143",
+      "tweet_url": "https://twitter.com/tesuta001/status/2024905304111190347",
+      "category": "推奨",
+      "recommended_at": "2026-02-20",
+      "price_at_recommendation": 5059.3,
+      "current_price": 5181.3,
+      "price_date": "2026-03-06",
+      "return_pct": 2.41,
+      "is_winner": true,
+      "is_contrarian": false
+    },
+    {
+      "ticker": "ACWI",
+      "matched_text": "オルカン",
+      "influencer": "tesuta001",
+      "display_name": "テスタ",
+      "tweet_text": "スーパー長期ほったらかし口座  定期的観察その11\n\nアメリカ株       605,746,069  (+405,746,069）\n金ETF 　　　　 378,817,500  (+178,817,500）\n井村ファンド    338,240,000  (+138,240,000）\nオルカン           251,925,548    (+51,925,548）\nS＆P500　　　 143",
+      "tweet_url": "https://twitter.com/tesuta001/status/2024905304111190347",
+      "category": "推奨",
+      "recommended_at": "2026-02-20",
+      "price_at_recommendation": 147.63,
+      "current_price": 141.68,
+      "price_date": "2026-03-06",
+      "return_pct": -4.03,
+      "is_winner": false,
+      "is_contrarian": false
+    },
+    {
+      "ticker": "^N225",
+      "matched_text": "日経",
+      "influencer": "gihuboy",
+      "display_name": "岐阜暴威",
+      "tweet_text": "目覚めて幸せ\n貴金属と日経、半導体上げ\nなんとかこのまま月曜日乗り切ってくれればいいけども。。。2月はもくようび弱くて金曜日戻すのが連続していたから覚悟決めて持ち越してよかった、、、あとは週末波乱ないこといのる",
+      "tweet_url": "https://twitter.com/gihuboy/status/2024956122600497239",
+      "category": "推奨/警戒",
+      "recommended_at": "2026-02-20",
+      "price_at_recommendation": 56825.7,
+      "current_price": 55620.84,
+      "price_date": "2026-03-06",
+      "return_pct": -2.12,
+      "is_winner": false,
+      "is_contrarian": true
+    },
+    {
+      "ticker": "^N225",
+      "matched_text": "日経",
+      "influencer": "gihuboy",
+      "display_name": "岐阜暴威",
+      "tweet_text": "前日比＋10万、ポジションはそのまま\n日経は下げながらも、イヒ、住金、三井ESが頑張ってくれた。半導体のイビデンは朝投げとけばよかったかなぁ",
+      "tweet_url": "https://twitter.com/gihuboy/status/2024738347034509709",
+      "category": "推奨/警戒",
+      "recommended_at": "2026-02-20",
+      "price_at_recommendation": 56825.7,
+      "current_price": 55620.84,
+      "price_date": "2026-03-06",
+      "return_pct": -2.12,
+      "is_winner": false,
+      "is_contrarian": true
+    },
+    {
+      "ticker": "^GSPC",
+      "matched_text": "S&P500",
+      "influencer": "yukimamax",
+      "display_name": "ゆきママ",
+      "tweet_text": "【超重要】米最高裁、トランプ政権の『包括関税』を無効化。\n\n✔︎『関税撤廃で株価爆上げ！』と飛びつく前に、投資家が絶対に知っておくべき3つのポイントをまとめ（単純な話ではないです）\n\n① 株価は若干リスクオン気味の反応\n・輸入コスト減の期待で、S&P500は報道後小幅高（+0.3%）",
+      "tweet_url": "https://twitter.com/yukimamax/status/2024874574719193298",
+      "category": "購入/高騰",
+      "recommended_at": "2026-02-20",
+      "price_at_recommendation": 6909.51,
+      "current_price": 6740.02,
+      "price_date": "2026-03-06",
+      "return_pct": -2.45,
+      "is_winner": false,
+      "is_contrarian": false
+    },
+    {
+      "ticker": "MAGS",
+      "matched_text": "M7",
+      "influencer": "YasLovesTech",
+      "display_name": "やす  ベンチャーキャピタル",
+      "tweet_text": "おはようございます\n\n本日の朝刊です。イラン情勢悪化の割には底がったですね。金や原油が上がってるのでそれなりに教科書通りには反応してるのですが \n\n特にM7が売り疲れてきたのか耐えてる気がします",
+      "tweet_url": "https://twitter.com/YasLovesTech/status/2024607969107947820",
+      "category": "推奨",
+      "recommended_at": "2026-02-19",
+      "price_at_recommendation": 61.59,
+      "current_price": 60.99,
+      "price_date": "2026-03-06",
+      "return_pct": -0.97,
+      "is_winner": false,
+      "is_contrarian": false
+    },
+    {
+      "ticker": "MU",
+      "matched_text": "$MU",
+      "influencer": "yukimamax",
+      "display_name": "ゆきママ",
+      "tweet_text": "暴落でも乗り越える2026年最強投資戦略\n\n◎ 買い推奨：日米AI半導体 $MU $SNDK イビデンなど◯FANG+ \n警戒セクター：高PERのSaaS、暗号資産\n\n機関投資家がこぞってSaaSを買い推奨する裏で起きてい『ホラーな現実』など解説！\n\nポジション整理に迷っている方はぜひ読んで",
+      "tweet_url": "https://twitter.com/yukimamax/status/2025180123822236034",
+      "category": "推奨/購入/下落",
+      "recommended_at": "2026-02-21",
+      "price_at_recommendation": 428.17,
+      "current_price": 370.3,
+      "price_date": "2026-03-06",
+      "return_pct": -13.52,
+      "is_winner": false,
+      "is_contrarian": false
+    },
+    {
+      "ticker": "SNDK",
+      "matched_text": "$SNDK",
+      "influencer": "yukimamax",
+      "display_name": "ゆきママ",
+      "tweet_text": "暴落でも乗り越える2026年最強投資戦略\n\n◎ 買い推奨：日米AI半導体 $MU $SNDK イビデンなど◯FANG+ \n警戒セクター：高PERのSaaS、暗号資産\n\n機関投資家がこぞってSaaSを買い推奨する裏で起きてい『ホラーな現実』など解説！\n\nポジション整理に迷っている方はぜひ読んで",
+      "tweet_url": "https://twitter.com/yukimamax/status/2025180123822236034",
+      "category": "推奨/購入/下落",
+      "recommended_at": "2026-02-21",
+      "price_at_recommendation": 649.97,
+      "current_price": 527.33,
+      "price_date": "2026-03-06",
+      "return_pct": -18.87,
+      "is_winner": false,
+      "is_contrarian": false
+    },
+    {
+      "ticker": "FNGS",
+      "matched_text": "FANG+",
+      "influencer": "yukimamax",
+      "display_name": "ゆきママ",
+      "tweet_text": "暴落でも乗り越える2026年最強投資戦略\n\n◎ 買い推奨：日米AI半導体 $MU $SNDK イビデンなど◯FANG+ \n警戒セクター：高PERのSaaS、暗号資産\n\n機関投資家がこぞってSaaSを買い推奨する裏で起きてい『ホラーな現実』など解説！\n\nポジション整理に迷っている方はぜひ読んで",
+      "tweet_url": "https://twitter.com/yukimamax/status/2025180123822236034",
+      "category": "推奨/購入/下落",
+      "recommended_at": "2026-02-21",
+      "price_at_recommendation": 62.19,
+      "current_price": 64.0,
+      "price_date": "2026-03-06",
+      "return_pct": 2.91,
+      "is_winner": true,
+      "is_contrarian": false
+    },
+    {
+      "ticker": "^GSPC",
+      "matched_text": "S&P500",
+      "influencer": "yukimamax",
+      "display_name": "ゆきママ",
+      "tweet_text": "ちなみにここ20年のS&P500のリターンは余裕で年10％超えるから、値上げ断ってS&P500に投資した方がいいな！\nナスダックならここ20年で20％近いからな。ゴールド？1年で100％だああああああああ！\nというわけで、家賃のとりあえず値上げは断るに限る。\nしょうがないんだ…それが普通借家契約なんだ…",
+      "tweet_url": "https://twitter.com/yukimamax/status/2025135071402098702",
+      "category": "推奨",
+      "recommended_at": "2026-02-21",
+      "price_at_recommendation": 6909.51,
+      "current_price": 6740.02,
+      "price_date": "2026-03-06",
+      "return_pct": -2.45,
+      "is_winner": false,
+      "is_contrarian": false
+    },
+    {
+      "ticker": "QQQ",
+      "matched_text": "ナスダック",
+      "influencer": "yukimamax",
+      "display_name": "ゆきママ",
+      "tweet_text": "ちなみにここ20年のS&P500のリターンは余裕で年10％超えるから、値上げ断ってS&P500に投資した方がいいな！\nナスダックならここ20年で20％近いからな。ゴールド？1年で100％だああああああああ！\nというわけで、家賃のとりあえず値上げは断るに限る。\nしょうがないんだ…それが普通借家契約なんだ…",
+      "tweet_url": "https://twitter.com/yukimamax/status/2025135071402098702",
+      "category": "推奨",
+      "recommended_at": "2026-02-21",
+      "price_at_recommendation": 608.81,
+      "current_price": 599.75,
+      "price_date": "2026-03-06",
+      "return_pct": -1.49,
+      "is_winner": false,
+      "is_contrarian": false
+    },
+    {
+      "ticker": "GC=F",
+      "matched_text": "ゴールド",
+      "influencer": "yukimamax",
+      "display_name": "ゆきママ",
+      "tweet_text": "ちなみにここ20年のS&P500のリターンは余裕で年10％超えるから、値上げ断ってS&P500に投資した方がいいな！\nナスダックならここ20年で20％近いからな。ゴールド？1年で100％だああああああああ！\nというわけで、家賃のとりあえず値上げは断るに限る。\nしょうがないんだ…それが普通借家契約なんだ…",
+      "tweet_url": "https://twitter.com/yukimamax/status/2025135071402098702",
+      "category": "推奨",
+      "recommended_at": "2026-02-21",
+      "price_at_recommendation": 5059.3,
+      "current_price": 5181.3,
+      "price_date": "2026-03-06",
+      "return_pct": 2.41,
+      "is_winner": true,
+      "is_contrarian": false
+    },
+    {
+      "ticker": "GC=F",
+      "matched_text": "ゴールド",
+      "influencer": "_teeeeest",
+      "display_name": "ななし＠氷河期ブログの人",
+      "tweet_text": "iFreeETF FANG+ゴールド \n\n凄いのきたwww\n\n過去の最大下落率とか調べてみたい",
+      "tweet_url": "https://twitter.com/_teeeeest/status/2024411543514071379",
+      "category": "推奨/下落",
+      "recommended_at": "2026-02-19",
+      "price_at_recommendation": 4975.9,
+      "current_price": 5181.3,
+      "price_date": "2026-03-06",
+      "return_pct": 4.13,
+      "is_winner": true,
+      "is_contrarian": false
+    },
+    {
+      "ticker": "FNGS",
+      "matched_text": "FANG+",
+      "influencer": "_teeeeest",
+      "display_name": "ななし＠氷河期ブログの人",
+      "tweet_text": "iFreeETF FANG+ゴールド \n\n凄いのきたwww\n\n過去の最大下落率とか調べてみたい",
+      "tweet_url": "https://twitter.com/_teeeeest/status/2024411543514071379",
+      "category": "推奨/下落",
+      "recommended_at": "2026-02-19",
+      "price_at_recommendation": 61.76,
+      "current_price": 64.0,
+      "price_date": "2026-03-06",
+      "return_pct": 3.63,
+      "is_winner": true,
+      "is_contrarian": false
+    },
+    {
+      "ticker": "CRCL",
+      "matched_text": "$CRCL",
+      "influencer": "miku919191",
+      "display_name": "みくかぶ専業投資家",
+      "tweet_text": "サークルインターネット復活\nいや〜ほんと苦しめられたw\n仮想通貨の状況が悪い中で、好決算だったから大丈夫かな？\n\n$CRCL",
+      "tweet_url": "https://twitter.com/miku919191/status/2029205610328379784",
+      "category": "購入/市況",
+      "recommended_at": "2026-03-04",
+      "price_at_recommendation": 105.27,
+      "current_price": 101.91,
+      "price_date": "2026-03-06",
+      "return_pct": -3.19,
+      "is_winner": false,
+      "is_contrarian": false
+    },
+    {
+      "ticker": "^N225",
+      "matched_text": "日経",
+      "influencer": "YasLovesTech",
+      "display_name": "やす  ベンチャーキャピタル",
+      "tweet_text": "本日+4%超の爆上げの日経ですが\n\n・ショート勢の買い戻しによる上昇(ショートカバー)\n・今回の下げで大儲けした集団は当然次の機会を狙う\n\nこの視点で見ると相場の見え方も変わってきます\n\n値動きが極端になってるので、日本株は長期上昇でもボラの高い相場になるかもしれませんね ",
+      "tweet_url": "https://twitter.com/YasLovesTech/status/2029370425570947214",
+      "category": "推奨/勝ちトレード/市況/高騰",
+      "recommended_at": "2026-03-05",
+      "price_at_recommendation": 55278.06,
+      "current_price": 55620.84,
+      "price_date": "2026-03-06",
+      "return_pct": 0.62,
+      "is_winner": true,
+      "is_contrarian": false
+    },
+    {
+      "ticker": "QQQ",
+      "matched_text": "$QQQ",
+      "influencer": "YasLovesTech",
+      "display_name": "やす  ベンチャーキャピタル",
+      "tweet_text": "まぁ、ナス100 ( $QQQ )や FANG+ ( $FGNS ), M7 ( $MAGS )持っておけば、長期的には良い相場だと思ってます\n\n米国株から流れた韓国や日本が一気にやられましたよね。PERだけが伸びてふわふわしてる日本株よりこっちのがいいと個人的には思いますよ",
+      "tweet_url": "https://twitter.com/YasLovesTech/status/2029321697229230401",
+      "category": "推奨/市況",
+      "recommended_at": "2026-03-04",
+      "price_at_recommendation": 610.75,
+      "current_price": 599.75,
+      "price_date": "2026-03-06",
+      "return_pct": -1.8,
+      "is_winner": false,
+      "is_contrarian": false
+    },
+    {
+      "ticker": "FGNS",
+      "matched_text": "$FGNS",
+      "influencer": "YasLovesTech",
+      "display_name": "やす  ベンチャーキャピタル",
+      "tweet_text": "まぁ、ナス100 ( $QQQ )や FANG+ ( $FGNS ), M7 ( $MAGS )持っておけば、長期的には良い相場だと思ってます\n\n米国株から流れた韓国や日本が一気にやられましたよね。PERだけが伸びてふわふわしてる日本株よりこっちのがいいと個人的には思いますよ",
+      "tweet_url": "https://twitter.com/YasLovesTech/status/2029321697229230401",
+      "category": "推奨/市況",
+      "recommended_at": "2026-03-04",
+      "price_at_recommendation": null,
+      "current_price": null,
+      "price_date": null,
+      "return_pct": null,
+      "is_winner": null,
+      "is_contrarian": false
+    },
+    {
+      "ticker": "MAGS",
+      "matched_text": "$MAGS",
+      "influencer": "YasLovesTech",
+      "display_name": "やす  ベンチャーキャピタル",
+      "tweet_text": "まぁ、ナス100 ( $QQQ )や FANG+ ( $FGNS ), M7 ( $MAGS )持っておけば、長期的には良い相場だと思ってます\n\n米国株から流れた韓国や日本が一気にやられましたよね。PERだけが伸びてふわふわしてる日本株よりこっちのがいいと個人的には思いますよ",
+      "tweet_url": "https://twitter.com/YasLovesTech/status/2029321697229230401",
+      "category": "推奨/市況",
+      "recommended_at": "2026-03-04",
+      "price_at_recommendation": 62.23,
+      "current_price": 60.99,
+      "price_date": "2026-03-06",
+      "return_pct": -1.99,
+      "is_winner": false,
+      "is_contrarian": false
+    },
+    {
+      "ticker": "FNGS",
+      "matched_text": "FANG+",
+      "influencer": "YasLovesTech",
+      "display_name": "やす  ベンチャーキャピタル",
+      "tweet_text": "まぁ、ナス100 ( $QQQ )や FANG+ ( $FGNS ), M7 ( $MAGS )持っておけば、長期的には良い相場だと思ってます\n\n米国株から流れた韓国や日本が一気にやられましたよね。PERだけが伸びてふわふわしてる日本株よりこっちのがいいと個人的には思いますよ",
+      "tweet_url": "https://twitter.com/YasLovesTech/status/2029321697229230401",
+      "category": "推奨/市況",
+      "recommended_at": "2026-03-04",
+      "price_at_recommendation": 64.02,
+      "current_price": 64.0,
+      "price_date": "2026-03-06",
+      "return_pct": -0.03,
+      "is_winner": false,
+      "is_contrarian": false
+    },
+    {
+      "ticker": "BTC-USD",
+      "matched_text": "ビットコイン",
+      "influencer": "YasLovesTech",
+      "display_name": "やす  ベンチャーキャピタル",
+      "tweet_text": "本日はテック株や半導体を中心に３指数とも上昇\n金やビットコインも広く買われてます。VIXも大きく低下しボラティリティは低下してます\n\n一方、原油は高止まりしており、金利も４％維持なので引き続きインフレ＆利下げ後退でマクロ環境は厳しいかと思われます\n\nドル円も157円維持です",
+      "tweet_url": "https://twitter.com/YasLovesTech/status/2029321104028799038",
+      "category": "推奨/市況/高騰",
+      "recommended_at": "2026-03-04",
+      "price_at_recommendation": 72710.58,
+      "current_price": 67953.23,
+      "price_date": "2026-03-07",
+      "return_pct": -6.54,
+      "is_winner": false,
+      "is_contrarian": false
+    },
+    {
+      "ticker": "AVGO",
+      "matched_text": "$AVGO",
+      "influencer": "YasLovesTech",
+      "display_name": "やす  ベンチャーキャピタル",
+      "tweet_text": "$AVGO ブロードコム\n\n売上：$19.31B（予想 $19.18B）\nEPS：$2.05vs$2.03\nQ2ガイダンス：$22B (予想 $20.5B)\n純利益：$7.35B\nQ2 AI半導体売上：$10.7B\n\n自社株/配当\n$10Bの自社株買い\n四半期配当：$0.65/株\n\n時間外ではほぼ横ばいの反応\n決算クリアできたみたいで良かったですね",
+      "tweet_url": "https://twitter.com/YasLovesTech/status/2029309904947953741",
+      "category": "推奨/市況",
+      "recommended_at": "2026-03-04",
+      "price_at_recommendation": 317.53,
+      "current_price": 330.48,
+      "price_date": "2026-03-06",
+      "return_pct": 4.08,
+      "is_winner": true,
+      "is_contrarian": false
+    },
+    {
+      "ticker": "^N225",
+      "matched_text": "日経",
+      "influencer": "gihuboy",
+      "display_name": "岐阜暴威",
+      "tweet_text": "日経下げすぎてて泣いた\n今日含み損142万\n明日は250万までいくかもしれないおわったなぁ、、、",
+      "tweet_url": "https://twitter.com/gihuboy/status/2028749641660215684",
+      "category": "購入/警戒",
+      "recommended_at": "2026-03-03",
+      "price_at_recommendation": 56279.05,
+      "current_price": 55620.84,
+      "price_date": "2026-03-06",
+      "return_pct": -1.17,
+      "is_winner": false,
+      "is_contrarian": true
+    },
+    {
+      "ticker": "^N225",
+      "matched_text": "日経",
+      "influencer": "株",
+      "display_name": "cis",
+      "tweet_text": "日経+2000か\nまた結局戦争下げは買い爆益か、、、\n俺は損切り済だが",
+      "tweet_url": "https://twitter.com/cissan_9984/status/2029264145502355880",
+      "category": "推奨/売却/勝ちトレード",
+      "recommended_at": "2026-03-04",
+      "price_at_recommendation": 54245.54,
+      "current_price": 55620.84,
+      "price_date": "2026-03-06",
+      "return_pct": 2.54,
+      "is_winner": true,
+      "is_contrarian": false
+    },
+    {
+      "ticker": "^N225",
+      "matched_text": "日経平均",
+      "influencer": "2okutameo",
+      "display_name": "弐億貯男",
+      "tweet_text": "暴落もつらいが、日経平均株価が爆戻ししてる日に保有株は小幅高だったりすると精神的にえぐられる\n中小型株持ってるとそれが意外に多い。\nいつ上がるねん！と言いたくなる",
+      "tweet_url": "https://twitter.com/2okutameo/status/2029163648787284133",
+      "category": "購入/下落",
+      "recommended_at": "2026-03-04",
+      "price_at_recommendation": 54245.54,
+      "current_price": 55620.84,
+      "price_date": "2026-03-06",
+      "return_pct": 2.54,
+      "is_winner": true,
+      "is_contrarian": false
+    },
+    {
+      "ticker": "GC=F",
+      "matched_text": "金価格",
+      "influencer": "2okutameo",
+      "display_name": "弐億貯男",
+      "tweet_text": "やっぱり金価格は下げてるといってもかなり底堅い",
+      "tweet_url": "https://twitter.com/2okutameo/status/2028808318391836897",
+      "category": "推奨",
+      "recommended_at": "2026-03-03",
+      "price_at_recommendation": 5107.4,
+      "current_price": 5181.3,
+      "price_date": "2026-03-06",
+      "return_pct": 1.45,
+      "is_winner": true,
+      "is_contrarian": false
+    },
+    {
+      "ticker": "TTD",
+      "matched_text": "$TTD",
+      "influencer": "Adscience12000",
+      "display_name": "サん",
+      "tweet_text": "$TTD\n凄い額だな。\nTTDのCEO、1.48億ドルもの巨額インサイダー買い。現在TTDはS&P500銘柄ワーストパフォーマンスランキング1、2位を争うほど株価低調。",
+      "tweet_url": "https://twitter.com/Adscience12000/status/2029406075708162261",
+      "category": "推奨/勝ちトレード",
+      "recommended_at": "2026-03-05",
+      "price_at_recommendation": 29.79,
+      "current_price": 29.28,
+      "price_date": "2026-03-06",
+      "return_pct": -1.71,
+      "is_winner": false,
+      "is_contrarian": false
+    },
+    {
+      "ticker": "^GSPC",
+      "matched_text": "S&P500",
+      "influencer": "Adscience12000",
+      "display_name": "サん",
+      "tweet_text": "$TTD\n凄い額だな。\nTTDのCEO、1.48億ドルもの巨額インサイダー買い。現在TTDはS&P500銘柄ワーストパフォーマンスランキング1、2位を争うほど株価低調。",
+      "tweet_url": "https://twitter.com/Adscience12000/status/2029406075708162261",
+      "category": "推奨/勝ちトレード",
+      "recommended_at": "2026-03-05",
+      "price_at_recommendation": 6830.71,
+      "current_price": 6740.02,
+      "price_date": "2026-03-06",
+      "return_pct": -1.33,
+      "is_winner": false,
+      "is_contrarian": false
+    },
+    {
+      "ticker": "EWY",
+      "matched_text": "$EWY",
+      "influencer": "Adscience12000",
+      "display_name": "サん",
+      "tweet_text": "$EWY\n韓国株ETF、本国の韓国市場が大暴落してた米国夜間セッションでは-10%くらいだったんだよ。今日はプラス推移。こういうボラが高いやつはショートもムズいから俺たち素人は急落を黙って受け止める。(もしくは高速損切り)",
+      "tweet_url": "https://twitter.com/Adscience12000/status/2029224078142529585",
+      "category": "推奨/売却/勝ちトレード/下落",
+      "recommended_at": "2026-03-04",
+      "price_at_recommendation": 134.37,
+      "current_price": 126.73,
+      "price_date": "2026-03-06",
+      "return_pct": -5.69,
+      "is_winner": false,
+      "is_contrarian": false
+    },
+    {
+      "ticker": "BTC-USD",
+      "matched_text": "ビットコイン",
+      "influencer": "hd_qu8",
+      "display_name": "米国株いつかは爆益予定ママ",
+      "tweet_text": "うわぁ～、寝不足すぎてウトウトしてる間にビットコインが〜\n信じてたよ〜！！\nコツコツ仕込んだCONL（含み損！）、ROBN（含み損！）の力を見せて〜",
+      "tweet_url": "https://twitter.com/hd_qu8/status/2029124701914841106",
+      "category": "推奨/購入",
+      "recommended_at": "2026-03-04",
+      "price_at_recommendation": 72710.58,
+      "current_price": 67953.23,
+      "price_date": "2026-03-07",
+      "return_pct": -6.54,
+      "is_winner": false,
+      "is_contrarian": false
+    },
+    {
+      "ticker": "GC=F",
+      "matched_text": "ゴールド",
+      "influencer": "米国ETF",
+      "display_name": "ハル",
+      "tweet_text": "速報：AIがゴールドマン・サックスのアナリスト並みの財務モデルを構築できるようになった（しかも無料）。\n\n年収約2,300万円相当の投資銀行業務を代替する12のClaudeプロンプトを紹介する（保存推奨）",
+      "tweet_url": "https://twitter.com/haru_tachibana8/status/2029397992814592236",
+      "category": "推奨",
+      "recommended_at": "2026-03-05",
+      "price_at_recommendation": 5065.3,
+      "current_price": 5181.3,
+      "price_date": "2026-03-06",
+      "return_pct": 2.29,
+      "is_winner": true,
+      "is_contrarian": false
+    },
+    {
+      "ticker": "3350.T",
+      "matched_text": "メタプラネット",
+      "influencer": "gihuboy",
+      "display_name": "岐阜暴威",
+      "tweet_text": "はじめまして\n株の話しませんか？\nおすすめはメタプラネットです",
+      "tweet_url": "https://twitter.com/gihuboy/status/2029419778918760839",
+      "category": "推奨/警戒",
+      "recommended_at": "2026-03-05",
+      "price_at_recommendation": 364.0,
+      "current_price": 341.0,
+      "price_date": "2026-03-06",
+      "return_pct": -6.32,
+      "is_winner": false,
+      "is_contrarian": true
+    },
+    {
+      "ticker": "META",
+      "matched_text": "メタ",
+      "influencer": "gihuboy",
+      "display_name": "岐阜暴威",
+      "tweet_text": "はじめまして\n株の話しませんか？\nおすすめはメタプラネットです",
+      "tweet_url": "https://twitter.com/gihuboy/status/2029419778918760839",
+      "category": "推奨/警戒",
+      "recommended_at": "2026-03-05",
+      "price_at_recommendation": 660.57,
+      "current_price": 644.86,
+      "price_date": "2026-03-06",
+      "return_pct": -2.38,
+      "is_winner": false,
+      "is_contrarian": true
+    }
+  ],
+  "untrackable": [
+    {
+      "text": "僕は選挙行きましたけど\n投票するしないは国民の義務でなく権利なので\n急に病気になってしまった人とかもいますし、そういうことは言い方はしないほうがいいと思いますよ",
+      "username": "tesuta001",
+      "url": "https://twitter.com/tesuta001/status/2020455598576332910",
+      "categories": [
+        "recommended_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "トランプキャンペーンに相当悪者にされたバイデン前大統領の息子ハンターバイデンはエプスタインとの絡みが一切なく、まともなスケベおじさんだったと米国で再評価され始めているようです。",
+      "username": "yurumazu",
+      "url": "https://twitter.com/yurumazu/status/2020437547797840168",
+      "categories": [
+        "purchased_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "ベゾスはバフェットに「なぜ人々はあなたの投資戦略を真似しないのか？」と尋ねた。バフェットは「私のやり方は、ゆっくり金持ちになる方法だから人は好まない」と答えた。ベゾスも「3年ではなく7年で考えられれば、競争で大きな優位に立てる。だが多くの人はそれができない」",
+      "username": "tomoyaasakura",
+      "url": "https://twitter.com/tomoyaasakura/status/2020286988012908595",
+      "categories": [
+        "recommended_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "52,000〜55,000円レベルで相当モミそうだな。ここからはさらなるインフレが待たれる。\nあとはやっぱり異次元のAI投資で企業の数字が出るねん後半。",
+      "username": "yukimamax",
+      "url": "https://twitter.com/yukimamax/status/2020708406815084711",
+      "categories": [
+        "purchased_assets",
+        "market_trend"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "脱ドル！(一部限定)\n\n当然の流れですね…ワンチャン資産凍結あるし、キンキラ金が大好き",
+      "username": "yukimamax",
+      "url": "https://twitter.com/yukimamax/status/2020664893548974360",
+      "categories": [
+        "recommended_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "今更積立なんかやらんぞ\n積立、俺がやるときは死んだときだけや",
+      "username": "gihuboy",
+      "url": "https://twitter.com/gihuboy/status/2024389293570207795",
+      "categories": [
+        "purchased_assets",
+        "warning_signals"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "前日比41万プラス\nなんとかアメリカがもう一日切り返して半導体から資金が流れてくれれば、、、",
+      "username": "gihuboy",
+      "url": "https://twitter.com/gihuboy/status/2024377348515385845",
+      "categories": [
+        "recommended_assets",
+        "warning_signals"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "これ、造船が足りないんだよな。。。\n３００万くらい買うつもりなんだけど、古野、三井ES、中国塗料とか入れてみようかな、決算で跳ねた日本ペイントとかよさそうなんだよね、しこしこ",
+      "username": "gihuboy",
+      "url": "https://twitter.com/gihuboy/status/2024263134715007421",
+      "categories": [
+        "purchased_assets",
+        "warning_signals"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "2月10日\n\nポジは今上がってる強いやつ買ったよ群と\nいつかグロース爆発して数倍になってよね夢見てるよお願い群と\nスポーツ関連群と\n後は半永久保有群\n\n明日は祝日らしいですねお疲れ様でした",
+      "username": "tesuta001",
+      "url": "https://twitter.com/tesuta001/status/2021138676630290938",
+      "categories": [
+        "purchased_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "ポートフォリオはつまらない企業で組んだ方が儲かります。つまらない企業はなんちゃらショックに一番強いから。",
+      "username": "yurumazu",
+      "url": "https://twitter.com/yurumazu/status/2019068759215132742",
+      "categories": [
+        "recommended_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "どうやら俺の相場人生は終わったようだ\n中部電力握って激しくインフレ負け\n年初のポジなら700億いってたのに、、、\nもうダメぽい",
+      "username": "株",
+      "url": "https://twitter.com/cissan_9984/status/2021152438166655281",
+      "categories": [
+        "purchased_assets",
+        "bearish_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "俺は無事ですよ\nキオクシアとディスコ大量保有してたのを急騰前に売ってしまって死にたいですが",
+      "username": "株",
+      "url": "https://twitter.com/cissan_9984/status/2021013299077447939",
+      "categories": [
+        "purchased_assets",
+        "bullish_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "◆金のチャート\n5000ドルの節目を超えたので、長めのチャートも2つ作りました",
+      "username": "goto_finance",
+      "url": "https://twitter.com/goto_finance/status/2015920778475356565",
+      "categories": [],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "RIZAPグループが子会社で保有する「湘南ベルマーレ」の全株式の譲渡を発表 \nhttps://\nkanpo-kanpo.blog.jp/archives/45825\n990.html\n…\n\nRIZAP、湘南ベルマーレを手放すのか",
+      "username": "kanpo_blog",
+      "url": "https://twitter.com/kanpo_blog/status/2024747436976263277",
+      "categories": [],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "マネックスの松本大とエプスタインとの関与について、SNSでは不正確な情報が多く拡散されています。",
+      "username": "heihachiro888",
+      "url": "https://twitter.com/heihachiro888/status/2024725378737340460",
+      "categories": [],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "マルタイの棒ラーメン。工場ライン増設で製造能力を倍増。追加で13.2 万食／日",
+      "username": "kanpo_blog",
+      "url": "https://twitter.com/kanpo_blog/status/2024644514963738967",
+      "categories": [],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "アンドルー元英王子を逮捕と報道\n\nhttps://\nnews.jp/i/139716201604\n3844460\n…\n\n英BBC放送は19日、英警察がチャールズ国王の弟で元王子のアンドルー氏を逮捕したと報じた。少女らの性的人身売買罪で起訴され自殺した米富豪エプスタイン氏に機密情報を漏えいした疑いなどで捜査を受けていた。",
+      "username": "kanpo_blog",
+      "url": "https://twitter.com/kanpo_blog/status/2024431142091538623",
+      "categories": [],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "【速報】大阪市水道局に金塊21kg・5億6654万円相当寄付される　水道管の老朽化対策などに活用へ \nhttps://\nnews.ntv.co.jp/n/ytv/category\n/society/yt794fc9cf78594a65998c168cf452d192\n…\n\nすごい",
+      "username": "kanpo_blog",
+      "url": "https://twitter.com/kanpo_blog/status/2024370801643049409",
+      "categories": [],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "楽天とGoogleが提携を発表　「YouTube」動画から商品をシームレスに購入できる購買体験を提供 \nhttps://\nkanpo-kanpo.blog.jp/archives/45822\n524.html\n…\n\nです",
+      "username": "kanpo_blog",
+      "url": "https://twitter.com/kanpo_blog/status/2024349963430613298",
+      "categories": [],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "三菱商事、「不肖の息子」千代田化工独り立ちへ　900億円回収で合意 \nhttps://\nnikkei.com/article/DGXZQO\nUC28BJO0Y6A120C2000000/\n…\n\n三菱商事が支援している千代田化工建設の業績改善により、900億円規模の資金を回収する合意に至った。2019年以来、30人規模の人材を派遣するなど全面支援してきた成果は約200億円の投資利益となる。",
+      "username": "kanpo_blog",
+      "url": "https://twitter.com/kanpo_blog/status/2024280987958722779",
+      "categories": [],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "気づけばこの２口座で７億超、２０２２年のように相場が低調な時ほど仕込み時ではある",
+      "username": "tapazou29",
+      "url": "https://twitter.com/tapazou29/status/2024670756991619182",
+      "categories": [
+        "purchased_assets",
+        "market_trend"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "Geminiがメール返信やら日々の料理やら確定申告やら、日常のサービス全てを請け負っていく感じある。\nなんやかんや、優劣あれどAI牛耳るメガテックはしっかり投資分以上に回収していくんじゃないか",
+      "username": "tapazou29",
+      "url": "https://twitter.com/tapazou29/status/2023943476635648022",
+      "categories": [
+        "recommended_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "インサイダー取引は発覚した時の代償が大きすぎて割にあわないので、ぜったいやっちゃいかんです\n会社員してると幹部じゃなくても知り得る未公開情報もあるので要注意\n\n【罰則】\n・5年以下の懲役や500万円以下の罰金\n・課徴金で利益は全額没収\n・氏名公表による社会的信用の失墜\n・勤務先の懲戒解雇",
+      "username": "2okutameo",
+      "url": "https://twitter.com/2okutameo/status/2023335373263516108",
+      "categories": [],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "今日Chat GPTに「食用金箔（添加物）は消費税率8%だから大量に買ってまとめて地金買取業者に売ったら、金現物として消費税率10%で買い取ってもらえるか？」と聞いたらたしなめられた\n実際のところは食用金箔は金以外の価格も上乗せされた値づけになってるから儲からんでしょうね",
+      "username": "2okutameo",
+      "url": "https://twitter.com/2okutameo/status/2022986174864957566",
+      "categories": [],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "東京証券取引所としては「JPXスタートアップ急成長100指数」を「和製NASDAQ100」として育てる目論みがあると思われる。\nETFが組成されたらこれまで時価総額や流動性の問題で入れなかった機関投資家による資金流入も期待できそう。",
+      "username": "2okutameo",
+      "url": "https://twitter.com/2okutameo/status/2022965587300036781",
+      "categories": [
+        "market_trend",
+        "recommended_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "私の保有株の最新の含み損益です。\n含み損益+38,570,300円\n保有株の決算発表は一通り終わりました。\n相場も落ち着いて徐々に損益も回復して行って欲しいな…。\nミークが金曜日に好決算だったので月曜日は期待",
+      "username": "2okutameo",
+      "url": "https://twitter.com/2okutameo/status/2022955162579710133",
+      "categories": [
+        "purchased_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "ランドセルを５００円で買えたのはすごい。\nうちの長男次男も軽く安めのを選んだけど、さすがにこのレベルは無かった。\nなお公立はまだいろいろ安いが、私立は制服含めて学用品が跳ね上がる。個人的には使用年限の決まっているものに高額のお金をかける発想は、ない",
+      "username": "tapazou29",
+      "url": "https://twitter.com/tapazou29/status/2022821541730484314",
+      "categories": [],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "食品の消費税率0%が実現するかもれないので予習しておきましょう。\nテストに出ます。\n\n【軽減税率】8%\nファストフードやコンビニの持ち帰り\n自販機のジュース\n出前\n学校給食\nみりん風調味料\nノンアルコールビール\n新聞\nオロナミンC（清涼飲料水（食品））\n氷（食べるための）\n食用金箔（添加物）",
+      "username": "2okutameo",
+      "url": "https://twitter.com/2okutameo/status/2022787381884301637",
+      "categories": [],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "確定申告で支払う住民税は今でこそ口座振替ですが、最初はコンビニ振り込みでした。\nコンビニで15万円を振り込む際にレジされていた店長さんに「こんな金額普通ないからびっくりした」と笑われました。",
+      "username": "2okutameo",
+      "url": "https://twitter.com/2okutameo/status/2022783095838322764",
+      "categories": [],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "十分インフレしてるだろ…こんなんワンコインやぞ…ギリ許せて650円。",
+      "username": "yukimamax",
+      "url": "https://twitter.com/yukimamax/status/2025064877405212908",
+      "categories": [],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "おはサンディスク！1日で10％ゲットです。これが米国株です。\nまだまだまだまだマーケットはAIに懐疑。メモリ、ストレージ株は上がると思います。安い時はコツコツ買っていきましょう。\n\nプレマーケット対応！『23時半待機勢』を出し抜いて底値で買える松井証券▶︎\nhttps://\nyukimama.net/fks/matsui-pre\nmarket/\n…",
+      "username": "yukimamax",
+      "url": "https://twitter.com/yukimamax/status/2024990389460238827",
+      "categories": [
+        "bullish_assets",
+        "recommended_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "なぜアジアだけこんなに急激に出生率が低くなってるのか知りたいよな\n\n資源が出ないから労働者としての価値を高める必要があって教育課金が激しくなって子供の数が少なくなったからか\n\n儒教的価値観なのか\n\nフェミニズムなのか\n\nそれら全部なのか、その他にもあるのか",
+      "username": "nobutaro_mane",
+      "url": "https://twitter.com/nobutaro_mane/status/2025032723493257448",
+      "categories": [],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "ちなみにワシは社会保険料あげるくらいなら国債で全部賄えばいい派\n\n社会保険料は現役世代だけが負担させられるけどインフレは全世代で負担させることができるから\n\n老人たちを冥土の土産としてインフレの業火でやいたればええとともうわ。最後につけ払わせて召されてもらおう",
+      "username": "nobutaro_mane",
+      "url": "https://twitter.com/nobutaro_mane/status/2024807753894728085",
+      "categories": [],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "そういえば2024年3月にドル円ロングした分が残ってて\n\n150円でポジション取ったんだけど2年経過してスワップで13円分貰ってるんだけど\n\nこれ137円まで下がらないと原価割れしないってことよな。一生一緒ポジションあり得るわこれわ",
+      "username": "nobutaro_mane",
+      "url": "https://twitter.com/nobutaro_mane/status/2024791886448443651",
+      "categories": [
+        "purchased_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "1992年アルベールビル五輪で金メダル獲得の日系米国人クリースティ・ヤマグチと今回金メダルを取ったアリサ・リュウはサンフランシスコ対岸のイーストベイとよばれる地域で生まれ育った。サンフランシスコベイエリアは全米屈指のアジア系女性が活躍する地域なのである。",
+      "username": "Adscience12000",
+      "url": "https://twitter.com/Adscience12000/status/2025026025936285976",
+      "categories": [],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "実はサンフランシスコベイエリアの出身だそうです。ご近所w同じく金メダリスト、アジア系のクリスティーヤマグチもこの辺出身らしく、謎にフィギュアスケートの聖地",
+      "username": "Adscience12000",
+      "url": "https://twitter.com/Adscience12000/status/2024951188849111403",
+      "categories": [],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "前日比プラス29万\nメイン株は死んでるけど昨日買った銘柄がプラス8%と活躍してくれた、ｱﾘｶﾞﾄｳｺﾞｻﾞｲﾏｽ",
+      "username": "gihuboy",
+      "url": "https://twitter.com/gihuboy/status/2021112608498254282",
+      "categories": [
+        "warning_signals",
+        "purchased_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "そろそろNTT買い時だと思うんですよね。\n来週の火曜日に150円台になることがあれば、迷わず1万株買います。\n150円割ることがあれば躊躇なく1万株追加してナンピンするでしょうね。\n160円近くになれば、まだ騰がる可能性を捨ててでも売ります。\nなお、この法則は、ここ数年100発100中で当たっています",
+      "username": "yuki75868813751",
+      "url": "https://twitter.com/yuki75868813751/status/2025163098882294035",
+      "categories": [
+        "recommended_assets",
+        "purchased_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "金融市場、世界経済の動向を知りたいならYardeni Researchのサイトがすごく便利。会員登録も不要で世界中のデータがグラフで見れる。Bloombergじゃないと見れないようなデータも豊富で、ジャンル別に整理されてるのもありがたい。\n\n\nhttps://\nyardeni.com/our-charts/",
+      "username": "uehara_sato4",
+      "url": "https://twitter.com/uehara_sato4/status/2025139128829157870",
+      "categories": [
+        "recommended_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "僕の人生の資産総額を折れ線グラフにしてみました。\n43歳以降は指数関数的に増えているのが分かります。\n奨学金地獄だった若い頃は、本当に資産０でした。\n資産0を脱してからも過度な節約をせず人生を楽しむことを優先していたのでそこまで伸びていません。\n株を始めてからの伸びがやはりすごいですね",
+      "username": "yuki75868813751",
+      "url": "https://twitter.com/yuki75868813751/status/2025505433004507147",
+      "categories": [
+        "recommended_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "三田証券元幹部インサイダーで再逮捕　\n\n共謀して東洋証券株計101万2800株を約5億420万円で買い付けた疑い\n松木容疑者ら15名義の口座を利用\n\n15名義の口座使うって計画的すぎる\n儲けたお金全部没収+実刑にしてほしい",
+      "username": "miku919191",
+      "url": "https://twitter.com/miku919191/status/2024839945060565319",
+      "categories": [
+        "recommended_assets",
+        "purchased_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "台湾や韓国で半導体工場を作るとエンジニアの給料が1,500万から2,000万円以上かかる。でも日本なら年収1,000万ぐらい。さらに政府からも補助金がもらえる。高品質な素材メーカーも多いので、日本で半導体工場を作るメリットは大きい。ただ、SK Hynixが日本に新工場を作るというニュースは真偽不明。",
+      "username": "uehara_sato4",
+      "url": "https://twitter.com/uehara_sato4/status/2024769742192693505",
+      "categories": [
+        "recommended_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "FRBがオーバーナイトレポで185億ドルを供給。「普通じゃない＝流動性危機の前兆では？」という声が出ています。\n\nオーバーナイトレポは「資金が不足した銀行」にFRBが1日だけ現金を貸し出す仕組みで、ストレス時に市場の混乱を抑える役割があります。",
+      "username": "uehara_sato4",
+      "url": "https://twitter.com/uehara_sato4/status/2024746675500437951",
+      "categories": [
+        "recommended_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "世界の外貨準備に占める米ドルの割合は今世紀最低水準に低下し、各国中銀は米国債より金を積み増している。静かなドル離れは米国資産とこれまで当然視されてきた基軸通貨プレミアムを揺るがす。だが、それ以上に弱含んでいるのが私たちの円だ。円はドルのみならず他通貨に対しても下落が続く。",
+      "username": "tomoyaasakura",
+      "url": "https://twitter.com/tomoyaasakura/status/2025486977810784731",
+      "categories": [
+        "recommended_assets",
+        "bearish_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "一転「10%→15%」に\n相互関税の最高裁違憲判断を受け、きのう公表したトランプ新関税。当初の10%を一転15%に引き上げ、24日に発動します。ホワイトハウススタッフも不意打ちだったといいます。この意味合いや、今後のポイントを、1枚スライドで見やすくまとめました\n\nhttps://\nnote.com/goto_finance/n\n/na91d014851ce\n…",
+      "username": "goto_finance",
+      "url": "https://twitter.com/goto_finance/status/2025354944581435507",
+      "categories": [
+        "purchased_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "◆ 朝メモ\nnoteの朝メモでは上記スライドに加え、「後藤の視点」として今後のポイントや市場への影響をまとめています。休日にもサクッと読みやすくかいたので、よければご覧ください。\n\nnote",
+      "username": "goto_finance",
+      "url": "https://twitter.com/goto_finance/status/2024978101302952411",
+      "categories": [
+        "purchased_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "最高裁「相互関税は違憲」\nポイントを1枚のスライドにまとめました",
+      "username": "goto_finance",
+      "url": "https://twitter.com/goto_finance/status/2024977544802705602",
+      "categories": [
+        "purchased_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "寝て起きたらメインPFの持ち株爆上げしててお金増えてた\n\n深夜に解説を作っても大して読まれないとよく分かる…うん\nそりゃみんな寝てるもんね…私も二度寝するおやすみ",
+      "username": "utbuffett",
+      "url": "https://twitter.com/utbuffett/status/2024963857572397410",
+      "categories": [
+        "recommended_assets",
+        "purchased_assets",
+        "bullish_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "関税が違法になったらその分国庫からお金が市場に流れるからプラスなんじゃないの（適当）\n\n関税が違法ってことは減税なので株価にはプラス…？\n\nとりあえず持ち株上がってるからもういいや、うん",
+      "username": "utbuffett",
+      "url": "https://twitter.com/utbuffett/status/2024878661942571056",
+      "categories": [
+        "recommended_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "日本と韓国にヘッジファンドからのお金が流れ込んできてる。",
+      "username": "uehara_sato4",
+      "url": "https://twitter.com/uehara_sato4/status/2024718284193660984",
+      "categories": [
+        "recommended_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "国内で半導体工場が建設される時、最初に業績影響が出るのは建設会社。次に電気工事や通信工事といったサブコン。その次に超純水装置や特殊ガス周りの工場インフラやってる会社が恩恵を受けて、その次にクリーンルーム、搬送装置、半導体製造装置という順番になる。",
+      "username": "uehara_sato4",
+      "url": "https://twitter.com/uehara_sato4/status/2024708428497899789",
+      "categories": [
+        "purchased_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "オリンピック選手のインタビューのたびに、アシックスのマークのほうに目がいってしまう\n\n普段テレビ見ないけど、サウナに入ってる時見て、すごい宣伝効果だよなぁと思って買ったら、今日の下落相場でも強い",
+      "username": "miku919191",
+      "url": "https://twitter.com/miku919191/status/2024703708651774142",
+      "categories": [
+        "purchased_assets",
+        "market_trend",
+        "bearish_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "これから仮眠し、起きたら有酸素20分とインターバルトレーニング30分。\nいつかくる退場の日に備えて身体だけは鍛えておかないとな…\n薄い布団で寝てる人、マットレスはマジで買った方がいい。世界ガチで変わるぞ。母親にも誕生日プレゼで買ったらすごくあったかいし腰にもいいと喜んでたわ！",
+      "username": "gihuboy",
+      "url": "https://twitter.com/gihuboy/status/2024759268759785481",
+      "categories": [
+        "recommended_assets",
+        "purchased_assets",
+        "warning_signals"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "エイジス見ても思うけど金融犯罪はもっと重罪にしてほしいな。アフリカでも密猟者は即現場で射殺が可能になった途端、密猟が減った国があるので、インサイダーも即逮捕禁固20年以上にしよう。リスクが高ければリターンに見合わないからやらなくなるだろ。",
+      "username": "gihuboy",
+      "url": "https://twitter.com/gihuboy/status/2024488122361532793",
+      "categories": [
+        "recommended_assets",
+        "purchased_assets",
+        "warning_signals"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "結果発表〜\n2月18日献血の結果は〜、、、\n基準値を外れてる項目無し！やったね！\n\n健康診断、人間ドックいく金のない人はせめて献血で血液検査だけでも行きましょう！タダでできますよ！",
+      "username": "gihuboy",
+      "url": "https://twitter.com/gihuboy/status/2024465754968773039",
+      "categories": [
+        "recommended_assets",
+        "warning_signals"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "＜PR＞このたび、FOREXさんとまた連携することになりました！\n2月28日投資戦略フェアでも我々の時間帯のスポンサーです。\nノックアウトオプションがあるのでハイレバ民、損切りできない人はおすすめ、強制で損切り決めるので！\n\n\nhttps://\nforex.com/jp/tradercente\nr/lp/campaign-aff/?cid=0010204130\n…\n\nリンク間違えてて再投稿なり",
+      "username": "gihuboy",
+      "url": "https://twitter.com/gihuboy/status/2024458192089207094",
+      "categories": [
+        "recommended_assets",
+        "warning_signals"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "保有株の最新の含み損益です。\n含み損益+44,210,900円\n好決算だったミークとcottaの株価が上昇\nしかしITコンサルのINTLOOPが",
+      "username": "2okutameo",
+      "url": "https://twitter.com/2okutameo/status/2024991636569387088",
+      "categories": [
+        "purchased_assets",
+        "bullish_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "旧姓使用のみに変更した場合、証券会社や金融機関の本人確認や信用情報照会とかどうなるんだろう。\nこれらの手続きの際には改姓後の姓を使用するなら今と変わらない。\n旧姓使用可とした場合は別人へのなりすましが可能となり、現状ブラックの人たちには利用しやすい制度になりそう。",
+      "username": "2okutameo",
+      "url": "https://twitter.com/2okutameo/status/2024575954614661379",
+      "categories": [
+        "recommended_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "【100万円どうする？】子どものための臨時収入の投資先について\n\n「子どもたちに投資は怖くないということを背中で教えてあげなさい」と資金を貰ったけど、どう運用するかと質問をいただきました\n\n皆さんならどんな運用しますか？\n\n私がどうするかなどは記事にてー",
+      "username": "_teeeeest",
+      "url": "https://twitter.com/_teeeeest/status/2024952999341367774",
+      "categories": [
+        "recommended_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "トランプ大統領のグローバル関税、違憲判決。\n\n返金処理に新たな関税法か…荒れるなぁw",
+      "username": "yukimamax",
+      "url": "https://twitter.com/yukimamax/status/2024869250134098334",
+      "categories": [
+        "recommended_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "え？これを読んで今がインフレだと言ってると読み取れないの？\n\n流石に経済金融の話をする以前のレベルだわさいなら",
+      "username": "nobutaro_mane",
+      "url": "https://twitter.com/nobutaro_mane/status/2024835053134684280",
+      "categories": [
+        "recommended_assets",
+        "purchased_assets",
+        "market_trend"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "39ショップ2倍のエントリー開始｜PR\n\n39ショップ2倍\n\nhttps://\na.r10.to/h5h7Mb\n\n<20:00〜以下も追加>\n対象ショップ5倍\n\nhttps://\na.r10.to/h5k2Lk\n\n対象ショップ7倍\n\nhttps://\na.r10.to/hHRFCm\n\n対象ショップ10倍\n\nhttps://\na.r10.to/hHRFo8\n\n同一店舗買い周り\n\nhttps://\na",
+      "username": "お得情報ブロガー",
+      "url": "https://twitter.com/pay_cashless/status/2024434001222721839",
+      "categories": [
+        "recommended_assets",
+        "purchased_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "Bloombergが、OpenAIの資金調達は成功する可能性が高いことを報じました。\n\n1ヶ月前、SNSでは、\n「OpenAIは資金調達に失敗する」\n「Geminiの勢いに押されてヤバい」\nといった声の大合唱。\n\n最近、インプ目的の投稿も増えています。",
+      "username": "momoblog0214",
+      "url": "https://twitter.com/momoblog0214/status/2024335361053512046",
+      "categories": [
+        "recommended_assets",
+        "purchased_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "金利は関税違法を受けて小幅な上昇\n\n※関税は地味に財政再建にけっこう貢献してました",
+      "username": "YasLovesTech",
+      "url": "https://twitter.com/YasLovesTech/status/2024867183260750207",
+      "categories": [
+        "recommended_assets",
+        "bullish_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "米最高裁、トランプ大統領の「グローバル関税」に違憲判決\n\n​米連邦最高裁判所は金曜日、トランプ大統領が導入した「グローバル関税」を違法とする判決を下した。通商関税を課すために大統領が「緊急権限」を行使したことを退けた形だ。",
+      "username": "YasLovesTech",
+      "url": "https://twitter.com/YasLovesTech/status/2024866677171642505",
+      "categories": [
+        "recommended_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "最高裁は関税の返金に関しては声明を発表してない\n\n※違法だけど今までの関税の取り扱いは不明瞭です",
+      "username": "YasLovesTech",
+      "url": "https://twitter.com/YasLovesTech/status/2024866033891512487",
+      "categories": [
+        "recommended_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "調査によると47%のアメリカ国民がインフレのため年金的な口座（401kとか）からお金を引き出してるとのこと\n\nこういう口座は大抵、一定の年齢前に引き出すとペナルティが課せられます",
+      "username": "YasLovesTech",
+      "url": "https://twitter.com/YasLovesTech/status/2024864215107047914",
+      "categories": [
+        "recommended_assets",
+        "purchased_assets",
+        "market_trend"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "【匿名相談サービスを始めました】\n\n・株式投資（日本株が得意）\n・不動産、現代アート、仮想通貨への投資\n・金融でのキャリア（セル/バイサイド）\n・投資家バーについて\n・AIの投資への活用\n\nその他、聞きたいことあれば気軽に質問ください！\n\n\nhttps://\nmond.how/ja/uehara_sato4\n#mond_uehara_sato4",
+      "username": "uehara_sato4",
+      "url": "https://twitter.com/uehara_sato4/status/2024434628325736866",
+      "categories": [
+        "recommended_assets",
+        "purchased_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "光通信とレオスの新しい取り組み。株価変動リスクを取らず配当収入だけほしい年金の資金を狙ってる。こういうファンドの作り方もあるのか。\n\n・光通信は配当収入を放棄してキャピタルゲインだけを得る\n・レオスのファンドは配当収入だけ受け取って株価変動リスクはない",
+      "username": "uehara_sato4",
+      "url": "https://twitter.com/uehara_sato4/status/2024305286526493023",
+      "categories": [
+        "recommended_assets",
+        "purchased_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "赤旗さんの有用な記事ありがたいです。\n取材力に定評ある機関紙さんですから、情報の内容も信頼できますね。\nこの記事を読んで、\n「この企業、国策の波に乗り儲けられそうだな」と考えられる人は富裕層になれる思考と感じます。\nというわけで、献金額ナンバー3の三菱電機、出遅れましたが100株購入。",
+      "username": "yuki75868813751",
+      "url": "https://twitter.com/yuki75868813751/status/2024635875599290765",
+      "categories": [
+        "recommended_assets",
+        "purchased_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "オフ会やDMなどで「ゆーきはいつ売ってるの？」とよく聞かれるので、たまには売るタイミングもポストしてみます。\n三週間前に買ったJマテリアルを売りました。\n三週間前に1640円で買い、2075円で売れたので、わずか三週間で4万円以上儲けたことになります。単元で充分なので真似しやすいと思います。",
+      "username": "yuki75868813751",
+      "url": "https://twitter.com/yuki75868813751/status/2024274165684195763",
+      "categories": [
+        "recommended_assets",
+        "purchased_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "インフレは行動しない人には辛い 最低賃金で何も考えない人にとっては、デフレ天国かもしれん。",
+      "username": "yukimamax",
+      "url": "https://twitter.com/yukimamax/status/2025350795731108187",
+      "categories": [
+        "recommended_assets",
+        "purchased_assets",
+        "market_trend"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "そうそう、机とかタンスに貼って…ってそんなわけあるかい！\n\nボンボンドロップシールが初めて！明日、原宿に買いに行くんだ〜☆（ゝω・）vｷｬﾋﾟ",
+      "username": "yukimamax",
+      "url": "https://twitter.com/yukimamax/status/2025238472756461807",
+      "categories": [
+        "recommended_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "日本は中小企業が7割（勤め人ベース）なので、給料上げられないんですよね。コスト増で全部消えて、給料に回らないのが実態です。\n大手ですら実質賃金マイナスなので、この流れは変わらないと思います。\nそう考えると、日銀の利上げも限界で、インフレは継続しやすいので投資するしかないんですね…",
+      "username": "yukimamax",
+      "url": "https://twitter.com/yukimamax/status/2025227733044002871",
+      "categories": [
+        "recommended_assets",
+        "purchased_assets",
+        "market_trend"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "高くなるというより、円の価値そのものが落ちていっているので仕方ない。30年以上ぶりのインフレだから、みんな戸惑っている。慣れるしかない。\nそして、今ある現金の価値は明日には下がっている。早く、モノを買う、株を買った方が良いんだ。",
+      "username": "yukimamax",
+      "url": "https://twitter.com/yukimamax/status/2025221196669940130",
+      "categories": [
+        "recommended_assets",
+        "purchased_assets",
+        "market_trend"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "【21・22・23日の3連休・ガチのお願い】\n\n相場がお休みのこの3連休は、投資環境を見直して整える絶好のチャンス。今のうちに準備を済ませておきましょう！\n\nXやブログ、noteで【最新の投資情報や相場分析】をずっと『無料』で更新し続けるために、皆様の応援が頼りです",
+      "username": "yukimamax",
+      "url": "https://twitter.com/yukimamax/status/2025218292651360256",
+      "categories": [
+        "recommended_assets",
+        "market_trend"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "【月2.5万円×20年】約3,000万円作れます\n\n『NASDAQ100』で5万回のガチシミュ\n\n・積立元本：たったの600万\n・中央値：約2,955万円でFIRE\n・上位5%なら：約1.3億円\n\n労働と残業だけで2,000万円の利益を作るのは超ハードモード。お金に働かせましょう",
+      "username": "yukimamax",
+      "url": "https://twitter.com/yukimamax/status/2025212157953278117",
+      "categories": [
+        "recommended_assets",
+        "purchased_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "立ち回りについてブログ書くか…買いたい銘柄、買ってはいけない銘柄って感じで。\nみんなの応援（アフィ）がモチベ！興味のある講座はブログのバナーから開設開設ぅ！\n\nちな、GMOクリック証券は定期的にお金配りやってます。ワンチャン10万円は2/28までなので今すぐ開設▶︎\nhttps://\nyukimama.net/fks/gmo-accoun\nt-open/\n…",
+      "username": "yukimamax",
+      "url": "https://twitter.com/yukimamax/status/2025148041850945915",
+      "categories": [
+        "recommended_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "はい…これを理解せずに群がる個人投資家が悲しい…（機関投資家は買い推奨しながら裏で売りまくってる）",
+      "username": "yukimamax",
+      "url": "https://twitter.com/yukimamax/status/2025144376410996852",
+      "categories": [
+        "recommended_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "くっ…固定金利なら値上げしなくたっていいじゃないですかああ！",
+      "username": "yukimamax",
+      "url": "https://twitter.com/yukimamax/status/2025134118724616367",
+      "categories": [
+        "recommended_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "「バイ・アメリカ」から「さらば米国」へ。海外投資家が進めてきた資産分散の流れが、今や米国投資家にも広がる。資金は新興国や欧州、日本株へシフト。ビッグテック主導で割高となった米国株から、割安市場へ向かうのは自然な流れだ。国や資産の分散は一段と重要になる。",
+      "username": "tomoyaasakura",
+      "url": "https://twitter.com/tomoyaasakura/status/2025325341309632540",
+      "categories": [
+        "recommended_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "日米は「K字形」経済の様相を強める。株高の恩恵は資産保有層に集中し、実質賃金や消費は弱い。価格頼みの資産は反転も早く上の層も安泰ではない。下の層には資産形成と人的資本への投資が鍵となる。K字を再び一本の成長軌道へ戻せるか。問われるのは価格の上昇ではなく、富の循環をどう設計するか。",
+      "username": "tomoyaasakura",
+      "url": "https://twitter.com/tomoyaasakura/status/2024792205773475929",
+      "categories": [
+        "recommended_assets",
+        "purchased_assets",
+        "bullish_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "長年にわたり当社をご支援いただき、また「永久保有」とのお言葉まで賜りましたこと、心より深く御礼申し上げます。その重みあるご信頼に、身の引き締まる思いです。今後もそのご期待に真摯にお応えできますよう、一意専心、持続的成長と企業価値の向上に全力を尽くしてまいります。",
+      "username": "tomoyaasakura",
+      "url": "https://twitter.com/tomoyaasakura/status/2024785513379660270",
+      "categories": [
+        "purchased_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "コモディティは長年にわたり、株式や債券などの金融資産に大きく劣後してきた。その結果、バリュエーション面では歴史的に見ても割安な水準にある。中でもエネルギーは、需給改善や地政学、構造的な供給制約を背景に反発余地が大きい。エネルギーは今年を象徴する主要テーマの一つとなる可能性がある。",
+      "username": "tomoyaasakura",
+      "url": "https://twitter.com/tomoyaasakura/status/2024492943126741122",
+      "categories": [
+        "recommended_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "バフェット氏曰く「未来は自分のもの。他人が代わりに築いてはくれない」投資も同じ。責任の持てない他人の助言に振り回されず主体的に判断することが大切。うまくいかないからと売り買いを繰り返せば状況は更に悪化する。自らを信じ、規律と忍耐を貫いた先にこそ道は開ける。",
+      "username": "tomoyaasakura",
+      "url": "https://twitter.com/tomoyaasakura/status/2024453951849189573",
+      "categories": [
+        "recommended_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "早起きは5,000円くらいのお得\n\nmoomoo証券が新規開設＆入金で米国株を貰えるキャンペーンをやってます\n\n入金額によってガチャ回数が変わるので30万円ほど余裕資金ある人はノーリスクで株を貰いつつ、大当たりが出たらタイムカプセルにするのはどうでしょうか\n\nhttps://\nj.jp.moomoo.com/0tM24q#PR",
+      "username": "_teeeeest",
+      "url": "https://twitter.com/_teeeeest/status/2025288161191162358",
+      "categories": [
+        "recommended_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "【どれくらいある？】リスク資産をNISAと特定口座に分けてみた\n\nGeminiに今の資産状況でセミリタイアできそう？とFPやって貰っていたら老後のNISAを聖域化し過ぎてて、中古マンション買ったら無理無理の無理と言われましたww\n\nそこで自分のNISAと特定口座を把握してみました",
+      "username": "_teeeeest",
+      "url": "https://twitter.com/_teeeeest/status/2025133397535064457",
+      "categories": [
+        "purchased_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "少子高齢化では年金崩壊しない！\n一撃で分かる画像を紹介\n\n皆さん、年金は破綻する派ですか？\n\n私は貰える額は減るものの破綻することはないやろう、と思ってます\n\n理由は働く人が増えるからですが、超絶分かりやすい画像があったので記事にてシェアします",
+      "username": "_teeeeest",
+      "url": "https://twitter.com/_teeeeest/status/2024771003600318787",
+      "categories": [
+        "recommended_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "資産をつくったあと、労働モチベーションをどうやって保つのか 2026\n\n読者様から資産5000万円あれば給料で入金より資産上昇のほうが凄いし、働く意欲減りません？\n\nと質問を頂きました\n\n悲しい話、賃貸、零細勤務のワイはまだまだ労働が必要です\n\n詳細な回答は記事にて",
+      "username": "_teeeeest",
+      "url": "https://twitter.com/_teeeeest/status/2024590061212188716",
+      "categories": [
+        "recommended_assets",
+        "bullish_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "仕事がしんど過ぎてセミリタイアできるかGeminiに聞いてみましたw\n\n今年50歳\n資産6800万円\n利回りは3%想定\n年金は12万円程度を予想\n賃貸民…\n\nさすがに無理やろ、と思ってたら2500万円で中古マンション買って、残り4300万円を運用して年240万円取り崩しでいける、と\n\nマジですか？\n\n詳細は記事にて",
+      "username": "_teeeeest",
+      "url": "https://twitter.com/_teeeeest/status/2024451069624143956",
+      "categories": [
+        "recommended_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "62歳契約社員、貯金2400万円。中古マンションを購入すべきか迷っています\n\nずっと家を欲しいと思っているからかGoogleフィードでは管理人を狙い撃ちしたような記事が出てきますw\n\nウェブログついでに私自身も家を買えるかGeminiにFPもやって貰いました\n\n結果は記事にてー",
+      "username": "_teeeeest",
+      "url": "https://twitter.com/_teeeeest/status/2024408623200301178",
+      "categories": [
+        "recommended_assets",
+        "purchased_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "これは確かにっ\n\n2. 特に注目すべき点：顧客は短期的な生産拡大が困難であることを認識しており、ダブルオーダーは割り当て量の増加ではなく価格の上昇を招くだけであると理解しています。",
+      "username": "paurooteri",
+      "url": "https://twitter.com/paurooteri/status/2024845412893679686",
+      "categories": [
+        "recommended_assets",
+        "bullish_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "Samsungの平沢とテイラー\nMicronのボイジー、ニューヨーク、台湾、広島、シンガポール\n\nこれらに比べたら、\nSK Hynixは龍仁と15Xになる\n\nNANDが来なかったらまぁ良かったんだけど\nNANDも投資が必要となると、足りないのよ\n25万枚-30万枚/月の大規模な拠点が追加で一つ必要\n\nブルケースの対応だね",
+      "username": "paurooteri",
+      "url": "https://twitter.com/paurooteri/status/2024842390016778430",
+      "categories": [
+        "purchased_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "まぁ色々な状況を考えると補助金次第ではあるけど濃厚だと思うよ\n\n別にここ1年の話じゃなかったしね\nキオクシアの空きラインにも打診したでしょ",
+      "username": "paurooteri",
+      "url": "https://twitter.com/paurooteri/status/2024840518195392894",
+      "categories": [
+        "recommended_assets",
+        "purchased_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "Samsung電子のnote大変好評です\nメモリがどうなるか、全体に影響を与える彼らの生産能力をしっかりと把握しましょう\n是非、金曜日の夜に読んでみてください\n拡散もよろしくお願い致します",
+      "username": "paurooteri",
+      "url": "https://twitter.com/paurooteri/status/2024834262328091116",
+      "categories": [
+        "recommended_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "含み損が−500万に！\n先物−2200円とか\nやってくれるやないかああああ！！",
+      "username": "tesuta001",
+      "url": "https://twitter.com/tesuta001/status/2028846484368785597",
+      "categories": [
+        "purchased_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "最初から決めてる計画的買い下がりと\nナンピンは全く違うので\nそこが見てわからない初心者の方はもちろんダメですよ",
+      "username": "tesuta001",
+      "url": "https://twitter.com/tesuta001/status/2028814795059950022",
+      "categories": [
+        "recommended_assets",
+        "purchased_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "リアルが含み益546万！\nなので実質−1200万！\nバーチャは−4000万！\nリアルを1000円抜きで指値セットオン！",
+      "username": "tesuta001",
+      "url": "https://twitter.com/tesuta001/status/2028808959415775327",
+      "categories": [
+        "purchased_assets",
+        "winning_trades"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "現在値54225なので\nリアルは含み益になったけど最初切ったのと合わせたら-1600万くらい\nバーチャの方は−5500万かな\nボラ大きいいいいぃ",
+      "username": "tesuta001",
+      "url": "https://twitter.com/tesuta001/status/2028804060091146416",
+      "categories": [
+        "purchased_assets",
+        "winning_trades"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "お気づきの通り\nリアルが53650で追加して150枚に\n約定時含み損は\nバーチャの方が−8400万\nリアルが−750万",
+      "username": "tesuta001",
+      "url": "https://twitter.com/tesuta001/status/2028792047222825371",
+      "categories": [
+        "purchased_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "お風呂入ってたら約定きてびっくりした\n54150@100枚で55330@500枚絶対絶命ポジ完了バーチャと\n54150@50枚追加で54400@100枚リアル\n約定時含み損は−5900万と−250万",
+      "username": "tesuta001",
+      "url": "https://twitter.com/tesuta001/status/2028772888464199691",
+      "categories": [
+        "purchased_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "【ライブ配信】明日(3/5)木曜日8時pmからは「インド、ベトナム株オンラインセミナーハッチと読み解く！インド・ベトナム株投資の現在地」を行います。どなたでもご覧頂けます。",
+      "username": "heihachiro888",
+      "url": "https://twitter.com/heihachiro888/status/2028978848059277520",
+      "categories": [
+        "purchased_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "金融庁、首相名の仮想通貨を調査へ（共同通信） \n\nhttps://\nnews.yahoo.co.jp/articles/8781a\n5233f94eec6803923ca7cd5019cb51a6261\n…\n\n金融庁が高市早苗首相の名前入りの暗号資産「SANAE　TOKEN」に関し、関連業者への調査を検討していることが3日、分かった。携わったとされる企業は、仮想通貨の発行に必要な登録がなく、事実関",
+      "username": "kanpo_blog",
+      "url": "https://twitter.com/kanpo_blog/status/2028751123239284851",
+      "categories": [
+        "purchased_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "不動産も昨日の株のように、一瞬大暴落するようなタイミングがあれば、今からでも不動産一つくらい買いたいんですけどね～(^^;)\n数千万くらいのよい中古分譲マンションが買いたいです！\nいつか、貸してもらえない年齢になってしまうかもなので(^^;)",
+      "username": "yuki75868813751",
+      "url": "https://twitter.com/yuki75868813751/status/2029328630820815342",
+      "categories": [
+        "recommended_assets",
+        "bearish_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "「SANAE　TOKEN」に関し、携わったとされる企業は、仮想通貨の発行に必要な登録がなく、事実関係を確認\n\nそもそも登録なかったんかい\n勝手に首相の名前使う以前にアウトだったw\n過去において、有名人が宣伝とか名前を使った仮想通貨ってほぼ100%ロクな事ない",
+      "username": "miku919191",
+      "url": "https://twitter.com/miku919191/status/2029065317239144472",
+      "categories": [
+        "purchased_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "買った瞬間に爆益でラッキー  \n\n最近「買い煽りしてる」って言われることがあるけど、  \n日本株はこの1ヶ月、爆益報告なんてしてないんだよね。  \n\nそもそも有料商材もやってないし、  \n煽るメリットも特にない  \n\n私の感覚としては  \n「このラーメン美味しかったよ」",
+      "username": "momoblog0214",
+      "url": "https://twitter.com/momoblog0214/status/2029356412846186949",
+      "categories": [
+        "recommended_assets",
+        "purchased_assets",
+        "winning_trades"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "この値段で、Mac買えるの凄くない？\n\n子供が小学校で配布されたPCがダサくて…\nいっそ小学校〜高校まで全部MacBook Neoにしたらいいのに\n\n私も外に持ち歩きようにピンク買おうかな\nと思ったくらい、カラーも可愛いし、\niPad感覚で買えるのがいいよね",
+      "username": "momoblog0214",
+      "url": "https://twitter.com/momoblog0214/status/2029323479569637717",
+      "categories": [
+        "recommended_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "楽天で39ショップ2倍が追加｜PR\n\n39ショップ2倍\n\nhttps://\na.r10.to/hNtB8n\n\n<以下も20:00〜開始>\n対象ショップ5倍\n\nhttps://\na.r10.to/hkStJL\n対象ショップ7倍\n\nhttps://\na.r10.to/h5Hep5\n対象ショップ10倍\n\nhttps://\na.r10.to/hgP5dU\n対象ショップ10倍②\n\nhttps://\na.r1",
+      "username": "お得情報ブロガー",
+      "url": "https://twitter.com/pay_cashless/status/2029143353158492199",
+      "categories": [
+        "purchased_assets",
+        "bullish_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "2月は100万円で始めたデイトレ口座を284万円まで増やすことができました！月利184%でしたね！読者の方も利益がでてて嬉しい限りです！\n\n結果は出来すぎですが、やっていることは常にマイルールの徹底です。私が、どこに注目し、立ち回っているかFXnoteで体感して頂ければと思います！",
+      "username": "yys87495867",
+      "url": "https://twitter.com/yys87495867/status/2029401174257090744",
+      "categories": [
+        "recommended_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "キックの担当者の人とやり取りしてたらすでに俺のアカウントは収益化できるようにしてもらえてるらしい。\n外配信は画質がいいのと収益率がYouTubeの1.4倍ほどあるキックでやります、東京やらの観光所巡りします",
+      "username": "gihuboy",
+      "url": "https://twitter.com/gihuboy/status/2029395581685383570",
+      "categories": [
+        "recommended_assets",
+        "bullish_assets",
+        "warning_signals"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "持って耐えてたらとんでもないことになっていた、、、あと個人的にこの個人の押し目買いが入りながら下落していく感じ、、、これはまだまだ下げる予感する\n個人狙われてる",
+      "username": "gihuboy",
+      "url": "https://twitter.com/gihuboy/status/2029016435721384283",
+      "categories": [
+        "recommended_assets",
+        "bearish_assets",
+        "warning_signals"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "【FX,CFD,株配信】完全に終わった含み損今日だけで100万漢　２０２６年３月３日 \nhttps://\nyoutube.com/live/Cgd9k3Kih\nig?si=Gn7qstcK77btwqGy\n… \n@YouTube\nより",
+      "username": "gihuboy",
+      "url": "https://twitter.com/gihuboy/status/2028698107358388684",
+      "categories": [
+        "purchased_assets",
+        "bearish_assets",
+        "warning_signals"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "含み損100万　おわった",
+      "username": "gihuboy",
+      "url": "https://twitter.com/gihuboy/status/2028696265622704575",
+      "categories": [
+        "purchased_assets",
+        "warning_signals"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "午前中は含み益65万だったんふぁぜ\nそれがこれよ",
+      "username": "gihuboy",
+      "url": "https://twitter.com/gihuboy/status/2028690583603310817",
+      "categories": [
+        "purchased_assets",
+        "winning_trades",
+        "warning_signals"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "戦争下げ買い昨日の夜間の下げスピードにビビって損切り\nだいたいこういうの漏れてる",
+      "username": "株",
+      "url": "https://twitter.com/cissan_9984/status/2028722566425419965",
+      "categories": [
+        "recommended_assets",
+        "sold_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "戦争暴落は買えば毎回爆益だが果たして今回は？\n俺はもちろんいつものようにビビりながら買い",
+      "username": "株",
+      "url": "https://twitter.com/cissan_9984/status/2028344500201140420",
+      "categories": [
+        "recommended_assets",
+        "winning_trades",
+        "bearish_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "私が運営する「割安成長株コミュニティ」に楽天モバイル社員の方が社割投稿をされたので、この楽天モバイル社員の方のアカウントをコミュニティからBANいたしました\n楽天モバイル社員の皆様\nこのようなことはお控えください",
+      "username": "2okutameo",
+      "url": "https://twitter.com/2okutameo/status/2029127466326081551",
+      "categories": [
+        "recommended_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "ブログ更新しました：ナンピン買いのタイミングとコツ",
+      "username": "2okutameo",
+      "url": "https://twitter.com/2okutameo/status/2028938967429619938",
+      "categories": [
+        "recommended_assets",
+        "purchased_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "いまPTSの下げが大きくなっています。\nここだけの話、優良銘柄をストップ安で買い指値しておくと、ワンチャン買えちゃうかもしれません。\n\n知らんけど",
+      "username": "2okutameo",
+      "url": "https://twitter.com/2okutameo/status/2028803146781528122",
+      "categories": [
+        "recommended_assets",
+        "purchased_assets",
+        "bearish_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "金相場だけ眺めていたい",
+      "username": "2okutameo",
+      "url": "https://twitter.com/2okutameo/status/2028763291632414937",
+      "categories": [
+        "recommended_assets",
+        "market_trend"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "私が保有するサイバートラスト（4498）がAI進展に伴う業績影響についての見解を発表\n\nAIの普及は同社事業にとって大きな成長機会。AI基盤に不可欠なLinuxの需要増や、C2P2準拠の「iTrust」による生成データの真偽証明、AIエージェント間の信頼性確保などの役割が今後さらに高まると分析。",
+      "username": "2okutameo",
+      "url": "https://twitter.com/2okutameo/status/2028737505441562982",
+      "categories": [
+        "purchased_assets",
+        "market_trend"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "なかなかにアグレッシブな下落ですね\n※保有株↓",
+      "username": "2okutameo",
+      "url": "https://twitter.com/2okutameo/status/2028695191075578003",
+      "categories": [
+        "purchased_assets",
+        "bearish_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "はい。まさにおっしゃる通りだと思います。新興国株が米国株をアウトパフォームするのは、10年に1〜2回なので、どちらかというと警戒アラートですからね。\n一般の人は、世界最強国に投資を続けるのがベターだと思います。変に浮気しないことが大事ですね。",
+      "username": "yukimamax",
+      "url": "https://twitter.com/yukimamax/status/2029411180029362460",
+      "categories": [
+        "recommended_assets",
+        "warning_signals"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "ありがとうございますっ\n厳しい時こそ買い増しチャンスっ",
+      "username": "paurooteri",
+      "url": "https://twitter.com/paurooteri/status/2029394714227798501",
+      "categories": [
+        "recommended_assets",
+        "purchased_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "何もできない植田。\n\nというか、マジでインフレやばそうだな。ホルムズ海峡の混乱はしばらく続くし、原油はそうそう下がらんと思う。\n\nそれで高市支援金が庶民にばら撒かれて、財政悪化で円売りだろ？\n\n詰んでる。なのでやっぱり米国株最強。1ドル＝200円の扉が開いている。",
+      "username": "yukimamax",
+      "url": "https://twitter.com/yukimamax/status/2029380893975167472",
+      "categories": [
+        "recommended_assets",
+        "market_trend"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "韓国株、史上最大の上昇\n\nこういうもんです。買った人ナイスです\n\nそしてまだ安いです",
+      "username": "yukimamax",
+      "url": "https://twitter.com/yukimamax/status/2029373365266596153",
+      "categories": [
+        "purchased_assets",
+        "bullish_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "【ブクマ保存】\n株価が下がって苦しい時はパウロさんのnoteを見なさい\n▶︎\nhttps://\nnote.com/paul1211\n\nあ、口座開設は私のブログでよろしく\n\n日米国株＆NISAなら（ツール超優秀）  ▶︎\nhttps://\nyukimama.net/fks/matsui-kai\nsetsu/\n…\n\nFXなど短期トレード（迷ったらこれ） ▶︎\nhttps://\nyukimama.net",
+      "username": "yukimamax",
+      "url": "https://twitter.com/yukimamax/status/2029352601268175171",
+      "categories": [
+        "purchased_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "ROBN（ロビンフッドブル2倍ETF）も、あと1%でプラ転する",
+      "username": "hd_qu8",
+      "url": "https://twitter.com/hd_qu8/status/2029369950788632660",
+      "categories": [
+        "recommended_assets",
+        "winning_trades",
+        "bullish_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "これ今日の韓国市場はショートした馬鹿が捕まって10％くらい上がるだろ。韓国の株式戦士たちよ、夜明けは近いぞ。しかし逆サーキットブレーカーってないのかね。取引停止の代わりにBotが買いまくってボーナス5％上乗せとかw",
+      "username": "Adscience12000",
+      "url": "https://twitter.com/Adscience12000/status/2029322548140491248",
+      "categories": [
+        "recommended_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "2月6日くらい、CONLとROBNの含み損で−600万円とかだったんだよね\nこれ、IONLとかだと絶対しないよ〜w\nCONLと、ROBNは下値追いながら買い増ししてるときワクワクしたんだよね",
+      "username": "hd_qu8",
+      "url": "https://twitter.com/hd_qu8/status/2029212407751688545",
+      "categories": [
+        "recommended_assets",
+        "purchased_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "CONLプラ転は、まだお預けでもいい！\n取得単価より下で買い増しのほうが、好きだから",
+      "username": "hd_qu8",
+      "url": "https://twitter.com/hd_qu8/status/2029170152307343852",
+      "categories": [
+        "recommended_assets",
+        "purchased_assets",
+        "winning_trades"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "私のCONL…\nあと、−1%でプラ転するんですけど\n含み損との長い戦いを覚悟してたから、嬉しい",
+      "username": "hd_qu8",
+      "url": "https://twitter.com/hd_qu8/status/2029138760181661933",
+      "categories": [
+        "purchased_assets",
+        "winning_trades"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "韓国市場版のVIX (VKOSPI）無事ぶっ壊れる。コロナショックの時より高くねえかこれw\nおい韓国の株式戦士たちよ、ガクブルの時はチャンスだぞ。諦めんな！",
+      "username": "Adscience12000",
+      "url": "https://twitter.com/Adscience12000/status/2029062411651826037",
+      "categories": [
+        "recommended_assets",
+        "market_trend"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "ウォーレン・バフェット「第三次世界大戦が起こるとわかっていても、私は株式を保有し続けるだろう」",
+      "username": "米国ETF",
+      "url": "https://twitter.com/haru_tachibana8/status/2028934671107801498",
+      "categories": [
+        "purchased_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "【重版決定！！】なんと「世界一やさしい 米国ETFの教科書 1年生」の重版が決定しました！！\n\nご購入頂いた皆さま大変ありがとうございます\n\n引き続きよろしくお願いいたします\n\n\nhttps://\namzn.to/3AdxEcd",
+      "username": "米国ETF",
+      "url": "https://twitter.com/haru_tachibana8/status/2028786562625151109",
+      "categories": [
+        "recommended_assets",
+        "purchased_assets"
+      ],
+      "reason": "ティッカー特定不可"
+    },
+    {
+      "text": "なんなん、全部嘘やん\n全く信用できん、、、はめ込み\nこんな連中、表から追い出した方がいいわ",
+      "username": "gihuboy",
+      "url": "https://twitter.com/gihuboy/status/2028475029160382745",
+      "categories": [
+        "recommended_assets",
+        "warning_signals"
+      ],
+      "reason": "ティッカー特定不可"
+    }
+  ]
+};
+
+function showTab(name) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  event.target.classList.add('active');
+}
+
+function fmt(v, suffix) {
+  if (v === null || v === undefined) return 'N/A';
+  const s = v >= 0 ? '+' + v.toFixed(2) : v.toFixed(2);
+  return s + (suffix || '');
+}
+
+function cls(v) {
+  if (v === null || v === undefined) return '';
+  return v > 0 ? 'positive' : v < 0 ? 'negative' : 'neutral';
+}
+
+function render() {
+  const s = EMBEDDED_DATA.summary;
+  const recs = EMBEDDED_DATA.recommendations;
+  const untr = EMBEDDED_DATA.untrackable;
+
+  // Subtitle
+  document.getElementById('subtitle').textContent =
+    `対象期間: ${s.data_period.from} 〜 ${s.data_period.to} | 生成: ${s.generated_at.slice(0,10)}`;
+
+  // Dashboard
+  const dash = document.getElementById('dashboard');
+  dash.innerHTML = `
+    <div class="card">
+      <div class="card-value ${cls(s.win_rate - 50)}">${s.win_rate}%</div>
+      <div class="card-label">勝率 (${s.winners}勝 / ${s.losers}敗)</div>
+    </div>
+    <div class="card">
+      <div class="card-value ${cls(s.avg_return_pct)}">${fmt(s.avg_return_pct, '%')}</div>
+      <div class="card-label">平均リターン</div>
+    </div>
+    <div class="card">
+      <div class="card-value ${cls(s.total_return_pct)}">${fmt(s.total_return_pct, '%')}</div>
+      <div class="card-label">トータルリターン</div>
+    </div>
+    <div class="card">
+      <div class="card-value">${s.trackable_recommendations} / ${s.recommendation_tweets}</div>
+      <div class="card-label">追跡可能 / 推奨ツイート</div>
+    </div>
+  `;
+
+  // Picks table
+  const trackable = recs.filter(r => r.return_pct !== null);
+  trackable.sort((a, b) => (b.return_pct || 0) - (a.return_pct || 0));
+
+  let picksHtml = '<div class="section"><table><thead><tr>';
+  picksHtml += '<th>ティッカー</th><th>リターン</th><th>結果</th>';
+  picksHtml += '<th>推奨者</th><th>推奨日</th><th>推奨時価格</th><th>現在価格</th><th>ツイート</th>';
+  picksHtml += '</tr></thead><tbody>';
+
+  for (const r of trackable) {
+    const retCls = r.return_pct > 0 ? 'win' : 'lose';
+    const result = r.return_pct > 0 ? 'WIN' : 'LOSE';
+    picksHtml += `<tr>
+      <td class="ticker">$${r.ticker}</td>
+      <td class="${retCls}">${fmt(r.return_pct, '%')}</td>
+      <td class="${retCls}">${result}</td>
+      <td class="influencer">@${r.influencer}</td>
+      <td>${r.recommended_at || 'N/A'}</td>
+      <td>${r.price_at_recommendation ? '$' + r.price_at_recommendation.toFixed(2) : 'N/A'}</td>
+      <td>${r.current_price ? '$' + r.current_price.toFixed(2) : 'N/A'}</td>
+      <td class="tweet-preview"><a href="${r.tweet_url}" target="_blank">${r.tweet_text}</a></td>
+    </tr>`;
+  }
+  picksHtml += '</tbody></table></div>';
+
+  // 価格未取得の推奨も表示
+  const noPrice = recs.filter(r => r.return_pct === null);
+  if (noPrice.length > 0) {
+    picksHtml += '<div class="section"><div class="section-title">価格未取得（' + noPrice.length + '件）</div><table><thead><tr>';
+    picksHtml += '<th>ティッカー</th><th>推奨者</th><th>推奨日</th><th>ツイート</th>';
+    picksHtml += '</tr></thead><tbody>';
+    for (const r of noPrice) {
+      picksHtml += `<tr>
+        <td class="ticker">$${r.ticker}</td>
+        <td class="influencer">@${r.influencer}</td>
+        <td>${r.recommended_at || 'N/A'}</td>
+        <td class="tweet-preview"><a href="${r.tweet_url}" target="_blank">${r.tweet_text}</a></td>
+      </tr>`;
+    }
+    picksHtml += '</tbody></table></div>';
+  }
+
+  document.getElementById('tab-picks').innerHTML = picksHtml;
+
+  // Influencer cards
+  let infHtml = '<div class="section"><div class="inf-grid">';
+  const infEntries = Object.entries(s.by_influencer).sort((a, b) => b[1].avg_return - a[1].avg_return);
+  for (const [name, data] of infEntries) {
+    const wrCls = data.win_rate >= 50 ? 'positive' : 'negative';
+    const retCls = data.avg_return >= 0 ? 'positive' : 'negative';
+    infHtml += `<div class="inf-card">
+      <div>
+        <div class="inf-name">@${name}</div>
+        <div style="color:#71767b;font-size:13px">${data.picks}推奨</div>
+      </div>
+      <div class="inf-stats">
+        <div class="inf-winrate ${wrCls}">${data.win_rate}%</div>
+        <div class="${retCls}">平均 ${fmt(data.avg_return, '%')}</div>
+      </div>
+    </div>`;
+  }
+  infHtml += '</div></div>';
+  document.getElementById('tab-influencers').innerHTML = infHtml;
+
+  // Contrarian
+  const contrarians = recs.filter(r => r.is_contrarian && r.return_pct !== null);
+  let contHtml = '<div class="section">';
+  if (contrarians.length === 0) {
+    contHtml += '<p style="color:#71767b">逆指標アカウントの推奨銘柄データがありません。</p>';
+  } else {
+    contHtml += `<div class="dashboard" style="margin-bottom:16px">
+      <div class="card">
+        <div class="card-value">${s.contrarian_performance.total}</div>
+        <div class="card-label">逆指標推奨数</div>
+      </div>
+      <div class="card">
+        <div class="card-value ${cls(s.contrarian_performance.reverse_return_pct)}">${fmt(s.contrarian_performance.reverse_return_pct, '%')}</div>
+        <div class="card-label">逆張りリターン</div>
+      </div>
+    </div>`;
+    contHtml += '<table><thead><tr><th>ティッカー</th><th>推奨者</th><th>順張りリターン</th><th>逆張りリターン</th><th>ツイート</th></tr></thead><tbody>';
+    for (const r of contrarians) {
+      contHtml += `<tr>
+        <td class="ticker">$${r.ticker}</td>
+        <td class="influencer">@${r.influencer}</td>
+        <td class="${r.return_pct > 0 ? 'win' : 'lose'}">${fmt(r.return_pct, '%')}</td>
+        <td class="${-r.return_pct > 0 ? 'win' : 'lose'}">${fmt(-r.return_pct, '%')}</td>
+        <td class="tweet-preview">${r.tweet_text}</td>
+      </tr>`;
+    }
+    contHtml += '</tbody></table>';
+  }
+  contHtml += '</div>';
+  document.getElementById('tab-contrarian').innerHTML = contHtml;
+
+  // Untrackable
+  let untrHtml = '<div class="section">';
+  untrHtml += `<div class="section-title">追跡不能ツイート (${untr.length}件)</div>`;
+  if (untr.length === 0) {
+    untrHtml += '<p style="color:#71767b">全てのツイートから銘柄を特定できました。</p>';
+  } else {
+    for (const u of untr) {
+      untrHtml += `<div class="untrackable-item">
+        <span class="untrackable-user">@${u.username}</span>
+        <span style="color:#71767b"> — ${u.categories.join(', ')}</span>
+        <div class="untrackable-text">${u.text}</div>
+        ${u.url ? '<div><a href="' + u.url + '" target="_blank" style="font-size:12px">ツイートを見る</a></div>' : ''}
+      </div>`;
+    }
+  }
+  untrHtml += '</div>';
+  document.getElementById('tab-untrackable').innerHTML = untrHtml;
+}
+
+render();
+</script>
+</body>
+</html>

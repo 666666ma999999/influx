@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>influx Article Preview - 2026/3/5</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --card-bg: #141414;
+    --card-border: #222;
+    --text-primary: #e8e6e3;
+    --text-secondary: #9a9a9a;
+    --text-muted: #666;
+    --green: #00c853;
+    --green-dim: #00c85333;
+    --red: #ff1744;
+    --red-dim: #ff174433;
+    --amber: #ffab00;
+    --amber-dim: #ffab0033;
+    --blue: #448aff;
+    --blue-dim: #448aff22;
+    --accent: #b388ff;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text-primary);
+    font-family: 'Noto Serif JP', 'Hiragino Mincho ProN', serif;
+    line-height: 1.85;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .container {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+    position: relative;
+  }
+
+  /* Badge */
+  .badge {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    background: var(--accent);
+    color: #000;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 12px;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+    z-index: 100;
+    text-transform: uppercase;
+  }
+
+  /* Header */
+  .article-meta {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 12px;
+    color: var(--text-muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  h1 {
+    font-size: 28px;
+    font-weight: 900;
+    line-height: 1.4;
+    margin-bottom: 12px;
+    letter-spacing: -0.5px;
+  }
+
+  .subtitle {
+    font-size: 16px;
+    color: var(--text-secondary);
+    margin-bottom: 32px;
+    font-weight: 400;
+  }
+
+  .lead {
+    font-size: 17px;
+    line-height: 2;
+    margin-bottom: 40px;
+    padding-left: 16px;
+    border-left: 3px solid var(--accent);
+  }
+
+  /* Sentiment Thermometer */
+  .thermometer {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    padding: 28px;
+    margin-bottom: 40px;
+  }
+
+  .thermometer-title {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .thermometer-title::before {
+    content: '';
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  .thermo-bar-container {
+    position: relative;
+    height: 48px;
+    border-radius: 8px;
+    overflow: hidden;
+    display: flex;
+    margin-bottom: 12px;
+  }
+
+  .thermo-bullish {
+    background: linear-gradient(90deg, #00c853, #00e676);
+    width: 50.9%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    color: #000;
+    transition: width 1s ease;
+  }
+
+  .thermo-bearish {
+    background: linear-gradient(90deg, #ff1744, #d50000);
+    width: 31.5%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    color: #fff;
+    transition: width 1s ease;
+  }
+
+  .thermo-neutral {
+    background: linear-gradient(90deg, #424242, #616161);
+    width: 17.6%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-weight: 700;
+    font-size: 12px;
+    color: #bbb;
+    transition: width 1s ease;
+  }
+
+  .thermo-legend {
+    display: flex;
+    justify-content: space-between;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+
+  .thermo-legend span { display: flex; align-items: center; gap: 6px; }
+  .dot-green { width: 8px; height: 8px; border-radius: 50%; background: var(--green); display: inline-block; }
+  .dot-red { width: 8px; height: 8px; border-radius: 50%; background: var(--red); display: inline-block; }
+  .dot-gray { width: 8px; height: 8px; border-radius: 50%; background: #616161; display: inline-block; }
+
+  .thermo-insight {
+    margin-top: 16px;
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.8;
+    padding: 12px 16px;
+    background: #1a1a1a;
+    border-radius: 8px;
+    border-left: 3px solid var(--amber);
+  }
+
+  /* Market Dashboard */
+  .dashboard {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 40px;
+  }
+
+  .dash-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 10px;
+    padding: 16px;
+    text-align: center;
+  }
+
+  .dash-label {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+  }
+
+  .dash-value {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+
+  .dash-change {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .up { color: var(--green); }
+  .down { color: var(--red); }
+  .warn { color: var(--amber); }
+  .neutral-val { color: var(--text-secondary); }
+
+  /* Section headers */
+  .section {
+    margin-bottom: 40px;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--card-border);
+  }
+
+  .section-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+
+  .section-title {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+  }
+
+  .section-subtitle {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-left: auto;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .section p {
+    font-size: 15px;
+    line-height: 2;
+    margin-bottom: 16px;
+  }
+
+  /* Trade cards */
+  .trade-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .trade-card {
+    background: var(--card-bg);
+    border-radius: 10px;
+    padding: 16px;
+    border: 1px solid;
+  }
+
+  .trade-card.buy { border-color: var(--green); background: linear-gradient(135deg, var(--green-dim), var(--card-bg)); }
+  .trade-card.sell { border-color: var(--red); background: linear-gradient(135deg, var(--red-dim), var(--card-bg)); }
+
+  .trade-tag {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .trade-card.buy .trade-tag { color: var(--green); }
+  .trade-card.sell .trade-tag { color: var(--red); }
+
+  .trade-name {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+
+  .trade-detail {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+
+  .trade-date {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 6px;
+  }
+
+  /* Consensus bubbles */
+  .consensus-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .consensus-chip {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 24px;
+    padding: 8px 18px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: transform 0.2s;
+  }
+
+  .consensus-chip:hover { transform: scale(1.05); }
+
+  .consensus-chip.hot { border-color: var(--amber); background: var(--amber-dim); }
+  .consensus-chip.medium { border-color: var(--blue); background: var(--blue-dim); }
+
+  .chip-count {
+    background: rgba(255,255,255,0.1);
+    border-radius: 12px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  /* Contrarian Alarm */
+  .alarm {
+    background: linear-gradient(135deg, #1a0000, #0a0a0a);
+    border: 2px solid var(--red);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .alarm::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: repeating-linear-gradient(90deg, var(--red), var(--red) 20px, transparent 20px, transparent 40px);
+    animation: hazard 1s linear infinite;
+  }
+
+  @keyframes hazard {
+    from { transform: translateX(0); }
+    to { transform: translateX(40px); }
+  }
+
+  .alarm-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--red);
+    color: #fff;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 12px;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+
+  .alarm-profile {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 16px;
+  }
+
+  .alarm-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: #333;
+    border: 2px solid var(--red);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+
+  .alarm-name {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+  }
+
+  .alarm-handle {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+
+  .alarm-label {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 11px;
+    color: var(--red);
+    font-weight: 600;
+  }
+
+  .alarm-quote {
+    background: rgba(255,23,68,0.08);
+    border-left: 3px solid var(--red);
+    padding: 12px 16px;
+    border-radius: 0 8px 8px 0;
+    font-size: 15px;
+    line-height: 1.8;
+    margin-bottom: 12px;
+  }
+
+  .alarm-context {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+  }
+
+  /* Gap Chart */
+  .gap-chart {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+
+  .gap-row {
+    margin-bottom: 16px;
+  }
+
+  .gap-row:last-child { margin-bottom: 0; }
+
+  .gap-label {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .gap-bar {
+    height: 28px;
+    border-radius: 6px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .gap-bar-fill {
+    height: 100%;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    padding-left: 12px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .gap-bar.market .gap-bar-fill {
+    background: linear-gradient(90deg, var(--green), #00e676);
+    width: 95%;
+    color: #000;
+  }
+
+  .gap-bar.sentiment .gap-bar-fill {
+    background: linear-gradient(90deg, var(--amber), #ffc107);
+    width: 51%;
+    color: #000;
+  }
+
+  .gap-annotation {
+    margin-top: 12px;
+    padding: 12px 16px;
+    background: #1a1a1a;
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.7;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    border-left: 3px solid var(--amber);
+  }
+
+  /* Quote block */
+  .tweet-quote {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 10px;
+    padding: 16px;
+    margin: 16px 0;
+  }
+
+  .tweet-quote-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .tweet-quote-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: #333;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    flex-shrink: 0;
+  }
+
+  .tweet-quote-name {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .tweet-quote-handle {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .tweet-quote-text {
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--text-secondary);
+  }
+
+  /* CIS Story Timeline */
+  .timeline {
+    position: relative;
+    padding-left: 24px;
+    margin: 20px 0;
+  }
+
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 6px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--card-border);
+  }
+
+  .timeline-item {
+    position: relative;
+    margin-bottom: 20px;
+    padding-left: 16px;
+  }
+
+  .timeline-item::before {
+    content: '';
+    position: absolute;
+    left: -22px;
+    top: 6px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 2px solid;
+  }
+
+  .timeline-item.buy::before { border-color: var(--green); background: var(--green-dim); }
+  .timeline-item.sell::before { border-color: var(--red); background: var(--red-dim); }
+  .timeline-item.result::before { border-color: var(--amber); background: var(--amber-dim); }
+
+  .timeline-date {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 2px;
+  }
+
+  .timeline-text {
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--text-secondary);
+  }
+
+  /* Divider */
+  .divider {
+    border: none;
+    border-top: 1px solid var(--card-border);
+    margin: 40px 0;
+  }
+
+  /* Footer */
+  .footer {
+    text-align: center;
+    padding-top: 24px;
+    border-top: 1px solid var(--card-border);
+  }
+
+  .footer-source {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+    line-height: 1.6;
+  }
+
+  .footer-disclaimer {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 11px;
+    color: #555;
+    padding: 8px 16px;
+    background: #111;
+    border-radius: 6px;
+    display: inline-block;
+    margin-bottom: 16px;
+  }
+
+  .footer-brand {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 12px;
+    color: var(--accent);
+    letter-spacing: 1px;
+    font-weight: 600;
+  }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    .container { padding: 24px 16px 60px; }
+    h1 { font-size: 22px; }
+    .dashboard { grid-template-columns: repeat(2, 1fr); }
+    .trade-grid { grid-template-columns: 1fr; }
+    .dash-value { font-size: 17px; }
+    .thermo-bar-container { height: 40px; }
+    .badge { top: 8px; right: 8px; font-size: 10px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="badge">X Article Preview</div>
+
+<div class="container">
+
+  <!-- Header -->
+  <div class="article-meta">influx SNS Sentiment Report / 2026.03.05</div>
+  <h1>日経1,032円高の裏で投資家心理は五分五分 ── SNS 232件が映す"慎重な強気"</h1>
+  <p class="subtitle">イラン情勢一服で急反発も、インフルエンサーの半数は「戻り売り」を警戒。市場データとSNS心理のギャップが示す次の展開</p>
+
+  <!-- Lead -->
+  <div class="lead">
+    3月5日の日経平均は前日比1,032円高と力強いリバウンドを見せた。イラン情勢の最悪期脱出観測と原油価格の落ち着きが買い戻しを誘った格好だ。だが、21名のインフルエンサーによる232件の発言をAI分類したところ、強気と弱気はほぼ拮抗していた。数字が示すのは「急反発を素直に喜べない投資家心理」──これは日経やブルームバーグの市況欄では見えない、SNSだけが捉えるリアルタイムのセンチメントだ。
+  </div>
+
+  <!-- Sentiment Thermometer -->
+  <div class="thermometer">
+    <div class="thermometer-title">SNS Sentiment Thermometer / リアルタイム心理指標</div>
+    <div class="thermo-bar-container">
+      <div class="thermo-bullish">118件 (50.9%)</div>
+      <div class="thermo-bearish">73件 (31.5%)</div>
+      <div class="thermo-neutral">41件</div>
+    </div>
+    <div class="thermo-legend">
+      <span><span class="dot-green"></span>強気（推奨・購入・高騰・利益報告）</span>
+      <span><span class="dot-red"></span>弱気（下落・警戒・売却）</span>
+      <span><span class="dot-gray"></span>中立</span>
+    </div>
+    <div class="thermo-insight">
+      232件のインフルエンサー発言を9カテゴリに分類。強気発言118件に対し弱気発言73件。一見すると強気優勢だが、弱気の73件のうち29件は「警戒シグナル」に分類されており、急反発の裏で根強い慎重論が存在することを示す。
+    </div>
+  </div>
+
+  <!-- Market Dashboard -->
+  <div class="dashboard">
+    <div class="dash-card">
+      <div class="dash-label">日経平均</div>
+      <div class="dash-value up">55,278</div>
+      <div class="dash-change up">+1,032 (+1.90%)</div>
+    </div>
+    <div class="dash-card">
+      <div class="dash-label">日経先物(夜間)</div>
+      <div class="dash-value up">56,200</div>
+      <div class="dash-change up">穴埋め完了</div>
+    </div>
+    <div class="dash-card">
+      <div class="dash-label">S&amp;P 500</div>
+      <div class="dash-value up">5,920</div>
+      <div class="dash-change up">イラン前水準回復</div>
+    </div>
+    <div class="dash-card">
+      <div class="dash-label">ドル円</div>
+      <div class="dash-value warn">157.00</div>
+      <div class="dash-change warn">円安持続</div>
+    </div>
+    <div class="dash-card">
+      <div class="dash-label">VIX</div>
+      <div class="dash-value up">低下</div>
+      <div class="dash-change up">恐怖後退</div>
+    </div>
+    <div class="dash-card">
+      <div class="dash-label">原油</div>
+      <div class="dash-value warn">高止まり</div>
+      <div class="dash-change warn">インフレ懸念</div>
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- Section 1: 実弾レポート -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon" style="background: var(--green-dim); color: var(--green);">$</div>
+      <span class="section-title">実弾レポート: 誰が何を買い、何を売ったか</span>
+      <span class="section-subtitle">Real Money</span>
+    </div>
+
+    <p>経済誌が伝えるのはアナリストの「推奨銘柄」だ。一方、以下は<strong>実際に資金を投じた/引き揚げた報告</strong>である。推奨と実弾は往々にして乖離する。</p>
+
+    <div class="trade-grid">
+      <div class="trade-card buy">
+        <div class="trade-tag">BUY / 購入</div>
+        <div class="trade-name">テスタ</div>
+        <div class="trade-detail">日経先物 54,150円で50枚追加、計150枚のリアルポジ構築。「計画的買い下がり」と明言。その後55,150円で1,000円抜き利確。</div>
+        <div class="trade-date">3/3 10:02 - 3/3 18:45</div>
+      </div>
+      <div class="trade-card sell">
+        <div class="trade-tag">SELL / 損切り</div>
+        <div class="trade-name">cis</div>
+        <div class="trade-detail">「戦争暴落は買えば毎回爆益」と3/2に買い参入。しかし夜間の下げスピードにビビり損切り。+2,000円の反発を見て「結局爆益か...俺は損切り済」</div>
+        <div class="trade-date">3/2 買い &rarr; 3/3 損切り &rarr; 3/4 後悔</div>
+      </div>
+      <div class="trade-card buy">
+        <div class="trade-tag">BUY / 買い増し</div>
+        <div class="trade-name">米国株いつかは爆益予定ママ</div>
+        <div class="trade-detail">CONL（コインベースブル2倍ETF）、ROBN（ロビンフッドブル2倍ETF）を下値追いで買い増し。含み損-600万円からプラ転目前まで回復。</div>
+        <div class="trade-date">2月〜3/5 継続保有</div>
+      </div>
+      <div class="trade-card buy">
+        <div class="trade-tag">BUY / 利確後</div>
+        <div class="trade-name">モモ米国株投資</div>
+        <div class="trade-detail">「買った瞬間に爆益でラッキー」。ただし多くは買っておらず、美容代くらいの利確。「もっと買っておけばよかった」</div>
+        <div class="trade-date">3/5 00:40</div>
+      </div>
+      <div class="trade-card sell">
+        <div class="trade-tag">SELL / 全損切り</div>
+        <div class="trade-name">岐阜暴威</div>
+        <div class="trade-detail">含み損が1日で100万円に膨張。「全部損切りします」。翌日「全部損切りしておいてよかった」。さらに翌日「損切り後に取り直したんだろう...資産めちゃくちゃなくなる」</div>
+        <div class="trade-date">3/3 - 3/5 連日損切り</div>
+      </div>
+      <div class="trade-card buy">
+        <div class="trade-tag">BUY / 押し目</div>
+        <div class="trade-name">弐億貯男</div>
+        <div class="trade-detail">「PTSの下げが大きくなっています。ここだけの話、優良銘柄をストップ安で買い指値しておくと、ワンチャン買えちゃうかも」サイバートラスト(4498)保有継続。</div>
+        <div class="trade-date">3/3 12:02</div>
+      </div>
+    </div>
+
+    <p>注目すべきは、cis（著名個人投資家、資産230億円超）が「いつものパターン」で戦争下げを買い向かったが、今回はビビって損切りし、結果的に利益を逃した点だ。百戦錬磨のトレーダーでさえ今回のボラティリティに翻弄されている。</p>
+  </div>
+
+  <hr class="divider">
+
+  <!-- Section 2: cisのポジション実況 -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon" style="background: var(--blue-dim); color: var(--blue);">&#x23F1;</div>
+      <span class="section-title">ポジション実況: cisの「戦争下げ買い」顛末</span>
+      <span class="section-subtitle">Position Diary</span>
+    </div>
+
+    <p>経済誌では「機関投資家の動向」しか見えない。SNSでは個人の売買判断がリアルタイムで公開される。以下は、cisの3日間のポジション変動を時系列で追ったものだ。</p>
+
+    <div class="timeline">
+      <div class="timeline-item buy">
+        <div class="timeline-date">3月2日 05:39</div>
+        <div class="timeline-text">「戦争暴落は買えば毎回爆益だが果たして今回は？ 俺はもちろんいつものようにビビりながら買い」</div>
+      </div>
+      <div class="timeline-item sell">
+        <div class="timeline-date">3月3日 06:42</div>
+        <div class="timeline-text">「戦争下げ買い昨日の夜間の下げスピードにビビって損切り。だいたいこういうの漏れてる」</div>
+      </div>
+      <div class="timeline-item result">
+        <div class="timeline-date">3月3日 08:51</div>
+        <div class="timeline-text">「エヌビディアの決算の朝から日経5000下げか。トランプの掌返しも信用ならないし...しばらくおやすみかな」</div>
+      </div>
+      <div class="timeline-item result">
+        <div class="timeline-date">3月4日 18:34</div>
+        <div class="timeline-text">「日経+2000か。また結局戦争下げは買い爆益か、、、俺は損切り済だが」</div>
+      </div>
+    </div>
+
+    <p>「戦争暴落は毎回買えば爆益」というcis自身の経験則を今回は貫徹できなかった。この事実は、イラン情勢のボラティリティが過去の地政学リスク（ウクライナ侵攻など）とは質的に異なることを示唆する。</p>
+  </div>
+
+  <hr class="divider">
+
+  <!-- Section 3: コンセンサス検出 -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon" style="background: var(--amber-dim); color: var(--amber);">&#x1F4E1;</div>
+      <span class="section-title">コンセンサス検出: 複数が注目するテーマ</span>
+      <span class="section-subtitle">Consensus</span>
+    </div>
+
+    <p>3名以上のインフルエンサーが同方向で言及したテーマを「新興コンセンサス」として検出する。個人の見解は偏るが、複数の独立した声が一致するとき、市場の底流にある流れが見える。</p>
+
+    <div class="consensus-grid">
+      <div class="consensus-chip hot">米国テック・半導体 <span class="chip-count">8名</span></div>
+      <div class="consensus-chip hot">地政学リスク(イラン) <span class="chip-count">7名</span></div>
+      <div class="consensus-chip hot">円安・ドル円 <span class="chip-count">6名</span></div>
+      <div class="consensus-chip hot">韓国株 <span class="chip-count">5名</span></div>
+      <div class="consensus-chip medium">仮想通貨・BTC <span class="chip-count">4名</span></div>
+      <div class="consensus-chip medium">原油・エネルギー <span class="chip-count">4名</span></div>
+      <div class="consensus-chip medium">ブロードコム決算 <span class="chip-count">3名</span></div>
+      <div class="consensus-chip medium">金(ゴールド) <span class="chip-count">3名</span></div>
+    </div>
+
+    <p>最大のコンセンサスは<strong>「米国テック回帰」</strong>。やす（VC）は「ナス100やFANG+、M7を持っておけば長期的には良い相場」、ゆきママは「米国株最強。1ドル200円の扉が開いている」、モモは米国テック決算（ブロードコム、ヴィーバ）の好決算を速報。8名中6名が日本株より米国テックを選好する姿勢を示した。</p>
+
+    <p>2番目は<strong>「地政学リスクの長期化」</strong>。エミンは「ホルムズ海峡が永遠に封鎖されるという悲観論は非現実的」と冷静な見方。一方やすは「原油高によるインフレがじわじわと中期的に痛めつける」と警戒。短期楽観・中期警戒の見方が収斂しつつある。</p>
+
+    <div class="tweet-quote">
+      <div class="tweet-quote-header">
+        <div class="tweet-quote-avatar">E</div>
+        <span class="tweet-quote-name">Emin Yurumazu</span>
+        <span class="tweet-quote-handle">@yurumazu</span>
+      </div>
+      <div class="tweet-quote-text">今日の相場は円安、株安、債券安。リスクオフで円高にならないことに驚く人もいますが、これは通常のリスクオフではない。エネルギー価格の高騰は日本の貿易収支を悪化させるので円安、インフレ要因です。</div>
+    </div>
+
+    <p><strong>注目の個別銘柄</strong>として、サんは「$TTDのCEO、1.48億ドルもの巨額インサイダー買い。現在TTDはS&amp;P500ワーストパフォーマンスランキング1、2位を争う」と報告。CEO自身が巨額の自社株買いに動いた事実は、逆張りシグナルとして注目に値する。</p>
+  </div>
+
+  <hr class="divider">
+
+  <!-- Section 4: 逆指標アラーム -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon" style="background: var(--red-dim); color: var(--red);">&#x26A0;</div>
+      <span class="section-title">逆指標アラーム</span>
+      <span class="section-subtitle">Contrarian Alert</span>
+    </div>
+
+    <div class="alarm">
+      <div class="alarm-badge">&#x26A0; CONTRARIAN SIGNAL DETECTED</div>
+      <div class="alarm-profile">
+        <div class="alarm-avatar">岐</div>
+        <div>
+          <div class="alarm-name">岐阜暴威</div>
+          <div class="alarm-handle">@gihuboy</div>
+          <div class="alarm-label">逆指標アカウント / 29件の発言を検出</div>
+        </div>
+      </div>
+      <div class="alarm-quote">
+        「はじめまして。株の話しませんか？ おすすめはメタプラネットです」
+      </div>
+      <div class="alarm-context">
+        岐阜暴威の推奨発言は逆指標として機能する傾向がある。同氏が「おすすめ」と明言する場面は稀であり、今回のメタプラネット推奨は要注意シグナルとなる。なお、同氏は3/3〜3/5の3日間で含み損100万円超、連日の損切りを報告しており、「完全に死んだ。明日おそらく日経3000円安とか5000円安」と悲観を極めた翌日に日経は+1,032円の急反発を記録した。
+      </div>
+    </div>
+
+    <p>岐阜暴威の発言を時系列で追うと、悲観が極まったタイミング（3/3「完全に死んだ」）の翌営業日に反転する典型的なパターンが今回も観測された。同氏の29件の発言のうち、強気発言は「おすすめはメタプラネットです」の1件のみ。圧倒的に弱気に傾いた後の唐突な推奨は、感情的なリバウンドの可能性がある。</p>
+  </div>
+
+  <hr class="divider">
+
+  <!-- Section 5: Gap Analysis -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon" style="background: var(--amber-dim); color: var(--amber);">&#x2194;</div>
+      <span class="section-title">市場データ vs SNS心理のギャップ</span>
+      <span class="section-subtitle">Gap Analysis</span>
+    </div>
+
+    <div class="gap-chart">
+      <div class="gap-row">
+        <div class="gap-label">
+          <span>市場リターン</span>
+          <span style="color: var(--green); font-weight: 700;">+1.90%</span>
+        </div>
+        <div class="gap-bar market">
+          <div class="gap-bar-fill">日経 +1,032円 急反発</div>
+        </div>
+      </div>
+      <div class="gap-row">
+        <div class="gap-label">
+          <span>SNS強気比率</span>
+          <span style="color: var(--amber); font-weight: 700;">50.9%</span>
+        </div>
+        <div class="gap-bar sentiment">
+          <div class="gap-bar-fill">弱気とほぼ拮抗</div>
+        </div>
+      </div>
+      <div class="gap-annotation">
+        <strong>ギャップの解釈:</strong> 市場は+1.90%と明確にリスクオン方向へ動いたが、SNS上のセンチメントは50.9% vs 31.5%と、強気が辛うじて過半を超えた程度。この乖離は「急反発を手放しで喜べない」投資家心理を反映している。やす（VC）は「ショート勢の買い戻しによる上昇（ショートカバー）」と分析し、持続的な上昇への懐疑を示唆。弐億貯男は「爆戻ししてる日に保有株は小幅高。中小型株持ってるとそれが多い」と、指数と実感の乖離を指摘した。
+      </div>
+    </div>
+
+    <p>後藤達也は「3日で4,604円安」の急落から「穴埋め」までの急展開を速報。エミンは「大きく調整しているとはいえ高市政権のご祝儀相場を消しただけ」と、パニックの中で冷静な水準感を提示した。ゆきママは「何もできない植田。マジでインフレやばそう。ホルムズ海峡の混乱はしばらく続く。1ドル200円の扉が開いている」と、円安加速リスクを最も強く警告している。</p>
+
+    <p>結論として、市場の反発は「地政学リスクの最悪期脱出」を織り込んだ短期的なものであり、原油高・インフレ・円安という中期リスクはSNS上のインフルエンサーの間で広く共有されている。「慎重な強気」──これが232件の声から浮かび上がる、現在の投資家コンセンサスだ。</p>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <div class="footer-source">
+      データ出典: 21名のインフルエンサーによる232件のツイート（2026/3/2〜3/5収集）のAI分類に基づく<br>
+      9カテゴリ分類: 推奨資産(34) / 購入報告(30) / 売却報告(14) / 利益報告(31) / IPO(1) / 市況見解(40) / 高騰(23) / 下落(30) / 警戒(29)
+    </div>
+    <div class="footer-disclaimer">
+      本記事は投資助言ではありません。SNS上の発言の集計・分析であり、正確性を保証するものではありません。投資判断はご自身の責任でお願いいたします。
+    </div>
+    <div class="footer-brand">Powered by influx AI Tweet Analysis</div>
+  </div>
+
+</div>
+
+</body>
+</html>
