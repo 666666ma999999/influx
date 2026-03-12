@@ -1,0 +1,31 @@
+api_version: v1
+kind: influx_extension
+
+metadata:
+  name: tier3.post_composer
+  version: 1.0.0
+  tier: tier3_posting
+  description: Composes news items from curated tweets with title, body, and hashtags
+
+runtime:
+  entrypoint: "extensions.tier3_posting.post_composer.extension:PostComposerExtension"
+  enabled_by_default: true
+
+dependencies:
+  requires:
+    - "tier3.news_curator>=1.0.0"
+  optional: []
+
+hooks:
+  subscribes:
+    - name: tier3.compose
+      handler: on_compose
+      priority: 100
+  emits:
+    - compose.completed
+
+contracts:
+  consumes:
+    - "influx://contracts/classification.schema.json"
+  produces:
+    - "influx://contracts/news_item.schema.json"

@@ -1,0 +1,30 @@
+api_version: v1
+kind: influx_extension
+
+metadata:
+  name: tier1.x_collector
+  version: 1.0.0
+  tier: tier1_collection
+  description: X (Twitter) tweet collector using Playwright and cookie authentication
+
+runtime:
+  entrypoint: "extensions.tier1_collection.x_collector.extension:XCollectorExtension"
+  enabled_by_default: true
+
+dependencies:
+  requires: []
+  optional: []
+
+hooks:
+  subscribes:
+    - name: tier1.collect.source
+      handler: on_collect
+      priority: 100
+  emits:
+    - collect.completed
+    - collect.error
+
+contracts:
+  consumes: []
+  produces:
+    - "influx://contracts/tweet.schema.json"

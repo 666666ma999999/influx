@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "influx://extensions/tier2.llm_classifier/config_schema.json",
+  "title": "LLMClassifierExtension Config",
+  "description": "Configuration schema for the Claude API based tweet classifier extension.",
+  "type": "object",
+  "properties": {
+    "model": {
+      "type": "string",
+      "default": "claude-3-5-haiku-20241022",
+      "description": "Claude model to use"
+    },
+    "batch_size": {
+      "type": "integer",
+      "default": 20,
+      "description": "Tweets per API batch"
+    },
+    "few_shot_path": {
+      "type": "string",
+      "default": "data/few_shot_examples.json",
+      "description": "Path to few-shot examples"
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,32 @@
+api_version: v1
+kind: influx_extension
+
+metadata:
+  name: tier3.x_poster
+  version: 1.0.0
+  tier: tier3_posting
+  description: Posts news items to X (Twitter) using Playwright
+
+runtime:
+  entrypoint: "extensions.tier3_posting.x_poster.extension:XPosterExtension"
+  enabled_by_default: false
+
+dependencies:
+  requires:
+    - "tier3.scheduler>=1.0.0"
+  optional: []
+
+hooks:
+  subscribes:
+    - name: tier3.post
+      handler: on_post
+      priority: 100
+  emits:
+    - post.completed
+    - post.failed
+
+contracts:
+  consumes:
+    - "influx://contracts/news_item.schema.json"
+  produces:
+    - "influx://contracts/news_item.schema.json"

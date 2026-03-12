@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "influx://extensions/tier2.performance_tracker/config_schema.json",
+  "title": "PerformanceTrackerExtension Config",
+  "description": "Configuration schema for the performance tracker extension.",
+  "type": "object",
+  "properties": {
+    "output_dir": {
+      "type": "string",
+      "default": "output/performance",
+      "description": "Directory to store recommendations JSONL, scorecards, and snapshots."
+    },
+    "target_categories": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": ["recommended_assets", "purchased_assets"],
+      "description": "Classification categories to track as recommendations."
+    },
+    "price_cache_file": {
+      "type": "string",
+      "default": "output/price_cache.json",
+      "description": "Path to price cache JSON file."
+    }
+  },
+  "additionalProperties": false
+}

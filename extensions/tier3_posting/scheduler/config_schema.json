@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "default_strategy": {
+      "type": "string",
+      "enum": ["immediate", "optimal_time", "queue"],
+      "default": "immediate",
+      "description": "Default scheduling strategy"
+    },
+    "optimal_hours": {
+      "type": "array",
+      "items": {"type": "integer", "minimum": 0, "maximum": 23},
+      "default": [7, 8, 12, 18, 20, 21],
+      "description": "Optimal hours for posting (JST)"
+    },
+    "min_interval_minutes": {
+      "type": "integer",
+      "default": 60,
+      "description": "Minimum minutes between posts"
+    },
+    "timezone": {
+      "type": "string",
+      "default": "Asia/Tokyo",
+      "description": "Timezone for scheduling"
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,37 @@
+api_version: v1
+kind: influx_extension
+
+metadata:
+  name: tier2.performance_tracker
+  version: 1.0.0
+  tier: tier2_classification
+  description: >
+    Tracks influencer recommendation performance over time.
+    Extracts tickers from classified tweets, records recommendations,
+    and calculates win rate / return scorecards.
+
+runtime:
+  entrypoint: "extensions.tier2_classification.performance_tracker.extension:PerformanceTrackerExtension"
+  enabled_by_default: false
+
+dependencies:
+  requires: []
+  optional:
+    - tier2.keyword_classifier
+    - tier2.llm_classifier
+
+hooks:
+  subscribes:
+    - name: classify.post
+      handler: on_classify_post
+      priority: 200
+  emits:
+    - recommendation.created
+    - scorecard.updated
+
+contracts:
+  consumes:
+    - "influx://contracts/tweet.schema.json"
+    - "influx://contracts/classification.schema.json"
+  produces:
+    - "influx://contracts/recommendation.schema.json"

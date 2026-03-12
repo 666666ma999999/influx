@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "default_format": {
+      "type": "string",
+      "enum": ["x_post", "thread", "summary_card"],
+      "default": "x_post",
+      "description": "Default output format"
+    },
+    "max_body_length": {
+      "type": "integer",
+      "default": 280,
+      "description": "Maximum body length for x_post format"
+    },
+    "include_source_urls": {
+      "type": "boolean",
+      "default": true,
+      "description": "Include source tweet URLs in the body"
+    }
+  },
+  "additionalProperties": false
+}

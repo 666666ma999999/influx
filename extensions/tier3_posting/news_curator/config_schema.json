@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "min_confidence": {
+      "type": "number",
+      "default": 0.5,
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Minimum confidence threshold for curation"
+    },
+    "max_items_per_category": {
+      "type": "integer",
+      "default": 5,
+      "description": "Maximum items to select per category"
+    },
+    "max_total_items": {
+      "type": "integer",
+      "default": 20,
+      "description": "Maximum total curated items"
+    },
+    "time_window_hours": {
+      "type": "integer",
+      "default": 24,
+      "description": "Only consider tweets from the last N hours"
+    }
+  },
+  "additionalProperties": false
+}

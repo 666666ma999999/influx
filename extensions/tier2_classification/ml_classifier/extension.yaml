@@ -1,0 +1,31 @@
+api_version: v1
+kind: influx_extension
+
+metadata:
+  name: tier2.ml_classifier
+  version: 1.0.0
+  tier: tier2_classification
+  description: TF-IDF + LogisticRegression based tweet classifier
+
+runtime:
+  entrypoint: "extensions.tier2_classification.ml_classifier.extension:MLClassifierExtension"
+  enabled_by_default: true
+
+dependencies:
+  requires: []
+  optional:
+    - "tier2.keyword_classifier>=1.0.0"
+
+hooks:
+  subscribes:
+    - name: tier2.classify
+      handler: on_classify
+      priority: 300
+  emits:
+    - classification.created
+
+contracts:
+  consumes:
+    - "influx://contracts/tweet.schema.json"
+  produces:
+    - "influx://contracts/classification.schema.json"

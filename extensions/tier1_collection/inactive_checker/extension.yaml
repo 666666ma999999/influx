@@ -1,0 +1,29 @@
+api_version: v1
+kind: influx_extension
+
+metadata:
+  name: tier1.inactive_checker
+  version: 1.0.0
+  tier: tier1_collection
+  description: Account activity and inactive status checker
+
+runtime:
+  entrypoint: "extensions.tier1_collection.inactive_checker.extension:InactiveCheckerExtension"
+  enabled_by_default: true
+
+dependencies:
+  requires: []
+  optional:
+    - "tier1.x_collector>=1.0.0"
+
+hooks:
+  subscribes:
+    - name: tier1.influencer.validate
+      handler: on_validate
+      priority: 100
+  emits:
+    - influencer.validation.completed
+
+contracts:
+  consumes: []
+  produces: []

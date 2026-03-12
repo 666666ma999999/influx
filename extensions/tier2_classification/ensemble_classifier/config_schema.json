@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "influx://extensions/tier2.ensemble_classifier/config_schema.json",
+  "title": "EnsembleClassifierExtension Config",
+  "description": "Configuration schema for the meta-learner ensemble classifier extension.",
+  "type": "object",
+  "properties": {
+    "model_dir": {
+      "type": "string",
+      "default": "models",
+      "description": "Directory containing meta-classifier model"
+    },
+    "confidence_threshold": {
+      "type": "number",
+      "default": 0.5,
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Minimum confidence for classification"
+    }
+  },
+  "additionalProperties": false
+}

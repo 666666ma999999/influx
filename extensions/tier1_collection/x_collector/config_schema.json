@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "influx://extensions/tier1.x_collector/config_schema.json",
+  "title": "XCollectorExtension Config",
+  "description": "Configuration schema for the X (Twitter) tweet collector extension.",
+  "type": "object",
+  "properties": {
+    "profile_path": {
+      "type": "string",
+      "default": "./x_profile",
+      "description": "Path to browser profile with authenticated cookies"
+    },
+    "max_scrolls": {
+      "type": "integer",
+      "default": 10,
+      "description": "Default max scroll count per search URL"
+    },
+    "stop_after_empty": {
+      "type": "integer",
+      "default": 3,
+      "description": "Stop scrolling after N consecutive empty results"
+    }
+  },
+  "additionalProperties": false
+}

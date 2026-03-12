@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "profile_path": {
+      "type": "string",
+      "default": "./x_profile",
+      "description": "Path to browser profile"
+    },
+    "threshold_days": {
+      "type": "integer",
+      "default": 30,
+      "description": "Days of inactivity before account is considered inactive"
+    },
+    "use_cache": {
+      "type": "boolean",
+      "default": true,
+      "description": "Use same-day cached results if available"
+    }
+  },
+  "additionalProperties": false
+}

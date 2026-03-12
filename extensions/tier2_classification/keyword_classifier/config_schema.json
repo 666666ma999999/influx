@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "influx://extensions/tier2.keyword_classifier/config_schema.json",
+  "title": "KeywordClassifierExtension Config",
+  "description": "Configuration schema for the keyword-based tweet classifier extension.",
+  "type": "object",
+  "properties": {
+    "custom_rules": {
+      "type": "object",
+      "description": "Override or extend default CLASSIFICATION_RULES. Keys are category names, values follow the same structure as collector.config.CLASSIFICATION_RULES.",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "keywords": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "patterns": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}
