@@ -36,7 +36,6 @@ INFLUENCER_GROUPS = {
             {"username": "tapazou29", "min_faves": 150},
             {"username": "kanpo_blog", "min_faves": 80},
             {"username": "haru_tachibana8", "min_faves": 80},
-            {"username": "utbuffett", "min_faves": 80},
             {"username": "heihachiro888", "min_faves": 80},
         ]
     },
@@ -209,7 +208,8 @@ SEARCH_URLS = {
 
 def build_collect_tasks(groups: list = None, interleave: bool = True,
                         exclude_accounts: set = None,
-                        since: str = None, until: str = None) -> list:
+                        since: str = None, until: str = None,
+                        split_per_account: bool = False) -> list:
     """
     全グループのURLをCollectTaskリストに変換
 
@@ -219,6 +219,7 @@ def build_collect_tasks(groups: list = None, interleave: bool = True,
         exclude_accounts: 除外するアカウントのセット
         since: 検索開始日 (YYYY-MM-DD形式)
         until: 検索終了日 (YYYY-MM-DD形式、排他的)
+        split_per_account: Trueでアカウントごとに個別検索URL生成（引用ツイートの取りこぼし防止）
 
     Returns:
         CollectTaskのリスト
@@ -226,24 +227,23 @@ def build_collect_tasks(groups: list = None, interleave: bool = True,
     if groups is None:
         groups = list(SEARCH_URLS.keys())
 
-    # exclude_accounts指定時は動的にURL生成
-    if exclude_accounts:
+    # exclude_accounts or split_per_account指定時は動的にURL生成
+    if exclude_accounts or split_per_account:
         url_source = {
             group_key: generate_search_urls(group_key, exclude_accounts=exclude_accounts,
-                                            since=since, until=until)
+                                            since=since, until=until,
+                                            split_per_account=split_per_account)
+            for group_key in groups
+            if group_key in INFLUENCER_GROUPS
+        }
+    elif since or until:
+        url_source = {
+            group_key: generate_search_urls(group_key, since=since, until=until)
             for group_key in groups
             if group_key in INFLUENCER_GROUPS
         }
     else:
-        # since/until指定時も動的にURL生成
-        if since or until:
-            url_source = {
-                group_key: generate_search_urls(group_key, since=since, until=until)
-                for group_key in groups
-                if group_key in INFLUENCER_GROUPS
-            }
-        else:
-            url_source = SEARCH_URLS
+        url_source = SEARCH_URLS
 
     # グループごとに通常URLと引用URLを分離
     normal_by_group = {}
@@ -306,28 +306,61 @@ CLASSIFICATION_RULES = {
             "割安", "おすすめ", "ベスト", "PERが落ちている",
             "買い", "チャンス", "激安", "注目", "仕込み",
             "がいい", "を推す", "一択",
-            "金", "ゴールド", "ビットコイン", "BTC", "ETF", "投資信託"
+            "ゴールド", "ビットコイン", "BTC", "ETF", "投資信託",
+            "最強", "有望", "狙い目", "妙味", "出遅れ"
         ],
         "patterns": [
             r"[ぁ-んァ-ン一-龥]+がいい",
             r"[ぁ-んァ-ン一-龥]+を推す",
-            r"[ぁ-んァ-ン一-龥]+一択"
+            r"[ぁ-んァ-ン一-龥]+一択",
+            r"金ETF|金価格|金地金|純金|金相場|金先物|金スポット",
+            r"(おすすめ|推奨|注目).*?(銘柄|セクター|ETF)"
         ]
     },
     "purchased_assets": {
         "name": "個人で購入・保有している資産",
         "keywords": [
             "買った", "購入", "追加", "ナンピン", "買い増し",
-            "イン", "エントリー", "仕込んだ",
+            "エントリー", "仕込んだ",
             "現物", "田中貴金属", "地金", "金貨",
             "イーサリアム", "ETH", "暗号資産", "仮想通貨",
             "インデックス", "積立",
-            "ポートフォリオ", "保有", "含み益", "含み損"
+            "ポートフォリオ", "保有", "含み益", "含み損",
+            "約定", "指値", "成行", "NISA"
         ],
         "patterns": [
             r"[ぁ-んァ-ン一-龥A-Za-z0-9]+をイン",
+            r"(全力|株|銘柄|ドル|ゴールド|ビットコイン|BTC|ETH).*イン(?!フ|サ|タ|デ|ス|パ|ド|ナ)",
             r"[ぁ-んァ-ン一-龥A-Za-z0-9]+エントリー",
             r"[ぁ-んァ-ン一-龥A-Za-z0-9]+仕込んだ"
+        ]
+    },
+    "sold_assets": {
+        "name": "売却した資産",
+        "keywords": [
+            "売った", "売却", "利確", "利食い", "損切り", "ロスカット",
+            "手放した", "全売り", "一部売却", "ポジション解消",
+            "エグジット", "出金", "引き揚げ"
+        ],
+        "patterns": [
+            r"(売り|売却).*?(完了|済み|した)",
+            r"(利確|利食い|損切り).*?(した|済み|完了)",
+            r"(ポジション|持ち株).*?(解消|整理|縮小)"
+        ]
+    },
+    "winning_trades": {
+        "name": "勝ちトレード・利益報告",
+        "keywords": [
+            "爆益", "勝ち", "勝った", "大勝ち", "プラス転換",
+            "利益確定", "含み益", "プラ転", "勝率",
+            "リターン", "パフォーマンス", "運用益", "配当金",
+            "儲かった", "儲けた", "黒字", "プラス"
+        ],
+        "patterns": [
+            r"[+＋][0-9].*?(万|%|円|pips)",
+            r"(利益|収益|リターン).*?[0-9]+(万|%|円)",
+            r"(年初来|月間|週間).*?(パフォーマンス|リターン|成績)",
+            r"(勝率|的中率).*?[0-9]"
         ]
     },
     "ipo": {
@@ -341,26 +374,40 @@ CLASSIFICATION_RULES = {
         "name": "市況トレンドに関する見解",
         "keywords": [
             "相場", "地合い", "トレンド", "センチメント",
-            "利上げ", "利下げ", "インフレ", "円安", "円高"
+            "利上げ", "利下げ", "インフレ", "円安", "円高",
+            "GDP", "景気", "金利", "国債", "為替",
+            "関税", "VIX", "決算", "業績",
+            "マクロ", "リセッション", "スタグフレーション"
         ],
-        "patterns": []
+        "patterns": [
+            r"(政策|関税|規制).*?(変更|引き上げ|発動|撤廃)",
+            r"(資金|マネー).*?(シフト|流入|流出)",
+            r"(GDP|景気|経済).*?(成長|減速|後退|回復)"
+        ]
     },
     "bullish_assets": {
         "name": "高騰している資産",
         "keywords": [
             "爆上げ", "急騰", "ストップ高", "S高", "上昇",
-            "が強い", "絶好調"
+            "が強い", "絶好調",
+            "好調", "上方修正", "増益", "増収", "最高値",
+            "年初来高値", "高値更新", "続伸", "反発"
         ],
         "patterns": [
             r"[ぁ-んァ-ン一-龥A-Za-z0-9]+が強い",
-            r"[ぁ-んァ-ン一-龥A-Za-z0-9]+絶好調"
+            r"[ぁ-んァ-ン一-龥A-Za-z0-9]+絶好調",
+            r"[0-9]+倍",
+            r"(決算|業績).*?(好調|上方|増益|増収)",
+            r"前[日年期]比.*?[+＋][0-9]"
         ]
     },
     "bearish_assets": {
         "name": "下落している資産",
         "keywords": [
             "暴落", "急落", "ストップ安", "S安", "下落",
-            "が弱い", "終わった"
+            "が弱い", "終わった",
+            "割高", "続落", "反落", "安値更新", "年初来安値",
+            "減益", "減収", "下方修正"
         ],
         "patterns": [
             r"[ぁ-んァ-ン一-龥A-Za-z0-9]+が弱い",
@@ -373,10 +420,14 @@ CLASSIFICATION_RULES = {
             "岐阜", "ぎふ", "岐阜暴威",
             "ジム・ロジャーズ", "Jim Rogers",
             "信用買い残", "過去最高", "バブル",
-            "天井", "底打ち", "暴落フラグ"
+            "天井", "底打ち", "暴落フラグ",
+            "過熱", "危機", "警戒"
         ],
         "contrarian_accounts": ["gihuboy"],
-        "patterns": []
+        "patterns": [
+            r"(流動性|信用|融資).*?(不足|懸念|危機|収縮)",
+            r"(機関投資家|ヘッジファンド).*?(売り|ショート)"
+        ]
     }
 }
 

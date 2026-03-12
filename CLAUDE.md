@@ -1,3 +1,5 @@
+> **グローバルルール準拠**: ~/.claude/CLAUDE.md および ~/.claude/rules/ のルールに従うこと。
+
 # influx - X(Twitter)株式インフルエンサー ツイート収集・LLM分類システム
 
 ## プロジェクト概要

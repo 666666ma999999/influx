@@ -28,7 +28,12 @@ def _get_encryption_key() -> bytes:
 
     # フォールバック: マシン固有のキー生成
     import socket
-    machine_id = f"{os.getlogin()}@{socket.gethostname()}"
+    try:
+        login = os.getlogin()
+    except OSError:
+        import pwd
+        login = pwd.getpwuid(os.getuid()).pw_name
+    machine_id = f"{login}@{socket.gethostname()}"
     key_bytes = hashlib.sha256(machine_id.encode()).digest()
     return base64.urlsafe_b64encode(key_bytes)
 

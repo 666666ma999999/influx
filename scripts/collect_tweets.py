@@ -141,8 +141,8 @@ def parse_args():
     parser.add_argument(
         '--scrolls', '-s',
         type=int,
-        default=10,
-        help='スクロール回数 (default: 10)'
+        default=20,
+        help='スクロール回数 (default: 20)'
     )
 
     parser.add_argument(
@@ -228,6 +228,12 @@ def parse_args():
         type=str,
         default=None,
         help='検索終了日 (YYYY-MM-DD形式、排他的)'
+    )
+
+    parser.add_argument(
+        '--split-per-account',
+        action='store_true',
+        help='アカウントごとに個別検索URL生成（引用ツイートの取りこぼし防止、タスク数増加に注意）'
     )
 
     parser.add_argument(
@@ -321,7 +327,8 @@ def main():
     # タスクキュー構築
     interleave = not args.no_interleave
     tasks = build_collect_tasks(groups, interleave=interleave, exclude_accounts=exclude_accounts,
-                                since=args.since, until=args.until)
+                                since=args.since, until=args.until,
+                                split_per_account=args.split_per_account)
 
     print()
     print("=" * 60)
@@ -336,6 +343,8 @@ def main():
         print(f"除外アカウント: {len(exclude_accounts)}件")
     if args.since or args.until:
         print(f"検索期間: {args.since or '(デフォルト)'} ~ {args.until or '(デフォルト)'}")
+    if args.split_per_account:
+        print(f"アカウント分割: ON（個別URL生成）")
     print()
 
     # 共有重複排除セット

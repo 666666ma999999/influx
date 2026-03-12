@@ -79,7 +79,8 @@ class TweetClassifier:
             is_from_contrarian = username.lower() in [a.lower() for a in contrarian_accounts]
 
             # 分類判定
-            if matched_keywords or matched_patterns or is_from_contrarian:
+            # is_from_contrarian単独ではwarning_signalsを追加しない（ポストループで投資関連チェック付きで判定）
+            if matched_keywords or matched_patterns:
                 categories.append(category)
                 category_details[category] = {
                     'name': rule.get('name', category),
@@ -89,14 +90,15 @@ class TweetClassifier:
                 }
 
         # 逆指標アカウントからの投稿は警告シグナルに追加
-        if is_contrarian and 'warning_signals' not in categories:
+        # （他カテゴリなし = 投資に無関係なツイート → warning_signalsも不要）
+        if is_contrarian and categories and 'warning_signals' not in categories:
             categories.append('warning_signals')
             category_details['warning_signals'] = {
                 'name': self.rules['warning_signals'].get('name', '警戒すべき動き'),
                 'matched_keywords': [],
                 'matched_patterns': [],
                 'is_from_contrarian': True,
-                'note': '逆指標インフルエンサーからの投稿'
+                'note': '逆指標インフルエンサーからの投稿（投資関連カテゴリあり）'
             }
 
         # 結果をツイートに追加

@@ -334,7 +334,8 @@ def main():
         print("ERROR: Could not find EMBEDDED_DATA in viewer.html")
         sys.exit(1)
 
-    new_content = re.sub(pattern, f'const EMBEDDED_DATA = {tweets_json};', content, flags=re.DOTALL)
+    replacement = f'const EMBEDDED_DATA = {tweets_json};'
+    new_content = re.sub(pattern, lambda m: replacement, content, flags=re.DOTALL)
     with open(viewer_path, 'w', encoding='utf-8') as f:
         f.write(new_content)
     print(f"Regenerated {viewer_path}")
