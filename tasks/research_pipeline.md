@@ -27,7 +27,7 @@
 | V5 | Phase 2 (collect) 実行 | ✅ 完了 | 3人分52ツイート収集 (purazumakoi:8, kabuknight:6, susakisiki:38) |
 | V6 | Phase 3 (evaluate) 実行 | ✅ 完了 | xAI Grok API使用、4シグナル抽出 (6085.T x3, 7203.T x1) |
 | V7 | Phase 4 (report) 実行 | ✅ 完了 | scorecard.json + report.html 生成 |
-| V8 | HTMLレポート ブラウザ確認 | ⏳ 未確認 | output/research/research_report.html |
+| V8 | HTMLレポート ブラウザ確認 | ✅ 完了 | 構造・データ整合性確認済み (2026-03-13) |
 
 ## 解決済みブロッカー
 

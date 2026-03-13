@@ -118,13 +118,15 @@ def phase_discover(keywords=None, max_candidates=50):
 # ============================================================
 # Phase 2: Collect
 # ============================================================
-def phase_collect(candidates_files=None, max_collect=10, scrolls=10):
+def phase_collect(candidates_files=None, max_collect=10, scrolls=10, since=None, until=None):
     """候補インフルエンサーのツイートを収集する。
 
     Args:
         candidates_files: discovery JSONファイルパスのリスト（glob対応）
         max_collect: 収集する最大候補数
         scrolls: スクロール回数
+        since: 収集開始日 (YYYY-MM-DD)。Noneの場合は30日前
+        until: 収集終了日 (YYYY-MM-DD)。Noneの場合は明日
 
     Returns:
         収集結果ファイルパスのリスト
@@ -167,7 +169,10 @@ def phase_collect(candidates_files=None, max_collect=10, scrolls=10):
     unique.sort(key=lambda x: float(x.get("score", 0)), reverse=True)
     candidates_to_collect = unique[:max_collect]
 
+    _since = since or (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
+    _until = until or (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
     print(f"収集対象: {len(candidates_to_collect)}件 (全{len(unique)}件中)")
+    print(f"収集期間: {_since} 〜 {_until}")
 
     # Playwright で収集
     import urllib.parse
@@ -183,10 +188,10 @@ def phase_collect(candidates_files=None, max_collect=10, scrolls=10):
 
         print(f"\n--- [{i+1}/{len(candidates_to_collect)}] @{username} ---")
 
-        # 30日遡りの検索URL生成
-        since = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
-        until = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
-        query = f"from:{username} since:{since} until:{until}"
+        # 検索期間の決定
+        since_date = since or (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
+        until_date = until or (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
+        query = f"from:{username} since:{since_date} until:{until_date}"
         encoded = urllib.parse.quote(query)
         search_url = f"https://x.com/search?q={encoded}&src=typed_query&f=live"
 
@@ -207,6 +212,7 @@ def phase_collect(candidates_files=None, max_collect=10, scrolls=10):
                 for tweet in tweets:
                     tweet["research_candidate"] = True
                     tweet["candidate_score"] = candidate.get("score", 0)
+                    tweet["username"] = username  # DOM解析の不安定なusernameを上書き
 
                 output_path = os.path.join(RESEARCH_DIR, f"tweets_{username}.json")
                 with open(output_path, "w", encoding="utf-8") as f:
@@ -603,6 +609,24 @@ def main():
         default=50,
         help="Discovery最大候補数 (default: 50)",
     )
+    parser.add_argument(
+        "--since",
+        type=str,
+        default=None,
+        help="収集開始日 YYYY-MM-DD (default: 30日前)",
+    )
+    parser.add_argument(
+        "--until",
+        type=str,
+        default=None,
+        help="収集終了日 YYYY-MM-DD (default: 明日)",
+    )
+    parser.add_argument(
+        "--clean",
+        action="store_true",
+        default=False,
+        help="前回の評価データをクリアしてから実行（signals/evaluations/indexをバックアップ後削除）",
+    )
 
     args = parser.parse_args()
 
@@ -622,11 +646,18 @@ def main():
             candidates_files=candidates_files,
             max_collect=args.max_collect,
             scrolls=args.scrolls,
+            since=args.since,
+            until=getattr(args, 'until', None),
         )
         if args.phase == "collect":
             return
 
     if args.phase == "evaluate" or args.phase == "full":
+        if args.clean:
+            from extensions.tier1_collection.grok_discoverer.research_store import ResearchStore
+            store = ResearchStore(base_dir=RESEARCH_DIR)
+            store.clear()
+            print("前回データをクリアしました")
         phase_evaluate()
         if args.phase == "evaluate":
             return

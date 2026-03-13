@@ -19,7 +19,7 @@ def add_business_days(date_str: str, n: int, market: str = "US") -> str:
         n営業日後の日付文字列 (YYYY-MM-DD形式)
     """
     base_date = np.datetime64(date_str, "D")
-    target_date = np.busday_offset(base_date, n)
+    target_date = np.busday_offset(base_date, n, roll="forward")
     return str(target_date)
 
 

@@ -90,6 +90,18 @@ class ResearchStore:
                 indent=2,
             )
 
+    def clear(self) -> None:
+        """signals.jsonl, evaluations.jsonl, index.json をバックアップ後削除する。
+
+        各ファイルを .bak にリネームしてからインメモリインデックスをリセットする。
+        """
+        for path in [self.signals_path, self.evaluations_path, self.index_path]:
+            if os.path.exists(path):
+                bak_path = path + ".bak"
+                os.replace(path, bak_path)
+                logger.info("バックアップ作成: %s → %s", path, bak_path)
+        self._index = set()
+
     @staticmethod
     def get_signal_id(tweet_url: str, ticker: str) -> str:
         """シグナルレコードの一意IDを生成する。
@@ -132,15 +144,33 @@ class ResearchStore:
         logger.debug("シグナル追加: %s (%s %s)", signal_id, signal.get("ticker", "?"), signal.get("direction", "?"))
         return True
 
-    def add_evaluation(self, evaluation: Dict[str, Any]) -> None:
-        """評価レコードを追加する。
+    def add_evaluation(self, evaluation: Dict[str, Any]) -> bool:
+        """評価レコードを追加する（signal_idベースの重複排除付き）。
 
         Args:
             evaluation: 評価レコード辞書
+
+        Returns:
+            True: 新規追加された, False: 重複のためスキップ
         """
+        signal_id = evaluation.get("signal_id")
+        if signal_id:
+            # 既存evaluationsから重複チェック（初回のみファイル読み込み）
+            if not hasattr(self, "_eval_ids"):
+                self._eval_ids = set()
+                if os.path.exists(self.evaluations_path):
+                    for rec in self._load_jsonl(self.evaluations_path):
+                        sid = rec.get("signal_id")
+                        if sid:
+                            self._eval_ids.add(sid)
+            if signal_id in self._eval_ids:
+                return False
+            self._eval_ids.add(signal_id)
+
         self._ensure_dir()
         with open(self.evaluations_path, "a", encoding="utf-8") as f:
             f.write(json.dumps(evaluation, ensure_ascii=False) + "\n")
+        return True
 
     def load_signals(self) -> List[Dict[str, Any]]:
         """全シグナルレコードを読み込む。
