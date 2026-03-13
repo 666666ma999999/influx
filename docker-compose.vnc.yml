@@ -12,6 +12,7 @@ services:
       - DISPLAY=:99
       - VNC_PASSWORD=${VNC_PASSWORD}
       - ANTHROPIC_API_KEY
+      - XAI_API_KEY
 
     ports:
       - "6080:6080"  # noVNC (ブラウザからアクセス)

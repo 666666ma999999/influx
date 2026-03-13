@@ -1,0 +1,31 @@
+api_version: v1
+kind: influx_extension
+
+metadata:
+  name: tier1.grok_discoverer
+  version: 1.0.0
+  tier: tier1_collection
+  description: >
+    Discovers new investment influencer candidates using Grok API (xai-sdk x_search).
+    Searches by keywords and network analysis to find accounts with 3000+ followers
+    making specific investment recommendations.
+
+runtime:
+  entrypoint: "extensions.tier1_collection.grok_discoverer.extension:GrokDiscovererExtension"
+  enabled_by_default: false
+
+dependencies:
+  requires: []
+  optional: []
+
+hooks:
+  subscribes:
+    - name: influencer.discover
+      handler: on_influencer_discover
+      priority: 100
+  emits:
+    - influencer.candidates_found
+
+contracts:
+  consumes: []
+  produces: []

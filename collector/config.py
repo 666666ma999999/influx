@@ -483,3 +483,29 @@ LLM_CONFIG = {
     "max_retries": 3,                     # API呼び出しの最大リトライ回数
     "retry_backoff_base": 2.0             # リトライ時の待機時間の基数（指数バックオフ）
 }
+
+
+# Grok Discovery設定
+DISCOVERY_CONFIG = {
+    "model": "grok-4-1-fast-non-reasoning",
+    "keyword_batch_size": 3,
+    "network_batch_size": 8,
+    "max_retries": 3,
+    "retry_backoff_base": 2.0,
+    "timeout_seconds": 120,
+    "min_followers": 3000,
+    "default_max_candidates": 50,
+    "batch_result_limit": 10,
+}
+
+# リサーチ用キーワード
+RESEARCH_KEYWORDS = [
+    "日本株 高配当",
+    "グロース株 成長株",
+    "バリュー株 割安",
+    "米国株 投資",
+    "インデックス投資",
+    "株式投資 銘柄分析",
+    "決算 業績",
+    "テンバガー 成長",
+]

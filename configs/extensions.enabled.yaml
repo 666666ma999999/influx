@@ -1,4 +1,5 @@
 enabled:
+  - tier1.grok_discoverer
   - tier2.keyword_classifier
   - tier2.performance_tracker
   - tier3.news_curator

@@ -8,4 +8,4 @@ x_profile/
 output/
 docker-compose*.yml
 Dockerfile*
-supervisord.conf
+!supervisord.conf

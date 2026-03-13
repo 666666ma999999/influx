@@ -1,0 +1,26 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "keywords": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "Discovery search keywords"
+    },
+    "max_candidates": {
+      "type": "integer",
+      "default": 50,
+      "description": "Maximum number of candidates to return"
+    },
+    "min_followers": {
+      "type": "integer",
+      "default": 3000,
+      "description": "Minimum follower count"
+    },
+    "output_dir": {
+      "type": "string",
+      "default": "output/research",
+      "description": "Output directory for discovery results"
+    }
+  }
+}

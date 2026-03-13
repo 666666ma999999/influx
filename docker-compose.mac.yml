@@ -14,6 +14,7 @@ services:
       - DISPLAY=host.docker.internal:0
       - TZ=Asia/Tokyo
       - ANTHROPIC_API_KEY
+      - XAI_API_KEY
 
     volumes:
       - ./collector:/app/collector:ro
@@ -38,6 +39,7 @@ services:
       - DISPLAY=host.docker.internal:0
       - TZ=Asia/Tokyo
       - ANTHROPIC_API_KEY
+      - XAI_API_KEY
 
     volumes:
       - ./collector:/app/collector:ro

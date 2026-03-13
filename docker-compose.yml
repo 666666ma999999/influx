@@ -12,6 +12,7 @@ services:
       - DISPLAY=${DISPLAY:-:0}
       - TZ=Asia/Tokyo
       - ANTHROPIC_API_KEY
+      - XAI_API_KEY
 
     # ボリュームマウント
     volumes:
@@ -59,6 +60,7 @@ services:
       - DISPLAY=${DISPLAY:-:0}
       - TZ=Asia/Tokyo
       - ANTHROPIC_API_KEY
+      - XAI_API_KEY
 
     volumes:
       - ./collector:/app/collector:ro
