@@ -116,9 +116,126 @@ def phase_discover(keywords=None, max_candidates=50):
 
 
 # ============================================================
+# Phase 2a: Screen
+# ============================================================
+def phase_screen(candidates_files=None, since=None, until=None):
+    """Phase 2a: Grok APIで全候補をスクリーニング。
+
+    Args:
+        candidates_files: discovery JSONファイルパスのリスト（glob対応）
+        since: スクリーニング開始日 (YYYY-MM-DD)
+        until: スクリーニング終了日 (YYYY-MM-DD)
+
+    Returns:
+        スクリーニング結果JSONのパス
+    """
+    from collector.grok_client import GrokClient
+    from collector.config import SCREENING_CONFIG
+
+    print("=== Phase 2a: Screen ===")
+
+    # 候補ファイル読み込み
+    if candidates_files is None:
+        pattern = os.path.join(RESEARCH_DIR, "discovery_*.json")
+        candidates_files = sorted(glob.glob(pattern))
+
+    if not candidates_files:
+        print("エラー: 候補ファイルが見つかりません")
+        return None
+
+    # 全候補のハンドルを抽出・重複排除
+    all_handles = set()
+    all_candidates_data = {}  # username -> discovery情報
+    for filepath in candidates_files:
+        for actual_path in glob.glob(filepath):
+            try:
+                with open(actual_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                for c in data.get("candidates", []):
+                    username = c.get("username", "").strip().lstrip("@").lower()
+                    if username:
+                        all_handles.add(username)
+                        if username not in all_candidates_data:
+                            all_candidates_data[username] = c
+            except (json.JSONDecodeError, OSError) as e:
+                print(f"警告: {actual_path} の読み込みに失敗: {e}")
+
+    if not all_handles:
+        print("エラー: スクリーニング対象の候補がありません")
+        return None
+
+    print(f"スクリーニング対象: {len(all_handles)}候補")
+
+    # Grok APIでスクリーニング
+    client = GrokClient()
+    batch_size = SCREENING_CONFIG.get("screen_batch_size", 10)
+
+    _since = since or (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
+    _until = until or (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
+
+    result = client.screen_candidates(
+        handles=list(all_handles),
+        batch_size=batch_size,
+        from_date=_since,
+        to_date=_until,
+    )
+
+    screened = result.get("candidates", [])
+    errors = result.get("errors", [])
+
+    # discovery情報とスクリーニング結果をマージ
+    for candidate in screened:
+        username = candidate.get("username", "")
+        discovery_info = all_candidates_data.get(username, {})
+        candidate["discovery_score"] = discovery_info.get("score", 0)
+        candidate["discovery_display_name"] = discovery_info.get("display_name", "")
+        candidate["discovery_description"] = discovery_info.get("description", "")
+        candidate["investment_focus"] = discovery_info.get("investment_focus", [])
+        # screening_score = investment_relevance_score（ソート用エイリアス）
+        candidate["screening_score"] = candidate.get("investment_relevance_score", 0)
+
+    # 保存
+    ensure_research_dir()
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    output_path = os.path.join(RESEARCH_DIR, f"screening_{timestamp}.json")
+
+    data = {
+        "screened_at": datetime.now().isoformat(),
+        "total_candidates": len(all_handles),
+        "screened_count": len(screened),
+        "candidates": screened,
+        "errors": errors,
+        "meta": result.get("meta", {}),
+    }
+
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+    # ランキング表示
+    min_score = SCREENING_CONFIG.get("screen_min_score", 20)
+    qualified = [c for c in screened if c.get("investment_relevance_score", 0) >= min_score]
+
+    print(f"\nスクリーニング完了: {len(screened)}件評価 → {output_path}")
+    print(f"最低スコア {min_score}以上: {len(qualified)}件")
+    print(f"\n=== ランキング (investment_relevance_score降順) ===")
+    for i, c in enumerate(screened[:30]):
+        score = c.get("investment_relevance_score", 0)
+        username = c.get("username", "")
+        summary = c.get("screening_summary", "")[:50]
+        tweet_est = c.get("tweet_count_estimate", 0)
+        marker = "★" if score >= min_score else " "
+        print(f"  {marker} {i+1:2d}. @{username:<20s} score:{score:3d} tweets~{tweet_est:3d} {summary}")
+
+    if errors:
+        print(f"\nエラー: {len(errors)}件")
+
+    return output_path
+
+
+# ============================================================
 # Phase 2: Collect
 # ============================================================
-def phase_collect(candidates_files=None, max_collect=10, scrolls=10, since=None, until=None):
+def phase_collect(candidates_files=None, max_collect=10, scrolls=10, since=None, until=None, screening_files=None):
     """候補インフルエンサーのツイートを収集する。
 
     Args:
@@ -166,7 +283,50 @@ def phase_collect(candidates_files=None, max_collect=10, scrolls=10, since=None,
             seen.add(username)
             unique.append(c)
 
-    unique.sort(key=lambda x: float(x.get("score", 0)), reverse=True)
+    # スクリーニングデータがある場合はscreening_scoreでソート
+    screening_data = {}
+    if screening_files:
+        for sf in screening_files:
+            for actual_path in glob.glob(sf):
+                try:
+                    with open(actual_path, "r", encoding="utf-8") as f:
+                        sdata = json.load(f)
+                    for sc in sdata.get("candidates", []):
+                        su = sc.get("username", "").lower()
+                        if su:
+                            screening_data[su] = sc
+                except (json.JSONDecodeError, OSError) as e:
+                    print(f"警告: {actual_path} の読み込みに失敗: {e}")
+    elif screening_files is None:
+        # screening_files未指定時は最新のscreeningファイルを自動検出
+        screening_pattern = os.path.join(RESEARCH_DIR, "screening_*.json")
+        screening_found = sorted(glob.glob(screening_pattern))
+        if screening_found:
+            latest_screening = screening_found[-1]
+            print(f"スクリーニングデータ自動検出: {latest_screening}")
+            try:
+                with open(latest_screening, "r", encoding="utf-8") as f:
+                    sdata = json.load(f)
+                for sc in sdata.get("candidates", []):
+                    su = sc.get("username", "").lower()
+                    if su:
+                        screening_data[su] = sc
+            except (json.JSONDecodeError, OSError) as e:
+                print(f"警告: {latest_screening} の読み込みに失敗: {e}")
+
+    if screening_data:
+        # スクリーニングデータでソート（screening_score降順）
+        for c in unique:
+            username = c.get("username", "").lower()
+            if username in screening_data:
+                c["screening_score"] = screening_data[username].get("investment_relevance_score", 0)
+                c["screening_summary"] = screening_data[username].get("screening_summary", "")
+            else:
+                c["screening_score"] = 0
+        unique.sort(key=lambda x: x.get("screening_score", 0), reverse=True)
+        print(f"スクリーニングデータ適用: {len(screening_data)}件")
+    else:
+        unique.sort(key=lambda x: float(x.get("score", 0)), reverse=True)
     candidates_to_collect = unique[:max_collect]
 
     _since = since or (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
@@ -577,7 +737,7 @@ def main():
     )
     parser.add_argument(
         "--phase",
-        choices=["discover", "collect", "evaluate", "report", "full"],
+        choices=["discover", "screen", "collect", "evaluate", "report", "full"],
         default="full",
         help="実行フェーズ (default: full)",
     )
@@ -590,6 +750,11 @@ def main():
         "--candidates",
         nargs="*",
         help="候補JSONファイルパス（--phase collect時、glob対応）",
+    )
+    parser.add_argument(
+        "--screening",
+        nargs="*",
+        help="スクリーニングJSONファイルパス（--phase collect時、glob対応）",
     )
     parser.add_argument(
         "--max-collect",
@@ -640,14 +805,26 @@ def main():
         if args.phase == "discover":
             return
 
+    if args.phase == "screen" or args.phase == "full":
+        candidates_files = args.candidates if args.phase == "screen" else None
+        screening_path = phase_screen(
+            candidates_files=candidates_files,
+            since=args.since,
+            until=getattr(args, 'until', None),
+        )
+        if args.phase == "screen":
+            return
+
     if args.phase == "collect" or args.phase == "full":
         candidates_files = args.candidates if args.phase == "collect" else None
+        screening_files = getattr(args, 'screening', None) if args.phase == "collect" else None
         collected = phase_collect(
             candidates_files=candidates_files,
             max_collect=args.max_collect,
             scrolls=args.scrolls,
             since=args.since,
             until=getattr(args, 'until', None),
+            screening_files=screening_files,
         )
         if args.phase == "collect":
             return

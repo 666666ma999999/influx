@@ -47,6 +47,25 @@ class DiscoveryResult(BaseModel):
     candidates: list[CandidateInfo] = Field(default_factory=list)
 
 
+class ScreenedTweet(BaseModel):
+    text: str = Field(description="ツイート本文（要約可）")
+    approximate_date: str = Field(default="", description="おおよその投稿日 YYYY-MM-DD")
+    engagement_level: str = Field(default="medium", description="エンゲージメント水準: high/medium/low")
+    investment_relevance: bool = Field(default=False, description="投資関連ツイートか")
+
+
+class ScreenedCandidate(BaseModel):
+    username: str = Field(description="Xユーザー名")
+    investment_relevance_score: int = Field(default=0, ge=0, le=100, description="投資関連度スコア (0-100)")
+    tweet_count_estimate: int = Field(default=0, description="直近30日の投資関連ツイート推定数")
+    representative_tweets: list[ScreenedTweet] = Field(default_factory=list, description="代表的な投資関連ツイート (最大5件)")
+    screening_summary: str = Field(default="", description="スクリーニング概要")
+
+
+class ScreeningResult(BaseModel):
+    candidates: list[ScreenedCandidate] = Field(default_factory=list)
+
+
 class GrokClient:
     """xai-sdk を使って投資インフルエンサー候補を発見するクライアント。"""
 
@@ -277,10 +296,12 @@ class GrokClient:
     def _build_keyword_prompt(self, keywords: list[str], max_candidates: int) -> str:
         keyword_text = "、".join(keywords)
         return (
-            "以下のキーワードに関連する投資インフルエンサーを探してください。"
+            "以下のキーワードに関連する日本株の投資インフルエンサーを探してください。"
             f"キーワード: {keyword_text}。"
             f"フォロワー{self.min_followers}人以上、具体的な投資判断（銘柄推奨、売買報告、決算分析）を行っているアカウントを優先。"
-            "bot/企業公式/ニュースメディア/仮想通貨のみ/FXのみは除外。"
+            "大型アカウントだけでなく、フォロワー3000〜30000人程度の中小規模で質の高い発信をしているアカウントも積極的に含めること。"
+            "直近30日以内に具体的な銘柄名・銘柄コードを含む投稿をしているアカウントを優先すること。"
+            "除外対象: bot/企業公式/ニュースメディア/仮想通貨のみ/FXのみ/情報商材販売/有料サロン勧誘/アフィリエイト中心。"
             f"最大{max_candidates}件まで候補を挙げてください。"
         )
 
@@ -290,7 +311,8 @@ class GrokClient:
             "以下のアカウントが頻繁に言及・引用・議論している投資系アカウントを探してください。"
             f"対象アカウント: {handle_text}。"
             f"フォロワー{self.min_followers}人以上かつ、株式や企業分析など具体的な投資発信を継続している個人アカウントを優先。"
-            "bot/企業公式/ニュースメディア/仮想通貨のみ/FXのみは除外。"
+            "特にフォロワー3000〜30000人程度の中小規模で、独自の分析や売買判断を発信しているアカウントを重視すること。"
+            "除外対象: bot/企業公式/ニュースメディア/仮想通貨のみ/FXのみ/情報商材販売/有料サロン勧誘/アフィリエイト中心。"
             f"最大{max_candidates}件まで候補を挙げてください。"
         )
 
@@ -303,7 +325,7 @@ class GrokClient:
     ) -> str:
         constraints = [
             prompt,
-            "出力は構造化データのみ。推測でもよいが、直近投稿や言及から妥当な根拠を含めること。",
+            "出力は構造化データのみ。X上で実際に確認できるアカウントのみ返すこと。直近投稿や言及から妥当な根拠を含めること。",
             f"候補数は最大{max_candidates}件。",
             f"estimated_followers は可能なら数値で推定し、{self.min_followers}未満は含めないこと。",
             "evidence には発見の根拠を短い要約で1-3件、sample_posts には代表投稿の要約を1-3件入れること。",
@@ -449,3 +471,162 @@ class GrokClient:
         )
         limit = max_candidates or self.default_max_candidates
         return filtered[:limit]
+
+    def _build_screening_prompt(self, handles: list[str]) -> str:
+        """スクリーニング用プロンプトを生成する。"""
+        handle_text = ", ".join(f"@{h}" for h in handles)
+        return (
+            f"以下のアカウントの直近30日間の投稿を調査し、投資関連度を評価してください。\n"
+            f"対象アカウント: {handle_text}\n\n"
+            "各アカウントについて以下を評価:\n"
+            "1. investment_relevance_score (0-100): 投資関連度スコア\n"
+            "   - 80-100: 具体的な銘柄コード・銘柄名を含む売買報告、決算分析を頻繁に投稿\n"
+            "   - 50-79: 投資関連の話題が多いが、具体的な銘柄言及は少ない\n"
+            "   - 20-49: 投資に触れることもあるが、主な話題は別\n"
+            "   - 0-19: 投資にほぼ無関係\n"
+            "2. tweet_count_estimate: 直近30日の投資関連ツイート推定数\n"
+            "3. representative_tweets: 代表的な投資関連ツイート (最大5件)\n"
+            "4. screening_summary: 1-2文の概要\n\n"
+            "出力は構造化データのみ。全アカウントを漏れなく評価すること。"
+        )
+
+    def _screen_batch(
+        self,
+        handles: list[str],
+        prompt: str,
+        from_date: datetime,
+        to_date: datetime,
+    ) -> dict:
+        """1バッチ分のスクリーニングを実行する。"""
+        for attempt in range(self.max_retries):
+            try:
+                chat = self.client.chat.create(
+                    model=self.model,
+                    tools=[x_search(
+                        from_date=from_date,
+                        to_date=to_date,
+                        allowed_x_handles=list(handles),
+                    )],
+                )
+                chat.append(system("あなたはX/Twitter上の投資インフルエンサー調査アナリストです。"))
+                chat.append(user(prompt))
+
+                response, parsed = chat.parse(ScreeningResult)
+                _ = response
+                if not parsed or not isinstance(parsed, ScreeningResult):
+                    raise ValueError("ScreeningResult の parse に失敗しました")
+
+                candidates = [c.model_dump() for c in parsed.candidates]
+                return {"candidates": candidates, "errors": []}
+            except Exception as exc:
+                sanitized_error = self._sanitize_log(str(exc))
+                logger.warning(
+                    "Screening batch failed",
+                    extra={
+                        "extra_data": {
+                            "attempt": attempt + 1,
+                            "max_retries": self.max_retries,
+                            "error": sanitized_error,
+                            "handles": handles,
+                        }
+                    },
+                )
+                if attempt < self.max_retries - 1:
+                    wait_time = self.retry_backoff_base ** attempt
+                    time.sleep(wait_time)
+                    continue
+                return {
+                    "candidates": [],
+                    "errors": [{"handles": handles, "error": sanitized_error}],
+                }
+
+        return {"candidates": [], "errors": [{"handles": handles, "error": "unknown error"}]}
+
+    def screen_candidates(
+        self,
+        handles: list[str],
+        batch_size: int = 10,
+        from_date=None,
+        to_date=None,
+    ) -> dict:
+        """候補アカウントの投資関連度をスクリーニングする。
+
+        Args:
+            handles: スクリーニング対象のXユーザー名リスト
+            batch_size: 1バッチあたりのハンドル数（x_search allowed_x_handles上限）
+            from_date: 検索開始日
+            to_date: 検索終了日
+
+        Returns:
+            {"candidates": [...], "errors": [...], "meta": {...}}
+        """
+        try:
+            from .config import SCREENING_CONFIG
+            cooldown = SCREENING_CONFIG.get("screen_cooldown_sec", 2)
+        except (ImportError, AttributeError):
+            cooldown = 2
+
+        handles = [h.strip().lstrip("@").lower() for h in handles if h and h.strip()]
+        handles = sorted(set(handles))
+        if not handles:
+            return {"candidates": [], "errors": ["handles が空です"], "meta": {"source": "screening"}}
+
+        from_dt, to_dt = self._resolve_dates(from_date, to_date)
+        batches = self._chunk_list(handles, batch_size)
+
+        candidates_by_username: dict[str, dict[str, Any]] = {}
+        errors: list[dict[str, Any]] = []
+
+        for i, batch in enumerate(batches):
+            prompt = self._build_screening_prompt(batch)
+            logger.info(
+                f"Screening batch {i + 1}/{len(batches)}",
+                extra={"extra_data": {"handles": batch}},
+            )
+            try:
+                result = self._screen_batch(
+                    handles=batch,
+                    prompt=prompt,
+                    from_date=from_dt,
+                    to_date=to_dt,
+                )
+                for candidate in result.get("candidates", []):
+                    username = str(candidate.get("username", "")).strip().lstrip("@").lower()
+                    if not username:
+                        continue
+                    candidate["username"] = username
+                    if username not in candidates_by_username:
+                        candidates_by_username[username] = candidate
+                    else:
+                        # 高いスコアを採用
+                        existing = candidates_by_username[username]
+                        if candidate.get("investment_relevance_score", 0) > existing.get("investment_relevance_score", 0):
+                            candidates_by_username[username] = candidate
+                errors.extend(result.get("errors", []))
+            except Exception as exc:
+                error = {"batch": batch, "error": self._sanitize_log(str(exc))}
+                errors.append(error)
+                logger.error("Screening batch failed", extra={"extra_data": error})
+
+            # バッチ間クールダウン
+            if i < len(batches) - 1:
+                time.sleep(cooldown)
+
+        # スコア降順ソート
+        all_candidates = sorted(
+            candidates_by_username.values(),
+            key=lambda x: x.get("investment_relevance_score", 0),
+            reverse=True,
+        )
+
+        return {
+            "candidates": all_candidates,
+            "errors": errors,
+            "meta": {
+                "source": "screening",
+                "total_handles": len(handles),
+                "batch_count": len(batches),
+                "from_date": from_dt.isoformat(),
+                "to_date": to_dt.isoformat(),
+            },
+        }

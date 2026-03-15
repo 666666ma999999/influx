@@ -488,24 +488,60 @@ LLM_CONFIG = {
 # Grok Discovery設定
 DISCOVERY_CONFIG = {
     "model": "grok-4-1-fast-non-reasoning",
-    "keyword_batch_size": 3,
+    "keyword_batch_size": 5,
     "network_batch_size": 8,
     "max_retries": 3,
     "retry_backoff_base": 2.0,
     "timeout_seconds": 120,
     "min_followers": 3000,
     "default_max_candidates": 50,
-    "batch_result_limit": 10,
+    "batch_result_limit": 15,
+}
+
+# スクリーニング設定
+SCREENING_CONFIG = {
+    "screen_batch_size": 10,       # allowed_x_handles上限
+    "screen_result_limit": 5,      # 候補あたりの代表ツイート数
+    "screen_min_score": 20,        # 最低relevanceスコア
+    "screen_cooldown_sec": 2,      # バッチ間クールダウン
 }
 
 # リサーチ用キーワード
 RESEARCH_KEYWORDS = [
-    "日本株 高配当",
-    "グロース株 成長株",
-    "バリュー株 割安",
-    "米国株 投資",
-    "インデックス投資",
-    "株式投資 銘柄分析",
-    "決算 業績",
-    "テンバガー 成長",
+    # --- batch 1 (軸A,B,C,D,E) ---
+    "株クラ 日本株",              # A: コミュニティ
+    "スイングトレード 日本株",     # B: 投資スタイル
+    "利確 損切り",                # C: 売買行動
+    "決算跨ぎ 決算プレー",        # D: 決算・還元
+    "半導体 AI",                  # E: 旬テーマ
+    # --- batch 2 ---
+    "個別株 投資家",              # A
+    "デイトレ 日本株",            # B
+    "押し目買い ナンピン",         # C
+    "決算 上方修正",              # D
+    "防衛 宇宙",                  # E
+    # --- batch 3 ---
+    "億り人 FIRE",                # A
+    "IPO セカンダリー",           # B
+    "ストップ高 ストップ安",       # C
+    "増配 自社株買い",             # D
+    "データセンター AIインフラ",    # E
+    # --- batch 4 ---
+    "兼業投資家 日本株",           # A
+    "小型株 成長株",              # B
+    "含み益 含み損",              # C
+    "連続増配 高配当株",           # D
+    "再生医療 iPS細胞",           # E
+    # --- batch 5 ---
+    "投資家さんと繋がりたい",      # A
+    "株主優待 優待株",            # B
+    "エントリー 新規買い",         # C
+    "決算短信 会社予想",           # D
+    "量子コンピューター レアアース", # E
+    # --- batch 6 ---
+    "テクニカル分析 チャート",      # B
+    "ファンダメンタル分析 財務",    # B
+    "原子力 SMR",                 # E
+    "サイバーセキュリティ 防衛",    # E
+    "造船 海運",                  # E
 ]
