@@ -22,6 +22,71 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from extensions.tier3_posting.x_poster.post_store import PostStore
 
+
+# Lazy import for image generation
+def _get_image_generators():
+    from extensions.tier3_posting.image_generator.chart_generator import ChartGenerator
+    from extensions.tier3_posting.image_generator.ogp_generator import OGPGenerator
+    return ChartGenerator(), OGPGenerator()
+
+
+def generate_images_for_draft(draft: dict, chart_gen, ogp_gen) -> list[dict]:
+    """ドラフトのテンプレートタイプに応じた画像を生成
+
+    Returns:
+        list[dict]: [{"path": str, "type": str, "description": str}]
+    """
+    template_type = draft.get("template_type", "")
+    images = []
+
+    try:
+        if template_type == "win_rate_ranking":
+            # Extract data for bar chart from draft metadata or body
+            source_items = draft.get("source_items", [])
+            if source_items:
+                labels = [item.get("username", "?") for item in source_items[:5]]
+                values = [item.get("win_rate", 0) for item in source_items[:5]]
+                if any(v > 0 for v in values):
+                    path = chart_gen.generate_bar_chart({
+                        "labels": labels,
+                        "values": values,
+                        "title": "勝率TOP5 インフルエンサー",
+                        "ylabel": "勝率 (%)",
+                        "filename": f"win_rate_{draft.get('news_id', 'unknown')}"
+                    })
+                    images.append({"path": path, "type": "bar_chart", "description": "勝率ランキング"})
+
+        elif template_type == "weekly_report":
+            # Pie chart for category distribution
+            metadata = draft.get("metadata", {})
+            cat_counts = metadata.get("category_counts", {})
+            if cat_counts:
+                path = chart_gen.generate_pie_chart({
+                    "labels": list(cat_counts.keys()),
+                    "values": list(cat_counts.values()),
+                    "title": "カテゴリ別ツイート分布",
+                    "filename": f"category_dist_{draft.get('news_id', 'unknown')}"
+                })
+                images.append({"path": path, "type": "pie_chart", "description": "カテゴリ分布"})
+
+        elif template_type in ("contrarian_signal", "market_summary", "hot_picks",
+                                "trade_activity", "earnings_flash"):
+            # OGP card for text-based templates
+            category = draft.get("metadata", {}).get("category", "market_trend")
+            path = ogp_gen.generate({
+                "title": draft.get("title", "市場レポート"),
+                "summary": draft.get("body", "")[:100],
+                "category": category,
+                "badge_text": draft.get("metadata", {}).get("corner_name", ""),
+                "filename": f"ogp_{draft.get('news_id', 'unknown')}"
+            })
+            images.append({"path": path, "type": "ogp_card", "description": "OGPカード"})
+    except Exception as e:
+        print(f"  ⚠️ 画像生成エラー: {e}")
+
+    return images
+
+
 # --- Constants ---
 
 BULLISH_KEYWORDS = [
@@ -427,11 +492,22 @@ def parse_args() -> argparse.Namespace:
         "--output-dir", type=str, default="output/posting",
         help="出力ディレクトリ (default: output/posting)"
     )
+    parser.add_argument(
+        "--with-images", action="store_true",
+        help="ドラフトに合わせた画像を自動生成"
+    )
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
+
+    # 画像生成の初期化
+    if args.with_images:
+        chart_gen, ogp_gen = _get_image_generators()
+        print("🖼️ 画像生成モード: ON")
+    else:
+        chart_gen = ogp_gen = None
 
     # 入力ファイル決定
     input_path = args.input
@@ -483,6 +559,12 @@ def main() -> None:
     added = 0
     skipped = 0
     for draft in drafts:
+        if args.with_images:
+            images = generate_images_for_draft(draft, chart_gen, ogp_gen)
+            if images:
+                draft["images"] = images
+                for img in images:
+                    print(f"  🖼️ 生成: {img['description']} -> {img['path']}")
         if store.add_draft(draft):
             print(f"  追加: {draft['title']}")
             added += 1

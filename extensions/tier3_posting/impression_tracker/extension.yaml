@@ -1,0 +1,31 @@
+api_version: v1
+kind: influx_extension
+
+metadata:
+  name: tier3.impression_tracker
+  version: 1.0.0
+  tier: tier3_posting
+  description: 投稿済みツイートのインプレッション追跡
+
+runtime:
+  entrypoint: "extensions.tier3_posting.impression_tracker.extension:ImpressionTrackerExtension"
+  enabled_by_default: false
+
+dependencies:
+  requires:
+    - "tier3.x_poster>=1.0.0"
+  optional: []
+
+hooks:
+  subscribes:
+    - name: tier3.track_impressions
+      handler: on_track_impressions
+      priority: 100
+  emits:
+    - impression.tracked
+    - impression.failed
+
+contracts:
+  consumes:
+    - "influx://contracts/news_item.schema.json"
+  produces: []

@@ -6,7 +6,9 @@ import os
 import random
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
+
+from dateutil.parser import parse as parse_datetime
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -22,6 +24,9 @@ def main():
     parser.add_argument("--limit", type=int, default=5, help="最大投稿数（デフォルト: 5）")
     parser.add_argument("--profile", default="./x_profile", help="ブラウザプロファイルパス")
     parser.add_argument("--data-dir", default="output/posting", help="PostStoreのベースディレクトリ")
+    parser.add_argument("--schedule", action="store_true", default=False, help="予約投稿モードを使用（schedule_post()経由）")
+    parser.add_argument("--scheduled-at", default=None, help="予約日時 (ISO 8601 JST, e.g. 2026-03-15T09:00:00+09:00)")
+    parser.add_argument("--interval", type=int, default=60, help="予約投稿間隔（分）")
     args = parser.parse_args()
 
     dry_run = not args.no_dry_run
@@ -44,8 +49,18 @@ def main():
 
     print(f"承認済みドラフト: {len(approved)}件")
     print(f"投稿モード: {'DRY RUN' if dry_run else '本番投稿'}")
+    if args.schedule:
+        print(f"予約投稿モード: ON（間隔: {args.interval}分）")
     print(f"最大投稿数: {args.limit}")
     print(f"{'='*60}\n")
+
+    # Pre-calculate scheduled_at base time for schedule mode
+    if args.schedule:
+        jst = timezone(timedelta(hours=9))
+        if args.scheduled_at:
+            next_scheduled_at = parse_datetime(args.scheduled_at)
+        else:
+            next_scheduled_at = datetime.now(jst) + timedelta(hours=1)
 
     poster = XPoster(profile_path=args.profile)
 
@@ -80,21 +95,39 @@ def main():
                 post_body = f"{post_body}\n\n{tags_str}"
 
         # Post
-        result = poster.post(body=post_body, dry_run=dry_run)
+        if args.schedule:
+            scheduled_at_str = next_scheduled_at.isoformat()
+            print(f"  予約日時: {scheduled_at_str}")
+            result = poster.schedule_post(body=post_body, scheduled_at=scheduled_at_str, dry_run=dry_run)
+            next_scheduled_at += timedelta(minutes=args.interval)
+        else:
+            result = poster.post(body=post_body, dry_run=dry_run)
 
         now = datetime.now(timezone.utc).isoformat()
 
         if result.get("success"):
-            print(f"  成功: {result.get('posted_url', '(dry run)')}")
-            store.add_history({
-                "news_id": news_id,
-                "status": "posted",
-                "posted_url": result.get("posted_url", ""),
-                "posted_at": now,
-                "dry_run": result.get("dry_run", False),
-            })
-            if not result.get("dry_run"):
-                store.update_draft_status(news_id, "posted")
+            if args.schedule:
+                print(f"  予約成功: {scheduled_at_str}")
+                store.add_history({
+                    "news_id": news_id,
+                    "status": "scheduled",
+                    "scheduled_at": scheduled_at_str,
+                    "posted_at": now,
+                    "dry_run": result.get("dry_run", False),
+                })
+                if not result.get("dry_run"):
+                    store.update_draft_status(news_id, "scheduled")
+            else:
+                print(f"  成功: {result.get('posted_url', '(dry run)')}")
+                store.add_history({
+                    "news_id": news_id,
+                    "status": "posted",
+                    "posted_url": result.get("posted_url", ""),
+                    "posted_at": now,
+                    "dry_run": result.get("dry_run", False),
+                })
+                if not result.get("dry_run"):
+                    store.update_draft_status(news_id, "posted")
             posted_count += 1
         else:
             print(f"  失敗: {result.get('error', 'Unknown error')}")

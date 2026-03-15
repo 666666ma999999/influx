@@ -1,0 +1,44 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "profile_path": {
+      "type": "string",
+      "default": "./x_profile",
+      "description": "Path to browser profile with authenticated cookies"
+    },
+    "max_tweets_per_run": {
+      "type": "integer",
+      "default": 10,
+      "minimum": 1,
+      "description": "Maximum number of tweets to scrape per run"
+    },
+    "wait_between_scrapes": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "default": [60, 120],
+      "description": "Min/max wait seconds between scrapes [min, max]"
+    },
+    "scrape_schedule": {
+      "type": "object",
+      "properties": {
+        "intervals_hours": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "default": [1, 4, 24],
+          "description": "Hours after posting to scrape impressions"
+        },
+        "daily_for_days": {
+          "type": "integer",
+          "default": 7,
+          "description": "Number of days to continue daily scraping"
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

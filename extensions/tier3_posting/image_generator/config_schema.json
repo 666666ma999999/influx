@@ -1,0 +1,33 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "output_dir": {
+      "type": "string",
+      "default": "./output/posting/images",
+      "description": "生成画像の出力先ディレクトリ"
+    },
+    "theme": {
+      "type": "string",
+      "enum": ["dark", "light"],
+      "default": "dark",
+      "description": "画像テーマ (dark: X風ダークテーマ, light: ライトテーマ)"
+    },
+    "font_family": {
+      "type": "string",
+      "default": "Noto Sans CJK JP",
+      "description": "使用するフォントファミリー"
+    },
+    "image_width": {
+      "type": "integer",
+      "default": 1200,
+      "description": "画像幅 (px)"
+    },
+    "image_height": {
+      "type": "integer",
+      "default": 675,
+      "description": "画像高さ (px)"
+    }
+  },
+  "additionalProperties": false
+}

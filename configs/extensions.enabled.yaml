@@ -6,3 +6,5 @@ enabled:
   - tier3.post_composer
   - tier3.scheduler
   - tier3.x_poster
+  - tier3.impression_tracker
+  - tier3.image_generator

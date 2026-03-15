@@ -7,10 +7,14 @@ import hashlib
 import json
 import logging
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
+
+JST = timezone(timedelta(hours=9))
+
+IMPRESSIONS_FILE = "impressions.jsonl"
 
 
 class PostStore:
@@ -21,6 +25,7 @@ class PostStore:
         drafts_path: drafts.jsonl のパス
         history_path: post_history.jsonl のパス
         index_path: index.json のパス（news_id一覧のキャッシュ）
+        impressions_path: impressions.jsonl のパス
     """
 
     def __init__(self, base_dir: str = "output/posting") -> None:
@@ -29,6 +34,10 @@ class PostStore:
         self.history_path = os.path.join(base_dir, "post_history.jsonl")
         self.index_path = os.path.join(base_dir, "index.json")
         self._index: Optional[set] = None
+
+    @property
+    def impressions_path(self) -> str:
+        return os.path.join(self.base_dir, IMPRESSIONS_FILE)
 
     def _ensure_dir(self) -> None:
         os.makedirs(self.base_dir, exist_ok=True)
@@ -239,7 +248,9 @@ class PostStore:
             True: 投稿済み, False: 未投稿
         """
         for rec in self.load_history():
-            if rec.get("news_id") == news_id and rec.get("status") == "posted":
+            if (rec.get("news_id") == news_id
+                    and rec.get("status") == "posted"
+                    and not rec.get("dry_run", False)):
                 return True
         return False
 
@@ -287,3 +298,85 @@ class PostStore:
                 count += 1
 
         return count
+
+    def add_impression(self, record: dict) -> bool:
+        """インプレッションデータを追記する。
+
+        Args:
+            record: インプレッションレコード辞書
+                - news_id (str): ニュースID（必須）
+                - tweet_url (str): ツイートURL（必須）
+                - impressions (int): インプレッション数
+                - likes (int): いいね数
+                - retweets (int): リツイート数
+                - replies (int): リプライ数
+                - bookmarks (int): ブックマーク数
+                - engagement_rate (float): エンゲージメント率
+                - scraped_at (str): スクレイピング日時（ISO 8601）
+
+        Returns:
+            True: 追記成功, False: バリデーションエラー
+        """
+        news_id = record.get("news_id")
+        tweet_url = record.get("tweet_url")
+        if not news_id or not tweet_url:
+            logger.warning("📊 news_id または tweet_url が無いレコードはスキップ: %s", record)
+            return False
+
+        record.setdefault("scraped_at", datetime.now(JST).isoformat())
+
+        self._ensure_dir()
+        with open(self.impressions_path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+        logger.debug("📊 インプレッション追記: %s (%s)", news_id, tweet_url)
+        return True
+
+    def load_impressions(self, news_id: str = None) -> list:
+        """インプレッションデータを読み込む。
+
+        Args:
+            news_id: 指定時はそのnews_idのみフィルタ
+
+        Returns:
+            インプレッションレコードのリスト（scraped_at昇順）
+        """
+        records = []
+        if not os.path.exists(self.impressions_path):
+            return records
+
+        with open(self.impressions_path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line:
+                    try:
+                        rec = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
+                    if news_id and rec.get("news_id") != news_id:
+                        continue
+                    records.append(rec)
+
+        records.sort(key=lambda r: r.get("scraped_at", ""))
+        return records
+
+    def get_latest_impressions(self) -> dict:
+        """各news_idの最新インプレッションを取得する。
+
+        Returns:
+            {news_id: latest_impression_record} の辞書
+        """
+        all_records = self.load_impressions()
+        latest: Dict[str, dict] = {}
+
+        for rec in all_records:
+            nid = rec.get("news_id")
+            if not nid:
+                continue
+            if nid not in latest:
+                latest[nid] = rec
+            else:
+                if rec.get("scraped_at", "") > latest[nid].get("scraped_at", ""):
+                    latest[nid] = rec
+
+        return latest
