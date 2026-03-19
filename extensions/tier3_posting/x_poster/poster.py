@@ -238,7 +238,7 @@ class XPoster:
                 }
 
             # クリックしてフォーカス
-            textarea.click()
+            textarea.click(force=True)
             self._human_wait(0.3, 0.8)
 
             # 人間らしいタイピング
@@ -274,7 +274,7 @@ class XPoster:
                     "error": "スケジュールアイコンが見つかりません",
                 }
 
-            schedule_icon.click()
+            schedule_icon.click(force=True)
             self._human_wait(1.0, 2.0)
 
             # 日時ピッカーで予約日時を設定
@@ -581,7 +581,7 @@ class XPoster:
             try:
                 el = page.wait_for_selector(selector, timeout=timeout, state="visible")
                 if el:
-                    el.click()
+                    el.click(force=True)
                     return True
             except Exception as e:
                 logger.warning("Click attempt %d/%d failed for %s: %s", attempt, max_retries, selector, e)
