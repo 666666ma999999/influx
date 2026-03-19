@@ -107,23 +107,24 @@ class XPoster:
             self._human_type(page, body)
             self._human_wait(1.0, 2.0)
 
+            # Wait for post button to become enabled
+            try:
+                page.wait_for_function(
+                    """() => {
+                        const btn = document.querySelector('[data-testid="tweetButton"]');
+                        return btn && !btn.disabled && !btn.getAttribute('aria-disabled');
+                    }""",
+                    timeout=10000,
+                )
+            except Exception:
+                logger.warning("Post button may not be enabled; attempting click anyway")
+
             # 画像添付
             if images:
                 self._attach_images(page, images)
 
             # 投稿ボタンクリック
-            post_button = page.wait_for_selector(
-                '[data-testid="tweetButton"]', timeout=10000
-            )
-            if not post_button:
-                return {
-                    "success": False,
-                    "posted_url": "",
-                    "error": "投稿ボタンが見つかりません",
-                    "dry_run": False,
-                }
-
-            post_button.click()
+            self._click_with_retry(page, '[data-testid="tweetButton"]', max_retries=3, timeout=10000)
             self._human_wait(3.0, 5.0)
 
             # 投稿完了確認（ツイートURLの取得を試みる）
@@ -296,30 +297,12 @@ class XPoster:
                 }
 
             # 予約確定ボタンをクリック
-            confirm_button = None
-            for selector in [
+            self._click_with_retry(
+                page,
                 '[data-testid="scheduledConfirmationPrimaryAction"]',
-                'button[data-testid="scheduledConfirmationPrimaryAction"]',
-            ]:
-                try:
-                    confirm_button = page.wait_for_selector(selector, timeout=5000)
-                    if confirm_button:
-                        break
-                except Exception:
-                    continue
-
-            if not confirm_button:
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                page.screenshot(
-                    path=f"output/posting/schedule_error_{timestamp}.png"
-                )
-                return {
-                    "success": False,
-                    "scheduled_at": scheduled_at,
-                    "error": "予約確定ボタンが見つかりません",
-                }
-
-            confirm_button.click()
+                max_retries=3,
+                timeout=10000,
+            )
             self._human_wait(3.0, 5.0)
 
             logger.info("📅 予約投稿完了: %s", scheduled_at)
@@ -591,6 +574,21 @@ class XPoster:
         except Exception as exc:
             logger.warning("Cookie読込エラー: %s", exc)
             return []
+
+    def _click_with_retry(self, page, selector: str, max_retries: int = 3, timeout: int = 10000) -> bool:
+        """Click an element with retry on stale reference."""
+        for attempt in range(1, max_retries + 1):
+            try:
+                el = page.wait_for_selector(selector, timeout=timeout, state="visible")
+                if el:
+                    el.click()
+                    return True
+            except Exception as e:
+                logger.warning("Click attempt %d/%d failed for %s: %s", attempt, max_retries, selector, e)
+                if attempt == max_retries:
+                    raise
+                self._human_wait(0.5, 1.0)
+        return False
 
     def _human_type(self, page, text: str) -> None:
         """人間らしいタイピング（10-50ms間隔）。
