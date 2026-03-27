@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>X Post Manager</title>
+<style>
+:root {
+  --bg: #000; --bg2: #16181c; --bg3: #1d1f23; --bg-header: rgba(0,0,0,0.65);
+  --text: #e7e9ea; --text2: #71767b; --link: #1d9bf0; --border: #2f3336;
+  --accent: #1d9bf0; --green: #00ba7c; --red: #f4212e; --yellow: #ffd400;
+  --purple: #7856ff; --gray: #536471; --orange: #ff6f00;
+  --pill: 9999px; --card-r: 12px; --input-r: 8px;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--font);line-height:1.3;min-height:100vh}
+button{font-family:inherit;cursor:pointer} input,textarea,select{font-family:inherit}
+
+/* Layout */
+.app{display:flex;flex-direction:column;height:100vh}
+.header{background:var(--bg-header);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:10px 20px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.header-title{font-size:18px;font-weight:700}
+.header-actions{display:flex;gap:8px;align-items:center}
+.hbtn{background:none;border:1px solid var(--border);border-radius:var(--pill);color:var(--text);padding:5px 14px;font-size:13px;font-weight:600;transition:background .2s}
+.hbtn:hover{background:rgba(231,233,234,.1)}
+.hbtn--p{background:var(--accent);border-color:var(--accent);color:#fff}
+.search{background:var(--bg2);border:1px solid var(--border);border-radius:var(--pill);color:var(--text);padding:5px 12px;font-size:13px;width:150px}
+.search:focus{outline:none;border-color:var(--accent)}
+
+.main{display:flex;flex:1;overflow:hidden}
+
+/* Left: Calendar */
+.cal-panel{width:380px;min-width:320px;border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0}
+.cal-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border)}
+.cal-title{font-size:16px;font-weight:700}
+.cal-nav{background:none;border:none;color:var(--text);font-size:18px;padding:4px 10px;border-radius:6px}
+.cal-nav:hover{background:rgba(231,233,234,.1)}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);padding:8px 12px;gap:2px}
+.cal-dow{text-align:center;font-size:11px;color:var(--text2);padding:6px 0;font-weight:600}
+.cal-cell{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:4px 2px;border-radius:8px;cursor:pointer;font-size:13px;transition:background .15s;position:relative}
+.cal-cell:hover{background:rgba(231,233,234,.06)}
+.cal-cell--today{background:rgba(29,155,240,.1);font-weight:700}
+.cal-cell--selected{background:rgba(29,155,240,.2);outline:2px solid var(--accent);outline-offset:-2px}
+.cal-cell--other{color:var(--text2);opacity:.4}
+.cal-num{font-size:13px;margin-bottom:2px}
+.cal-dots{display:flex;gap:2px;flex-wrap:wrap;justify-content:center}
+.cal-dot{width:6px;height:6px;border-radius:50%}
+.cal-dot--approved{background:var(--green)}
+.cal-dot--scheduled{background:var(--yellow)}
+.cal-dot--posted{background:var(--purple)}
+.cal-dot--failed{background:var(--red)}
+
+/* Legend */
+.cal-legend{padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--text2)}
+.cal-legend-item{display:flex;align-items:center;gap:4px}
+.cal-legend-dot{width:8px;height:8px;border-radius:50%}
+
+/* Stats */
+.cal-stats{padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--text2)}
+.cal-stat{display:flex;align-items:center;gap:4px}
+.cal-stat b{color:var(--text);font-weight:700}
+
+/* CLI bar */
+.cli-bar{padding:10px 16px;border-top:1px solid var(--border);background:var(--bg2);font-size:12px}
+.cli-label{color:var(--text2);margin-bottom:4px}
+.cli-cmd{display:flex;align-items:center;gap:8px}
+.cli-text{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-family:monospace;font-size:12px;color:var(--green);flex:1;overflow-x:auto;white-space:nowrap}
+.cli-copy{background:none;border:1px solid var(--border);border-radius:6px;color:var(--text2);padding:4px 10px;font-size:11px}
+.cli-copy:hover{color:var(--text);background:rgba(231,233,234,.06)}
+
+/* Right: Panel */
+.right-panel{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.panel-header{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.panel-title{font-size:16px;font-weight:700}
+.panel-tabs{display:flex;gap:4px}
+.ptab{background:none;border:1px solid var(--border);border-radius:var(--pill);color:var(--text2);padding:4px 12px;font-size:12px;font-weight:600;transition:all .15s}
+.ptab:hover{background:rgba(231,233,234,.06)}
+.ptab.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.panel-list{flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:10px}
+.panel-empty{text-align:center;padding:60px 20px;color:var(--text2)}
+
+/* Card */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--card-r);padding:14px;display:flex;flex-direction:column;gap:8px;transition:background .15s}
+.card:hover{background:var(--bg3)}
+.card--stale{border-left:3px solid var(--orange)}
+.card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:6px}
+.badges{display:flex;gap:5px;flex-wrap:wrap}
+.badge{display:inline-block;padding:1px 7px;border-radius:var(--pill);font-size:11px;font-weight:600;line-height:1.5}
+.badge--draft{background:rgba(29,155,240,.15);color:var(--accent)}
+.badge--approved{background:rgba(0,186,124,.15);color:var(--green)}
+.badge--scheduled{background:rgba(255,212,0,.15);color:var(--yellow)}
+.badge--posted{background:rgba(120,86,255,.15);color:var(--purple)}
+.badge--rejected{background:rgba(244,33,46,.15);color:var(--red)}
+.badge--failed{background:rgba(244,33,46,.15);color:var(--red)}
+.badge--archived{background:rgba(83,100,113,.15);color:var(--gray)}
+.badge--type{background:rgba(231,233,234,.08);color:var(--text2)}
+.badge--dryrun{background:rgba(255,212,0,.15);color:var(--yellow)}
+.badge--stale{background:rgba(255,111,0,.15);color:var(--orange)}
+.card-title{font-size:14px;font-weight:700;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.card-body{font-size:13px;color:var(--text2);line-height:1.4;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-wrap;word-break:break-word}
+.card-meta{display:flex;justify-content:space-between;font-size:11px;color:var(--text2)}
+.char-ok{color:var(--green)} .char-warn{color:var(--yellow)} .char-over{color:var(--red)}
+.card-sched{font-size:11px;color:var(--yellow);display:flex;align-items:center;gap:4px}
+.card-footer{display:flex;gap:5px;flex-wrap:wrap;padding-top:8px;border-top:1px solid var(--border)}
+.cbtn{flex:1;padding:5px 0;border:1px solid var(--border);border-radius:var(--pill);background:none;font-size:12px;font-weight:600;text-align:center;min-width:60px;transition:background .15s}
+.cbtn:hover{background:rgba(231,233,234,.06)}
+.cbtn--approve{color:var(--green);border-color:rgba(0,186,124,.3)}
+.cbtn--reject{color:var(--red);border-color:rgba(244,33,46,.3)}
+.cbtn--edit{color:var(--accent);border-color:rgba(29,155,240,.3)}
+.cbtn--archive{color:var(--gray);border-color:rgba(83,100,113,.3)}
+.cbtn--retry{color:var(--yellow);border-color:rgba(255,212,0,.3)}
+.cbtn--restore{color:var(--accent);border-color:rgba(29,155,240,.3)}
+
+/* Error details */
+.err-details{margin-top:4px}
+.err-summary{font-size:11px;color:var(--red);cursor:pointer}
+.err-text{font-size:10px;color:var(--text2);background:rgba(244,33,46,.05);border-radius:6px;padding:6px;margin-top:4px;max-height:150px;overflow-y:auto;white-space:pre-wrap;font-family:monospace}
+
+/* Modal overlay */
+.modal-bg{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(91,112,131,.4);backdrop-filter:blur(4px);z-index:100;justify-content:center;align-items:center}
+.modal-bg.active{display:flex}
+.modal{background:var(--bg);border:1px solid var(--border);border-radius:var(--card-r);width:100%;max-width:520px;max-height:90vh;overflow-y:auto}
+.modal-head{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:1}
+.modal-head h2{font-size:16px;font-weight:700}
+.modal-x{background:none;border:none;color:var(--text);font-size:18px;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.modal-x:hover{background:rgba(231,233,234,.1)}
+.modal-body{padding:16px;display:flex;flex-direction:column;gap:14px}
+.fg{display:flex;flex-direction:column;gap:5px}
+.fl{font-size:12px;font-weight:600;color:var(--text2)}
+.fi{background:var(--bg);border:1px solid var(--border);border-radius:var(--input-r);padding:9px 11px;color:var(--text);font-size:14px}
+.fi:focus{outline:none;border-color:var(--accent)}
+.fta{background:var(--bg);border:1px solid var(--border);border-radius:var(--input-r);padding:9px 11px;color:var(--text);font-size:14px;line-height:1.4;resize:vertical;min-height:120px}
+.fta:focus{outline:none;border-color:var(--accent)}
+.fsel{background:var(--bg);border:1px solid var(--border);border-radius:var(--input-r);padding:9px 11px;color:var(--text);font-size:14px}
+.modal-foot{display:flex;gap:8px;justify-content:flex-end;padding:12px 16px;border-top:1px solid var(--border);position:sticky;bottom:0;background:var(--bg)}
+.mbtn{padding:7px 18px;border-radius:var(--pill);font-size:13px;font-weight:700;border:1px solid var(--border);transition:background .2s}
+.mbtn--cancel{background:none;color:var(--text)}
+.mbtn--save{background:var(--accent);border-color:var(--accent);color:#fff}
+.mbtn--schedule{background:var(--green);border-color:var(--green);color:#fff}
+.ta-footer{display:flex;justify-content:space-between;margin-top:-6px;font-size:11px;color:var(--text2)}
+.live-c{font-size:13px;font-weight:600}
+.modal-info{display:flex;gap:14px;flex-wrap:wrap;padding:8px 10px;background:var(--bg2);border-radius:var(--input-r);font-size:12px}
+.mi-item{display:flex;flex-direction:column;gap:1px}
+.mi-label{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text2);opacity:.6}
+.mi-val{color:var(--text);font-size:12px}
+
+/* Schedule modal extras */
+.sched-preview{background:var(--bg2);border-radius:var(--input-r);padding:12px;font-size:13px;color:var(--text);white-space:pre-wrap;word-break:break-word;max-height:200px;overflow-y:auto;border:1px solid var(--border)}
+.sched-row{display:flex;gap:10px;align-items:flex-end}
+.sched-row .fg{flex:1}
+
+/* Toast */
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--bg2);border:1px solid var(--border);border-radius:var(--input-r);padding:8px 18px;font-size:13px;color:var(--text);z-index:300;opacity:0;transition:transform .3s,opacity .3s;pointer-events:none}
+.toast.visible{transform:translateX(-50%) translateY(0);opacity:1}
+
+/* Responsive */
+@media(max-width:700px){.main{flex-direction:column}.cal-panel{width:100%;border-right:none;border-bottom:1px solid var(--border);max-height:50vh}}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div class="header-title">X Post Manager</div>
+    <div class="header-actions">
+      <input class="search" id="search" placeholder="Search...">
+      <button class="hbtn" id="btn-compact">Compact</button>
+      <button class="hbtn hbtn--p" id="btn-new-post">+ New Post</button>
+      <button class="hbtn" id="btn-refresh">Refresh</button>
+    </div>
+  </div>
+  <div class="main">
+    <!-- Left: Calendar -->
+    <div class="cal-panel">
+      <div class="cal-header">
+        <button class="cal-nav" id="cal-prev">&#9664;</button>
+        <span class="cal-title" id="cal-title"></span>
+        <button class="cal-nav" id="cal-next">&#9654;</button>
+      </div>
+      <div class="cal-grid" id="cal-grid"></div>
+      <div class="cal-legend">
+        <div class="cal-legend-item"><div class="cal-legend-dot" style="background:var(--green)"></div>Approved</div>
+        <div class="cal-legend-item"><div class="cal-legend-dot" style="background:var(--yellow)"></div>Scheduled</div>
+        <div class="cal-legend-item"><div class="cal-legend-dot" style="background:var(--purple)"></div>Posted</div>
+        <div class="cal-legend-item"><div class="cal-legend-dot" style="background:var(--red)"></div>Failed</div>
+      </div>
+      <div class="cal-stats" id="cal-stats"></div>
+      <div class="cli-bar" id="cli-bar"></div>
+    </div>
+    <!-- Right: Panel -->
+    <div class="right-panel">
+      <div class="panel-header">
+        <span class="panel-title" id="panel-title">Drafts</span>
+        <div class="panel-tabs" id="panel-tabs">
+          <button class="ptab active" data-mode="drafts">Drafts</button>
+          <button class="ptab" data-mode="all">All</button>
+          <button class="ptab" data-mode="failed">Failed</button>
+          <button class="ptab" data-mode="archived">Archived</button>
+          <button class="ptab" data-mode="bookmarks">Bookmarks</button>
+        </div>
+      </div>
+      <div class="panel-list" id="panel-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal-bg" id="edit-modal">
+  <div class="modal">
+    <div class="modal-head"><h2 id="edit-modal-title">Edit</h2><button class="modal-x" id="edit-close">&times;</button></div>
+    <div class="modal-body">
+      <div class="modal-info" id="edit-info" style="display:none"></div>
+      <div class="fg"><label class="fl">Title</label><input class="fi" id="ed-title"></div>
+      <div class="fg"><label class="fl">Body</label><textarea class="fta" id="ed-body"></textarea>
+        <div class="ta-footer"><span>Includes hashtags</span><span class="live-c" id="ed-counter">280</span></div>
+      </div>
+      <div class="fg"><label class="fl">Hashtags (comma separated)</label><input class="fi" id="ed-tags" placeholder="#stock, #investment"></div>
+      <div class="fg"><label class="fl">Scheduled at</label><input class="fi" id="ed-sched" type="datetime-local"></div>
+    </div>
+    <div class="modal-foot"><button class="mbtn mbtn--cancel" id="edit-cancel">Cancel</button><button class="mbtn mbtn--save" id="edit-save">Save</button></div>
+  </div>
+</div>
+
+<!-- Schedule Modal (Approve flow) -->
+<div class="modal-bg" id="sched-modal">
+  <div class="modal">
+    <div class="modal-head"><h2>Approve &amp; Schedule</h2><button class="modal-x" id="sched-close">&times;</button></div>
+    <div class="modal-body">
+      <div class="sched-preview" id="sched-preview"></div>
+      <div class="fg"><label class="fl">Account</label>
+        <select class="fsel" id="sched-account"></select>
+      </div>
+      <div class="sched-row">
+        <div class="fg"><label class="fl">Date</label><input class="fi" id="sched-date" type="date"></div>
+        <div class="fg"><label class="fl">Time (JST)</label>
+          <select class="fsel" id="sched-time">
+            <option value="07:00">07:00</option><option value="08:00">08:00</option>
+            <option value="12:00">12:00</option><option value="18:00">18:00</option>
+            <option value="20:00" selected>20:00</option><option value="21:00">21:00</option>
+          </select>
+        </div>
+      </div>
+      <div class="fg" id="sched-conflict" style="display:none;color:var(--yellow);font-size:12px"></div>
+    </div>
+    <div class="modal-foot"><button class="mbtn mbtn--cancel" id="sched-cancel">Cancel</button><button class="mbtn mbtn--schedule" id="sched-ok">Approve &amp; Schedule</button></div>
+  </div>
+</div>
+
+<!-- Compose Modal (New Post) -->
+<div class="modal-bg" id="compose-modal">
+  <div class="modal">
+    <div class="modal-head"><h2>New Post</h2><button class="modal-x" id="compose-close">&times;</button></div>
+    <div class="modal-body">
+      <div class="fg"><label class="fl">Body</label><textarea class="fta" id="cmp-body" placeholder="Write your post..." style="min-height:100px"></textarea>
+        <div class="ta-footer"><span>Includes hashtags</span><span class="live-c" id="cmp-counter">280</span></div>
+      </div>
+      <div class="fg"><label class="fl">Hashtags (comma separated)</label><input class="fi" id="cmp-tags" placeholder="#BTC, #investment"></div>
+      <div class="fg"><label class="fl">Title (optional, for management)</label><input class="fi" id="cmp-title" placeholder="Post title"></div>
+      <div class="fg"><label class="fl">Account</label><select class="fsel" id="cmp-account"></select></div>
+      <div class="fg">
+        <label class="fl">Attach Image</label>
+        <div id="cmp-images" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px"></div>
+        <button class="hbtn" id="cmp-pick-image" style="margin-top:6px;font-size:12px">Select Image...</button>
+      </div>
+      <div id="cmp-image-picker" style="display:none;max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:8px;margin-top:4px">
+        <div style="display:flex;gap:8px;flex-wrap:wrap" id="cmp-image-list"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="mbtn mbtn--cancel" id="compose-cancel">Cancel</button>
+      <button class="mbtn mbtn--save" id="compose-draft">Save as Draft</button>
+      <button class="mbtn mbtn--schedule" id="compose-approve">Approve &amp; Schedule</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ===== State ===== */
+var API='';
+var allData=[];
+var calYear,calMonth; // current calendar view
+var selectedDate=null; // YYYY-MM-DD or null
+var panelMode='drafts'; // drafts|all|failed|archived|date
+var editingId=null;
+var schedId=null;
+var searchQ='';
+var meta={}; // /api/meta response (accounts, statuses, cli_commands, etc.)
+var STATUSES=['draft','approved','scheduled','posted','rejected','failed','archived']; // fallback
+var bookmarksData=[]; // /api/bookmarks response
+
+/* ===== Init ===== */
+(function(){var n=new Date();calYear=n.getFullYear();calMonth=n.getMonth();fetchMeta();fetchData()})();
+
+async function fetchMeta(){
+  try{var r=await fetch(API+'/api/meta');meta=await r.json()}catch(e){meta={}}
+}
+
+/* ===== API ===== */
+async function fetchData(){
+  try{
+    var r=await fetch(API+'/api/drafts');allData=await r.json();
+    await fetchMeta();
+  }catch(e){allData=[];toast('Load failed')}
+  renderAll();
+}
+async function apiStatus(id,status,extra){
+  var b={status:status};if(extra)Object.assign(b,extra);
+  await fetch(API+'/api/drafts/'+id+'/status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});
+  await fetchData();
+}
+async function apiEdit(id,data){
+  await fetch(API+'/api/drafts/'+id+'/edit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+  await fetchData();
+}
+
+/* ===== Helpers ===== */
+function esc(s){if(!s)return'';var d=document.createElement('div');d.textContent=s;return d.innerHTML}
+function fmtDate(s){if(!s)return'';var d=new Date(s);if(isNaN(d))return s;return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate())+' '+p2(d.getHours())+':'+p2(d.getMinutes())}
+function p2(n){return String(n).padStart(2,'0')}
+function toDateKey(d){var jst=new Date(d.getTime()+9*3600000);return jst.getUTCFullYear()+'-'+p2(jst.getUTCMonth()+1)+'-'+p2(jst.getUTCDate())}
+function toJstIso(dateStr){if(!dateStr)return null;var d=new Date(dateStr);if(isNaN(d))return null;var jst=new Date(d.getTime()+9*3600000);return jst.toISOString().replace('Z','+09:00')}
+function fullLen(body,tags){var l=body?body.length:0;if(tags&&tags.length){var t=tags.join(' ');if(l+t.length+2<=280)l+=2+t.length}return l}
+function charClsLocal(r){return r<0?'char-over':r<=40?'char-warn':'char-ok'}
+function itemsByDate(dateKey){return allData.filter(function(i){if(!i.scheduled_date_key)return false;if(i.status==='archived'||i.status==='rejected'||i.status==='draft')return false;return i.scheduled_date_key===dateKey})}
+
+/* ===== Toast ===== */
+var _tt;function toast(m){var e=document.getElementById('toast');e.textContent=m;e.classList.add('visible');if(_tt)clearTimeout(_tt);_tt=setTimeout(function(){e.classList.remove('visible')},2500)}
+
+/* ===== Calendar ===== */
+function renderCal(){
+  var title=calYear+'年'+(calMonth+1)+'月';
+  document.getElementById('cal-title').textContent=title;
+  var g=document.getElementById('cal-grid');
+  var html='';
+  var dows=['日','月','火','水','木','金','土'];
+  dows.forEach(function(d){html+='<div class="cal-dow">'+d+'</div>'});
+  var first=new Date(calYear,calMonth,1);
+  var startDay=first.getDay();
+  var daysInMonth=new Date(calYear,calMonth+1,0).getDate();
+  var today=toDateKey(new Date());
+  // prev month padding
+  var prevDays=new Date(calYear,calMonth,0).getDate();
+  for(var i=startDay-1;i>=0;i--){
+    var dd=prevDays-i;
+    html+='<div class="cal-cell cal-cell--other"><span class="cal-num">'+dd+'</span></div>';
+  }
+  // this month
+  for(var d=1;d<=daysInMonth;d++){
+    var dk=calYear+'-'+p2(calMonth+1)+'-'+p2(d);
+    var items=itemsByDate(dk);
+    var cls='cal-cell';
+    if(dk===today)cls+=' cal-cell--today';
+    if(dk===selectedDate)cls+=' cal-cell--selected';
+    var dots='';
+    if(items.length){
+      dots='<div class="cal-dots">';
+      items.forEach(function(it){dots+='<div class="cal-dot cal-dot--'+(it.status||'draft')+'"></div>'});
+      dots+='</div>';
+    }
+    html+='<div class="'+cls+'" data-date="'+dk+'"><span class="cal-num">'+d+'</span>'+dots+'</div>';
+  }
+  // next month padding
+  var totalCells=startDay+daysInMonth;
+  var remaining=totalCells%7===0?0:7-totalCells%7;
+  for(var i=1;i<=remaining;i++){
+    html+='<div class="cal-cell cal-cell--other"><span class="cal-num">'+i+'</span></div>';
+  }
+  g.innerHTML=html;
+}
+
+document.getElementById('cal-grid').addEventListener('click',function(e){
+  var cell=e.target.closest('.cal-cell[data-date]');
+  if(!cell)return;
+  selectedDate=cell.getAttribute('data-date');
+  panelMode='date';
+  renderAll();
+});
+document.getElementById('cal-prev').addEventListener('click',function(){calMonth--;if(calMonth<0){calMonth=11;calYear--}renderCal()});
+document.getElementById('cal-next').addEventListener('click',function(){calMonth++;if(calMonth>11){calMonth=0;calYear++}renderCal()});
+
+/* ===== Stats ===== */
+function renderStats(){
+  var statuses=meta.statuses||STATUSES;
+  var c={};statuses.forEach(function(s){c[s]=0});
+  allData.forEach(function(i){if(c.hasOwnProperty(i.status))c[i.status]++});
+  var el=document.getElementById('cal-stats');
+  el.innerHTML='';
+  Object.keys(c).forEach(function(s){if(c[s]>0)el.innerHTML+='<div class="cal-stat">'+s+': <b>'+c[s]+'</b></div>'});
+}
+
+/* ===== CLI bar ===== */
+function renderCli(){
+  var el=document.getElementById('cli-bar');
+  var cmds=meta.cli_commands||[];
+  if(!cmds.length){
+    el.innerHTML='<div class="cli-label">No approved posts to schedule</div>';
+    return;
+  }
+  var html='<div class="cli-label">Next: schedule '+cmds.reduce(function(s,c){return s+c.count},0)+' approved post(s)</div>';
+  cmds.forEach(function(c){
+    html+='<div class="cli-cmd" style="margin-top:4px"><code class="cli-text">'+esc(c.command)+'</code><button class="cli-copy" onclick="navigator.clipboard.writeText(\''+c.command.replace(/'/g,"\\'")+'\');toast(\'Copied\')">Copy</button></div>';
+  });
+  el.innerHTML=html;
+}
+
+/* ===== Panel tabs ===== */
+document.getElementById('panel-tabs').addEventListener('click',function(e){
+  var t=e.target.closest('.ptab');if(!t)return;
+  panelMode=t.getAttribute('data-mode');
+  selectedDate=null;
+  renderPanel();renderCal();
+  document.querySelectorAll('.ptab').forEach(function(b){b.classList.toggle('active',b.getAttribute('data-mode')===panelMode)});
+});
+
+/* ===== Panel ===== */
+function renderPanel(){
+  var title,items;
+  // Update tab active state
+  document.querySelectorAll('.ptab').forEach(function(b){
+    if(panelMode==='date') b.classList.remove('active');
+    else b.classList.toggle('active',b.getAttribute('data-mode')===panelMode);
+  });
+
+  if(panelMode==='date'&&selectedDate){
+    title=selectedDate+' の投稿';
+    items=itemsByDate(selectedDate);
+  } else if(panelMode==='drafts'){
+    title='Drafts';
+    items=allData.filter(function(i){return i.status==='draft'||i.status==='rejected'});
+  } else if(panelMode==='failed'){
+    title='Failed';
+    items=allData.filter(function(i){return i.status==='failed'});
+  } else if(panelMode==='archived'){
+    title='Archived';
+    items=allData.filter(function(i){return i.status==='archived'});
+  } else if(panelMode==='bookmarks'){
+    title='Bookmarks';
+    // ブックマークは別データソース
+    if(!bookmarksData.length) fetchBookmarks();
+    var bItems=bookmarksData;
+    if(searchQ){
+      var q=searchQ.toLowerCase();
+      bItems=bItems.filter(function(i){return(i.text||'').toLowerCase().includes(q)||(i.author||'').toLowerCase().includes(q)});
+    }
+    document.getElementById('panel-title').textContent='Bookmarks ('+bItems.length+')';
+    var el=document.getElementById('panel-list');
+    if(!bItems.length){el.innerHTML='<div class="panel-empty">No bookmarks</div>';return}
+    el.innerHTML=bItems.map(renderBookmarkCard).join('');
+    return;
+  } else {
+    title='All ('+allData.length+')';
+    items=allData.slice();
+  }
+
+  if(searchQ){
+    var q=searchQ.toLowerCase();
+    items=items.filter(function(i){return(i.title||'').toLowerCase().includes(q)||(i.body||'').toLowerCase().includes(q)});
+  }
+  items.sort(function(a,b){return(a.created_at||'')>(b.created_at||'')?-1:1});
+
+  document.getElementById('panel-title').textContent=title+(panelMode==='date'?'':' ('+items.length+')');
+
+  var el=document.getElementById('panel-list');
+  if(!items.length){el.innerHTML='<div class="panel-empty">No posts</div>';return}
+  el.innerHTML=items.map(renderCard).join('');
+}
+
+function renderCard(item){
+  var id=item.news_id||'';
+  var body=item.body||'';
+  var rem=item.char_remaining!=null?item.char_remaining:(280-fullLen(body,item.hashtags));
+  var stale=!!item.is_stale;
+  var cls='card'+(stale?' card--stale':'');
+
+  // badges
+  var bg='<span class="badge badge--'+item.status+'">'+esc(item.status)+'</span>';
+  if(item.template_type)bg+='<span class="badge badge--type">'+esc(item.template_type)+'</span>';
+  var accLabel=item.account_label||item.account_id;
+  if(accLabel)bg+='<span class="badge badge--type" title="Account">@'+esc(accLabel)+'</span>';
+  if(item.has_dry_run&&!item.has_real_post)bg+='<span class="badge badge--dryrun">DRY RUN</span>';
+  if(stale)bg+='<span class="badge badge--stale">STALE'+(item.stale_days?' ('+item.stale_days+'d)':'')+'</span>';
+  if(item.archived_reason)bg+='<span class="badge badge--type">'+esc(item.archived_reason)+'</span>';
+
+  // scheduled info
+  var sch='';
+  if(item.scheduled_at)sch='<div class="card-sched">&#128197; '+fmtDate(item.scheduled_at)+'</div>';
+
+  // error
+  var err='';
+  if(item.error){err='<details class="err-details"><summary class="err-summary">Error details</summary><pre class="err-text">'+esc(item.error)+'</pre></details>'}
+
+  // image preview
+  var imgHtml='';
+  if(item.images_base64&&item.images_base64.length>0){
+    imgHtml='<div style="display:flex;gap:6px;margin-top:6px;overflow-x:auto">';
+    item.images_base64.forEach(function(img){
+      imgHtml+='<img src="'+esc(img.data||'')+'" style="height:60px;border-radius:6px;border:1px solid var(--border)" title="'+esc(img.description||'')+'">';
+    });
+    imgHtml+='</div>';
+  }
+
+  // impressions
+  var impHtml='';
+  if(item.impressions){
+    var imp=item.impressions;
+    var fmtN=function(n){return n!=null?(n>=1000?(n/1000).toFixed(1)+'K':n):'-'};
+    impHtml='<div style="display:flex;gap:10px;font-size:11px;color:var(--text2);margin-top:4px">'+
+      '<span title="Views">\uD83D\uDC41 '+fmtN(imp.impressions)+'</span>'+
+      '<span title="Likes">\u2661 '+fmtN(imp.likes)+'</span>'+
+      '<span title="RT">\uD83D\uDD04 '+fmtN(imp.retweets)+'</span>'+
+      '</div>';
+  }
+
+  // posted URL
+  var urlHtml='';
+  if(item.posted_url){
+    urlHtml='<a href="'+esc(item.posted_url)+'" target="_blank" rel="noopener" style="font-size:12px;color:var(--link)" onclick="event.stopPropagation()">View post \u2192</a>';
+  }
+
+  // actions (driven by BE available_actions)
+  var act='';
+  if(item.available_actions&&item.available_actions.length){
+    item.available_actions.forEach(function(a){
+      act+=abtn(a,a.charAt(0).toUpperCase()+a.slice(1),id);
+    });
+  } else {
+    // fallback: old logic
+    var s=item.status;
+    if(s==='draft'||s==='rejected')act=abtn('approve','Approve',id)+abtn('edit','Edit',id)+abtn('archive','Archive',id);
+    else if(s==='approved')act=abtn('edit','Edit',id)+abtn('reject','Reject',id)+abtn('archive','Archive',id);
+    else if(s==='scheduled')act=abtn('edit','Edit',id)+abtn('reject','Reject',id);
+    else if(s==='failed')act=abtn('retry','Retry',id)+abtn('archive','Archive',id);
+    else if(s==='archived')act=abtn('restore','Restore',id);
+  }
+
+  var charClass=item.char_class?('char-'+item.char_class):charClsLocal(rem);
+  return '<div class="'+cls+'" data-id="'+esc(id)+'">'+
+    '<div class="card-top"><div class="badges">'+bg+'</div></div>'+
+    '<div class="card-title">'+esc(item.title||'(no title)')+'</div>'+
+    '<div class="card-body">'+esc(body)+'</div>'+
+    '<div class="card-meta"><span>'+fmtDate(item.created_at)+'</span><span class="'+charClass+'">'+rem+' chars</span></div>'+
+    sch+imgHtml+err+impHtml+urlHtml+
+    '<div class="card-footer">'+act+'</div></div>';
+}
+function abtn(a,l,id){return '<button class="cbtn cbtn--'+a+'" data-action="'+a+'" data-id="'+esc(id)+'">'+l+'</button>'}
+
+/* ===== Card actions ===== */
+document.getElementById('panel-list').addEventListener('click',function(e){
+  var b=e.target.closest('[data-action]');
+  if(!b)return;
+  e.stopPropagation();
+  handleAction(b.getAttribute('data-action'),b.getAttribute('data-id'));
+});
+
+async function handleAction(action,id){
+  if(action==='approve'){openScheduleModal(id);return}
+  if(action==='edit'){openEditModal(id);return}
+  if(action==='reject'){await apiStatus(id,'rejected');toast('Rejected')}
+  else if(action==='archive'){await apiStatus(id,'archived',{reason:'manual'});toast('Archived')}
+  else if(action==='restore'){await apiStatus(id,'draft');toast('Restored')}
+  else if(action==='retry'){await apiStatus(id,'approved');toast('Reset for retry')}
+}
+
+/* ===== Schedule Modal ===== */
+function openScheduleModal(id){
+  var item=allData.find(function(i){return i.news_id===id});
+  if(!item)return;
+  schedId=id;
+  // Preview: body + hashtags
+  var preview=item.body||'';
+  if(item.hashtags&&item.hashtags.length){var t=item.hashtags.join(' ');if(preview.length+t.length+2<=280)preview+='\n\n'+t}
+  document.getElementById('sched-preview').textContent=preview;
+  // Account selector
+  var sel=document.getElementById('sched-account');
+  var accs=meta.accounts||[];
+  sel.innerHTML='<option value="">Auto (content-based)</option>'+accs.map(function(a){return '<option value="'+esc(a.id)+'"'+(a.id===(item.account_id||'')?' selected':'')+'>@'+esc(a.label)+'</option>'}).join('');
+  // Default date: +30 days
+  var def=new Date();def.setDate(def.getDate()+30);
+  document.getElementById('sched-date').value=toDateKey(def);
+  // Check conflicts
+  checkSchedConflict();
+  document.getElementById('sched-modal').classList.add('active');
+}
+function closeScheduleModal(){schedId=null;document.getElementById('sched-modal').classList.remove('active')}
+
+function checkSchedConflict(){
+  var dateVal=document.getElementById('sched-date').value;
+  var timeVal=document.getElementById('sched-time').value;
+  var existing=itemsByDate(dateVal);
+  var el=document.getElementById('sched-conflict');
+  if(existing.length){
+    el.style.display='block';
+    el.textContent='This date already has '+existing.length+' post(s) scheduled: '+existing.map(function(i){return i.title||'?'}).join(', ');
+  } else {
+    el.style.display='none';
+  }
+}
+document.getElementById('sched-date').addEventListener('change',checkSchedConflict);
+document.getElementById('sched-time').addEventListener('change',checkSchedConflict);
+
+document.getElementById('sched-ok').addEventListener('click',async function(){
+  if(!schedId)return;
+  var dateVal=document.getElementById('sched-date').value;
+  var timeVal=document.getElementById('sched-time').value;
+  if(!dateVal){toast('Select a date');return}
+  // Build ISO 8601 JST datetime
+  var iso=dateVal+'T'+timeVal+':00+09:00';
+  var accountId=document.getElementById('sched-account').value;
+  var extra={scheduled_at:iso};
+  if(accountId)extra.account_id=accountId;
+  await apiStatus(schedId,'approved',extra);
+  closeScheduleModal();
+  toast('Approved & scheduled for '+dateVal+' '+timeVal);
+});
+document.getElementById('sched-close').addEventListener('click',closeScheduleModal);
+document.getElementById('sched-cancel').addEventListener('click',closeScheduleModal);
+document.getElementById('sched-modal').addEventListener('click',function(e){if(e.target===this)closeScheduleModal()});
+
+/* ===== Edit Modal ===== */
+function openEditModal(id){
+  var item=allData.find(function(i){return i.news_id===id});
+  if(!item)return;
+  editingId=id;
+  document.getElementById('edit-modal-title').textContent='Edit: '+(item.title||'').substring(0,30);
+  document.getElementById('ed-title').value=item.title||'';
+  document.getElementById('ed-body').value=item.body||'';
+  document.getElementById('ed-tags').value=(item.hashtags||[]).join(', ');
+  if(item.scheduled_at){var d=new Date(item.scheduled_at);if(!isNaN(d)){var off=d.getTimezoneOffset();document.getElementById('ed-sched').value=new Date(d.getTime()-off*60000).toISOString().slice(0,16)}else document.getElementById('ed-sched').value=''}else document.getElementById('ed-sched').value='';
+  var info='';
+  if(id)info+='<div class="mi-item"><span class="mi-label">ID</span><span class="mi-val">'+esc(id)+'</span></div>';
+  if(item.status)info+='<div class="mi-item"><span class="mi-label">Status</span><span class="mi-val">'+esc(item.status)+'</span></div>';
+  if(item.created_at)info+='<div class="mi-item"><span class="mi-label">Created</span><span class="mi-val">'+fmtDate(item.created_at)+'</span></div>';
+  var iel=document.getElementById('edit-info');iel.innerHTML=info;iel.style.display=info?'flex':'none';
+  updateEditCounter();
+  document.getElementById('edit-modal').classList.add('active');
+  document.getElementById('ed-title').focus();
+}
+function closeEditModal(){editingId=null;document.getElementById('edit-modal').classList.remove('active')}
+async function saveEdit(){
+  if(!editingId)return;
+  var ht=document.getElementById('ed-tags').value.trim();
+  var tags=ht?ht.split(',').map(function(s){return s.trim()}).filter(Boolean):[];
+  var sv=document.getElementById('ed-sched').value;
+  await apiEdit(editingId,{
+    title:document.getElementById('ed-title').value.trim(),
+    body:document.getElementById('ed-body').value,
+    hashtags:tags,
+    scheduled_at:sv?toJstIso(sv):null
+  });
+  closeEditModal();toast('Saved');
+}
+function updateEditCounter(){
+  var ht=document.getElementById('ed-tags').value.trim();
+  var tags=ht?ht.split(',').map(function(s){return s.trim()}).filter(Boolean):[];
+  var l=fullLen(document.getElementById('ed-body').value,tags);
+  var r=280-l;var el=document.getElementById('ed-counter');
+  el.textContent=r;el.className='live-c '+charClsLocal(r);
+}
+document.getElementById('ed-body').addEventListener('input',updateEditCounter);
+document.getElementById('ed-tags').addEventListener('input',updateEditCounter);
+document.getElementById('edit-close').addEventListener('click',closeEditModal);
+document.getElementById('edit-cancel').addEventListener('click',closeEditModal);
+document.getElementById('edit-save').addEventListener('click',saveEdit);
+document.getElementById('edit-modal').addEventListener('click',function(e){if(e.target===this)closeEditModal()});
+
+/* ===== Search ===== */
+var _st;document.getElementById('search').addEventListener('input',function(e){
+  if(_st)clearTimeout(_st);_st=setTimeout(function(){searchQ=e.target.value.trim();renderPanel()},300);
+});
+
+/* ===== Buttons ===== */
+document.getElementById('btn-refresh').addEventListener('click',fetchData);
+document.getElementById('btn-compact').addEventListener('click',async function(){
+  await fetch(API+'/api/drafts/compact',{method:'POST'});await fetchData();toast('Compacted');
+});
+
+/* ===== Keyboard ===== */
+document.addEventListener('keydown',function(e){
+  if(e.key==='Escape'){closeEditModal();closeScheduleModal()}
+  if((e.ctrlKey||e.metaKey)&&e.key==='s'&&editingId){e.preventDefault();saveEdit()}
+});
+
+/* ===== Compose (New Post) ===== */
+var composeImages=[]; // [{path,name,data}]
+var availableImages=[]; // from /api/images
+
+document.getElementById('btn-new-post').addEventListener('click',openCompose);
+function openCompose(){
+  document.getElementById('cmp-body').value='';
+  document.getElementById('cmp-tags').value='';
+  document.getElementById('cmp-title').value='';
+  composeImages=[];
+  renderComposeImages();
+  updateComposeCounter();
+  document.getElementById('cmp-image-picker').style.display='none';
+  // Account selector
+  var csel=document.getElementById('cmp-account');
+  var accs=meta.accounts||[];
+  csel.innerHTML='<option value="">Auto (content-based)</option>'+accs.map(function(a){return '<option value="'+esc(a.id)+'">@'+esc(a.label)+'</option>'}).join('');
+  document.getElementById('compose-modal').classList.add('active');
+  document.getElementById('cmp-body').focus();
+  // Load available images
+  loadAvailableImages();
+}
+function closeCompose(){document.getElementById('compose-modal').classList.remove('active')}
+document.getElementById('compose-close').addEventListener('click',closeCompose);
+document.getElementById('compose-cancel').addEventListener('click',closeCompose);
+document.getElementById('compose-modal').addEventListener('click',function(e){if(e.target===this)closeCompose()});
+
+function updateComposeCounter(){
+  var ht=document.getElementById('cmp-tags').value.trim();
+  var tags=ht?ht.split(',').map(function(s){return s.trim()}).filter(Boolean):[];
+  var l=fullLen(document.getElementById('cmp-body').value,tags);
+  var r=280-l;var el=document.getElementById('cmp-counter');
+  el.textContent=r;el.className='live-c '+charClsLocal(r);
+}
+document.getElementById('cmp-body').addEventListener('input',updateComposeCounter);
+document.getElementById('cmp-tags').addEventListener('input',updateComposeCounter);
+
+function renderComposeImages(){
+  var el=document.getElementById('cmp-images');
+  if(!composeImages.length){el.innerHTML='<span style="font-size:12px;color:var(--text2)">No images attached</span>';return}
+  el.innerHTML=composeImages.map(function(img,i){
+    return '<div style="position:relative;width:80px"><img src="'+esc(img.data)+'" style="width:80px;height:60px;object-fit:cover;border-radius:6px;border:1px solid var(--border)"><button onclick="composeImages.splice('+i+',1);renderComposeImages()" style="position:absolute;top:-4px;right:-4px;background:var(--red);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:12px;cursor:pointer">&times;</button><div style="font-size:10px;color:var(--text2);text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(img.name)+'</div></div>';
+  }).join('');
+}
+
+async function loadAvailableImages(){
+  try{
+    var r=await fetch(API+'/api/images');
+    availableImages=await r.json();
+  }catch(e){availableImages=[]}
+}
+
+document.getElementById('cmp-pick-image').addEventListener('click',function(){
+  var picker=document.getElementById('cmp-image-picker');
+  if(picker.style.display==='none'){
+    picker.style.display='block';
+    var el=document.getElementById('cmp-image-list');
+    if(!availableImages.length){el.innerHTML='<span style="color:var(--text2);font-size:12px">No images found in output/</span>';return}
+    el.innerHTML=availableImages.map(function(img,i){
+      return '<div style="cursor:pointer;width:100px" data-img-idx="'+i+'"><img src="'+esc(img.data)+'" style="width:100px;height:70px;object-fit:cover;border-radius:6px;border:1px solid var(--border)"><div style="font-size:10px;color:var(--text2);text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(img.name)+'</div></div>';
+    }).join('');
+  } else {
+    picker.style.display='none';
+  }
+});
+
+document.getElementById('cmp-image-list').addEventListener('click',function(e){
+  var el=e.target.closest('[data-img-idx]');
+  if(!el)return;
+  var idx=parseInt(el.getAttribute('data-img-idx'));
+  var img=availableImages[idx];
+  if(img&&!composeImages.find(function(c){return c.path===img.path})){
+    composeImages.push(img);
+    renderComposeImages();
+  }
+  document.getElementById('cmp-image-picker').style.display='none';
+});
+
+// Save as draft
+document.getElementById('compose-draft').addEventListener('click',async function(){
+  var body=document.getElementById('cmp-body').value;
+  if(!body.trim()){toast('Body is required');return}
+  var ht=document.getElementById('cmp-tags').value.trim();
+  var tags=ht?ht.split(',').map(function(s){return s.trim()}).filter(Boolean):[];
+  var data={
+    body:body,
+    title:document.getElementById('cmp-title').value.trim()||body.substring(0,30),
+    hashtags:tags,
+    template_type:'manual',
+    account_id:document.getElementById('cmp-account').value
+  };
+  if(composeImages.length){
+    data.images=composeImages.map(function(img){return {path:img.path,type:'attached',description:img.name}});
+  }
+  await fetch(API+'/api/drafts/create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+  closeCompose();await fetchData();toast('Draft created');
+});
+
+// Approve & Schedule (create + open schedule modal)
+document.getElementById('compose-approve').addEventListener('click',async function(){
+  var body=document.getElementById('cmp-body').value;
+  if(!body.trim()){toast('Body is required');return}
+  var ht=document.getElementById('cmp-tags').value.trim();
+  var tags=ht?ht.split(',').map(function(s){return s.trim()}).filter(Boolean):[];
+  var data={
+    body:body,
+    title:document.getElementById('cmp-title').value.trim()||body.substring(0,30),
+    hashtags:tags,
+    template_type:'manual',
+    account_id:document.getElementById('cmp-account').value
+  };
+  if(composeImages.length){
+    data.images=composeImages.map(function(img){return {path:img.path,type:'attached',description:img.name}});
+  }
+  var r=await fetch(API+'/api/drafts/create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+  var result=await r.json();
+  closeCompose();
+  await fetchData();
+  if(result.ok&&result.news_id){
+    openScheduleModal(result.news_id);
+  } else {
+    toast('Created but schedule failed');
+  }
+});
+
+/* ===== Render All ===== */
+/* ===== Bookmarks ===== */
+async function fetchBookmarks(){
+  try{var r=await fetch(API+'/api/bookmarks');bookmarksData=await r.json()}catch(e){bookmarksData=[]}
+  if(panelMode==='bookmarks') renderPanel();
+}
+
+function renderBookmarkCard(bm){
+  var text=bm.text||'(no text)';
+  var author=bm.author||'';
+  var url=bm.url||'';
+  var likes=bm.like_count||0;
+  var rt=bm.retweet_count||0;
+  var date=bm.created_at?fmtDate(bm.created_at):'';
+
+  return '<div class="card" style="cursor:default">'+
+    '<div class="card-top"><div class="badges">'+
+      '<span class="badge badge--type">bookmark</span>'+
+      '<span class="badge badge--type">'+esc(author)+'</span>'+
+    '</div></div>'+
+    '<div class="card-body" style="-webkit-line-clamp:6">'+esc(text)+'</div>'+
+    '<div class="card-meta">'+
+      '<span>'+date+'</span>'+
+      '<span style="display:flex;gap:10px;font-size:11px;color:var(--text2)">'+
+        '<span title="Likes" style="color:var(--red)">&#9825; '+likes+'</span>'+
+        '<span title="RT">&#128260; '+rt+'</span>'+
+      '</span>'+
+    '</div>'+
+    (url?'<div style="padding-top:6px;border-top:1px solid var(--border);display:flex;gap:6px">'+
+      '<a href="'+esc(url)+'" target="_blank" rel="noopener" style="font-size:12px;color:var(--link)" onclick="event.stopPropagation()">View on X &#8594;</a>'+
+      '<button class="cbtn cbtn--approve" style="flex:0;padding:4px 12px;font-size:11px" onclick="createFromBookmark(\''+esc(url.replace(/'/g,"\\'"))+'\',\''+esc(text.replace(/'/g,"\\'").replace(/\n/g,'\\n').substring(0,200))+'\',\''+esc(author.replace(/'/g,"\\'"))+'\')">+ Draft</button>'+
+    '</div>':'')+
+  '</div>';
+}
+
+function createFromBookmark(url,text,author){
+  // Composeモーダルを開いてブックマーク内容を初期入力
+  document.getElementById('cmp-body').value=text;
+  document.getElementById('cmp-title').value='Re: '+author+' bookmark';
+  document.getElementById('cmp-tags').value='';
+  composeImages=[];
+  renderComposeImages();
+  updateComposeCounter();
+  document.getElementById('cmp-image-picker').style.display='none';
+  var csel=document.getElementById('cmp-account');
+  csel.innerHTML='<option value="">Auto (content-based)</option>'+(meta.accounts||[]).map(function(a){return '<option value="'+esc(a.id)+'">@'+esc(a.label)+'</option>'}).join('');
+  document.getElementById('compose-modal').classList.add('active');
+  document.getElementById('cmp-body').focus();
+  loadAvailableImages();
+}
+
+function renderAll(){renderCal();renderStats();renderCli();renderPanel()}
+</script>
+</body>
+</html>

@@ -3,6 +3,8 @@
 ドラフトと投稿履歴をJSONL形式で追記保存し、news_idベースの重複排除を行う。
 """
 
+import fcntl
+import glob
 import hashlib
 import json
 import logging
@@ -42,6 +44,16 @@ class PostStore:
     def _ensure_dir(self) -> None:
         os.makedirs(self.base_dir, exist_ok=True)
 
+    def _append_with_lock(self, filepath: str, line: str) -> None:
+        """ファイルロック付きでJSONL行を追記する。"""
+        self._ensure_dir()
+        with open(filepath, "a", encoding="utf-8") as f:
+            fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+            try:
+                f.write(line + "\n")
+            finally:
+                fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+
     def _load_index(self) -> set:
         if self._index is not None:
             return self._index
@@ -80,12 +92,16 @@ class PostStore:
     def _save_index(self) -> None:
         self._ensure_dir()
         with open(self.index_path, "w", encoding="utf-8") as f:
-            json.dump(
-                {"news_ids": sorted(self._load_index() if self._index is None else self._index)},
-                f,
-                ensure_ascii=False,
-                indent=2,
-            )
+            fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+            try:
+                json.dump(
+                    {"news_ids": sorted(self._load_index() if self._index is None else self._index)},
+                    f,
+                    ensure_ascii=False,
+                    indent=2,
+                )
+            finally:
+                fcntl.flock(f.fileno(), fcntl.LOCK_UN)
 
     def add_draft(self, draft: dict) -> bool:
         """ドラフトを追加する（news_id重複時はスキップ）。
@@ -111,9 +127,7 @@ class PostStore:
         draft.setdefault("updated_at", now)
         draft.setdefault("status", "draft")
 
-        self._ensure_dir()
-        with open(self.drafts_path, "a", encoding="utf-8") as f:
-            f.write(json.dumps(draft, ensure_ascii=False) + "\n")
+        self._append_with_lock(self.drafts_path, json.dumps(draft, ensure_ascii=False))
 
         index.add(news_id)
         self._save_index()
@@ -145,9 +159,7 @@ class PostStore:
         }
         update_record.update(extra)
 
-        self._ensure_dir()
-        with open(self.drafts_path, "a", encoding="utf-8") as f:
-            f.write(json.dumps(update_record, ensure_ascii=False) + "\n")
+        self._append_with_lock(self.drafts_path, json.dumps(update_record, ensure_ascii=False))
 
         return True
 
@@ -232,9 +244,7 @@ class PostStore:
         """
         record.setdefault("recorded_at", datetime.now(timezone.utc).isoformat())
 
-        self._ensure_dir()
-        with open(self.history_path, "a", encoding="utf-8") as f:
-            f.write(json.dumps(record, ensure_ascii=False) + "\n")
+        self._append_with_lock(self.history_path, json.dumps(record, ensure_ascii=False))
 
         return True
 
@@ -325,9 +335,7 @@ class PostStore:
 
         record.setdefault("scraped_at", datetime.now(JST).isoformat())
 
-        self._ensure_dir()
-        with open(self.impressions_path, "a", encoding="utf-8") as f:
-            f.write(json.dumps(record, ensure_ascii=False) + "\n")
+        self._append_with_lock(self.impressions_path, json.dumps(record, ensure_ascii=False))
 
         logger.debug("📊 インプレッション追記: %s (%s)", news_id, tweet_url)
         return True
@@ -380,3 +388,196 @@ class PostStore:
                     latest[nid] = rec
 
         return latest
+
+    def archive_draft(self, news_id: str, reason: str = "manual") -> bool:
+        """ドラフトをアーカイブ済みに更新する。
+
+        Args:
+            news_id: 対象のnews_id
+            reason: アーカイブ理由（デフォルト: "manual"）
+
+        Returns:
+            True: 更新成功, False: news_idが見つからない
+        """
+        return self.update_draft_status(news_id, "archived", archived_reason=reason)
+
+    def bulk_update_status(self, news_ids: List[str], new_status: str, **extra) -> int:
+        """複数ドラフトのステータスを一括更新する。
+
+        Args:
+            news_ids: 対象のnews_idリスト
+            new_status: 新しいステータス
+            **extra: 追加フィールド
+
+        Returns:
+            更新成功件数
+        """
+        count = 0
+        for news_id in news_ids:
+            if self.update_draft_status(news_id, new_status, **extra):
+                count += 1
+        return count
+
+    def _collect_screenshot_paths(self) -> List[str]:
+        """output/posting/ 配下のスクリーンショットPNGパスを収集する。
+
+        Returns:
+            schedule_error_*.png と schedule_dryrun_*.png のパスリスト
+        """
+        patterns = [
+            os.path.join(self.base_dir, "schedule_error_*.png"),
+            os.path.join(self.base_dir, "schedule_dryrun_*.png"),
+        ]
+        paths: List[str] = []
+        for pattern in patterns:
+            paths.extend(glob.glob(pattern))
+        paths.sort()
+        return paths
+
+    def get_full_draft(self, news_id: str) -> Optional[Dict[str, Any]]:
+        """単一ドラフトの完全情報を取得する。
+
+        load_drafts() から該当アイテムを取得し、load_history() から全履歴、
+        get_latest_impressions() からインプレッションをマージして返す。
+
+        Args:
+            news_id: 対象のnews_id
+
+        Returns:
+            マージ済みドラフト辞書。見つからない場合は None。
+            追加フィールド:
+                - history: そのnews_idの全履歴レコードのリスト
+                - has_dry_run: 履歴に dry_run=True のレコードがあるか
+                - has_real_post: 履歴に dry_run=False かつ status="posted" のレコードがあるか
+                - posted_url: 履歴から取得（real post優先）
+                - posted_at: 履歴から取得（real post優先）
+                - error: 最新のfailedレコードのerrorテキスト
+                - impressions: 最新インプレッションレコード
+                - screenshot_paths: 関連スクリーンショットのパスリスト
+        """
+        # ドラフト取得
+        drafts = self.load_drafts()
+        draft: Optional[Dict[str, Any]] = None
+        for d in drafts:
+            if d.get("news_id") == news_id:
+                draft = d.copy()
+                break
+        if draft is None:
+            return None
+
+        # 履歴取得（該当news_idのみ）
+        all_history = self.load_history()
+        history_records = [r for r in all_history if r.get("news_id") == news_id]
+
+        draft["history"] = history_records
+        draft["has_dry_run"] = any(r.get("dry_run", False) for r in history_records)
+        draft["has_real_post"] = any(
+            not r.get("dry_run", False) and r.get("status") == "posted"
+            for r in history_records
+        )
+
+        # posted_url / posted_at: real post優先、なければdry_runのもの
+        real_posts = [
+            r for r in history_records
+            if not r.get("dry_run", False) and r.get("status") == "posted"
+        ]
+        dry_runs = [
+            r for r in history_records
+            if r.get("dry_run", False) and r.get("status") == "posted"
+        ]
+        source_for_url = real_posts[-1] if real_posts else (dry_runs[-1] if dry_runs else None)
+        if source_for_url:
+            if source_for_url.get("posted_url"):
+                draft["posted_url"] = source_for_url["posted_url"]
+            if source_for_url.get("posted_at"):
+                draft["posted_at"] = source_for_url["posted_at"]
+
+        # error: 最新のfailedレコードから
+        failed_records = [r for r in history_records if r.get("status") == "failed"]
+        if failed_records:
+            draft["error"] = failed_records[-1].get("error")
+
+        # インプレッション
+        latest_impressions = self.get_latest_impressions()
+        if news_id in latest_impressions:
+            draft["impressions"] = latest_impressions[news_id]
+
+        # スクリーンショット
+        draft["screenshot_paths"] = self._collect_screenshot_paths()
+
+        return draft
+
+    def get_all_with_history(self) -> List[Dict[str, Any]]:
+        """全ドラフトに履歴・インプレッション・メタ情報をマージして返す。
+
+        build_review_page.py の行62-93のロジックを拡張したメソッド。
+        各ドラフトに以下をマージする:
+            - load_history() から posted_url, posted_at, error, dry_run, status(履歴)
+            - get_latest_impressions() からインプレッション
+            - has_dry_run: 履歴に dry_run=True のレコードがあるか
+            - has_real_post: 履歴に dry_run=False かつ status="posted" のレコードがあるか
+            - screenshot_paths: output/posting/ 内の関連PNGリスト
+
+        Returns:
+            マージ済みドラフトのリスト
+        """
+        drafts = self.load_drafts()
+        all_history = self.load_history()
+
+        # news_idごとに全履歴レコードをグループ化
+        history_by_nid: Dict[str, List[Dict[str, Any]]] = {}
+        for rec in all_history:
+            nid = rec.get("news_id")
+            if nid:
+                history_by_nid.setdefault(nid, []).append(rec)
+
+        # インプレッション
+        latest_impressions = self.get_latest_impressions()
+
+        # スクリーンショット（全ドラフト共通で一度だけ収集）
+        screenshot_paths = self._collect_screenshot_paths()
+
+        for draft in drafts:
+            nid = draft.get("news_id")
+            if not nid:
+                continue
+
+            records = history_by_nid.get(nid, [])
+
+            # has_dry_run / has_real_post 判定
+            draft["has_dry_run"] = any(r.get("dry_run", False) for r in records)
+            draft["has_real_post"] = any(
+                not r.get("dry_run", False) and r.get("status") == "posted"
+                for r in records
+            )
+
+            # posted_url / posted_at: real post優先、なければdry_runのもの
+            real_posts = [
+                r for r in records
+                if not r.get("dry_run", False) and r.get("status") == "posted"
+            ]
+            dry_runs = [
+                r for r in records
+                if r.get("dry_run", False) and r.get("status") == "posted"
+            ]
+            source = real_posts[-1] if real_posts else (dry_runs[-1] if dry_runs else None)
+            if source:
+                if source.get("posted_url"):
+                    draft["posted_url"] = source["posted_url"]
+                if source.get("posted_at"):
+                    draft["posted_at"] = source["posted_at"]
+                draft["dry_run"] = source.get("dry_run", False)
+
+            # error: 最新のfailedレコードから
+            failed_records = [r for r in records if r.get("status") == "failed"]
+            if failed_records:
+                draft["error"] = failed_records[-1].get("error")
+
+            # インプレッション
+            if nid in latest_impressions:
+                draft["impressions"] = latest_impressions[nid]
+
+            # スクリーンショット
+            draft["screenshot_paths"] = screenshot_paths
+
+        return drafts

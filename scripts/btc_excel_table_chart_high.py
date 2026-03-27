@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-BTC月間中央値→翌月最安値 乖離率分析テーブルチャート生成 (4分割版・逆時系列)
+BTC月間中央値→翌月最高値 乖離率分析テーブルチャート生成 (4分割版・逆時系列)
 
-Excel (btc_monthly_deviation.xlsx) のBTC乖離分析シートを読み込み、
+yfinanceデータからBTC乖離分析を行い、
 X (Twitter) 2x2グリッド投稿用の4枚の画像を生成する。
 
 Image 1: 2025-2026年 (14行) — 最新月が先頭
@@ -13,6 +13,7 @@ Image 4: 2022年 (12行) + 全期間統計
 
 import os
 import sys
+import statistics
 from datetime import datetime
 
 import matplotlib
@@ -21,43 +22,16 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import matplotlib.font_manager as fm
 
-try:
-    import openpyxl
-except ImportError:
-    print("openpyxl not found. Installing...")
-    import subprocess
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "openpyxl", "-q"])
-    import openpyxl
-
 
 # ── Configuration ──────────────────────────────────────────────
 
-EXCEL_PATH = os.environ.get(
-    "BTC_EXCEL_PATH",
-    "/Users/masaaki_nagasawa/Desktop/btc_monthly_deviation.xlsx"
-)
-# Docker mount path fallback
-if not os.path.exists(EXCEL_PATH):
-    EXCEL_PATH = "/host_desktop/btc_monthly_deviation.xlsx"
-
-SHEET_NAME = "BTC乖離分析"
 OUTPUT_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "output")
 
 OUTPUT_FILES = [
-    "btc_deviation_1_2025_2026.png",
-    "btc_deviation_2_2024.png",
-    "btc_deviation_3_2023.png",
-    "btc_deviation_4_2022.png",
-]
-
-# Old output files to clean up
-OLD_OUTPUT_FILES = [
-    "btc_deviation_1_2024_2026.png",
-    "btc_deviation_2_2023.png",
-    "btc_deviation_3_2022.png",
-    "btc_deviation_4_2021.png",
-    "btc_monthly_deviation_heatmap.png",
-    "btc_monthly_deviation_table.png",
+    "btc_deviation_high_1_2025_2026.png",
+    "btc_deviation_high_2_2024.png",
+    "btc_deviation_high_3_2023.png",
+    "btc_deviation_high_4_2022.png",
 ]
 
 # Colors
@@ -74,45 +48,124 @@ JP_FONT = None
 MONO_FONT = None
 
 
+# ── Data Loading ───────────────────────────────────────────────
+
+def load_data():
+    """Load hardcoded BTC max-price deviation data from yfinance."""
+    data = [
+        {'base_month': '2022/01', 'median': 41821, 'next_month': '2022/02', 'max_price': 45661, 'max_date': '2/10', 'deviation': 0.092},
+        {'base_month': '2022/02', 'median': 40990, 'next_month': '2022/03', 'max_price': 48087, 'max_date': '3/28', 'deviation': 0.173},
+        {'base_month': '2022/03', 'median': 41801, 'next_month': '2022/04', 'max_price': 47313, 'max_date': '4/3', 'deviation': 0.132},
+        {'base_month': '2022/04', 'median': 40540, 'next_month': '2022/05', 'max_price': 39903, 'max_date': '5/4', 'deviation': -0.016},
+        {'base_month': '2022/05', 'median': 30297, 'next_month': '2022/06', 'max_price': 31957, 'max_date': '6/1', 'deviation': 0.055},
+        {'base_month': '2022/06', 'median': 21855, 'next_month': '2022/07', 'max_price': 24573, 'max_date': '7/30', 'deviation': 0.124},
+        {'base_month': '2022/07', 'median': 21362, 'next_month': '2022/08', 'max_price': 25136, 'max_date': '8/15', 'deviation': 0.177},
+        {'base_month': '2022/08', 'median': 22961, 'next_month': '2022/09', 'max_price': 22674, 'max_date': '9/13', 'deviation': -0.013},
+        {'base_month': '2022/09', 'median': 19559, 'next_month': '2022/10', 'max_price': 20988, 'max_date': '10/29', 'deviation': 0.073},
+        {'base_month': '2022/10', 'median': 19417, 'next_month': '2022/11', 'max_price': 21447, 'max_date': '11/5', 'deviation': 0.105},
+        {'base_month': '2022/11', 'median': 16693, 'next_month': '2022/12', 'max_price': 18319, 'max_date': '12/14', 'deviation': 0.097},
+        {'base_month': '2022/12', 'median': 16906, 'next_month': '2023/01', 'max_price': 23920, 'max_date': '1/29', 'deviation': 0.415},
+        {'base_month': '2023/01', 'median': 20976, 'next_month': '2023/02', 'max_price': 25134, 'max_date': '2/16', 'deviation': 0.198},
+        {'base_month': '2023/02', 'median': 23391, 'next_month': '2023/03', 'max_price': 29160, 'max_date': '3/30', 'deviation': 0.247},
+        {'base_month': '2023/03', 'median': 25053, 'next_month': '2023/04', 'max_price': 31006, 'max_date': '4/14', 'deviation': 0.238},
+        {'base_month': '2023/04', 'median': 28417, 'next_month': '2023/05', 'max_price': 29820, 'max_date': '5/6', 'deviation': 0.049},
+        {'base_month': '2023/05', 'median': 27220, 'next_month': '2023/06', 'max_price': 31390, 'max_date': '6/23', 'deviation': 0.153},
+        {'base_month': '2023/06', 'median': 26963, 'next_month': '2023/07', 'max_price': 31815, 'max_date': '7/13', 'deviation': 0.180},
+        {'base_month': '2023/07', 'median': 30146, 'next_month': '2023/08', 'max_price': 30177, 'max_date': '8/8', 'deviation': 0.001},
+        {'base_month': '2023/08', 'median': 28702, 'next_month': '2023/09', 'max_price': 27489, 'max_date': '9/19', 'deviation': -0.042},
+        {'base_month': '2023/09', 'median': 26278, 'next_month': '2023/10', 'max_price': 35150, 'max_date': '10/24', 'deviation': 0.338},
+        {'base_month': '2023/10', 'median': 28328, 'next_month': '2023/11', 'max_price': 38415, 'max_date': '11/24', 'deviation': 0.356},
+        {'base_month': '2023/11', 'median': 36874, 'next_month': '2023/12', 'max_price': 44706, 'max_date': '12/8', 'deviation': 0.212},
+        {'base_month': '2023/12', 'median': 42628, 'next_month': '2024/01', 'max_price': 48969, 'max_date': '1/11', 'deviation': 0.149},
+        {'base_month': '2024/01', 'median': 42842, 'next_month': '2024/02', 'max_price': 63913, 'max_date': '2/28', 'deviation': 0.492},
+        {'base_month': '2024/02', 'median': 51305, 'next_month': '2024/03', 'max_price': 73750, 'max_date': '3/14', 'deviation': 0.437},
+        {'base_month': '2024/03', 'median': 68330, 'next_month': '2024/04', 'max_price': 72715, 'max_date': '4/8', 'deviation': 0.064},
+        {'base_month': '2024/04', 'median': 65221, 'next_month': '2024/05', 'max_price': 71946, 'max_date': '5/21', 'deviation': 0.103},
+        {'base_month': '2024/05', 'median': 66267, 'next_month': '2024/06', 'max_price': 71908, 'max_date': '6/7', 'deviation': 0.085},
+        {'base_month': '2024/06', 'median': 66341, 'next_month': '2024/07', 'max_price': 69988, 'max_date': '7/29', 'deviation': 0.055},
+        {'base_month': '2024/07', 'median': 64119, 'next_month': '2024/08', 'max_price': 65593, 'max_date': '8/1', 'deviation': 0.023},
+        {'base_month': '2024/08', 'median': 59479, 'next_month': '2024/09', 'max_price': 66481, 'max_date': '9/27', 'deviation': 0.118},
+        {'base_month': '2024/09', 'median': 60157, 'next_month': '2024/10', 'max_price': 73577, 'max_date': '10/29', 'deviation': 0.223},
+        {'base_month': '2024/10', 'median': 66642, 'next_month': '2024/11', 'max_price': 99656, 'max_date': '11/22', 'deviation': 0.495},
+        {'base_month': '2024/11', 'median': 90551, 'next_month': '2024/12', 'max_price': 108268, 'max_date': '12/17', 'deviation': 0.196},
+        {'base_month': '2024/12', 'median': 97491, 'next_month': '2025/01', 'max_price': 109115, 'max_date': '1/20', 'deviation': 0.119},
+        {'base_month': '2025/01', 'median': 101090, 'next_month': '2025/02', 'max_price': 102756, 'max_date': '2/1', 'deviation': 0.016},
+        {'base_month': '2025/02', 'median': 96553, 'next_month': '2025/03', 'max_price': 95043, 'max_date': '3/2', 'deviation': -0.016},
+        {'base_month': '2025/03', 'median': 84343, 'next_month': '2025/04', 'max_price': 95768, 'max_date': '4/25', 'deviation': 0.135},
+        {'base_month': '2025/04', 'median': 84719, 'next_month': '2025/05', 'max_price': 111970, 'max_date': '5/22', 'deviation': 0.322},
+        {'base_month': '2025/05', 'median': 104106, 'next_month': '2025/06', 'max_price': 110561, 'max_date': '6/9', 'deviation': 0.062},
+        {'base_month': '2025/06', 'median': 105723, 'next_month': '2025/07', 'max_price': 123092, 'max_date': '7/14', 'deviation': 0.164},
+        {'base_month': '2025/07', 'median': 117636, 'next_month': '2025/08', 'max_price': 124457, 'max_date': '8/14', 'deviation': 0.058},
+        {'base_month': '2025/08', 'median': 115028, 'next_month': '2025/09', 'max_price': 117912, 'max_date': '9/18', 'deviation': 0.025},
+        {'base_month': '2025/09', 'median': 113039, 'next_month': '2025/10', 'max_price': 126198, 'max_date': '10/6', 'deviation': 0.116},
+        {'base_month': '2025/10', 'median': 112956, 'next_month': '2025/11', 'max_price': 111167, 'max_date': '11/2', 'deviation': -0.016},
+        {'base_month': '2025/11', 'median': 94287, 'next_month': '2025/12', 'max_price': 94602, 'max_date': '12/9', 'deviation': 0.003},
+        {'base_month': '2025/12', 'median': 88344, 'next_month': '2026/01', 'max_price': 97861, 'max_date': '1/14', 'deviation': 0.108},
+        {'base_month': '2026/01', 'median': 90513, 'next_month': '2026/02', 'max_price': 79323, 'max_date': '2/1', 'deviation': -0.124},
+        {'base_month': '2026/02', 'median': 68005, 'next_month': '2026/03', 'max_price': 74052, 'max_date': '3/4', 'deviation': 0.089},
+    ]
+    # Add note for last row
+    data[-1]['note'] = '※3月は16日まで'
+
+    # Add dev_pct field
+    for d in data:
+        d['dev_pct'] = d['deviation'] * 100
+
+    # Reverse for descending order (newest first)
+    data.reverse()
+    print(f"Loaded {len(data)} rows (2022-2026, reverse chronological)")
+    return data
+
+
 # ── Color Functions ────────────────────────────────────────────
 
 def get_deviation_color(dev_pct):
-    """Return color based on deviation percentage value."""
-    if dev_pct > 10:
+    """Return color based on deviation percentage value.
+
+    Inverted scheme for max-price data (most values are positive):
+    - > +30%: bright green (extreme upside)
+    - > +15%: green
+    - > +5%: light green
+    - 0% to +5%: light gray (minimal move)
+    - -1% to 0%: orange (slight negative)
+    - < -1%: red (rare negative)
+    - < -5%: bright red (very rare strong negative)
+    """
+    if dev_pct > 30:
         return "#00E676"
-    elif dev_pct > 0:
+    elif dev_pct > 15:
         return "#66BB6A"
-    elif dev_pct >= -5:
+    elif dev_pct > 5:
+        return "#81C784"
+    elif dev_pct >= 0:
         return "#B0BEC5"
-    elif dev_pct >= -10:
+    elif dev_pct >= -1:
         return "#FFB74D"
-    elif dev_pct >= -15:
-        return "#FF7043"
-    elif dev_pct >= -25:
-        return "#EF5350"
+    elif dev_pct >= -5:
+        return "#FF5252"
     else:
         return "#FF1744"
 
 
 def get_bar_color(dev_pct):
-    """Return bar fill color based on deviation percentage."""
+    """Return bar fill color based on deviation percentage.
+
+    Positive bars: green (#66BB6A), brighter for larger values.
+    Negative bars: red (#EF5350).
+    """
     if dev_pct >= 0:
-        t = min(abs(dev_pct) / 25.0, 1.0)
+        t = min(abs(dev_pct) / 50.0, 1.0)
         r = int(0x66 + (0x00 - 0x66) * t)
         g = int(0xBB + (0xE6 - 0xBB) * t)
         b = int(0x6A + (0x76 - 0x6A) * t)
         return f"#{r:02X}{g:02X}{b:02X}"
     else:
-        t = min(abs(dev_pct) / 50.0, 1.0)
-        r = 0xEF
-        g = int(0x53 + (0x17 - 0x53) * t)
-        b = int(0x50 + (0x44 - 0x50) * t)
-        return f"#{r:02X}{g:02X}{b:02X}"
+        return "#EF5350"
 
 
 def get_fontweight(dev_pct):
     """Return font weight based on deviation magnitude."""
-    if dev_pct > 10 or dev_pct < -25:
+    if dev_pct > 30 or dev_pct < -5:
         return "bold"
     return "normal"
 
@@ -167,53 +220,7 @@ def mono_text(ax, x, y, text, **kwargs):
     return ax.text(x, y, text, **kwargs)
 
 
-# ── Data Loading ───────────────────────────────────────────────
-
-def load_excel_data():
-    """Load BTC deviation data from Excel file."""
-    print(f"Reading: {EXCEL_PATH}")
-    wb = openpyxl.load_workbook(EXCEL_PATH)
-    ws = wb[SHEET_NAME]
-
-    data = []
-    for row in ws.iter_rows(min_row=6, max_row=66, min_col=1, max_col=8, values_only=True):
-        if row[0] is None:
-            continue
-
-        base_month = str(row[0])
-        median_price = row[1]
-        min_price = row[3]
-        min_date = str(row[4]) if row[4] else ""
-        deviation = float(row[5])
-
-        data.append({
-            'base_month': base_month,
-            'median': int(median_price) if median_price else 0,
-            'min_price': int(min_price) if min_price else 0,
-            'min_date': min_date,
-            'deviation': deviation,
-            'dev_pct': deviation * 100,
-        })
-
-    # Add 2026/02 data (researched from StatMuse, March data through Mar 15 only)
-    data.append({
-        'base_month': '2026/02',
-        'median': 68005,
-        'min_price': 65738,
-        'min_date': '3/1',
-        'deviation': -0.033,
-        'dev_pct': -0.033 * 100,
-        'note': '※3月は15日まで',
-    })
-
-    # Filter to 2022-2026 only (exclude 2021)
-    data = [d for d in data if not d['base_month'].startswith('2021')]
-
-    # Reverse to most-recent-first order
-    data.reverse()
-    print(f"Loaded {len(data)} rows (2022-2026, reverse chronological)")
-    return data
-
+# ── Data Splitting ─────────────────────────────────────────────
 
 def split_data(data):
     """Split into 4 balanced groups (data is already reversed: newest first).
@@ -234,10 +241,10 @@ def split_data(data):
     groups = [g1, g2, g3, g4]
 
     titles = [
-        "BTC 月間中央値 → 翌月最安値 乖離率 ❶ 2025-2026年",
-        "BTC 月間中央値 → 翌月最安値 乖離率 ❷ 2024年",
-        "BTC 月間中央値 → 翌月最安値 乖離率 ❸ 2023年",
-        "BTC 月間中央値 → 翌月最安値 乖離率 ❹ 2022年",
+        "BTC 月間中央値 → 翌月最高値 乖離率 ❶ 2025-2026年",
+        "BTC 月間中央値 → 翌月最高値 乖離率 ❷ 2024年",
+        "BTC 月間中央値 → 翌月最高値 乖離率 ❸ 2023年",
+        "BTC 月間中央値 → 翌月最高値 乖離率 ❹ 2022年",
     ]
 
     return [(titles[i], groups[i]) for i in range(4)]
@@ -249,6 +256,15 @@ def compute_stats(data):
     neg_months = [d for d in data if d['dev_pct'] < 0]
     pos_months = [d for d in data if d['dev_pct'] >= 0]
 
+    # Max rise (primary stat for max-price version)
+    max_rise = max(data, key=lambda d: d['dev_pct'])
+    max_rise_month = max_rise['base_month']
+    max_rise_next_year_month = max_rise_month.split('/')[0] + '/' + str(int(max_rise_month.split('/')[1]) + 1).zfill(2)
+    if max_rise_month.endswith('/12'):
+        next_year = int(max_rise_month.split('/')[0]) + 1
+        max_rise_next_year_month = f"{next_year}/01"
+    rise_label = f"{max_rise_month}\u2192{max_rise_next_year_month.split('/')[1].lstrip('0')}\u6708"
+
     # Max drop
     max_drop = min(data, key=lambda d: d['dev_pct'])
     max_drop_month = max_drop['base_month']
@@ -258,30 +274,20 @@ def compute_stats(data):
         max_drop_next_year_month = f"{next_year}/01"
     drop_label = f"{max_drop_month}\u2192{max_drop_next_year_month.split('/')[1].lstrip('0')}\u6708"
 
-    # Max rise
-    max_rise = max(data, key=lambda d: d['dev_pct'])
-    max_rise_month = max_rise['base_month']
-    max_rise_next_year_month = max_rise_month.split('/')[0] + '/' + str(int(max_rise_month.split('/')[1]) + 1).zfill(2)
-    if max_rise_month.endswith('/12'):
-        next_year = int(max_rise_month.split('/')[0]) + 1
-        max_rise_next_year_month = f"{next_year}/01"
-    rise_label = f"{max_rise_month}\u2192{max_rise_next_year_month.split('/')[1].lstrip('0')}\u6708"
-
-    import statistics
     avg_dev = statistics.mean(dev_pcts)
     median_dev = statistics.median(dev_pcts)
-    neg_pct = len(neg_months) / len(data) * 100
     pos_pct = len(pos_months) / len(data) * 100
+    neg_pct = len(neg_months) / len(data) * 100
 
     return {
-        'max_drop_pct': max_drop['dev_pct'],
-        'max_drop_label': drop_label,
         'max_rise_pct': max_rise['dev_pct'],
         'max_rise_label': rise_label,
+        'max_drop_pct': max_drop['dev_pct'],
+        'max_drop_label': drop_label,
         'avg_dev': avg_dev,
         'median_dev': median_dev,
-        'neg_pct': neg_pct,
         'pos_pct': pos_pct,
+        'neg_pct': neg_pct,
         'first_month': data[-1]['base_month'],
         'last_month': data[0]['base_month'],
     }
@@ -325,17 +331,17 @@ def render_image(title, rows, all_data, image_index, stats=None):
     # Column positions (as fraction of width)
     col_month_x = 0.02
     col_median_x = 0.13
-    col_minprice_x = 0.29
+    col_maxprice_x = 0.29
     col_dev_x = 0.50
     bar_start_x = 0.58
     bar_end_x = 0.97
     bar_width = bar_end_x - bar_start_x
 
-    # Bar scaling (consistent across all 4 images using all_data)
-    all_neg = [d['dev_pct'] for d in all_data if d['dev_pct'] < 0]
-    all_pos = [d['dev_pct'] for d in all_data if d['dev_pct'] > 0]
-    max_neg = max(abs(v) for v in all_neg) if all_neg else 1
-    max_pos = max(all_pos) if all_pos else 1
+    # Bar scaling: asymmetric for max-price data
+    # Negative side: accommodate up to ~15% negative
+    # Positive side: accommodate up to ~50% positive
+    max_neg = 15.0   # scale negative side to 15%
+    max_pos = 50.0   # scale positive side to 50%
     total_range = max_neg + max_pos
     zero_frac = max_neg / total_range
     zero_x = bar_start_x + bar_width * zero_frac
@@ -358,20 +364,20 @@ def render_image(title, rows, all_data, image_index, stats=None):
 
     y_htext = y_header_bot + header_height * 0.55
     hfs = 16
-    jp_text(ax, col_month_x, y_htext, "\u57fa\u6e96\u6708",
+    jp_text(ax, col_month_x, y_htext, "基準月",
             fontsize=hfs, fontweight='bold', color=TEXT_HEADER, va='center')
-    jp_text(ax, col_median_x, y_htext, "\u6708\u9593\u4e2d\u592e\u5024",
+    jp_text(ax, col_median_x, y_htext, "月間中央値",
             fontsize=hfs, fontweight='bold', color=TEXT_HEADER, va='center')
-    jp_text(ax, col_minprice_x, y_htext, "\u7fcc\u6708\u6700\u5b89\u5024(\u65e5\u4ed8)",
+    jp_text(ax, col_maxprice_x, y_htext, "翌月最高値(日付)",
             fontsize=hfs, fontweight='bold', color=TEXT_HEADER, va='center')
-    jp_text(ax, col_dev_x, y_htext, "\u4e56\u96e2\u7387",
+    jp_text(ax, col_dev_x, y_htext, "乖離率",
             fontsize=hfs, fontweight='bold', color=TEXT_HEADER, va='center')
-    jp_text(ax, bar_start_x + bar_width / 2, y_htext, "\u30d0\u30fc",
+    jp_text(ax, bar_start_x + bar_width / 2, y_htext, "バー",
             fontsize=hfs, fontweight='bold', color=TEXT_HEADER,
             va='center', ha='center')
 
     # Scale markers
-    scale_markers = [-40, -30, -20, -10, 0, 10, 20]
+    scale_markers = [-10, 0, 10, 20, 30, 40, 50]
     for marker in scale_markers:
         if marker < 0:
             mx = zero_x - (abs(marker) / max_neg) * (zero_x - bar_start_x)
@@ -423,11 +429,11 @@ def render_image(title, rows, all_data, image_index, stats=None):
         mono_text(ax, col_median_x, y_text, median_str,
                   fontsize=data_fs, color=TEXT_SECONDARY, va='center')
 
-        # 翌月最安値 (日付)
-        min_str = f"${d['min_price']:,}"
-        if d['min_date']:
-            min_str += f" ({d['min_date']})"
-        mono_text(ax, col_minprice_x, y_text, min_str,
+        # 翌月最高値 (日付)
+        max_str = f"${d['max_price']:,}"
+        if d['max_date']:
+            max_str += f" ({d['max_date']})"
+        mono_text(ax, col_maxprice_x, y_text, max_str,
                   fontsize=data_fs, color=TEXT_SECONDARY, va='center')
 
         # 乖離率
@@ -441,7 +447,7 @@ def render_image(title, rows, all_data, image_index, stats=None):
         bar_h = row_height * 0.55
 
         if dev_pct < 0:
-            bar_len = (abs(dev_pct) / max_neg) * (zero_x - bar_start_x)
+            bar_len = min((abs(dev_pct) / max_neg) * (zero_x - bar_start_x), zero_x - bar_start_x)
             bar_left = zero_x - bar_len
             bar_rect = patches.FancyBboxPatch(
                 (bar_left, y_text - bar_h / 2), bar_len, bar_h,
@@ -450,7 +456,7 @@ def render_image(title, rows, all_data, image_index, stats=None):
             )
             ax.add_patch(bar_rect)
         elif dev_pct > 0:
-            bar_len = (dev_pct / max_pos) * (bar_end_x - zero_x)
+            bar_len = min((dev_pct / max_pos) * (bar_end_x - zero_x), bar_end_x - zero_x)
             bar_rect = patches.FancyBboxPatch(
                 (zero_x, y_text - bar_h / 2), bar_len, bar_h,
                 boxstyle="round,pad=0.003",
@@ -464,7 +470,7 @@ def render_image(title, rows, all_data, image_index, stats=None):
     ax.plot([zero_x, zero_x], [y_first_row_top, y_last_row_bot],
             color='#FFFFFF', linewidth=0.7, linestyle='--', alpha=0.4)
 
-    # ── Footnote for rows with notes (Image 4 only) ──
+    # ── Footnote for rows with notes ──
     notes = [(d['base_month'], d['note']) for d in rows if d.get('note')]
     if notes:
         y_note = y_last_row_bot + 0.02
@@ -484,24 +490,24 @@ def render_image(title, rows, all_data, image_index, stats=None):
         first_m = stats['first_month']
         last_m = stats['last_month']
         jp_text(ax, 0.02, y_stats_title,
-                f"\u25b6 \u5168\u671f\u9593\u7d71\u8a08 ({first_m}-{last_m})",
+                f"\u25b6 全期間統計 ({first_m}-{last_m})",
                 fontsize=15, fontweight='bold', color='#58A6FF', va='center')
 
         y_line1 = y_stats_title - 0.45
-        line1 = (f"\u6700\u5927\u4e0b\u843d: {stats['max_drop_pct']:+.1f}% ({stats['max_drop_label']})  "
-                 f"|  \u6700\u5927\u4e0a\u6607: {stats['max_rise_pct']:+.1f}% ({stats['max_rise_label']})")
+        line1 = (f"最大上昇: {stats['max_rise_pct']:+.1f}% ({stats['max_rise_label']})  "
+                 f"|  最大下落: {stats['max_drop_pct']:+.1f}% ({stats['max_drop_label']})")
         jp_text(ax, 0.02, y_line1, line1,
                 fontsize=13, color=TEXT_PRIMARY, va='center')
 
         y_line2 = y_line1 - 0.40
-        line2 = (f"\u5e73\u5747\u4e56\u96e2: {stats['avg_dev']:+.1f}%  |  "
-                 f"\u4e2d\u592e\u5024\u4e56\u96e2: {stats['median_dev']:+.1f}%")
+        line2 = (f"平均乖離: {stats['avg_dev']:+.1f}%  |  "
+                 f"中央値乖離: {stats['median_dev']:+.1f}%")
         jp_text(ax, 0.02, y_line2, line2,
                 fontsize=13, color=TEXT_PRIMARY, va='center')
 
         y_line3 = y_line2 - 0.40
-        line3 = (f"\u4e0b\u843d\u6708: {stats['neg_pct']:.0f}%  |  "
-                 f"\u4e0a\u6607\u6708: {stats['pos_pct']:.0f}%")
+        line3 = (f"上昇月: {stats['pos_pct']:.0f}%  |  "
+                 f"下落月: {stats['neg_pct']:.0f}%")
         jp_text(ax, 0.02, y_line3, line3,
                 fontsize=13, color=TEXT_PRIMARY, va='center')
 
@@ -514,16 +520,9 @@ def render_image(title, rows, all_data, image_index, stats=None):
 
 def main():
     setup_fonts()
-    data = load_excel_data()
+    data = load_data()
 
     os.makedirs(OUTPUT_DIR, exist_ok=True)
-
-    # Clean up old output files
-    for old_file in OLD_OUTPUT_FILES:
-        old_path = os.path.join(OUTPUT_DIR, old_file)
-        if os.path.exists(old_path):
-            os.remove(old_path)
-            print(f"Deleted old file: {old_path}")
 
     groups = split_data(data)
     stats = compute_stats(data)

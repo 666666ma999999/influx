@@ -2,7 +2,7 @@
 """投稿済みツイートのインプレッションを追跡するスクリプト
 
 Usage:
-    python scripts/track_impressions.py [--days 7] [--news-id ID] [--limit 10]
+    python -m extensions.tier3_posting.cli.track [--days 7] [--news-id ID] [--limit 10]
 
 推奨スケジュール:
     - 投稿1h後、4h後、24h後
@@ -17,9 +17,7 @@ import sys
 import time
 from datetime import datetime, timedelta, timezone
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from extensions.tier3_posting.x_poster.post_store import PostStore
+from ..x_poster.post_store import PostStore
 
 JST = timezone(timedelta(hours=9))
 

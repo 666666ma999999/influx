@@ -18,15 +18,15 @@ import urllib.request
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from extensions.tier3_posting.x_poster.post_store import PostStore
+from ..x_poster.post_store import PostStore
+from ..services.style_prompt_builder import build_style_aware_prompt
+from ..account_routing import resolve_account
 
 
 # Lazy import for image generation
 def _get_image_generators():
-    from extensions.tier3_posting.image_generator.chart_generator import ChartGenerator
-    from extensions.tier3_posting.image_generator.ogp_generator import OGPGenerator
+    from ..image_generator.chart_generator import ChartGenerator
+    from ..image_generator.ogp_generator import OGPGenerator
     return ChartGenerator(), OGPGenerator()
 
 
@@ -125,7 +125,8 @@ def extract_date(path: str) -> str:
 
 def find_latest_input() -> Optional[str]:
     """output/tweets_*.json の最新ファイルを返す。"""
-    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    # プロジェクトルート: extensions/tier3_posting/cli/compose.py → 4階層上
+    project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
     pattern = os.path.join(project_root, "output", "tweets_*.json")
     files = sorted(glob.glob(pattern))
     return files[-1] if files else None
@@ -184,7 +185,8 @@ def call_llm(prompt: str) -> str:
 
 def generate_win_rate_ranking(date_str: str) -> List[Dict[str, Any]]:
     """勝率ランキングTOP5ドラフトを生成。"""
-    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    # プロジェクトルート: extensions/tier3_posting/cli/compose.py → 4階層上
+    project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
     scorecards_path = os.path.join(
         project_root, "output", "performance", "scorecards.json"
     )
@@ -351,9 +353,12 @@ def generate_market_summary(
         return []
 
     tweets_text = _collect_tweets_text(market_tweets)
-    prompt = (
-        "以下の投資インフルエンサーの市況コメントを280文字以内で要約してください。"
-        "ハッシュタグは不要です。\n\n" + tweets_text
+    prompt = build_style_aware_prompt(
+        task="market_summary",
+        source_data=tweets_text,
+        target_account="kabuki666999",
+        target_style="explainer",
+        topic="investing",
     )
     body = call_llm(prompt)
     if not body:
@@ -385,9 +390,12 @@ def generate_hot_picks(
         return []
 
     tweets_text = _collect_tweets_text(pick_tweets)
-    prompt = (
-        "以下の投資インフルエンサーの推奨・購入銘柄を280文字以内で要約してください。"
-        "具体的な銘柄名を含めてください。\n\n" + tweets_text
+    prompt = build_style_aware_prompt(
+        task="hot_picks",
+        source_data=tweets_text,
+        target_account="kabuki666999",
+        target_style="listicle",
+        topic="investing",
     )
     body = call_llm(prompt)
     if not body:
@@ -418,9 +426,12 @@ def generate_trade_activity(
         return []
 
     tweets_text = _collect_tweets_text(trade_tweets)
-    prompt = (
-        "以下の投資インフルエンサーの売買動向を280文字以内で要約してください。\n\n"
-        + tweets_text
+    prompt = build_style_aware_prompt(
+        task="trade_activity",
+        source_data=tweets_text,
+        target_account="kabuki666999",
+        target_style="breaking",
+        topic="investing",
     )
     body = call_llm(prompt)
     if not body:
@@ -477,6 +488,10 @@ def generate_earnings_flash(
 # --- Main ---
 
 def parse_args() -> argparse.Namespace:
+    # プロジェクトルート: extensions/tier3_posting/cli/compose.py → 4階層上
+    project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+    default_output_dir = os.path.join(project_root, "output", "posting")
+
     parser = argparse.ArgumentParser(
         description="収集済みツイートからX投稿ドラフトを生成"
     )
@@ -489,8 +504,8 @@ def parse_args() -> argparse.Namespace:
         help="テンプレートのみモード（LLM呼び出しをスキップ）"
     )
     parser.add_argument(
-        "--output-dir", type=str, default="output/posting",
-        help="出力ディレクトリ (default: output/posting)"
+        "--output-dir", type=str, default=default_output_dir,
+        help=f"出力ディレクトリ (default: {default_output_dir})"
     )
     parser.add_argument(
         "--with-images", action="store_true",

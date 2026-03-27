@@ -17,15 +17,34 @@ influx/
 │   ├── x_collector.py         # SafeXCollector: Playwright+Cookie認証によるツイート収集
 │   ├── classifier.py          # TweetClassifier: キーワード/正規表現ベース分類
 │   └── llm_classifier.py      # LLMClassifier: Claude API(urllib)によるバッチ分類
-├── scripts/                    # 実行スクリプト
+├── extensions/tier3_posting/   # 投稿管理エクステンション（独立モジュール）
+│   ├── cli/                   # CLIエントリポイント（python -m で実行）
+│   │   ├── server.py          # 管理画面APIサーバー
+│   │   ├── manage.py          # ドラフト管理CLI（status/archive/compact等）
+│   │   ├── run.py             # 予約投稿・即時投稿（--mode schedule|immediate）
+│   │   ├── compose.py         # ドラフト自動生成（スタイル対応プロンプト）
+│   │   ├── build_html.py      # 静的HTML生成（オフライン用）
+│   │   ├── build_style_dataset.py  # ブックマーク教師データ構築
+│   │   └── track.py           # インプレッション追跡
+│   ├── services/              # ビジネスロジック（Single Source of Truth）
+│   │   ├── draft_service.py   # ドラフト作成・news_id生成
+│   │   ├── post_preparation.py # 文字数計算・日時正規化・ステータス定義
+│   │   ├── view_model.py      # UI用データ事前計算
+│   │   └── style_prompt_builder.py  # スタイル対応LLMプロンプト
+│   ├── account_routing.py     # マルチアカウント自動振り分け
+│   ├── ui/review.html         # 投稿進捗管理画面（カレンダー+リスト）
+│   ├── x_poster/              # PostStore, XPoster
+│   ├── scheduler/             # 投稿スケジューラー
+│   ├── image_generator/       # チャート・OGP画像生成
+│   ├── impression_tracker/    # インプレッションスクレイパー
+│   ├── news_curator/          # ニュースキュレーター
+│   └── post_composer/         # 投稿コンポーザー
+├── scripts/                    # 収集・分類スクリプト
 │   ├── collect_tweets.py      # ツイート収集 + キーワード分類 + JSON/CSV保存
 │   ├── classify_tweets.py     # LLM分類実行 + viewer.html更新
-│   ├── merge_llm_classifications.py  # LLM分類結果のマージ + viewer再生成
 │   ├── check_inactive_accounts.py    # アカウント状態・最終投稿日確認
 │   ├── setup_profile.py       # 初回セットアップ（persistent context）
-│   ├── setup_profile_vnc.py   # VNC版セットアップ（対話入力なし）
-│   ├── setup_from_chrome.py   # 既存Chrome Cookieコピーによるセットアップ
-│   └── setup_with_remote_chrome.py   # CDP接続（port 9222）によるCookie取得
+│   └── setup_from_chrome.py   # 既存Chrome Cookieコピーによるセットアップ
 ├── data/
 │   └── few_shot_examples.json # LLM分類のFew-shot例（24例）
 ├── output/                    # 生成ファイル（.gitignoreでJSON/CSVは除外）
@@ -95,6 +114,24 @@ docker compose run xstock python scripts/classify_tweets.py --input output/tweet
 
 # アカウント状態確認
 docker compose run xstock python scripts/check_inactive_accounts.py
+
+# === 投稿管理（extensions/tier3_posting/cli/ 経由） ===
+
+# 管理画面起動（http://localhost:8080）
+python -m extensions.tier3_posting.cli.server --port 8080
+# Docker: docker compose --profile review up review
+
+# ドラフト管理（ステータス確認）
+python -m extensions.tier3_posting.cli.manage status
+
+# ドラフト自動生成
+docker compose run xstock python -m extensions.tier3_posting.cli.compose
+
+# 承認済みドラフトの予約投稿
+docker compose run xstock python -m extensions.tier3_posting.cli.run --no-dry-run --limit 2
+
+# 即時投稿
+docker compose run xstock python -m extensions.tier3_posting.cli.run --mode immediate --no-dry-run
 ```
 
 ### collect_tweets.py オプション

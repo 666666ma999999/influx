@@ -8,9 +8,7 @@ import os
 import re
 import sys
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from extensions.tier3_posting.x_poster.post_store import PostStore
+from ..x_poster.post_store import PostStore
 
 EMBED_PATTERN = re.compile(r"const EMBEDDED_DATA = \[.*?\];", re.DOTALL)
 
@@ -43,8 +41,9 @@ def encode_images_base64(drafts: list) -> list:
 def main():
     parser = argparse.ArgumentParser(description="PostStoreデータをreview.htmlに埋め込み")
     parser.add_argument(
-        "--html", default="output/posting/review.html",
-        help="テンプレートHTMLパス (default: output/posting/review.html)"
+        "--html",
+        default=os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "ui", "review.html"),
+        help="テンプレートHTMLパス (default: extensions/tier3_posting/ui/review.html)"
     )
     parser.add_argument(
         "--output", default=None,
@@ -58,41 +57,19 @@ def main():
 
     output_path = args.output or args.html
 
-    # PostStore からデータ読み込み
+    # PostStore からデータ読み込み（履歴・インプレッション・メタ情報統合済み）
     store = PostStore(base_dir=args.data_dir)
-    drafts = store.load_drafts()
-    history = store.load_history()
+    drafts = store.get_all_with_history()
 
-    # 履歴をnews_idでインデックス化
-    history_map = {}
-    for rec in history:
-        nid = rec.get("news_id")
-        if nid:
-            history_map[nid] = rec
-
-    # ドラフトに履歴情報をマージ
+    # screenshot_paths をファイル名のみに変換
     for draft in drafts:
-        nid = draft.get("news_id")
-        if nid and nid in history_map:
-            h = history_map[nid]
-            if h.get("posted_url"):
-                draft["posted_url"] = h["posted_url"]
-            if h.get("posted_at"):
-                draft["posted_at"] = h["posted_at"]
-            if h.get("error"):
-                draft["error"] = h["error"]
-
-    # インプレッションデータのマージ
-    latest_impressions = store.get_latest_impressions()
-    for draft in drafts:
-        news_id = draft.get("news_id")
-        if news_id and news_id in latest_impressions:
-            draft["impressions"] = latest_impressions[news_id]
+        paths = draft.get("screenshot_paths", [])
+        draft["screenshot_paths"] = [os.path.basename(p) for p in paths]
 
     # 画像データのBase64エンコード
     drafts = encode_images_base64(drafts)
 
-    print(f"ドラフト: {len(drafts)}件, 履歴: {len(history)}件")
+    print(f"ドラフト: {len(drafts)}件（履歴・インプレッション統合済み）")
 
     # HTML読み込み
     if not os.path.exists(args.html):
@@ -102,15 +79,20 @@ def main():
     with open(args.html, "r", encoding="utf-8") as f:
         html = f.read()
 
-    # EMBEDDED_DATA置換
+    # EMBEDDED_DATA置換（プレースホルダーがあるHTMLのみ。API版review.htmlではスキップ）
     data_json = json.dumps(drafts, ensure_ascii=False, indent=None)
     # 制御文字エスケープ
     data_json = data_json.replace('\n', '\\n').replace('\r', '\\r').replace('\t', '\\t')
 
     match = EMBED_PATTERN.search(html)
     if not match:
-        print("ERROR: EMBEDDED_DATA placeholder not found in HTML")
-        sys.exit(1)
+        print("INFO: EMBEDDED_DATA placeholder not found (API版review.html)。データJSONのみ出力します。")
+        # フォールバック: JSONファイルとして出力
+        json_path = output_path.replace(".html", "_data.json")
+        with open(json_path, "w", encoding="utf-8") as f:
+            json.dump(drafts, f, ensure_ascii=False, indent=2)
+        print(f"データ出力: {len(drafts)}件 → {json_path}")
+        return
 
     new_snippet = f"const EMBEDDED_DATA = {data_json};"
     new_html = html[:match.start()] + new_snippet + html[match.end():]

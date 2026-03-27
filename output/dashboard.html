@@ -1,0 +1,1376 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>influx Dashboard</title>
+<style>
+:root {
+  --color-bg: #000;
+  --color-bg-elevated: #16181c;
+  --color-bg-hover: #1d1f23;
+  --color-bg-overlay: rgba(91,112,131,0.4);
+  --color-bg-header: rgba(0,0,0,0.65);
+  --color-text-primary: #e7e9ea;
+  --color-text-secondary: #71767b;
+  --color-text-link: #1d9bf0;
+  --color-border: #2f3336;
+  --color-border-hover: #3e4144;
+  --color-accent: #1d9bf0;
+  --color-accent-hover: #1a8cd8;
+  --color-draft: #1d9bf0;
+  --color-approved: #00ba7c;
+  --color-posted: #7856ff;
+  --color-rejected: #f4212e;
+  --color-warning: #ffd400;
+  --color-scheduled: #ffd400;
+  --color-draft-bg: rgba(29,155,240,0.15);
+  --color-approved-bg: rgba(0,186,124,0.15);
+  --color-posted-bg: rgba(120,86,255,0.15);
+  --color-rejected-bg: rgba(244,33,46,0.15);
+  --color-scheduled-bg: rgba(255,212,0,0.15);
+  --color-healthy: #00ba7c;
+  --color-healthy-bg: rgba(0,186,124,0.15);
+  --color-critical: #f4212e;
+  --color-critical-bg: rgba(244,33,46,0.15);
+  --color-warning-bg: rgba(255,212,0,0.15);
+  --radius-card: 16px;
+  --radius-pill: 9999px;
+  --radius-input: 8px;
+  --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--color-bg);
+  color: var(--color-text-primary);
+  font-family: var(--font-family);
+  line-height: 1.4;
+  min-height: 100vh;
+}
+a { color: var(--color-text-link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.container { max-width: 1200px; margin: 0 auto; padding: 0 16px 48px; }
+
+/* Header */
+.header {
+  position: sticky; top: 0; z-index: 100;
+  background: var(--color-bg-header);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--color-border);
+  padding: 12px 0; margin-bottom: 24px;
+}
+.header-inner {
+  max-width: 1200px; margin: 0 auto; padding: 0 16px;
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;
+}
+.header-title { font-size: 20px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+.health-badge { font-size: 12px; font-weight: 600; padding: 2px 10px; border-radius: var(--radius-pill); text-transform: uppercase; }
+.health-healthy { background: var(--color-healthy-bg); color: var(--color-healthy); }
+.health-warning { background: var(--color-warning-bg); color: var(--color-warning); }
+.health-critical { background: var(--color-critical-bg); color: var(--color-critical); }
+.header-meta { font-size: 13px; color: var(--color-text-secondary); }
+
+/* Nav */
+.nav { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 24px; }
+.nav a {
+  display: inline-block; padding: 6px 14px; border-radius: var(--radius-pill);
+  font-size: 13px; font-weight: 500; color: var(--color-text-secondary);
+  border: 1px solid var(--color-border); transition: all .15s;
+}
+.nav a:hover { color: var(--color-text-primary); border-color: var(--color-border-hover); text-decoration: none; }
+.nav a.active { color: var(--color-accent); border-color: var(--color-accent); }
+.nav a.missing { opacity: 0.4; pointer-events: none; }
+
+/* Section */
+.section { margin-bottom: 28px; }
+.section-title {
+  font-size: 15px; font-weight: 700; color: var(--color-text-secondary);
+  margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px;
+}
+
+/* KPI Cards */
+.kpi-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; }
+.kpi-card {
+  background: var(--color-bg-elevated); border: 1px solid var(--color-border);
+  border-radius: var(--radius-card); padding: 16px; text-align: center;
+}
+.kpi-label { font-size: 12px; color: var(--color-text-secondary); margin-bottom: 4px; }
+.kpi-value { font-size: 28px; font-weight: 700; }
+
+/* Pipeline Flow */
+.pipeline {
+  display: flex; align-items: center; gap: 0; overflow-x: auto;
+  background: var(--color-bg-elevated); border: 1px solid var(--color-border);
+  border-radius: var(--radius-card); padding: 20px 16px;
+}
+.stage { flex: 1; min-width: 100px; text-align: center; }
+.stage-icon {
+  width: 44px; height: 44px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 20px; margin-bottom: 6px; border: 2px solid var(--color-border);
+}
+.stage-icon.completed { border-color: var(--color-healthy); background: var(--color-healthy-bg); }
+.stage-icon.ready { border-color: var(--color-accent); background: var(--color-draft-bg); }
+.stage-icon.pending { border-color: var(--color-border); }
+.stage-icon.error { border-color: var(--color-critical); background: var(--color-critical-bg); }
+.stage-label { font-size: 13px; font-weight: 600; }
+.stage-count { font-size: 12px; color: var(--color-text-secondary); }
+.stage-arrow { flex: 0 0 32px; text-align: center; color: var(--color-text-secondary); font-size: 18px; }
+
+/* Lifecycle + Alerts */
+.split-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.lifecycle-card, .alerts-card {
+  background: var(--color-bg-elevated); border: 1px solid var(--color-border);
+  border-radius: var(--radius-card); padding: 20px;
+}
+.alerts-card { max-height: 200px; overflow-y: auto; }
+.lifecycle-bar { display: flex; height: 28px; border-radius: 6px; overflow: hidden; margin-bottom: 12px; }
+.lifecycle-segment { min-width: 2px; transition: width .3s; }
+.lifecycle-legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; }
+.legend-item { display: flex; align-items: center; gap: 4px; }
+.legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+.alert-item { padding: 6px 0; font-size: 13px; border-bottom: 1px solid var(--color-border); display: flex; align-items: flex-start; gap: 6px; }
+.alert-item:last-child { border-bottom: none; }
+.alert-icon { flex-shrink: 0; }
+
+/* Actions */
+.actions-list { display: flex; flex-direction: column; gap: 8px; }
+.action-item {
+  background: var(--color-bg-elevated); border: 1px solid var(--color-border);
+  border-radius: 12px; padding: 12px 16px; display: flex; align-items: center; gap: 12px;
+}
+.action-priority {
+  width: 24px; height: 24px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700;
+  background: var(--color-draft-bg); color: var(--color-accent); flex-shrink: 0;
+}
+.action-content { flex: 1; min-width: 0; }
+.action-label { font-size: 14px; font-weight: 600; }
+.action-reason { font-size: 12px; color: var(--color-text-secondary); }
+.action-cmd {
+  font-family: "SF Mono", "Fira Code", monospace; font-size: 12px;
+  color: var(--color-text-secondary); background: rgba(255,255,255,0.05);
+  padding: 4px 8px; border-radius: 6px; margin-top: 4px; word-break: break-all;
+}
+.copy-btn {
+  background: none; border: 1px solid var(--color-border);
+  color: var(--color-text-secondary); border-radius: 6px;
+  padding: 4px 10px; font-size: 12px; cursor: pointer; white-space: nowrap; flex-shrink: 0;
+  transition: all .15s;
+}
+.copy-btn:hover { color: var(--color-text-primary); border-color: var(--color-border-hover); }
+.copy-btn.copied { color: var(--color-healthy); border-color: var(--color-healthy); }
+
+/* Run History */
+.history-table-wrap {
+  background: var(--color-bg-elevated); border: 1px solid var(--color-border);
+  border-radius: var(--radius-card); overflow-x: auto;
+}
+.history-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.history-table th { padding: 10px 14px; text-align: left; color: var(--color-text-secondary); font-weight: 600; border-bottom: 1px solid var(--color-border); white-space: nowrap; }
+.history-table td { padding: 8px 14px; border-bottom: 1px solid var(--color-border); white-space: nowrap; }
+.history-table tr:last-child td { border-bottom: none; }
+.history-table tr:hover td { background: var(--color-bg-hover); }
+
+/* BTC */
+.btc-card {
+  background: var(--color-bg-elevated); border: 1px solid var(--color-border);
+  border-radius: var(--radius-card); padding: 20px;
+  display: flex; gap: 24px; flex-wrap: wrap; align-items: center;
+}
+.btc-stat { font-size: 13px; }
+.btc-stat strong { color: var(--color-text-primary); }
+.btc-stat span { color: var(--color-text-secondary); }
+
+/* Empty state */
+.empty-state { text-align: center; padding: 32px; color: var(--color-text-secondary); font-size: 14px; }
+
+/* ====================================================================
+   Posting Queue
+   ==================================================================== */
+.pq-section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.pq-header-actions { display: flex; gap: 6px; }
+.pq-header-btn {
+  padding: 6px 14px; border-radius: var(--radius-pill); font-size: 13px; font-weight: 600;
+  border: 1px solid var(--color-border); background: none; color: var(--color-text-secondary);
+  cursor: pointer; transition: all .15s;
+}
+.pq-header-btn:hover { color: var(--color-text-primary); border-color: var(--color-border-hover); }
+.pq-header-btn--primary { background: var(--color-accent); border-color: var(--color-accent); color: #fff; }
+.pq-header-btn--primary:hover { background: var(--color-accent-hover); }
+
+/* PQ Tabs */
+.pq-tabs { display: flex; border-bottom: 1px solid var(--color-border); margin-bottom: 16px; }
+.pq-tab {
+  flex: 1; text-align: center; padding: 12px 0; font-size: 14px; font-weight: 500;
+  color: var(--color-text-secondary); cursor: pointer; position: relative;
+  border: none; background: none; transition: background 0.2s;
+}
+.pq-tab:hover { background: rgba(231,233,234,0.06); }
+.pq-tab.active { color: var(--color-text-primary); font-weight: 700; }
+.pq-tab.active::after {
+  content: ''; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+  width: 56px; height: 4px; background: var(--color-accent); border-radius: 2px;
+}
+.pq-tab-count { font-size: 12px; color: var(--color-text-secondary); font-weight: 400; margin-left: 4px; }
+.pq-tab.active .pq-tab-count { color: var(--color-text-primary); }
+
+/* PQ Card Grid */
+.pq-card-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; padding: 8px 0; }
+
+/* PQ Card */
+.pq-card {
+  background: var(--color-bg-elevated); border: 1px solid var(--color-border);
+  border-radius: var(--radius-card); padding: 16px; cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.pq-card:hover { background: var(--color-bg-hover); border-color: var(--color-border-hover); }
+.pq-card-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.pq-card-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+.pq-badge {
+  display: inline-block; padding: 2px 8px; border-radius: var(--radius-pill);
+  font-size: 12px; font-weight: 600; line-height: 1.4; white-space: nowrap;
+}
+.pq-badge--draft { background: var(--color-draft-bg); color: var(--color-draft); }
+.pq-badge--approved { background: var(--color-approved-bg); color: var(--color-approved); }
+.pq-badge--posted { background: var(--color-posted-bg); color: var(--color-posted); }
+.pq-badge--rejected { background: var(--color-rejected-bg); color: var(--color-rejected); }
+.pq-badge--scheduled { background: var(--color-scheduled-bg); color: var(--color-scheduled); }
+.pq-badge--failed { background: var(--color-critical-bg); color: var(--color-critical); }
+.pq-badge--type { background: rgba(231,233,234,0.1); color: var(--color-text-secondary); font-weight: 500; }
+.pq-card-sources { font-size: 12px; color: var(--color-text-secondary); opacity: 0.7; }
+.pq-card-title {
+  font-size: 15px; font-weight: 700; line-height: 1.3;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.pq-card-body {
+  font-size: 14px; color: var(--color-text-secondary); line-height: 1.4;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+  white-space: pre-wrap; word-break: break-word; min-height: 20px;
+}
+.pq-card-hashtags { display: flex; gap: 4px; flex-wrap: wrap; font-size: 13px; color: var(--color-accent); }
+.pq-card-meta { display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: var(--color-text-secondary); }
+.pq-char-counter { font-weight: 600; font-size: 12px; }
+.pq-char-counter--ok { color: var(--color-approved); }
+.pq-char-counter--warn { color: var(--color-warning); }
+.pq-char-counter--over { color: var(--color-rejected); }
+.pq-card-scheduled { display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--color-text-secondary); }
+.pq-card-schedule-info {
+  padding: 8px 12px; margin-top: 4px;
+  background: rgba(255,212,0,0.1); border-left: 3px solid var(--color-scheduled);
+  border-radius: 4px; font-size: 13px; color: var(--color-scheduled);
+}
+.pq-card-impressions {
+  display: flex; flex-wrap: wrap; gap: 12px; padding: 10px 0; margin-top: 4px;
+  border-top: 1px solid var(--color-border); font-size: 13px; color: #8899a6;
+}
+.pq-card-impressions span:hover { color: #e7e9ea; }
+.pq-impression-time { font-size: 11px; color: #536471; margin-left: auto; }
+.pq-card-images { display: flex; gap: 8px; margin-top: 6px; overflow-x: auto; padding: 4px 0; }
+.pq-card-image-thumb {
+  flex-shrink: 0; width: 120px; cursor: pointer; border-radius: 8px;
+  overflow: hidden; border: 1px solid var(--color-border); transition: transform 0.2s;
+}
+.pq-card-image-thumb:hover { transform: scale(1.05); }
+.pq-card-image-thumb img { width: 100%; height: 80px; object-fit: cover; display: block; }
+.pq-image-label { display: block; padding: 4px 6px; font-size: 11px; color: #8899a6; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pq-posted-link { display: inline-flex; align-items: center; gap: 4px; color: var(--color-accent); font-size: 13px; padding: 4px 0; }
+.pq-posted-link:hover { text-decoration: underline; }
+.pq-card-error {
+  padding: 6px 10px; background: var(--color-critical-bg); border-radius: 6px;
+  font-size: 12px; color: var(--color-critical);
+  white-space: pre-wrap; word-break: break-word;
+  max-height: 60px; overflow: hidden;
+}
+.pq-card-footer { display: flex; gap: 6px; flex-wrap: wrap; padding-top: 8px; border-top: 1px solid var(--color-border); }
+.pq-card-btn {
+  flex: 1; padding: 6px 0; border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill); background: none; font-size: 13px;
+  font-weight: 600; text-align: center; transition: background 0.2s; min-width: 70px; cursor: pointer;
+}
+.pq-card-btn:hover { background: rgba(231,233,234,0.06); }
+.pq-card-btn--approve { color: var(--color-approved); border-color: rgba(0,186,124,0.3); }
+.pq-card-btn--approve:hover { background: rgba(0,186,124,0.1); }
+.pq-card-btn--reject { color: var(--color-rejected); border-color: rgba(244,33,46,0.3); }
+.pq-card-btn--reject:hover { background: rgba(244,33,46,0.1); }
+.pq-card-btn--edit { color: var(--color-accent); border-color: rgba(29,155,240,0.3); }
+.pq-card-btn--edit:hover { background: rgba(29,155,240,0.1); }
+.pq-card-btn--delete { color: var(--color-text-secondary); }
+.pq-card-btn--delete:hover { background: rgba(231,233,234,0.06); }
+
+/* PQ Modal */
+.pq-modal-overlay {
+  display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: var(--color-bg-overlay); backdrop-filter: blur(4px);
+  z-index: 200; justify-content: center; align-items: center; padding: 20px;
+}
+.pq-modal-overlay.active { display: flex; }
+.pq-modal {
+  background: var(--color-bg); border: 1px solid var(--color-border);
+  border-radius: var(--radius-card); width: 100%; max-width: 600px; max-height: 90vh; overflow-y: auto;
+}
+.pq-modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px; border-bottom: 1px solid var(--color-border);
+  position: sticky; top: 0; background: var(--color-bg); z-index: 1;
+}
+.pq-modal-header h2 { font-size: 17px; font-weight: 700; }
+.pq-modal-close {
+  background: none; border: none; color: var(--color-text-primary); font-size: 20px;
+  width: 34px; height: 34px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+}
+.pq-modal-close:hover { background: rgba(231,233,234,0.1); }
+.pq-modal-body { padding: 16px; display: flex; flex-direction: column; gap: 16px; }
+.pq-form-group { display: flex; flex-direction: column; gap: 6px; }
+.pq-form-label { font-size: 13px; font-weight: 600; color: var(--color-text-secondary); }
+.pq-form-input, .pq-form-textarea, .pq-form-select {
+  background: var(--color-bg); border: 1px solid var(--color-border);
+  border-radius: var(--radius-input); padding: 10px 12px;
+  color: var(--color-text-primary); font-size: 15px; transition: border-color 0.2s;
+}
+.pq-form-input:focus, .pq-form-textarea:focus, .pq-form-select:focus { outline: none; border-color: var(--color-accent); }
+.pq-form-textarea { line-height: 1.4; resize: vertical; min-height: 140px; }
+.pq-form-select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2371767b' viewBox='0 0 16 16'%3E%3Cpath d='M8 11.5l-5-5h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px;
+}
+.pq-textarea-footer { display: flex; align-items: center; justify-content: space-between; margin-top: -8px; }
+.pq-textarea-hint { font-size: 12px; color: var(--color-text-secondary); opacity: 0.6; }
+.pq-live-counter { font-size: 14px; font-weight: 600; }
+.pq-modal-info {
+  display: flex; gap: 16px; flex-wrap: wrap; padding: 8px 12px;
+  background: var(--color-bg-elevated); border-radius: var(--radius-input);
+  font-size: 13px; color: var(--color-text-secondary);
+}
+.pq-modal-info-item { display: flex; flex-direction: column; gap: 2px; }
+.pq-modal-info-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.6; }
+.pq-modal-info-value { color: var(--color-text-primary); font-size: 13px; }
+.pq-modal-footer {
+  display: flex; gap: 8px; justify-content: flex-end; padding: 12px 16px;
+  border-top: 1px solid var(--color-border); position: sticky; bottom: 0; background: var(--color-bg);
+}
+.pq-modal-btn {
+  padding: 8px 20px; border-radius: var(--radius-pill); font-size: 14px; font-weight: 700;
+  border: 1px solid var(--color-border); cursor: pointer; transition: background 0.2s;
+}
+.pq-modal-btn--cancel { background: none; color: var(--color-text-primary); }
+.pq-modal-btn--cancel:hover { background: rgba(231,233,234,0.1); }
+.pq-modal-btn--save { background: var(--color-accent); border-color: var(--color-accent); color: #fff; }
+.pq-modal-btn--save:hover { background: var(--color-accent-hover); }
+
+/* PQ Confirm */
+.pq-confirm-overlay {
+  display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: var(--color-bg-overlay); backdrop-filter: blur(4px);
+  z-index: 300; justify-content: center; align-items: center; padding: 20px;
+}
+.pq-confirm-overlay.active { display: flex; }
+.pq-confirm-box {
+  background: var(--color-bg); border: 1px solid var(--color-border);
+  border-radius: var(--radius-card); padding: 24px; max-width: 320px; width: 100%; text-align: center;
+}
+.pq-confirm-box h3 { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
+.pq-confirm-box p { font-size: 14px; color: var(--color-text-secondary); margin-bottom: 20px; line-height: 1.5; }
+.pq-confirm-actions { display: flex; gap: 8px; justify-content: center; }
+.pq-confirm-btn {
+  padding: 8px 24px; border-radius: var(--radius-pill); font-size: 14px; font-weight: 700;
+  border: none; cursor: pointer; transition: background 0.2s;
+}
+.pq-confirm-btn--cancel { background: rgba(231,233,234,0.1); color: var(--color-text-primary); }
+.pq-confirm-btn--cancel:hover { background: rgba(231,233,234,0.15); }
+.pq-confirm-btn--delete { background: var(--color-rejected); color: #fff; }
+.pq-confirm-btn--delete:hover { background: #dc1d28; }
+
+/* PQ Toast */
+.pq-toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(100px);
+  background: var(--color-bg-elevated); border: 1px solid var(--color-border);
+  border-radius: var(--radius-input); padding: 10px 20px; font-size: 14px;
+  color: var(--color-text-primary); z-index: 400; opacity: 0;
+  transition: transform 0.3s ease, opacity 0.3s ease; pointer-events: none;
+}
+.pq-toast.visible { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+/* PQ Image Modal */
+.pq-image-modal-overlay {
+  display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.85); z-index: 500;
+  justify-content: center; align-items: center; cursor: pointer;
+}
+.pq-image-modal-overlay.active { display: flex; }
+.pq-image-modal-content { max-width: 90vw; max-height: 90vh; border-radius: 12px; }
+.pq-image-modal-caption { color: #e7e9ea; text-align: center; margin-top: 12px; font-size: 14px; }
+
+.hidden-input { display: none; }
+
+/* ====================================================================
+   Progress & Quality Widgets
+   ==================================================================== */
+.widget-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.widget-card {
+  background: var(--color-bg-elevated); border: 1px solid var(--color-border);
+  border-radius: var(--radius-card); padding: 20px;
+}
+.widget-card-title { font-size: 13px; font-weight: 700; color: var(--color-text-secondary); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.3px; }
+.bottleneck-bar { display: flex; height: 24px; border-radius: 6px; overflow: hidden; margin-bottom: 10px; }
+.bottleneck-segment { min-width: 4px; transition: width .3s; }
+.bottleneck-label { font-size: 13px; color: var(--color-warning); font-weight: 600; }
+.bottleneck-sub { font-size: 12px; color: var(--color-text-secondary); margin-top: 4px; }
+.completion-row { display: flex; gap: 24px; align-items: baseline; margin-top: 8px; }
+.completion-stat { text-align: center; }
+.completion-stat-value { font-size: 28px; font-weight: 700; display: block; }
+.completion-stat-label { font-size: 12px; color: var(--color-text-secondary); }
+.char-dist-bar { display: flex; height: 20px; border-radius: 4px; overflow: hidden; margin-bottom: 8px; }
+.char-dist-legend { display: flex; gap: 12px; font-size: 12px; color: var(--color-text-secondary); }
+.char-dist-legend span { display: flex; align-items: center; gap: 4px; }
+.char-dist-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.tpl-mix-bar { display: flex; height: 20px; border-radius: 4px; overflow: hidden; margin-bottom: 8px; }
+.tpl-mix-legend { display: flex; flex-wrap: wrap; gap: 10px; font-size: 12px; color: var(--color-text-secondary); }
+.tpl-mix-legend span { display: flex; align-items: center; gap: 4px; }
+.hashtag-cloud { display: flex; flex-wrap: wrap; gap: 6px; }
+.hashtag-pill {
+  display: inline-block; padding: 4px 10px; border-radius: var(--radius-pill);
+  background: var(--color-draft-bg); color: var(--color-accent);
+  font-size: 13px; font-weight: 500;
+}
+.hashtag-pill .hcount { color: var(--color-text-secondary); margin-left: 4px; font-weight: 400; }
+.engagement-row { display: flex; gap: 20px; flex-wrap: wrap; }
+.engagement-stat { text-align: center; }
+.engagement-stat-value { font-size: 22px; font-weight: 700; display: block; }
+.engagement-stat-label { font-size: 11px; color: var(--color-text-secondary); }
+.engagement-best { font-size: 12px; color: var(--color-text-secondary); margin-top: 8px; }
+.engagement-best strong { color: var(--color-text-primary); }
+.mini-timeline { display: flex; align-items: center; gap: 0; margin-top: 4px; }
+.mt-step { display: flex; align-items: center; gap: 0; font-size: 11px; color: var(--color-text-secondary); }
+.mt-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--color-border); flex-shrink: 0; }
+.mt-dot.done { background: var(--color-approved); }
+.mt-line { width: 20px; height: 2px; background: var(--color-border); }
+.mt-line.done { background: var(--color-approved); }
+.mt-label { margin-left: 3px; white-space: nowrap; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-border-hover); }
+
+/* Responsive */
+@media (max-width: 900px) {
+  .kpi-grid { grid-template-columns: repeat(3, 1fr); }
+  .split-row { grid-template-columns: 1fr; }
+  .widget-grid { grid-template-columns: 1fr; }
+  .pq-card-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 600px) {
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .pipeline { flex-wrap: wrap; gap: 8px; }
+  .stage-arrow { display: none; }
+  .stage { min-width: 80px; }
+  .header-inner { flex-direction: column; align-items: flex-start; }
+  .pq-card-grid { grid-template-columns: 1fr; }
+  .pq-card-btn { font-size: 12px; min-width: 60px; padding: 5px 0; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-inner">
+    <div class="header-title">influx Dashboard <span id="health-badge" class="health-badge"></span></div>
+    <div class="header-meta" id="header-meta"></div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="nav" id="nav-links"></div>
+
+  <div class="section">
+    <div class="section-title">Overview</div>
+    <div class="kpi-grid" id="kpi-grid"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Pipeline</div>
+    <div class="pipeline" id="pipeline"></div>
+  </div>
+
+  <div class="section">
+    <div class="split-row">
+      <div>
+        <div class="section-title">Draft Lifecycle</div>
+        <div class="lifecycle-card" id="lifecycle"></div>
+      </div>
+      <div>
+        <div class="section-title">Alerts</div>
+        <div class="alerts-card" id="alerts"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Next Actions</div>
+    <div class="actions-list" id="actions"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Run History (14 days)</div>
+    <div class="history-table-wrap">
+      <table class="history-table" id="history-table">
+        <thead><tr><th>Date</th><th>Collected</th><th>Classified</th><th>Drafts</th><th>Approved</th><th>Posted</th><th>Tracked</th><th>Status</th></tr></thead>
+        <tbody id="history-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">BTC Divergence</div>
+    <div class="btc-card" id="btc-card"></div>
+  </div>
+
+  <!-- Progress Tracking -->
+  <div class="section" id="progress-section">
+    <div class="section-title">Progress Tracking</div>
+    <div class="widget-grid">
+      <div class="widget-card" id="bottleneck-widget"></div>
+      <div class="widget-card" id="completion-widget"></div>
+    </div>
+  </div>
+
+  <!-- Quality Management -->
+  <div class="section" id="quality-section">
+    <div class="section-title">Quality Management</div>
+    <div class="widget-grid">
+      <div class="widget-card" id="charcount-widget"></div>
+      <div class="widget-card" id="template-widget"></div>
+      <div class="widget-card" id="hashtag-widget"></div>
+      <div class="widget-card" id="engagement-widget"></div>
+    </div>
+  </div>
+
+  <!-- Posting Queue -->
+  <div class="section" id="posting-queue">
+    <div class="pq-section-header">
+      <div class="section-title" style="margin-bottom:0">Posting Queue</div>
+      <div class="pq-header-actions">
+        <button class="pq-header-btn" id="pq-btn-import">Import</button>
+        <button class="pq-header-btn pq-header-btn--primary" id="pq-btn-export">Export</button>
+      </div>
+    </div>
+    <div class="pq-tabs" id="pq-tabs">
+      <button class="pq-tab active" data-pq-tab="needs_review">Needs Review<span class="pq-tab-count" id="pq-count-needs_review"></span></button>
+      <button class="pq-tab" data-pq-tab="approved">Approved<span class="pq-tab-count" id="pq-count-approved"></span></button>
+      <button class="pq-tab" data-pq-tab="scheduled">Scheduled<span class="pq-tab-count" id="pq-count-scheduled"></span></button>
+      <button class="pq-tab" data-pq-tab="posted">Posted<span class="pq-tab-count" id="pq-count-posted"></span></button>
+    </div>
+    <div class="pq-card-grid" id="pq-card-grid"></div>
+  </div>
+</div>
+
+<!-- PQ Edit Modal -->
+<div class="pq-modal-overlay" id="pq-modal-overlay">
+  <div class="pq-modal">
+    <div class="pq-modal-header">
+      <h2 id="pq-modal-title">Edit Draft</h2>
+      <button class="pq-modal-close" id="pq-modal-close">&times;</button>
+    </div>
+    <div class="pq-modal-body">
+      <div class="pq-modal-info" id="pq-modal-info" style="display:none;"></div>
+      <div class="pq-form-group">
+        <label class="pq-form-label" for="pq-edit-title">Title</label>
+        <input class="pq-form-input" id="pq-edit-title" type="text" placeholder="Post title">
+      </div>
+      <div class="pq-form-group">
+        <label class="pq-form-label" for="pq-edit-body">Body</label>
+        <textarea class="pq-form-textarea" id="pq-edit-body" placeholder="Post body (max 280 chars)"></textarea>
+        <div class="pq-textarea-footer">
+          <span class="pq-textarea-hint">X post character limit</span>
+          <span class="pq-live-counter" id="pq-edit-counter">280</span>
+        </div>
+      </div>
+      <div class="pq-form-group">
+        <label class="pq-form-label" for="pq-edit-hashtags">Hashtags (comma separated)</label>
+        <input class="pq-form-input" id="pq-edit-hashtags" type="text" placeholder="#stock, #investment">
+      </div>
+      <div class="pq-form-group">
+        <label class="pq-form-label" for="pq-edit-scheduled">Scheduled at</label>
+        <input class="pq-form-input" id="pq-edit-scheduled" type="datetime-local">
+      </div>
+      <div class="pq-form-group">
+        <label class="pq-form-label" for="pq-edit-format">Format</label>
+        <select class="pq-form-select" id="pq-edit-format">
+          <option value="x_post">x_post</option>
+          <option value="thread">thread</option>
+          <option value="summary_card">summary_card</option>
+        </select>
+      </div>
+    </div>
+    <div class="pq-modal-footer">
+      <button class="pq-modal-btn pq-modal-btn--cancel" id="pq-modal-cancel">Cancel</button>
+      <button class="pq-modal-btn pq-modal-btn--save" id="pq-modal-save">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- PQ Confirm Delete -->
+<div class="pq-confirm-overlay" id="pq-confirm-overlay">
+  <div class="pq-confirm-box">
+    <h3>Delete post?</h3>
+    <p>This action cannot be undone.</p>
+    <div class="pq-confirm-actions">
+      <button class="pq-confirm-btn pq-confirm-btn--cancel" id="pq-confirm-cancel">Cancel</button>
+      <button class="pq-confirm-btn pq-confirm-btn--delete" id="pq-confirm-delete">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- PQ Toast -->
+<div class="pq-toast" id="pq-toast"></div>
+
+<!-- PQ Image Modal -->
+<div class="pq-image-modal-overlay" id="pq-imageModal">
+  <div onclick="event.stopPropagation()">
+    <img class="pq-image-modal-content" id="pq-modalImage" src="" alt="">
+    <div class="pq-image-modal-caption" id="pq-modalCaption"></div>
+  </div>
+</div>
+
+<!-- PQ File Input -->
+<input type="file" class="hidden-input" id="pq-file-input" accept=".json">
+
+<script>
+/* ========================================================================
+   Dashboard Data
+   ======================================================================== */
+const EMBEDDED_DATA = {"generated_at": "2026-03-20T21:26:11.924126+09:00", "overview": {"latest_run_date": "2026-03-14", "health": "warning", "counts": {"collected": 139, "classified": 139, "drafts": 0, "approved": 2, "posted": 0, "tracked": 0, "failed": 1}}, "stages": [{"key": "collect", "label": "収集", "status": "completed", "count": 139, "command": "docker compose run xstock python scripts/collect_tweets.py"}, {"key": "classify", "label": "分類", "status": "completed", "count": 139, "command": "docker compose run xstock python scripts/classify_tweets.py"}, {"key": "draft", "label": "ドラフト", "status": "ready", "count": 0, "command": ""}, {"key": "review", "label": "レビュー", "status": "completed", "count": 2, "command": ""}, {"key": "post", "label": "投稿", "status": "error", "count": 0, "command": ""}, {"key": "track", "label": "追跡", "status": "pending", "count": 0, "command": ""}], "lifecycle": {"draft": 0, "approved": 2, "scheduled": 0, "posted": 0, "failed": 1, "rejected": 1, "archived": 2}, "run_history": [{"date": "2026-03-14", "collected": 139, "classified": 139, "drafts": "-", "approved": "-", "posted": "-", "tracked": "-", "status": "healthy"}, {"date": "2026-03-08", "collected": 170, "classified": 170, "drafts": "-", "approved": "-", "posted": "-", "tracked": "-", "status": "healthy"}, {"date": "2026-03-05", "collected": 239, "classified": 0, "drafts": "-", "approved": "-", "posted": "-", "tracked": "-", "status": "healthy"}, {"date": "2026-02-26", "collected": 155, "classified": 155, "drafts": "-", "approved": "-", "posted": "-", "tracked": "-", "status": "healthy"}, {"date": "2026-02-24", "collected": 147, "classified": 147, "drafts": "-", "approved": "-", "posted": "-", "tracked": "-", "status": "healthy"}, {"date": "2026-02-23", "collected": 16, "classified": 16, "drafts": "-", "approved": "-", "posted": "-", "tracked": "-", "status": "healthy"}, {"date": "2026-02-22", "collected": 40, "classified": 40, "drafts": "-", "approved": "-", "posted": "-", "tracked": "-", "status": "healthy"}, {"date": "2026-02-21", "collected": 172, "classified": 150, "drafts": "-", "approved": "-", "posted": "-", "tracked": "-", "status": "healthy"}, {"date": "2026-02-19", "collected": 52, "classified": 52, "drafts": "-", "approved": "-", "posted": "-", "tracked": "-", "status": "healthy"}, {"date": "2026-02-06", "collected": 0, "classified": 0, "drafts": "-", "approved": "-", "posted": "-", "tracked": "-", "status": "warning"}], "actions": [{"priority": 1, "label": "投稿エラーを確認", "reason": "failed 1件 — review.htmlでエラー詳細を確認", "command": ""}, {"priority": 2, "label": "ツイート収集", "reason": "最新収集日が3日以上前", "command": "docker compose run xstock python scripts/collect_tweets.py"}, {"priority": 5, "label": "投稿実行", "reason": "承認済み2件が未投稿", "command": ""}], "pages": [{"label": "Dashboard", "href": "dashboard.html", "exists": true}, {"label": "Viewer", "href": "viewer.html", "exists": true}, {"label": "Review", "href": "posting/review.html", "exists": true}, {"label": "Performance", "href": "performance_report.html", "exists": true}, {"label": "Annotator", "href": "annotator.html", "exists": true}, {"label": "BTC Viewer", "href": "btc_deviation_viewer.html", "exists": true}], "btc_divergence": {"data_updated_at": "2026-03-14 16:16", "chart_exists": true, "viewer_exists": true, "image_count": 8}, "alerts": [{"level": "error", "text": "投稿失敗が1件あります"}, {"level": "warning", "text": "承認済み2件が未投稿です"}, {"level": "info", "text": "実投稿はまだありません（dry_runのみ）"}]};
+
+const D = EMBEDDED_DATA;
+const STAGE_ICONS = {
+  collect: "\u{1F4E5}", classify: "\u{1F3F7}", draft: "\u{1F4DD}",
+  review: "\u{2705}", post: "\u{1F4E4}", track: "\u{1F4CA}"
+};
+const STATUS_COLORS = {
+  draft: "var(--color-draft)", approved: "var(--color-approved)",
+  scheduled: "var(--color-scheduled)", posted: "var(--color-posted)",
+  failed: "var(--color-critical)", rejected: "var(--color-rejected)",
+  archived: "var(--color-text-secondary)"
+};
+
+function esc(s) {
+  var el = document.createElement("span");
+  el.textContent = s || "";
+  return el.innerHTML;
+}
+
+function renderHeader() {
+  var badge = document.getElementById("health-badge");
+  var health = D.overview ? D.overview.health : "unknown";
+  badge.textContent = health;
+  badge.className = "health-badge health-" + health;
+  var meta = document.getElementById("header-meta");
+  var gen = D.generated_at ? new Date(D.generated_at).toLocaleString("ja-JP") : "-";
+  var latest = D.overview ? D.overview.latest_run_date || "-" : "-";
+  meta.textContent = "Last build: " + gen + " | Latest data: " + latest;
+}
+
+function renderNav() {
+  var nav = document.getElementById("nav-links");
+  var pages = D.pages || [];
+  pages.forEach(function(p) {
+    var a = document.createElement("a");
+    a.href = p.href;
+    a.textContent = p.label;
+    if (p.href === "dashboard.html") a.classList.add("active");
+    if (!p.exists) a.classList.add("missing");
+    nav.appendChild(a);
+  });
+}
+
+function renderKPI() {
+  var grid = document.getElementById("kpi-grid");
+  var c = D.overview ? D.overview.counts || {} : {};
+  var items = [
+    { label: "Collected", value: c.collected || 0, color: "" },
+    { label: "Classified", value: c.classified || 0, color: "" },
+    { label: "Drafts", value: c.drafts || 0, color: "var(--color-draft)" },
+    { label: "Approved", value: c.approved || 0, color: "var(--color-approved)" },
+    { label: "Posted", value: c.posted || 0, color: "var(--color-posted)" },
+    { label: "Tracked", value: c.tracked || 0, color: "var(--color-warning)" }
+  ];
+  items.forEach(function(item) {
+    var card = document.createElement("div");
+    card.className = "kpi-card";
+    card.innerHTML = '<div class="kpi-label">' + esc(item.label) + '</div>' +
+      '<div class="kpi-value" style="' + (item.color ? "color:" + item.color : "") + '">' + item.value + '</div>';
+    grid.appendChild(card);
+  });
+}
+
+function renderPipeline() {
+  var el = document.getElementById("pipeline");
+  var stages = D.stages || [];
+  stages.forEach(function(s, i) {
+    if (i > 0) { var arrow = document.createElement("div"); arrow.className = "stage-arrow"; arrow.textContent = "\u2192"; el.appendChild(arrow); }
+    var div = document.createElement("div"); div.className = "stage";
+    div.innerHTML = '<div class="stage-icon ' + (s.status || "pending") + '">' + (STAGE_ICONS[s.key] || "") + '</div>' +
+      '<div class="stage-label">' + esc(s.label) + '</div><div class="stage-count">' + (s.count != null ? s.count : "-") + '</div>';
+    el.appendChild(div);
+  });
+  if (!stages.length) el.innerHTML = '<div class="empty-state">No pipeline data</div>';
+}
+
+function renderLifecycle() {
+  var el = document.getElementById("lifecycle");
+  var lc = D.lifecycle || {};
+  var keys = ["draft","approved","scheduled","posted","failed","rejected","archived"];
+  var total = keys.reduce(function(s,k){ return s + (lc[k]||0); }, 0);
+  if (!total) { el.innerHTML = '<div class="empty-state">No draft data</div>'; return; }
+  var bar = '<div class="lifecycle-bar">';
+  keys.forEach(function(k){ var v=lc[k]||0; if(v>0){ bar += '<div class="lifecycle-segment" style="width:'+(v/total*100).toFixed(1)+'%;background:'+(STATUS_COLORS[k]||"#555")+'" title="'+k+': '+v+'"></div>'; }});
+  bar += '</div>';
+  var leg = '<div class="lifecycle-legend">';
+  keys.forEach(function(k){ var v=lc[k]||0; if(v>0){ leg += '<div class="legend-item"><div class="legend-dot" style="background:'+(STATUS_COLORS[k]||"#555")+'"></div>'+k+' '+v+'</div>'; }});
+  leg += '</div>';
+  el.innerHTML = bar + leg;
+}
+
+function renderAlerts() {
+  var el = document.getElementById("alerts");
+  var alerts = D.alerts || [];
+  if (!alerts.length) { el.innerHTML = '<div class="empty-state">No alerts</div>'; return; }
+  var iconMap = { error: "\u274C", warning: "\u26A0\uFE0F", info: "\u2139\uFE0F" };
+  alerts.forEach(function(a) {
+    var div = document.createElement("div"); div.className = "alert-item alert-" + (a.level || "info");
+    div.innerHTML = '<span class="alert-icon">' + (iconMap[a.level] || iconMap.info) + '</span><span>' + esc(a.text) + '</span>';
+    el.appendChild(div);
+  });
+}
+
+function renderActions() {
+  var el = document.getElementById("actions");
+  var actions = D.actions || [];
+  if (!actions.length) { el.innerHTML = '<div class="empty-state">No pending actions</div>'; return; }
+  actions.forEach(function(a, i) {
+    var div = document.createElement("div"); div.className = "action-item";
+    var cmdHtml = a.command ? '<div class="action-cmd">' + esc(a.command) + '</div>' : '';
+    div.innerHTML = '<div class="action-priority">' + (i+1) + '</div><div class="action-content">' +
+      '<div class="action-label">' + esc(a.label) + '</div><div class="action-reason">' + esc(a.reason) + '</div>' + cmdHtml + '</div>' +
+      (a.command ? '<button class="copy-btn" data-cmd="' + esc(a.command).replace(/"/g,"&quot;") + '">Copy</button>' : '');
+    el.appendChild(div);
+  });
+  el.addEventListener("click", function(e) {
+    var btn = e.target.closest(".copy-btn"); if (!btn) return;
+    navigator.clipboard.writeText(btn.getAttribute("data-cmd")).then(function() {
+      btn.textContent = "Copied!"; btn.classList.add("copied");
+      setTimeout(function(){ btn.textContent = "Copy"; btn.classList.remove("copied"); }, 1500);
+    });
+  });
+}
+
+function renderHistory() {
+  var tbody = document.getElementById("history-body");
+  var rows = D.run_history || [];
+  if (!rows.length) { tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No run history</td></tr>'; return; }
+  rows.forEach(function(r) {
+    var tr = document.createElement("tr");
+    var dot = r.status === "healthy" ? "\u{1F7E2}" : r.status === "warning" ? "\u{1F7E1}" : "\u{1F534}";
+    tr.innerHTML = '<td>'+esc(r.date)+'</td><td>'+(r.collected!=null?r.collected:"-")+'</td><td>'+(r.classified!=null?r.classified:"-")+'</td><td>'+(r.drafts||"-")+'</td><td>'+(r.approved||"-")+'</td><td>'+(r.posted||"-")+'</td><td>'+(r.tracked||"-")+'</td><td>'+dot+'</td>';
+    tbody.appendChild(tr);
+  });
+}
+
+function renderBTC() {
+  var el = document.getElementById("btc-card");
+  var btc = D.btc_divergence;
+  if (!btc) { el.innerHTML = '<div class="empty-state">No BTC data</div>'; return; }
+  el.innerHTML = '<div class="btc-stat"><span>Data updated: </span><strong>' + esc(btc.data_updated_at || "-") + '</strong></div>' +
+    '<div class="btc-stat"><span>Charts: </span><strong>' + (btc.image_count || 0) + ' images</strong></div>' +
+    '<div class="btc-stat"><span>Viewer: </span><strong>' + (btc.viewer_exists ? "Available" : "Not found") + '</strong></div>' +
+    (btc.viewer_exists ? '<a href="btc_deviation_viewer.html" style="font-size:13px;">Open Viewer</a>' : '');
+}
+
+renderHeader(); renderNav(); renderKPI(); renderPipeline();
+renderLifecycle(); renderAlerts(); renderActions(); renderHistory(); renderBTC();
+
+/* ========================================================================
+   Posting Queue
+   ======================================================================== */
+var POSTING_DATA = [{"news_id": "0f2f4782c058e75d", "source_items": [], "title": "勝率ランキングTOP5 (20260310)", "body": "📈勝率ランキングTOP5\n\n1位 弐億貯男 100.0%（3件中0件的中）\n2位 ななし＠氷河期ブログの人 100.0%（2件中0件的中）\n3位 後藤達也 100.0%（1件中0件的中）\n4位 HUTCH ハッチ (岡元兵八郎) 100.0%（1件中0件的中）\n5位 ゆーき 100.0%（1件中0件的中）\n\n#投資 #株式 #インフルエンサー", "format": "x_post", "scheduled_at": "2026-03-10T10:21:33.111191", "hashtags": ["#投資", "#株式", "#インフルエンサー"], "status": "archived", "template_type": "win_rate_ranking", "created_at": "2026-03-10T10:21:33.111619+00:00", "updated_at": "2026-03-15T06:44:22.478861+00:00", "archived_reason": "scheduled_time_passed"}, {"news_id": "8910aaf401d9349f", "source_items": ["https://twitter.com/gihuboy/status/100007"], "title": "逆指標シグナル: 岐阜暴威 (20260310)", "body": "⚠️逆指標シグナル検知\n\n岐阜暴威(@gihuboy)が強気発言:\n「日経4万円突破！全力ロング！ここからさらに上がる！強気でいきます！爆上げ相場に乗り遅れるな！」\n\n逆指標アカウントの強気発言は警戒シグナルとして注目\n\n#逆指標 #投資 #株式", "format": "x_post", "scheduled_at": "2026-03-10T10:21:33.111473", "hashtags": ["#逆指標", "#投資", "#株式"], "status": "rejected", "template_type": "contrarian_signal", "created_at": "2026-03-10T10:21:33.112419+00:00", "updated_at": "2026-03-15T04:59:29.545046+00:00", "posted_at": "2026-03-10T10:22:14.997690+00:00"}, {"news_id": "932ecc84d0c44b7a", "source_items": [], "title": "週間レポート (20260310)", "body": "📊今週の投資インフルエンサー動向\n\n・推奨銘柄: 2件\n・購入報告: 2件\n・IPO情報: 1件\n・市況トレンド: 2件\n・高騰銘柄: 2件\n・下落銘柄: 1件\n・警戒シグナル: 2件\nアクティブ: 10名\n\n#週間レポート #投資 #株式", "format": "x_post", "scheduled_at": "2026-03-10T10:21:33.111485", "hashtags": ["#週間レポート", "#投資", "#株式"], "status": "archived", "template_type": "weekly_report", "created_at": "2026-03-10T10:21:33.112761+00:00", "updated_at": "2026-03-15T06:44:22.479421+00:00", "archived_reason": "scheduled_time_passed"}, {"news_id": "62255878086c5b80", "source_items": [], "title": "勝率ランキングTOP5 (20260315)", "body": "📈勝率ランキングTOP5\n\n1位 弐億貯男 100.0%（3件中0件的中）\n2位 ななし＠氷河期ブログの人 100.0%（2件中0件的中）\n3位 後藤達也 100.0%（1件中0件的中）\n4位 HUTCH ハッチ (岡元兵八郎) 100.0%（1件中0件的中）\n5位 ゆーき 100.0%（1件中0件的中）\n\n#投資 #株式 #インフルエンサー", "format": "x_post", "scheduled_at": "2026-03-15T13:57:02.791307", "hashtags": ["#投資", "#株式", "#インフルエンサー"], "status": "approved", "template_type": "win_rate_ranking", "created_at": "2026-03-15T04:57:02.791933+00:00", "updated_at": "2026-03-19T06:30:00.634288+00:00", "posted_at": "2026-03-19T06:30:00.767291+00:00"}, {"news_id": "5cf61aced533cfe2", "source_items": ["https://twitter.com/gihuboy/status/2032375213456048214"], "title": "逆指標シグナル: 岐阜暴威 (20260315)", "body": "⚠️逆指標シグナル検知\n\n岐阜暴威(@gihuboy)が強気発言:\n「今日買いポジ増やしちゃったよ、、、\nおわった、、、」\n\n逆指標アカウントの強気発言は警戒シグナルとして注目\n\n#逆指標 #投資 #株式", "format": "x_post", "scheduled_at": "2026-03-15T13:57:02.791344", "hashtags": ["#逆指標", "#投資", "#株式"], "status": "approved", "template_type": "contrarian_signal", "created_at": "2026-03-15T04:57:02.793225+00:00", "updated_at": "2026-03-19T06:30:00.635433+00:00", "posted_at": "2026-03-19T06:30:00.767717+00:00"}, {"news_id": "53adc60ebfd9c3ec", "source_items": [], "title": "週間レポート (20260315)", "body": "📊今週の投資インフルエンサー動向\n\n・推奨銘柄: 13件\n・購入報告: 13件\n・IPO情報: 4件\n・市況トレンド: 17件\n・高騰銘柄: 7件\n・下落銘柄: 12件\n・警戒シグナル: 10件\nアクティブ: 18名\n\n#週間レポート #投資 #株式", "format": "x_post", "scheduled_at": "2026-03-15T13:57:02.791393", "hashtags": ["#週間レポート", "#投資", "#株式"], "status": "failed", "template_type": "weekly_report", "created_at": "2026-03-15T04:57:02.793526+00:00", "updated_at": "2026-03-15T05:06:03.787674+00:00", "error": "ElementHandle.click: Timeout 30000ms exceeded.\nCall log:\n  - attempting click action\n    2 × waiting for element to be visible, enabled and stable\n      - element is visible, enabled and stable\n      - scrolling into view if needed\n      - done scrolling\n      - <div class=\"css-175oi2r r-1p0dtai r-1d2f490 r-1xcajam r-zchlnj r-ipm5af\"></div> from <div class=\"css-175oi2r r-aqfbo4 r-zchlnj r-1d2f490 r-1xcajam r-1p0dtai r-12vffkv\">…</div> subtree intercepts pointer events\n    - retrying click action\n    - waiting 20ms\n    2 × waiting for element to be visible, enabled and stable\n      - element is visible, enabled and stable\n      - scrolling into view if needed\n      - done scrolling\n      - <div class=\"css-175oi2r r-1p0dtai r-1d2f490 r-1xcajam r-zchlnj r-ipm5af\"></div> from <div class=\"css-175oi2r r-aqfbo4 r-zchlnj r-1d2f490 r-1xcajam r-1p0dtai r-12vffkv\">…</div> subtree intercepts pointer events\n    - retrying click action\n      - waiting 100ms\n    56 × waiting for element to be visible, enabled and stable\n       - element is visible, enabled and stable\n       - scrolling into view if needed\n       - done scrolling\n       - <div class=\"css-175oi2r r-1p0dtai r-1d2f490 r-1xcajam r-zchlnj r-ipm5af\"></div> from <div class=\"css-175oi2r r-aqfbo4 r-zchlnj r-1d2f490 r-1xcajam r-1p0dtai r-12vffkv\">…</div> subtree intercepts pointer events\n     - retrying click action\n       - waiting 500ms\n"}];
+
+var PQ_STORAGE_KEY = 'dashboard_posting_data';
+var PQ_CHAR_LIMIT = 280;
+var pqAllData = pqLoadData();
+var pqCurrentTab = 'needs_review';
+var pqEditingId = null;
+var pqDeletingId = null;
+
+function pqGetItemId(item) { return item.news_id || item.id || ''; }
+
+function pqLoadData() {
+  var stored = localStorage.getItem(PQ_STORAGE_KEY);
+  var local = [];
+  if (stored) { try { local = JSON.parse(stored); } catch(e) { local = []; } }
+  return pqMergeData(POSTING_DATA, local);
+}
+
+function pqMergeData(base, overlay) {
+  var map = new Map();
+  var i, item, key;
+  for (i = 0; i < base.length; i++) { item = base[i]; key = pqGetItemId(item); if (key) map.set(key, item); }
+  for (i = 0; i < overlay.length; i++) {
+    item = overlay[i]; key = pqGetItemId(item); if (!key) continue;
+    if (map.has(key)) {
+      var existing = map.get(key);
+      var ot = item.updated_at || item.created_at || '';
+      var et = existing.updated_at || existing.created_at || '';
+      if (ot >= et) map.set(key, item);
+    } else { map.set(key, item); }
+  }
+  return Array.from(map.values());
+}
+
+function pqSaveData(data) {
+  try { localStorage.setItem(PQ_STORAGE_KEY, JSON.stringify(data)); }
+  catch(e) { pqShowToast('Failed to save: storage may be full'); }
+}
+
+function pqFormatDate(dateStr) {
+  if (!dateStr) return '';
+  var d = new Date(dateStr); if (isNaN(d.getTime())) return dateStr;
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+}
+
+function pqFormatDateShort(dateStr) {
+  if (!dateStr) return '';
+  var d = new Date(dateStr); if (isNaN(d.getTime())) return dateStr;
+  return String(d.getMonth()+1).padStart(2,'0')+'/'+String(d.getDate()).padStart(2,'0')+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+}
+
+function pqCharClass(remaining) {
+  if (remaining < 0) return 'pq-char-counter--over';
+  if (remaining <= 40) return 'pq-char-counter--warn';
+  return 'pq-char-counter--ok';
+}
+
+function pqLiveClass(remaining) {
+  if (remaining < 0) return 'pq-live-counter pq-char-counter--over';
+  if (remaining <= 40) return 'pq-live-counter pq-char-counter--warn';
+  return 'pq-live-counter pq-char-counter--ok';
+}
+
+var pqToastTimer = null;
+function pqShowToast(message) {
+  var el = document.getElementById('pq-toast');
+  el.textContent = message; el.classList.add('visible');
+  if (pqToastTimer) clearTimeout(pqToastTimer);
+  pqToastTimer = setTimeout(function(){ el.classList.remove('visible'); pqToastTimer = null; }, 2500);
+}
+
+function pqGetFilteredData(tabName) {
+  var statusFilter;
+  if (tabName === 'needs_review') statusFilter = ['draft','failed','rejected'];
+  else statusFilter = [tabName];
+  return pqAllData.filter(function(item) {
+    return statusFilter.indexOf(item.status) !== -1;
+  }).sort(function(a,b) {
+    var da = a.created_at || '', db = b.created_at || '';
+    return da > db ? -1 : da < db ? 1 : 0;
+  });
+}
+
+function pqGetTabCounts() {
+  var c = { needs_review: 0, approved: 0, scheduled: 0, posted: 0 };
+  for (var i = 0; i < pqAllData.length; i++) {
+    var s = pqAllData[i].status;
+    if (s === 'draft' || s === 'failed' || s === 'rejected') c.needs_review++;
+    else if (s === 'approved') c.approved++;
+    else if (s === 'scheduled') c.scheduled++;
+    else if (s === 'posted') c.posted++;
+  }
+  return c;
+}
+
+function pqRenderTabCounts() {
+  var c = pqGetTabCounts();
+  var tabs = ['needs_review','approved','scheduled','posted'];
+  for (var i = 0; i < tabs.length; i++) {
+    var el = document.getElementById('pq-count-' + tabs[i]);
+    if (el) el.textContent = c[tabs[i]] > 0 ? ' (' + c[tabs[i]] + ')' : '';
+  }
+}
+
+function pqRenderCards() {
+  var grid = document.getElementById('pq-card-grid');
+  var items = pqGetFilteredData(pqCurrentTab);
+  if (items.length === 0) {
+    var msgs = {
+      needs_review: 'No items to review. Generate drafts or import a JSON file.',
+      approved: 'No approved posts. Review and approve items from the queue.',
+      scheduled: 'No scheduled posts.',
+      posted: 'No posts published yet.'
+    };
+    grid.innerHTML = '<div class="empty-state">' + (msgs[pqCurrentTab] || 'No items') + '</div>';
+    return;
+  }
+  var html = '';
+  for (var i = 0; i < items.length; i++) html += pqRenderCard(items[i]);
+  grid.innerHTML = html;
+}
+
+function pqRenderCard(item) {
+  var id = pqGetItemId(item);
+  var body = item.body || '';
+  var remaining = PQ_CHAR_LIMIT - body.length;
+  var counterCls = pqCharClass(remaining);
+  var statusBadge = 'pq-badge--' + (item.status || 'draft');
+  var tmpl = item.template_type || item.format || 'x_post';
+
+  var hashHtml = '';
+  if (item.hashtags && item.hashtags.length) {
+    hashHtml = '<div class="pq-card-hashtags">';
+    for (var i = 0; i < item.hashtags.length; i++) {
+      var tag = item.hashtags[i]; if (tag && tag.charAt(0) !== '#') tag = '#' + tag;
+      hashHtml += '<span>' + esc(tag) + '</span>';
+    }
+    hashHtml += '</div>';
+  }
+
+  var schedHtml = '';
+  if (item.scheduled_at) {
+    schedHtml = '<div class="pq-card-scheduled"><span>&#128197;</span> ' + pqFormatDateShort(item.scheduled_at) + '</div>';
+  }
+
+  var schedInfoHtml = '';
+  if (item.status === 'scheduled' && item.scheduled_at) {
+    var sd = new Date(item.scheduled_at), now = new Date(), diff = sd - now;
+    var tStr = diff > 0 ? Math.floor(diff/3600000) + 'h ' + Math.floor((diff%3600000)/60000) + 'm' : 'time reached';
+    schedInfoHtml = '<div class="pq-card-schedule-info">&#128197; ' + sd.toLocaleString('ja-JP') + ' (' + tStr + ')</div>';
+  }
+
+  var postedHtml = '';
+  if (item.status === 'posted' && item.posted_url) {
+    postedHtml = '<a class="pq-posted-link" href="' + esc(item.posted_url) + '" target="_blank" rel="noopener" onclick="event.stopPropagation();">View post &#8594;</a>';
+  }
+
+  var srcHtml = '';
+  if (item.source_items && item.source_items.length) srcHtml = '<span class="pq-card-sources">' + item.source_items.length + ' source(s)</span>';
+
+  var errHtml = '';
+  if (item.status === 'failed' && item.error) {
+    var errText = item.error.length > 120 ? item.error.substring(0,120) + '...' : item.error;
+    errHtml = '<div class="pq-card-error">' + esc(errText) + '</div>';
+  }
+
+  var impHtml = '';
+  if (item.impressions) {
+    var imp = item.impressions;
+    var fn = function(n) { if (!n && n !== 0) return '-'; if (n >= 1e6) return (n/1e6).toFixed(1)+'M'; if (n >= 1e3) return (n/1e3).toFixed(1)+'K'; return n.toString(); };
+    var engRate = imp.engagement_rate ? (imp.engagement_rate*100).toFixed(2)+'%' : '-';
+    impHtml = '<div class="pq-card-impressions">' +
+      '<span title="Views">&#128065; '+fn(imp.impressions)+'</span>' +
+      '<span title="Likes">&#9825; '+fn(imp.likes)+'</span>' +
+      '<span title="Retweets">&#128260; '+fn(imp.retweets)+'</span>' +
+      '<span title="Replies">&#128172; '+fn(imp.replies)+'</span>' +
+      '<span title="Engagement">&#128202; '+engRate+'</span>' +
+      (imp.scraped_at ? '<span class="pq-impression-time">'+new Date(imp.scraped_at).toLocaleString('ja-JP')+'</span>' : '') +
+      '</div>';
+  }
+
+  var imgHtml = '';
+  if (item.images_base64 && item.images_base64.length) {
+    imgHtml = '<div class="pq-card-images">';
+    for (var j = 0; j < item.images_base64.length; j++) {
+      var img = item.images_base64[j];
+      imgHtml += '<div class="pq-card-image-thumb" data-pq-action="show-image" data-img-src="'+esc(img.data||'')+'" data-img-caption="'+esc(img.description||'')+'">' +
+        '<img src="'+esc(img.data||'')+'" alt="'+esc(img.description||'')+'" loading="lazy">' +
+        '<span class="pq-image-label">'+esc(img.description||'')+'</span></div>';
+    }
+    imgHtml += '</div>';
+  }
+
+  var actHtml = '';
+  var s = item.status;
+  if (s === 'draft' || s === 'failed') {
+    actHtml = '<button class="pq-card-btn pq-card-btn--approve" data-pq-action="approve" data-pq-id="'+esc(id)+'">Approve</button>' +
+      '<button class="pq-card-btn pq-card-btn--reject" data-pq-action="reject" data-pq-id="'+esc(id)+'">Reject</button>' +
+      '<button class="pq-card-btn pq-card-btn--edit" data-pq-action="edit" data-pq-id="'+esc(id)+'">Edit</button>' +
+      '<button class="pq-card-btn pq-card-btn--delete" data-pq-action="delete" data-pq-id="'+esc(id)+'">Delete</button>';
+  } else if (s === 'approved' || s === 'scheduled') {
+    actHtml = '<button class="pq-card-btn pq-card-btn--edit" data-pq-action="edit" data-pq-id="'+esc(id)+'">Edit</button>' +
+      '<button class="pq-card-btn pq-card-btn--reject" data-pq-action="reject" data-pq-id="'+esc(id)+'">Reject</button>' +
+      '<button class="pq-card-btn pq-card-btn--delete" data-pq-action="delete" data-pq-id="'+esc(id)+'">Delete</button>';
+  } else if (s === 'posted') {
+    actHtml = '<button class="pq-card-btn pq-card-btn--delete" data-pq-action="delete" data-pq-id="'+esc(id)+'">Delete</button>';
+  } else if (s === 'rejected') {
+    actHtml = '<button class="pq-card-btn pq-card-btn--edit" data-pq-action="edit" data-pq-id="'+esc(id)+'">Edit</button>' +
+      '<button class="pq-card-btn pq-card-btn--approve" data-pq-action="approve" data-pq-id="'+esc(id)+'">Approve</button>' +
+      '<button class="pq-card-btn pq-card-btn--delete" data-pq-action="delete" data-pq-id="'+esc(id)+'">Delete</button>';
+  }
+
+  return '<div class="pq-card" data-pq-id="'+esc(id)+'">' +
+    '<div class="pq-card-header"><div class="pq-card-badges">' +
+      '<span class="pq-badge '+statusBadge+'">'+esc(item.status||'draft')+'</span>' +
+      '<span class="pq-badge pq-badge--type">'+esc(tmpl)+'</span></div>'+srcHtml+'</div>' +
+    '<div class="pq-card-title">'+esc(item.title||'(no title)')+'</div>' +
+    '<div class="pq-card-body">'+esc(body)+'</div>' +
+    hashHtml +
+    '<div class="pq-card-meta"><span>'+pqFormatDate(item.created_at)+'</span>' +
+      '<span class="pq-char-counter '+counterCls+'">'+remaining+' chars</span></div>' +
+    pqMiniTimeline(item) +
+    schedHtml + schedInfoHtml + errHtml + impHtml + imgHtml + postedHtml +
+    '<div class="pq-card-footer">'+actHtml+'</div></div>';
+}
+
+function pqMiniTimeline(item) {
+  var steps = [
+    { label: 'Created', done: !!item.created_at, date: item.created_at },
+    { label: 'Approved', done: ['approved','scheduled','posted'].indexOf(item.status) !== -1, date: null },
+    { label: 'Posted', done: item.status === 'posted', date: item.posted_at }
+  ];
+  var html = '<div class="mini-timeline">';
+  for (var i = 0; i < steps.length; i++) {
+    if (i > 0) html += '<div class="mt-line' + (steps[i].done ? ' done' : '') + '"></div>';
+    var dateStr = steps[i].date ? pqFormatDateShort(steps[i].date) : '';
+    html += '<div class="mt-step"><div class="mt-dot' + (steps[i].done ? ' done' : '') + '"></div>' +
+      '<span class="mt-label">' + steps[i].label + (dateStr ? ' ' + dateStr : '') + '</span></div>';
+  }
+  html += '</div>';
+  return html;
+}
+
+function pqRenderAll() { pqRenderTabCounts(); pqRenderCards(); renderProgressSection(); renderQualitySection(); }
+
+/* ========================================================================
+   Progress Tracking
+   ======================================================================== */
+var TPL_COLORS = { win_rate_ranking: 'var(--color-accent)', contrarian_signal: 'var(--color-warning)', weekly_report: 'var(--color-posted)', unknown: 'var(--color-text-secondary)' };
+
+function renderProgressSection() {
+  var counts = { draft: 0, approved: 0, scheduled: 0, posted: 0, failed: 0, rejected: 0 };
+  for (var i = 0; i < pqAllData.length; i++) {
+    var s = pqAllData[i].status;
+    if (s && s !== 'archived' && counts.hasOwnProperty(s)) counts[s]++;
+  }
+
+  // Bottleneck widget
+  var el = document.getElementById('bottleneck-widget');
+  var transitions = [
+    { label: 'Draft \u2192 Approve', count: counts.draft, color: 'var(--color-draft)' },
+    { label: 'Approved \u2192 Post', count: counts.approved, color: 'var(--color-approved)' },
+    { label: 'Scheduled \u2192 Post', count: counts.scheduled, color: 'var(--color-scheduled)' },
+    { label: 'Failed \u2192 Review', count: counts.failed, color: 'var(--color-critical)' },
+    { label: 'Rejected \u2192 Edit', count: counts.rejected, color: 'var(--color-rejected)' }
+  ];
+  var total = transitions.reduce(function(s,t){ return s+t.count; },0);
+  var bottleneck = transitions.reduce(function(m,t){ return t.count > m.count ? t : m; }, transitions[0]);
+
+  var barHtml = '<div class="widget-card-title">Pipeline Bottleneck</div>';
+  if (total === 0) {
+    barHtml += '<div class="empty-state" style="padding:12px">No items in pipeline</div>';
+  } else {
+    barHtml += '<div class="bottleneck-bar">';
+    for (var i = 0; i < transitions.length; i++) {
+      var t = transitions[i];
+      if (t.count > 0) barHtml += '<div class="bottleneck-segment" style="width:'+(t.count/total*100).toFixed(1)+'%;background:'+t.color+'" title="'+t.label+': '+t.count+'"></div>';
+    }
+    barHtml += '</div>';
+    if (bottleneck.count > 0) barHtml += '<div class="bottleneck-label">' + bottleneck.count + ' items: ' + bottleneck.label + '</div>';
+    var detailParts = [];
+    for (var i = 0; i < transitions.length; i++) { if (transitions[i].count > 0) detailParts.push(transitions[i].label + ' (' + transitions[i].count + ')'); }
+    barHtml += '<div class="bottleneck-sub">' + detailParts.join(' / ') + '</div>';
+  }
+  el.innerHTML = barHtml;
+
+  // Completion widget
+  var compEl = document.getElementById('completion-widget');
+  var completed = counts.posted;
+  var inPipeline = counts.draft + counts.approved + counts.scheduled + counts.failed + counts.rejected;
+  compEl.innerHTML = '<div class="widget-card-title">Completion</div>' +
+    '<div class="completion-row">' +
+      '<div class="completion-stat"><span class="completion-stat-value" style="color:var(--color-posted)">' + completed + '</span><span class="completion-stat-label">Posted</span></div>' +
+      '<div class="completion-stat"><span class="completion-stat-value" style="color:var(--color-warning)">' + inPipeline + '</span><span class="completion-stat-label">In Pipeline</span></div>' +
+      '<div class="completion-stat"><span class="completion-stat-value">' + (completed + inPipeline) + '</span><span class="completion-stat-label">Total</span></div>' +
+    '</div>';
+}
+
+/* ========================================================================
+   Quality Management
+   ======================================================================== */
+function renderQualitySection() {
+  var nonArchived = pqAllData.filter(function(item) { return item.status !== 'archived'; });
+
+  // (a) Character Count Distribution
+  var charEl = document.getElementById('charcount-widget');
+  var ok = 0, warn = 0, over = 0;
+  for (var i = 0; i < nonArchived.length; i++) {
+    var len = (nonArchived[i].body || '').length;
+    if (len > 280) over++;
+    else if (len >= 240) warn++;
+    else ok++;
+  }
+  var charTotal = ok + warn + over;
+  var charHtml = '<div class="widget-card-title">Character Count</div>';
+  if (charTotal === 0) {
+    charHtml += '<div class="empty-state" style="padding:12px">No posts</div>';
+  } else {
+    charHtml += '<div class="char-dist-bar">';
+    if (ok > 0) charHtml += '<div class="bottleneck-segment" style="width:'+(ok/charTotal*100).toFixed(1)+'%;background:var(--color-approved)"></div>';
+    if (warn > 0) charHtml += '<div class="bottleneck-segment" style="width:'+(warn/charTotal*100).toFixed(1)+'%;background:var(--color-warning)"></div>';
+    if (over > 0) charHtml += '<div class="bottleneck-segment" style="width:'+(over/charTotal*100).toFixed(1)+'%;background:var(--color-critical)"></div>';
+    charHtml += '</div>';
+    charHtml += '<div class="char-dist-legend">' +
+      '<span><span class="char-dist-dot" style="background:var(--color-approved)"></span>OK ' + ok + '</span>' +
+      '<span><span class="char-dist-dot" style="background:var(--color-warning)"></span>Warning ' + warn + '</span>' +
+      '<span><span class="char-dist-dot" style="background:var(--color-critical)"></span>Over ' + over + '</span>' +
+    '</div>';
+  }
+  charEl.innerHTML = charHtml;
+
+  // (b) Template Mix
+  var tplEl = document.getElementById('template-widget');
+  var tplCounts = {};
+  for (var i = 0; i < nonArchived.length; i++) {
+    var t = nonArchived[i].template_type || 'unknown';
+    tplCounts[t] = (tplCounts[t] || 0) + 1;
+  }
+  var tplKeys = Object.keys(tplCounts).sort(function(a,b){ return tplCounts[b]-tplCounts[a]; });
+  var tplTotal = nonArchived.length;
+  var tplHtml = '<div class="widget-card-title">Template Mix</div>';
+  if (tplTotal === 0) {
+    tplHtml += '<div class="empty-state" style="padding:12px">No posts</div>';
+  } else {
+    tplHtml += '<div class="tpl-mix-bar">';
+    for (var i = 0; i < tplKeys.length; i++) {
+      var k = tplKeys[i], c = tplCounts[k];
+      tplHtml += '<div class="bottleneck-segment" style="width:'+(c/tplTotal*100).toFixed(1)+'%;background:'+(TPL_COLORS[k]||TPL_COLORS.unknown)+'"></div>';
+    }
+    tplHtml += '</div><div class="tpl-mix-legend">';
+    for (var i = 0; i < tplKeys.length; i++) {
+      var k = tplKeys[i];
+      tplHtml += '<span><span class="char-dist-dot" style="background:'+(TPL_COLORS[k]||TPL_COLORS.unknown)+'"></span>' + k + ' ' + tplCounts[k] + '</span>';
+    }
+    tplHtml += '</div>';
+  }
+  tplEl.innerHTML = tplHtml;
+
+  // (c) Top Hashtags
+  var hashEl = document.getElementById('hashtag-widget');
+  var tagCounts = {};
+  for (var i = 0; i < nonArchived.length; i++) {
+    var tags = nonArchived[i].hashtags || [];
+    for (var j = 0; j < tags.length; j++) {
+      var tag = tags[j].replace(/^#/, '');
+      tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+    }
+  }
+  var sortedTags = Object.keys(tagCounts).sort(function(a,b){ return tagCounts[b]-tagCounts[a]; }).slice(0, 8);
+  var hashHtml = '<div class="widget-card-title">Top Hashtags</div>';
+  if (sortedTags.length === 0) {
+    hashHtml += '<div class="empty-state" style="padding:12px">No hashtags</div>';
+  } else {
+    hashHtml += '<div class="hashtag-cloud">';
+    for (var i = 0; i < sortedTags.length; i++) {
+      hashHtml += '<span class="hashtag-pill">#' + esc(sortedTags[i]) + '<span class="hcount">' + tagCounts[sortedTags[i]] + '</span></span>';
+    }
+    hashHtml += '</div>';
+  }
+  hashEl.innerHTML = hashHtml;
+
+  // (d) Engagement Summary
+  var engEl = document.getElementById('engagement-widget');
+  var withImp = pqAllData.filter(function(item) { return item.impressions && item.impressions.engagement_rate != null; });
+  var engHtml = '<div class="widget-card-title">Engagement</div>';
+  if (withImp.length === 0) {
+    engHtml += '<div class="empty-state" style="padding:12px">No engagement data yet</div>';
+  } else {
+    var avgEng = withImp.reduce(function(s,it){ return s + it.impressions.engagement_rate; }, 0) / withImp.length;
+    var best = withImp.reduce(function(m,it){ return it.impressions.engagement_rate > m.impressions.engagement_rate ? it : m; });
+    var totalImp = withImp.reduce(function(s,it){ return s + (it.impressions.impressions || 0); }, 0);
+    engHtml += '<div class="engagement-row">' +
+      '<div class="engagement-stat"><span class="engagement-stat-value" style="color:var(--color-approved)">' + (avgEng*100).toFixed(2) + '%</span><span class="engagement-stat-label">Avg Rate</span></div>' +
+      '<div class="engagement-stat"><span class="engagement-stat-value">' + (totalImp >= 1000 ? (totalImp/1000).toFixed(1)+'K' : totalImp) + '</span><span class="engagement-stat-label">Total Views</span></div>' +
+    '</div>';
+    engHtml += '<div class="engagement-best">Best: <strong>' + esc((best.title||'').substring(0,30)) + '</strong> (' + (best.impressions.engagement_rate*100).toFixed(2) + '%)</div>';
+  }
+  engEl.innerHTML = engHtml;
+}
+
+/* Tab switching */
+function pqSwitchTab(tab) {
+  pqCurrentTab = tab;
+  var tabs = document.querySelectorAll('.pq-tab');
+  for (var i = 0; i < tabs.length; i++) {
+    tabs[i].classList.toggle('active', tabs[i].getAttribute('data-pq-tab') === tab);
+  }
+  pqRenderCards();
+}
+
+document.getElementById('pq-tabs').addEventListener('click', function(e) {
+  var tab = e.target.closest('.pq-tab');
+  if (tab) { var t = tab.getAttribute('data-pq-tab'); if (t) pqSwitchTab(t); }
+});
+
+/* Card actions */
+function pqFindItem(id) {
+  for (var i = 0; i < pqAllData.length; i++) { if (pqGetItemId(pqAllData[i]) === id) return pqAllData[i]; }
+  return null;
+}
+
+function pqUpdateStatus(id, newStatus) {
+  var item = pqFindItem(id); if (!item) return;
+  item.status = newStatus; item.updated_at = new Date().toISOString();
+  pqSaveData(pqAllData); pqRenderAll();
+}
+
+function pqRemoveItem(id) {
+  pqAllData = pqAllData.filter(function(item) { return pqGetItemId(item) !== id; });
+  pqSaveData(pqAllData); pqRenderAll();
+}
+
+document.getElementById('pq-card-grid').addEventListener('click', function(e) {
+  var imgThumb = e.target.closest('[data-pq-action="show-image"]');
+  if (imgThumb) { e.stopPropagation(); pqShowImageModal(imgThumb.getAttribute('data-img-src')||'', imgThumb.getAttribute('data-img-caption')||''); return; }
+  var btn = e.target.closest('[data-pq-action]');
+  if (btn) {
+    e.stopPropagation();
+    var action = btn.getAttribute('data-pq-action'), id = btn.getAttribute('data-pq-id');
+    if (action === 'approve') { pqUpdateStatus(id, 'approved'); pqShowToast('Post approved'); }
+    else if (action === 'reject') { pqUpdateStatus(id, 'rejected'); pqShowToast('Post rejected'); }
+    else if (action === 'edit') { pqOpenEditor(id); }
+    else if (action === 'delete') { pqOpenConfirmDelete(id); }
+    return;
+  }
+  var card = e.target.closest('.pq-card');
+  if (card) pqOpenEditor(card.getAttribute('data-pq-id'));
+});
+
+/* Modal Editor */
+var pqModalOverlay = document.getElementById('pq-modal-overlay');
+var pqEditTitle = document.getElementById('pq-edit-title');
+var pqEditBody = document.getElementById('pq-edit-body');
+var pqEditHashtags = document.getElementById('pq-edit-hashtags');
+var pqEditScheduled = document.getElementById('pq-edit-scheduled');
+var pqEditFormat = document.getElementById('pq-edit-format');
+var pqEditCounter = document.getElementById('pq-edit-counter');
+var pqModalInfo = document.getElementById('pq-modal-info');
+
+function pqOpenEditor(id) {
+  var item = pqFindItem(id); if (!item) return;
+  pqEditingId = id;
+  document.getElementById('pq-modal-title').textContent = item.status === 'rejected' ? 'Edit Rejected Post' : 'Edit Draft';
+  pqEditTitle.value = item.title || '';
+  pqEditBody.value = item.body || '';
+  pqEditHashtags.value = (item.hashtags || []).join(', ');
+  pqEditFormat.value = item.format || item.template_type || 'x_post';
+  if (item.scheduled_at) {
+    var d = new Date(item.scheduled_at);
+    if (!isNaN(d.getTime())) { var local = new Date(d.getTime() - d.getTimezoneOffset()*60000); pqEditScheduled.value = local.toISOString().slice(0,16); }
+    else pqEditScheduled.value = '';
+  } else pqEditScheduled.value = '';
+  var infoHtml = '';
+  if (id) infoHtml += '<div class="pq-modal-info-item"><span class="pq-modal-info-label">ID</span><span class="pq-modal-info-value">'+esc(id)+'</span></div>';
+  if (item.template_type) infoHtml += '<div class="pq-modal-info-item"><span class="pq-modal-info-label">Template</span><span class="pq-modal-info-value">'+esc(item.template_type)+'</span></div>';
+  if (item.source_items && item.source_items.length) infoHtml += '<div class="pq-modal-info-item"><span class="pq-modal-info-label">Sources</span><span class="pq-modal-info-value">'+item.source_items.length+' item(s)</span></div>';
+  if (item.created_at) infoHtml += '<div class="pq-modal-info-item"><span class="pq-modal-info-label">Created</span><span class="pq-modal-info-value">'+pqFormatDate(item.created_at)+'</span></div>';
+  if (infoHtml) { pqModalInfo.innerHTML = infoHtml; pqModalInfo.style.display = 'flex'; } else pqModalInfo.style.display = 'none';
+  pqUpdateLiveCounter();
+  pqModalOverlay.classList.add('active');
+  pqEditTitle.focus();
+}
+
+function pqCloseEditor() { pqEditingId = null; pqModalOverlay.classList.remove('active'); }
+
+function pqSaveEditor() {
+  if (!pqEditingId) return;
+  var item = pqFindItem(pqEditingId); if (!item) return;
+  item.title = pqEditTitle.value.trim();
+  item.body = pqEditBody.value;
+  var fv = pqEditFormat.value; item.format = fv; item.template_type = fv;
+  var hs = pqEditHashtags.value.trim();
+  item.hashtags = hs ? hs.split(',').map(function(s){ return s.trim(); }).filter(Boolean) : [];
+  item.scheduled_at = pqEditScheduled.value ? new Date(pqEditScheduled.value).toISOString() : null;
+  if (item.status === 'rejected' || item.status === 'failed') item.status = 'draft';
+  item.updated_at = new Date().toISOString();
+  pqSaveData(pqAllData); pqCloseEditor(); pqRenderAll(); pqShowToast('Changes saved');
+}
+
+function pqUpdateLiveCounter() {
+  var remaining = PQ_CHAR_LIMIT - (pqEditBody.value ? pqEditBody.value.length : 0);
+  pqEditCounter.textContent = remaining;
+  pqEditCounter.className = pqLiveClass(remaining);
+}
+
+pqEditBody.addEventListener('input', pqUpdateLiveCounter);
+document.getElementById('pq-modal-close').addEventListener('click', pqCloseEditor);
+document.getElementById('pq-modal-cancel').addEventListener('click', pqCloseEditor);
+document.getElementById('pq-modal-save').addEventListener('click', pqSaveEditor);
+pqModalOverlay.addEventListener('click', function(e) { if (e.target === pqModalOverlay) pqCloseEditor(); });
+
+/* Confirm Delete */
+var pqConfirmOverlay = document.getElementById('pq-confirm-overlay');
+
+function pqOpenConfirmDelete(id) { pqDeletingId = id; pqConfirmOverlay.classList.add('active'); }
+function pqCloseConfirmDelete() { pqDeletingId = null; pqConfirmOverlay.classList.remove('active'); }
+function pqConfirmDelete() { if (pqDeletingId !== null) { pqRemoveItem(pqDeletingId); pqCloseConfirmDelete(); pqShowToast('Post deleted'); } }
+
+document.getElementById('pq-confirm-cancel').addEventListener('click', pqCloseConfirmDelete);
+document.getElementById('pq-confirm-delete').addEventListener('click', pqConfirmDelete);
+pqConfirmOverlay.addEventListener('click', function(e) { if (e.target === pqConfirmOverlay) pqCloseConfirmDelete(); });
+
+/* Keyboard shortcuts */
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    if (pqDeletingId !== null) pqCloseConfirmDelete();
+    else if (pqEditingId !== null) pqCloseEditor();
+    else { var imgModal = document.getElementById('pq-imageModal'); if (imgModal.classList.contains('active')) pqCloseImageModal(); }
+  }
+  if ((e.ctrlKey || e.metaKey) && e.key === 's' && pqEditingId !== null) { e.preventDefault(); pqSaveEditor(); }
+});
+
+/* Export / Import */
+document.getElementById('pq-btn-export').addEventListener('click', function() {
+  if (!pqAllData.length) { pqShowToast('No data to export'); return; }
+  var blob = new Blob([JSON.stringify(pqAllData, null, 2)], { type: 'application/json' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a'); a.href = url;
+  a.download = 'dashboard_posting_' + new Date().toISOString().slice(0,10) + '.json';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+  pqShowToast('Exported ' + pqAllData.length + ' posts');
+});
+
+var pqFileInput = document.getElementById('pq-file-input');
+document.getElementById('pq-btn-import').addEventListener('click', function() { pqFileInput.click(); });
+pqFileInput.addEventListener('change', function(e) {
+  var file = e.target.files[0]; if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    try {
+      var imported = JSON.parse(ev.target.result);
+      if (!Array.isArray(imported)) { pqShowToast('Invalid JSON: expected array'); return; }
+      var before = pqAllData.length;
+      pqAllData = pqMergeData(pqAllData, imported);
+      pqSaveData(pqAllData); pqRenderAll();
+      pqShowToast('Imported ' + imported.length + ' posts (' + (pqAllData.length - before) + ' new)');
+    } catch(err) { pqShowToast('Failed to parse JSON'); }
+  };
+  reader.readAsText(file); pqFileInput.value = '';
+});
+
+/* Image Modal */
+function pqShowImageModal(src, caption) {
+  document.getElementById('pq-modalImage').src = src;
+  document.getElementById('pq-modalCaption').textContent = caption;
+  document.getElementById('pq-imageModal').classList.add('active');
+}
+function pqCloseImageModal() { document.getElementById('pq-imageModal').classList.remove('active'); }
+document.getElementById('pq-imageModal').addEventListener('click', pqCloseImageModal);
+
+/* Init posting queue */
+pqRenderAll();
+</script>
+</body>
+</html>

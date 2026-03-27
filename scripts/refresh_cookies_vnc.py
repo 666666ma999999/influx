@@ -22,9 +22,13 @@ from collector.config import PROFILE_PATH
 def main():
     parser = argparse.ArgumentParser(description="VNC経由Cookie再取得")
     parser.add_argument("--timeout", type=int, default=300, help="ログイン待機タイムアウト（秒、デフォルト: 300）")
+    parser.add_argument("--account", default=None, help="アカウントID（x_profiles/<account>/に保存）")
     args = parser.parse_args()
 
-    profile_path = Path(PROFILE_PATH).resolve()
+    if args.account:
+        profile_path = (project_root / "x_profiles" / args.account).resolve()
+    else:
+        profile_path = Path(PROFILE_PATH).resolve()
     profile_path.mkdir(parents=True, exist_ok=True)
 
     print("=" * 60)

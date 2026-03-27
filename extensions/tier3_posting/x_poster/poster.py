@@ -8,7 +8,7 @@ import random
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, List, Optional
 
 from dateutil.parser import parse as parse_datetime
 
@@ -26,7 +26,7 @@ class XPoster:
         self.profile_path = Path(profile_path).resolve()
 
     def post(
-        self, body: str, images: list[str] | None = None,
+        self, body: str, images: Optional[List[str]] = None,
         dry_run: bool = True,
     ) -> Dict[str, Any]:
         """Xに投稿する。
@@ -164,7 +164,7 @@ class XPoster:
 
     def schedule_post(
         self, body: str, scheduled_at: str,
-        images: list[str] | None = None,
+        images: Optional[List[str]] = None,
         dry_run: bool = True,
     ) -> dict:
         """X予約投稿（Playwright経由でネイティブUIを操作）

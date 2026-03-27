@@ -13,6 +13,7 @@ services:
       - VNC_PASSWORD=${VNC_PASSWORD}
       - ANTHROPIC_API_KEY
       - XAI_API_KEY
+      - COOKIE_ENCRYPTION_KEY
 
     ports:
       - "6080:6080"  # noVNC (ブラウザからアクセス)
@@ -23,6 +24,7 @@ services:
       - ./output:/app/output
       - ./data:/app/data
       - ./x_profile:/app/x_profile
+      - ./x_profiles:/app/x_profiles
       - ./core:/app/core:ro
       - ./extensions:/app/extensions:ro
       - ./configs:/app/configs:ro
@@ -30,3 +32,29 @@ services:
     shm_size: '2gb'
     security_opt:
       - seccomp:./docker/chromium-seccomp.json
+
+  review:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: xstock-review
+
+    environment:
+      - TZ=Asia/Tokyo
+      - COOKIE_ENCRYPTION_KEY
+
+    volumes:
+      - ./scripts:/app/scripts:ro
+      - ./extensions:/app/extensions:ro
+      - ./core:/app/core:ro
+      - ./collector:/app/collector:ro
+      - ./output:/app/output
+      - ./x_profiles:/app/x_profiles
+
+    ports:
+      - "8080:8080"
+
+    command: python -m extensions.tier3_posting.cli.server --port 8080
+
+    profiles:
+      - review

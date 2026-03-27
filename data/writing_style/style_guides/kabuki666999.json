@@ -1,0 +1,15 @@
+{
+  "account_id": "kabuki666999",
+  "persona": "投資・仮想通貨の情報発信アカウント。速報性と具体性を重視。",
+  "tone_rules": ["速報的", "具体的", "客観的", "データ重視"],
+  "preferred_formats": ["listicle", "breaking", "explainer"],
+  "hook_patterns": ["number-first", "surprise-first"],
+  "banned_patterns": ["投資助言に該当する表現", "保証表現", "過度な煽り"],
+  "writing_rules": [
+    "具体的な銘柄名・数値を含める",
+    "「〜が高騰」「〜が急落」のように事実ベースで書く",
+    "インフルエンサーの勝率等の客観データを活用する",
+    "相場の文脈（円安/利上げ等）を1行入れる",
+    "逆指標シグナルは警戒を明示する"
+  ]
+}
