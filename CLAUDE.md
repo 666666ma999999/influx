@@ -43,8 +43,7 @@ influx/
 │   ├── collect_tweets.py      # ツイート収集 + キーワード分類 + JSON/CSV保存
 │   ├── classify_tweets.py     # LLM分類実行 + viewer.html更新
 │   ├── check_inactive_accounts.py    # アカウント状態・最終投稿日確認
-│   ├── setup_profile.py       # 初回セットアップ（persistent context）
-│   └── setup_from_chrome.py   # 既存Chrome Cookieコピーによるセットアップ
+│   └── import_chrome_cookies.py  # ホスト macOS Chrome から X Cookie 抽出（唯一の確実経路、2026-04-21）
 ├── data/
 │   └── few_shot_examples.json # LLM分類のFew-shot例（24例）
 ├── output/                    # 生成ファイル（.gitignoreでJSON/CSVは除外）
@@ -65,7 +64,7 @@ influx/
 ### データフロー
 
 ```
-1. セットアップ: setup_profile.py → x_profile/cookies.json（Xログイン状態保存）
+1. Cookie 取得: import_chrome_cookies.py（ホスト Chrome から抽出）→ x_profiles/<account>/cookies.json（詳細は refresh-x-cookies スキル）
 2. 収集: collect_tweets.py → SafeXCollector（Cookie認証+人間らしい操作）→ output/tweets_*.json
 3. キーワード分類: TweetClassifier（キーワード+正規表現）→ categories フィールド追加
 4. LLM分類: classify_tweets.py → LLMClassifier（Claude API）→ llm_categories フィールド追加 → viewer.html更新
@@ -90,15 +89,10 @@ docker compose build
 ### 主要コマンド
 
 ```bash
-# 初回セットアップ（Xへの手動ログイン）
-docker compose --profile setup up setup
-
-# macOS XQuartzの場合
-docker compose -f docker-compose.mac.yml --profile setup up setup
-
-# VNCの場合
-docker compose -f docker-compose.vnc.yml up -d
-docker exec xstock-vnc python scripts/setup_profile_vnc.py
+# Cookie 取得（ホスト Chrome から抽出、X bot 検知を回避する唯一の確実経路）
+# 詳細: refresh-x-cookies スキル参照
+python3 scripts/import_chrome_cookies.py --chrome-profile "Profile 2" --account kabuki666999
+python3 scripts/import_chrome_cookies.py --chrome-profile "Default"   --account maaaki
 
 # ツイート収集（全グループ、スクロール10回）
 docker compose run xstock python scripts/collect_tweets.py
@@ -173,7 +167,7 @@ docker compose run xstock python -m extensions.tier3_posting.cli.run --mode imme
 | カテゴリキー | 名称 | 概要 |
 |-------------|------|------|
 | `recommended_assets` | オススメしている資産・セクター | 「割安」「おすすめ」「一択」等の推奨表現 |
-| `purchased_assets` | 個人で購入・保有している資産 | 「買った」「購入」「イン」「エントリー」等の購入報告 |
+| `purchased_assets` | 個人で売買している資産 | 購入・売却・損益報告（旧 `sold_assets`/`winning_trades` を統合） |
 | `ipo` | 申し込んだIPO | IPO関連（新規公開、抽選、当選） |
 | `market_trend` | 市況トレンドに関する見解 | 相場、地合い、利上げ/利下げ、円安/円高 |
 | `bullish_assets` | 高騰している資産 | 爆上げ、急騰、ストップ高 |
@@ -185,7 +179,21 @@ docker compose run xstock python -m extensions.tier3_posting.cli.run --mode imme
 - `is_contrarian=true` のアカウントの強気発言 → `bullish_assets` ではなく `warning_signals` に分類
 - 各ツイートは複数カテゴリに該当可能
 - 信頼度（confidence）: 0.0-1.0 のスコアを付与
-- Few-shot例は `data/few_shot_examples.json` に24例定義
+- Few-shot例は `data/few_shot_examples.json` に46例定義（7カテゴリ各3件以上）
+
+### カテゴリ → テンプレート対応表（plan.md M1 T1.0 で正規化）
+
+`collector/config.py` の `CATEGORY_TEMPLATE_MAP` を Single Source of Truth とする。
+
+| カテゴリ | テンプレート |
+|---|---|
+| `recommended_assets` | `hot_picks` |
+| `purchased_assets` | `trade_activity` |
+| `ipo` | `hot_picks`（IPO サブテンプレート） |
+| `market_trend` | `market_summary` |
+| `bullish_assets` | `hot_picks` |
+| `bearish_assets` | `market_summary` |
+| `warning_signals` | `contrarian_signal` |
 
 ## ツイートデータ構造
 

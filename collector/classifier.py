@@ -89,16 +89,19 @@ class TweetClassifier:
                     'is_from_contrarian': is_from_contrarian
                 }
 
-        # 逆指標アカウントからの投稿は警告シグナルに追加
-        # （他カテゴリなし = 投資に無関係なツイート → warning_signalsも不要）
-        if is_contrarian and categories and 'warning_signals' not in categories:
+        # 逆指標アカウントの投資関連カテゴリ該当時に warning_signals 追加
+        # （plan.md: config.CONTRARIAN_TRIGGER_CATEGORIES を SST として参照。
+        #   ユーザー指示 2026-04-19: gihuboy は逆神のため 6/7 投資カテゴリを全トリガー化）
+        from .config import apply_contrarian_override
+        new_categories = apply_contrarian_override(is_contrarian, categories)
+        if 'warning_signals' in new_categories and 'warning_signals' not in categories:
             categories.append('warning_signals')
             category_details['warning_signals'] = {
                 'name': self.rules['warning_signals'].get('name', '警戒すべき動き'),
                 'matched_keywords': [],
                 'matched_patterns': [],
                 'is_from_contrarian': True,
-                'note': '逆指標インフルエンサーからの投稿（投資関連カテゴリあり）'
+                'note': '逆指標インフルエンサーの投稿（CONTRARIAN_TRIGGER_CATEGORIES 該当）'
             }
 
         # 結果をツイートに追加

@@ -45,8 +45,7 @@ class Bookmark:
     created_at: str = ""
 
 
-class CookieExpiredError(Exception):
-    pass
+from extensions.tier3_posting.x_poster.exceptions import CookieExpiredError
 
 
 def load_cookies(profile_path: str = "./x_profile") -> list:
@@ -126,11 +125,14 @@ def scrape_bookmarks_from_dom(page) -> List[Bookmark]:
         try:
             card = cards.nth(i)
 
-            # テキスト
+            # テキスト（inner_textで確実にレンダリング済みテキストを取得）
             text = ""
             text_el = card.locator('[data-testid="tweetText"]')
             if text_el.count():
-                text = text_el.first.text_content() or ""
+                try:
+                    text = text_el.first.inner_text(timeout=3000) or ""
+                except Exception:
+                    text = text_el.first.text_content() or ""
 
             # URL（/status/リンクから）
             url = ""
@@ -185,6 +187,15 @@ def scrape_bookmarks_from_dom(page) -> List[Bookmark]:
             logger.debug("カード%d解析スキップ: %s", i, exc)
 
     return results
+
+
+def _upsert_dom_bookmark(dom_bookmarks: Dict[str, Bookmark], bm: Bookmark) -> None:
+    """DOM取得ブックマークを追加/更新する。テキスト空→非空の更新を許可。"""
+    existing = dom_bookmarks.get(bm.url)
+    if existing is None:
+        dom_bookmarks[bm.url] = bm
+    elif not existing.text and bm.text:
+        dom_bookmarks[bm.url] = bm
 
 
 def _parse_metric(card, selector: str) -> int:
@@ -297,6 +308,48 @@ def _parse_tweet_entry(entry: dict) -> Optional[Bookmark]:
         return None
 
 
+# ── テキスト空ブックマーク補完取得 ──────────────────────────────
+
+def _backfill_empty_text(page, bookmarks: List[Bookmark], max_items: int = 30) -> int:
+    """テキスト空のブックマークを個別ツイートページで補完取得する。
+
+    ブックマークタイムライン上でArticleカード等の特殊レイアウトにより
+    tweetText要素が存在しないケースを補完する。
+
+    Returns:
+        補完できた件数。
+    """
+    empty = [bm for bm in bookmarks if not bm.text and bm.url]
+    if not empty:
+        return 0
+
+    targets = empty[:max_items]
+    logger.info("テキスト空 %d件を個別ページから補完取得中...", len(targets))
+    filled = 0
+
+    for bm in targets:
+        try:
+            page.goto(bm.url, wait_until="domcontentloaded", timeout=12000)
+            page.wait_for_timeout(3000)
+            text_el = page.locator('[data-testid="tweetText"]')
+            if text_el.count():
+                try:
+                    text = text_el.first.inner_text(timeout=3000) or ""
+                except Exception:
+                    text = text_el.first.text_content() or ""
+                if text.strip():
+                    bm.text = text.strip()
+                    bm.is_long_form = len(bm.text) > 280
+                    filled += 1
+            time.sleep(random.uniform(0.5, 1.5))
+        except Exception as exc:
+            logger.debug("補完取得スキップ %s: %s", bm.url, exc)
+
+    if filled:
+        logger.info("  → %d/%d件のテキストを補完", filled, len(targets))
+    return filled
+
+
 # ── スクロール待機 ─────────────────────────────────────────────
 
 def _wait_for_new_tweets(page, prev_count: int, timeout_sec: float = 5.0) -> int:
@@ -325,12 +378,16 @@ def fetch_bookmarks(
     checkpoint_path: Optional[str] = None,
     out_path: Optional[str] = None,
     append: bool = False,
+    persistent: bool = False,
 ) -> List[Bookmark]:
     from playwright.sync_api import sync_playwright
 
-    cookies = load_cookies(profile_path)
-    if not cookies:
-        raise CookieExpiredError("Cookieが見つかりません。refresh_cookies_vnc.pyを実行してください。")
+    if not persistent:
+        cookies = load_cookies(profile_path)
+        if not cookies:
+            raise CookieExpiredError("Cookieが見つからないか期限切れです。scripts/import_chrome_cookies.py で Chrome から抽出してください（refresh-x-cookies スキル参照）。")
+    else:
+        cookies = None
 
     # チェックポイント復元
     cp = load_checkpoint(checkpoint_path)
@@ -417,36 +474,50 @@ def fetch_bookmarks(
     context = None
     try:
         pw = sync_playwright().start()
-        browser = pw.chromium.launch(
-            headless=headless,
-            args=["--disable-blink-features=AutomationControlled"],
-        )
 
-        # Service Worker を無効化して GraphQL を直接傍受
-        context = browser.new_context(
-            viewport={"width": 1280, "height": 900},
-            locale="ja-JP",
-            timezone_id="Asia/Tokyo",
-            service_workers="block",
-            user_agent=(
-                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/120.0.0.0 Safari/537.36"
-            ),
-        )
-        context.add_cookies(cookies)
+        if persistent:
+            # persistent context: ブラウザプロファイルのログイン状態を直接利用
+            context = pw.chromium.launch_persistent_context(
+                user_data_dir=str(Path(profile_path).resolve()),
+                headless=headless,
+                viewport={"width": 1280, "height": 900},
+                locale="ja-JP",
+                timezone_id="Asia/Tokyo",
+                args=["--disable-blink-features=AutomationControlled"],
+            )
+            context.on("response", handle_response)
+            page = context.pages[0] if context.pages else context.new_page()
+        else:
+            browser = pw.chromium.launch(
+                headless=headless,
+                args=["--disable-blink-features=AutomationControlled"],
+            )
 
-        # context レベルでレスポンス監視（SW対応）
-        context.on("response", handle_response)
+            # Service Worker を無効化して GraphQL を直接傍受
+            context = browser.new_context(
+                viewport={"width": 1280, "height": 900},
+                locale="ja-JP",
+                timezone_id="Asia/Tokyo",
+                service_workers="block",
+                user_agent=(
+                    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) "
+                    "Chrome/120.0.0.0 Safari/537.36"
+                ),
+            )
+            context.add_cookies(cookies)
 
-        page = context.new_page()
+            # context レベルでレスポンス監視（SW対応）
+            context.on("response", handle_response)
+
+            page = context.new_page()
 
         logger.info("ブックマークページにアクセス中...")
         page.goto("https://x.com/i/bookmarks", wait_until="domcontentloaded", timeout=60000)
         time.sleep(random.uniform(4.0, 6.0))
 
         if "/login" in page.url or "/i/flow/login" in page.url:
-            raise CookieExpiredError("Cookieが期限切れです。refresh_cookies_vnc.pyを実行してください。")
+            raise CookieExpiredError("Cookieが期限切れです。scripts/import_chrome_cookies.py で Chrome から再抽出してください（refresh-x-cookies スキル参照）。")
 
         # ツイートカードの表示を待つ
         try:
@@ -460,7 +531,7 @@ def fetch_bookmarks(
         initial_dom = scrape_bookmarks_from_dom(page)
         for bm in initial_dom:
             if bm.url:
-                dom_bookmarks[bm.url] = bm
+                _upsert_dom_bookmark(dom_bookmarks, bm)
         logger.info("初回DOM取得: %d件", len(initial_dom))
 
         # 初回分を逐次保存
@@ -492,8 +563,8 @@ def fetch_bookmarks(
             prev_dom_count = len(dom_bookmarks)
             prev_gql_count = len(graphql_bookmarks)
             for bm in new_dom:
-                if bm.url and bm.url not in dom_bookmarks:
-                    dom_bookmarks[bm.url] = bm
+                if bm.url:
+                    _upsert_dom_bookmark(dom_bookmarks, bm)
 
             # 新規ブックマークを逐次保存
             _flush_new_bookmarks(scroll_count)
@@ -525,6 +596,22 @@ def fetch_bookmarks(
 
         # 最終フラッシュ（取りこぼし防止）
         _flush_new_bookmarks(scroll_count)
+
+        # テキスト空ブックマークを個別ページから補完取得
+        filled = _backfill_empty_text(page, all_bookmarks)
+
+        # 補完があった場合、出力ファイルを再書き込み
+        if filled and out_path:
+            try:
+                if out_file:
+                    out_file.close()
+                    out_file = None
+                with open(out_path, "w", encoding="utf-8") as f:
+                    for bm in all_bookmarks:
+                        f.write(json.dumps(asdict(bm), ensure_ascii=False) + "\n")
+                logger.info("出力ファイルを更新済み（テキスト補完%d件反映）", filled)
+            except Exception as exc:
+                logger.warning("出力ファイル再書き込み失敗: %s", exc)
 
         elapsed = (time.time() - start_time) / 60.0
         logger.info("最終結果: DOM=%d, GraphQL=%d, 保存済み=%d (%.1f分)",
@@ -564,6 +651,7 @@ def main():
     parser.add_argument("--checkpoint", default=None, help="チェックポイントJSONパス")
     parser.add_argument("--append", action="store_true", help="既存ファイルに追記")
     parser.add_argument("--headless", action="store_true", help="ヘッドレスモード")
+    parser.add_argument("--persistent", action="store_true", help="persistent contextモード（ブラウザプロファイルのログイン状態を直接利用）")
     parser.add_argument("--profile", default="./x_profile", help="Cookieプロファイルパス")
     args = parser.parse_args()
 
@@ -577,6 +665,7 @@ def main():
             checkpoint_path=args.checkpoint,
             out_path=args.out,
             append=args.append,
+            persistent=args.persistent,
         )
 
         long_form = sum(1 for b in bookmarks if b.is_long_form)
@@ -590,7 +679,8 @@ def main():
     except CookieExpiredError as e:
         logger.error("Cookie期限切れ: %s", e)
         print("\nCookieが期限切れです。以下を実行してください:")
-        print("  docker exec xstock-vnc python scripts/refresh_cookies_vnc.py")
+        print("  python3 scripts/import_chrome_cookies.py --chrome-profile \"<Chrome profile>\" --account <your-account>")
+        print("  （詳細: refresh-x-cookies スキル参照）")
         sys.exit(20)
     except Exception as e:
         logger.exception("予期しないエラー")

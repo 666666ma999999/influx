@@ -161,7 +161,7 @@ class SafeXCollector:
 
                 # ログイン状態確認
                 if not self._check_login_status(page):
-                    logger.warning("ログイン未確認", extra={"extra_data": {"url": search_url, "action": "setup_profile.py を実行してログインしてください"}})
+                    logger.warning("ログイン未確認", extra={"extra_data": {"url": search_url, "action": "scripts/import_chrome_cookies.py で Chrome から Cookie を抽出してください（refresh-x-cookies スキル参照）"}})
                     return CollectionResult(
                         tweets=[], status="login_required",
                         error_message="ログインしていない可能性があります"

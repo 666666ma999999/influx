@@ -22,12 +22,99 @@ from ..x_poster.post_store import PostStore
 from ..services.style_prompt_builder import build_style_aware_prompt
 from ..account_routing import resolve_account
 
+# Single Source of Truth for カテゴリ → テンプレート対応（plan.md M1 T1.0）
+# プロジェクトルートを sys.path に追加して collector を core/shared 相当として import
+_PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+if _PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, _PROJECT_ROOT)
+from collector.config import CATEGORY_TEMPLATE_MAP  # noqa: E402
+
+
+def _categories_for_template(template_name: str) -> set:
+    """CATEGORY_TEMPLATE_MAP からテンプレートに割り当てられたカテゴリ集合を返す。"""
+    return {cat for cat, tmpl in CATEGORY_TEMPLATE_MAP.items() if tmpl == template_name}
+
 
 # Lazy import for image generation
 def _get_image_generators():
     from ..image_generator.chart_generator import ChartGenerator
     from ..image_generator.ogp_generator import OGPGenerator
     return ChartGenerator(), OGPGenerator()
+
+
+# plan.md M2 T2.5: A/B テスト experiment_id バージョンタグ Single Source of Truth
+# テンプレート・Few-shot・スコアリングのバージョンを結合して 1 つの identifier にする。
+# ER をこのタグ単位で集計することで A/B の因果性を保てる。
+COMPOSE_TEMPLATE_VERSION = "t1"      # 7 テンプレート構成バージョン
+COMPOSE_FEWSHOT_VERSION = "fs_m1_51"  # few_shot_examples.json の M1 T1.0 post-migration 版
+COMPOSE_SCORING_VERSION = "sc_m1"     # 有益度スコアリング (M2 T2.4 実装前は m1)
+
+
+def _build_experiment_id() -> str:
+    """plan.md M2 T2.5: experiment_id = {template_version}-{fewshot_version}-{scoring_version}"""
+    return f"{COMPOSE_TEMPLATE_VERSION}-{COMPOSE_FEWSHOT_VERSION}-{COMPOSE_SCORING_VERSION}"
+
+
+def _fallback_previous_high_er(store: "PostStore", date_str: str) -> List[Dict[str, Any]]:
+    """plan.md M4 T4.1: 当日ドラフト 0 件時、過去の高 ER 投稿から再投稿案を 1 件生成。
+
+    直近 14 日の posted で engagement_rate 上位のツイートを複製し、
+    新しい news_id + fallback フラグ付きドラフトとして返す。
+    """
+    try:
+        history = store.load_history()
+        latest_imp = store.get_latest_impressions()
+    except Exception:
+        return []
+
+    # posted かつ dry_run=False のもの
+    posted = [
+        rec for rec in history
+        if rec.get("status") == "posted" and rec.get("posted_url") and not rec.get("dry_run")
+    ]
+    if not posted:
+        return []
+
+    # engagement_rate 降順ソート
+    ranked = []
+    for rec in posted:
+        nid = rec.get("news_id")
+        imp = latest_imp.get(nid) if nid else None
+        if imp and imp.get("engagement_rate", 0) > 0:
+            ranked.append((imp["engagement_rate"], rec, imp))
+    if not ranked:
+        return []
+    ranked.sort(key=lambda x: x[0], reverse=True)
+    top_er, top_rec, top_imp = ranked[0]
+
+    # 既存ドラフトから原本を取得して body を再利用
+    try:
+        drafts = store.load_drafts()
+    except Exception:
+        drafts = []
+    original = next((d for d in drafts if d.get("news_id") == top_rec.get("news_id")), None)
+    if not original:
+        return []
+
+    fb_news_id = make_news_id(f"fallback:{date_str}:{top_rec.get('news_id', '')}")
+    fallback_draft = {
+        "news_id": fb_news_id,
+        "title": f"[再投稿候補] {original.get('title', '過去高ER投稿')}",
+        "body": original.get("body", ""),
+        "format": original.get("format", "x_post"),
+        "scheduled_at": datetime.now().isoformat(),
+        "hashtags": original.get("hashtags", []),
+        "status": "draft",
+        "template_type": original.get("template_type", "manual"),
+        "fallback_source_news_id": top_rec.get("news_id"),
+        "fallback_reason": "no_daily_generation",
+        "fallback_source_er": round(top_er, 6),
+    }
+    print(
+        f"  [FALLBACK] 前日高 ER 候補: news_id={top_rec.get('news_id')} "
+        f"ER={top_er:.4%}"
+    )
+    return [fallback_draft]
 
 
 def generate_images_for_draft(draft: dict, chart_gen, ogp_gen) -> list[dict]:
@@ -307,6 +394,11 @@ def generate_weekly_report(
             if cat in category_counts:
                 category_counts[cat] += 1
 
+    # plan.md M4 T4.1 レビュー対応: 全カテゴリ 0 件の週次レポートは空コンテンツなので生成しない
+    # （fallback_previous_high_er を呼ばせるため）
+    if sum(category_counts.values()) == 0:
+        return []
+
     lines = []
     for key, label in CATEGORY_LABELS.items():
         lines.append(f"・{label}: {category_counts[key]}件")
@@ -345,10 +437,9 @@ def _collect_tweets_text(tweets: List[Dict[str, Any]]) -> str:
 def generate_market_summary(
     tweets: List[Dict[str, Any]], date_str: str
 ) -> List[Dict[str, Any]]:
-    """市況サマリードラフトを生成（LLM使用）。"""
-    market_tweets = [
-        t for t in tweets if "market_trend" in get_categories(t)
-    ]
+    """市況サマリードラフトを生成（LLM使用）。CATEGORY_TEMPLATE_MAP の market_summary 該当カテゴリを対象。"""
+    target_cats = _categories_for_template("market_summary")
+    market_tweets = [t for t in tweets if set(get_categories(t)) & target_cats]
     if not market_tweets:
         return []
 
@@ -381,11 +472,9 @@ def generate_market_summary(
 def generate_hot_picks(
     tweets: List[Dict[str, Any]], date_str: str
 ) -> List[Dict[str, Any]]:
-    """注目銘柄ドラフトを生成（LLM使用）。"""
-    pick_tweets = [
-        t for t in tweets
-        if set(get_categories(t)) & {"recommended_assets", "purchased_assets"}
-    ]
+    """注目銘柄ドラフトを生成（LLM使用）。CATEGORY_TEMPLATE_MAP の hot_picks 該当カテゴリを対象。"""
+    target_cats = _categories_for_template("hot_picks")
+    pick_tweets = [t for t in tweets if set(get_categories(t)) & target_cats]
     if not pick_tweets:
         return []
 
@@ -418,10 +507,9 @@ def generate_hot_picks(
 def generate_trade_activity(
     tweets: List[Dict[str, Any]], date_str: str
 ) -> List[Dict[str, Any]]:
-    """売買動向ドラフトを生成（LLM使用）。"""
-    trade_tweets = [
-        t for t in tweets if "purchased_assets" in get_categories(t)
-    ]
+    """売買動向ドラフトを生成（LLM使用）。CATEGORY_TEMPLATE_MAP の trade_activity 該当カテゴリを対象。"""
+    target_cats = _categories_for_template("trade_activity")
+    trade_tweets = [t for t in tweets if set(get_categories(t)) & target_cats]
     if not trade_tweets:
         return []
 
@@ -454,10 +542,16 @@ def generate_trade_activity(
 def generate_earnings_flash(
     tweets: List[Dict[str, Any]], date_str: str
 ) -> List[Dict[str, Any]]:
-    """決算フラッシュドラフトを生成（LLM使用）。"""
+    """決算フラッシュドラフトを生成（LLM使用）。
+
+    plan.md M5 T5.3: 7 カテゴリ体系と整合させるため、キーワード AND カテゴリ (bullish_assets / market_trend)
+    の両方を満たすツイートのみ対象にする。単純なキーワードマッチだけだと日常ツイートにも hit するため。
+    """
+    target_cats = {"bullish_assets", "market_trend"}
     earnings_tweets = [
         t for t in tweets
-        if any(kw in t.get("text", "") for kw in EARNINGS_KEYWORDS)
+        if (set(get_categories(t)) & target_cats)
+        and any(kw in t.get("text", "") for kw in EARNINGS_KEYWORDS)
     ]
     if not earnings_tweets:
         return []
@@ -569,11 +663,29 @@ def main() -> None:
     else:
         print("\n--- LLMベースはスキップ (--no-llm) ---")
 
+    # plan.md M4 T4.1: 当日 0 件時のフォールバック
+    # 前日高 ER 投稿の再利用 → weekly_report/win_rate_ranking の強制生成は既に drafts に含まれる
+    # 追加されたドラフト 0 件になる可能性への事前補強: 前日の高ER posted を抽出
+    if not drafts:
+        print("\n[WARN] すべての generator が 0 件を返しました。フォールバック適用を試みます。")
+        try:
+            drafts.extend(_fallback_previous_high_er(store, date_str))
+        except Exception as e:
+            print(f"  フォールバック失敗（無視）: {e}")
+
     # --- ストアに保存 ---
     print(f"\n--- 保存 ({len(drafts)}件) ---")
     added = 0
     skipped = 0
+    exp_id = _build_experiment_id()
     for draft in drafts:
+        # plan.md M5 T5.3: resolve_account でアカウント振り分け（CATEGORY_ACCOUNT_MAP SST 経由）
+        # template_type → TEMPLATE_ROUTING（自動導出）→ account_id
+        if not draft.get("account_id"):
+            draft["account_id"] = resolve_account(draft)
+        # plan.md M2 T2.5: experiment_id を全ドラフトに付与し A/B 計測可能にする
+        if not draft.get("experiment_id"):
+            draft["experiment_id"] = exp_id
         if args.with_images:
             images = generate_images_for_draft(draft, chart_gen, ogp_gen)
             if images:
@@ -581,11 +693,15 @@ def main() -> None:
                 for img in images:
                     print(f"  🖼️ 生成: {img['description']} -> {img['path']}")
         if store.add_draft(draft):
-            print(f"  追加: {draft['title']}")
+            print(f"  追加: [{draft['account_id']}] {draft['title']}")
             added += 1
         else:
             print(f"  スキップ（重複）: {draft['title']}")
             skipped += 1
+
+    # plan.md M4 T4.1: 新規追加 0 件の場合も再利用フォールバック
+    if added == 0 and not drafts:
+        print("[FATAL] ドラフトが生成されませんでした。後工程（review.html）で承認可能な案がありません。")
 
     print(f"\n完了: {added}件追加, {skipped}件スキップ")
 

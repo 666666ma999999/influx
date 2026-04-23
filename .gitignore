@@ -1,10 +1,17 @@
 # ブラウザプロファイル（ログイン情報を含む）
 x_profile/
+x_profiles/
 
 # 出力ファイル
 output/*.json
 output/*.csv
+output/*.jsonl
+output/*.png
+output/*.html
 output/*/
+
+# Claude ワークスペース（ローカル監査メモ等）
+.claude/workspace/
 
 # Python
 __pycache__/

@@ -33,16 +33,42 @@ ACCOUNTS: Dict[str, dict] = {
 DEFAULT_ACCOUNT = "kabuki666999"
 
 
-# ── template_type → account_id ──────────────────────────────
+# ── template_type → account_id (plan.md M5 T5.3: SST 化) ────────────────────
+# CATEGORY_TEMPLATE_MAP + CATEGORY_ACCOUNT_MAP から自動導出。
+# カテゴリ非依存テンプレート (win_rate_ranking 等) は NON_CATEGORY_TEMPLATE_ACCOUNT_MAP で明示。
+
+# プロジェクトルートを sys.path に追加して collector を core/shared 相当として import
+import sys as _sys
+import os as _os
+_PROJECT_ROOT = _os.path.abspath(_os.path.join(_os.path.dirname(__file__), "..", ".."))
+if _PROJECT_ROOT not in _sys.path:
+    _sys.path.insert(0, _PROJECT_ROOT)
+from collector.config import (  # noqa: E402
+    CATEGORY_TEMPLATE_MAP,
+    CATEGORY_ACCOUNT_MAP,
+    NON_CATEGORY_TEMPLATE_ACCOUNT_MAP,
+)
+
+
+def _build_template_routing() -> Dict[str, str]:
+    """CATEGORY_TEMPLATE_MAP + CATEGORY_ACCOUNT_MAP から template_type → account_id を導出。
+
+    複数カテゴリが同じテンプレートに振り分けられているとき、それぞれの
+    アカウントが一致しない場合は DEFAULT_ACCOUNT にフォールバック。
+    """
+    derived: Dict[str, str] = {}
+    for cat, tmpl in CATEGORY_TEMPLATE_MAP.items():
+        acc = CATEGORY_ACCOUNT_MAP.get(cat, DEFAULT_ACCOUNT)
+        if tmpl in derived and derived[tmpl] != acc:
+            derived[tmpl] = DEFAULT_ACCOUNT
+        else:
+            derived[tmpl] = acc
+    return derived
+
 
 TEMPLATE_ROUTING: Dict[str, str] = {
-    "win_rate_ranking": "kabuki666999",
-    "contrarian_signal": "kabuki666999",
-    "weekly_report": "kabuki666999",
-    "market_summary": "kabuki666999",
-    "hot_picks": "kabuki666999",
-    "trade_activity": "kabuki666999",
-    "earnings_flash": "kabuki666999",
+    **_build_template_routing(),
+    **NON_CATEGORY_TEMPLATE_ACCOUNT_MAP,
     # manual は本文ベース判定にフォールスルー
 }
 

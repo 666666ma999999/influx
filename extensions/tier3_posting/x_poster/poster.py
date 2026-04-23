@@ -12,6 +12,8 @@ from typing import Any, Dict, List, Optional
 
 from dateutil.parser import parse as parse_datetime
 
+from .exceptions import CookieExpiredError
+
 logger = logging.getLogger(__name__)
 
 
@@ -47,12 +49,9 @@ class XPoster:
 
         cookies = self._load_cookies()
         if not cookies:
-            return {
-                "success": False,
-                "posted_url": "",
-                "error": "Cookie読込失敗: cookies.jsonが見つからないか空です",
-                "dry_run": False,
-            }
+            raise CookieExpiredError(
+                f"Cookie読込失敗: {self.profile_path}/cookies.json が見つからないか空です"
+            )
 
         browser = None
         context = None
@@ -73,12 +72,9 @@ class XPoster:
             self._human_wait(2.0, 4.0)
 
             if not self._check_login_status(page):
-                return {
-                    "success": False,
-                    "posted_url": "",
-                    "error": "ログインしていません。setup_profile.pyを実行してください",
-                    "dry_run": False,
-                }
+                raise CookieExpiredError(
+                    f"ログイン画面へリダイレクト（Cookie失効）: {page.url}"
+                )
 
             # 投稿画面に遷移
             page.goto(
@@ -188,11 +184,9 @@ class XPoster:
 
         cookies = self._load_cookies()
         if not cookies:
-            return {
-                "success": False,
-                "scheduled_at": scheduled_at,
-                "error": "Cookie読込失敗: cookies.jsonが見つからないか空です",
-            }
+            raise CookieExpiredError(
+                f"Cookie読込失敗: {self.profile_path}/cookies.json が見つからないか空です"
+            )
 
         browser = None
         context = None
@@ -213,11 +207,9 @@ class XPoster:
             self._human_wait(2.0, 4.0)
 
             if not self._check_login_status(page):
-                return {
-                    "success": False,
-                    "scheduled_at": scheduled_at,
-                    "error": "ログインしていません。setup_profile.pyを実行してください",
-                }
+                raise CookieExpiredError(
+                    f"ログイン画面へリダイレクト（Cookie失効）: {page.url}"
+                )
 
             # 投稿画面に遷移
             page.goto(

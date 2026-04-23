@@ -403,13 +403,17 @@ JSON配列で以下の形式で返してください:
             # バッチ分類
             results = self.classify_batch(batch)
 
-            # 結果をツイートにマージ
+            # 結果をツイートにマージ（plan.md: 逆指標オーバーライドを SST 経由で強制）
+            from .config import apply_contrarian_override
             for i, result in enumerate(results):
                 tweet_idx = start_idx + result["id"]
                 if tweet_idx < 0 or tweet_idx >= len(tweets):
                     continue  # 範囲外のインデックスをスキップ
                 if tweet_idx < len(tweets):
-                    tweets[tweet_idx]["llm_categories"] = result["llm_categories"]
+                    is_contrarian = bool(tweets[tweet_idx].get("is_contrarian", False))
+                    tweets[tweet_idx]["llm_categories"] = apply_contrarian_override(
+                        is_contrarian, result["llm_categories"]
+                    )
                     tweets[tweet_idx]["llm_reasoning"] = result["llm_reasoning"]
                     tweets[tweet_idx]["llm_confidence"] = result["llm_confidence"]
 

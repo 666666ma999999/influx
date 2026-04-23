@@ -340,6 +340,110 @@ class PostStore:
         logger.debug("📊 インプレッション追記: %s (%s)", news_id, tweet_url)
         return True
 
+    def add_impression_schedule(
+        self,
+        news_id: str,
+        tweet_url: str,
+        account_id: str = "",
+        posted_at: str = "",
+        intervals_hours: Optional[List[float]] = None,
+        experiment_id: str = "",
+    ) -> int:
+        """plan.md M1 T1.2: 投稿成功時に 1h/4h/24h 後の追跡予約エントリを impressions.jsonl に追記する。
+
+        plan.md M2 T2.5: experiment_id を継承し ER を A/B バージョン単位で集計可能にする。
+
+        Args:
+            news_id: ニュースID
+            tweet_url: 投稿 URL
+            account_id: 投稿アカウント
+            posted_at: 投稿日時 ISO（省略時は now(JST)）
+            intervals_hours: 予約間隔の時間リスト（デフォルト [1, 4, 24]）
+            experiment_id: A/B 実験タグ（template_version-fewshot_version-scoring_version）
+
+        Returns:
+            追加した予約エントリ数
+        """
+        if not news_id or not tweet_url:
+            logger.warning("📊 add_impression_schedule: news_id / tweet_url 必須")
+            return 0
+
+        base = datetime.fromisoformat(posted_at) if posted_at else datetime.now(JST)
+        if base.tzinfo is None:
+            base = base.replace(tzinfo=JST)
+
+        hours_list = intervals_hours if intervals_hours is not None else [1, 4, 24]
+        added = 0
+        for h in hours_list:
+            scheduled = (base + timedelta(hours=h)).isoformat()
+            record = {
+                "news_id": news_id,
+                "tweet_url": tweet_url,
+                "account_id": account_id,
+                "status": "scheduled",
+                "scheduled_at": scheduled,
+                "interval_hours": h,
+                "recorded_at": datetime.now(JST).isoformat(),
+            }
+            if experiment_id:
+                record["experiment_id"] = experiment_id
+            self._append_with_lock(
+                self.impressions_path, json.dumps(record, ensure_ascii=False)
+            )
+            added += 1
+
+        logger.info(
+            "📊 追跡予約 %d 件: news_id=%s @%s",
+            added, news_id, [f"+{h}h" for h in hours_list],
+        )
+        return added
+
+    def load_due_schedules(self, now: Optional[datetime] = None) -> List[Dict[str, Any]]:
+        """plan.md M1 T1.2 follow-up: 期限到来した予約エントリのうち、未実行のものを返す。
+
+        「未実行」の判定: 同じ news_id + interval_hours の組で status != 'scheduled' なレコードが
+        まだ存在しない場合、その scheduled エントリは未消費とみなす。
+
+        Args:
+            now: 現在時刻（省略時は datetime.now(JST)）
+
+        Returns:
+            期限到来した未消費の scheduled エントリ list（scheduled_at 昇順）
+        """
+        if now is None:
+            now = datetime.now(JST)
+
+        all_records = self.load_impressions()
+
+        # 既にスクレイピング済み (status != 'scheduled') な (news_id, interval_hours) セット
+        consumed: set = set()
+        for rec in all_records:
+            if rec.get("status") != "scheduled" and rec.get("interval_hours") is not None:
+                consumed.add((rec.get("news_id"), rec.get("interval_hours")))
+
+        due: List[Dict[str, Any]] = []
+        for rec in all_records:
+            if rec.get("status") != "scheduled":
+                continue
+            scheduled_at = rec.get("scheduled_at", "")
+            if not scheduled_at:
+                continue
+            try:
+                sched_dt = datetime.fromisoformat(scheduled_at)
+            except ValueError:
+                continue
+            if sched_dt.tzinfo is None:
+                sched_dt = sched_dt.replace(tzinfo=JST)
+            if sched_dt > now:
+                continue
+            key = (rec.get("news_id"), rec.get("interval_hours"))
+            if key in consumed:
+                continue
+            due.append(rec)
+
+        due.sort(key=lambda r: r.get("scheduled_at", ""))
+        return due
+
     def load_impressions(self, news_id: str = None) -> list:
         """インプレッションデータを読み込む。
 
@@ -369,7 +473,11 @@ class PostStore:
         return records
 
     def get_latest_impressions(self) -> dict:
-        """各news_idの最新インプレッションを取得する。
+        """各news_idの最新 scraping 済みインプレッションを取得する。
+
+        plan.md M1 T1.2/T1.4: UI 表示対象は status=='ok' のみ。以下は除外:
+        - scheduled: 予約エントリ（scrape 未完了）
+        - rate_limited / login_required / error: 失敗レコード（metrics 欠落で UI ノイズ）
 
         Returns:
             {news_id: latest_impression_record} の辞書
@@ -380,6 +488,10 @@ class PostStore:
         for rec in all_records:
             nid = rec.get("news_id")
             if not nid:
+                continue
+            # status が未設定の旧レコードは metrics が揃っていれば ok 扱い（後方互換）
+            status = rec.get("status")
+            if status is not None and status != "ok":
                 continue
             if nid not in latest:
                 latest[nid] = rec

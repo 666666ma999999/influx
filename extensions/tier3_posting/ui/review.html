@@ -98,7 +98,8 @@ button{font-family:inherit;cursor:pointer} input,textarea,select{font-family:inh
 .badge--dryrun{background:rgba(255,212,0,.15);color:var(--yellow)}
 .badge--stale{background:rgba(255,111,0,.15);color:var(--orange)}
 .card-title{font-size:14px;font-weight:700;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.card-body{font-size:13px;color:var(--text2);line-height:1.4;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-wrap;word-break:break-word}
+.card-body{font-size:13px;color:var(--text2);line-height:1.4;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-wrap;word-break:break-word;cursor:pointer}
+.card-body.expanded{-webkit-line-clamp:unset;display:block}
 .card-meta{display:flex;justify-content:space-between;font-size:11px;color:var(--text2)}
 .char-ok{color:var(--green)} .char-warn{color:var(--yellow)} .char-over{color:var(--red)}
 .card-sched{font-size:11px;color:var(--yellow);display:flex;align-items:center;gap:4px}
@@ -154,9 +155,66 @@ button{font-family:inherit;cursor:pointer} input,textarea,select{font-family:inh
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--bg2);border:1px solid var(--border);border-radius:var(--input-r);padding:8px 18px;font-size:13px;color:var(--text);z-index:300;opacity:0;transition:transform .3s,opacity .3s;pointer-events:none}
 .toast.visible{transform:translateX(-50%) translateY(0);opacity:1}
 
+
+/* Article preview & correction instructions */
+.article-section{margin-top:8px;border-top:1px solid var(--border);padding-top:8px}
+.article-toggle{font-size:12px;color:var(--accent);cursor:pointer;font-weight:600;display:flex;align-items:center;gap:4px}
+.article-toggle:hover{text-decoration:underline}
+.article-body{display:none;margin-top:8px;padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:var(--input-r);font-size:13px;line-height:1.7;color:var(--text);max-height:500px;overflow-y:auto}
+.article-body.expanded{display:block}
+.article-body h2{font-size:16px;font-weight:700;margin:18px 0 8px;padding-bottom:4px;border-bottom:1px solid var(--border)}
+.article-body h3{font-size:14px;font-weight:700;margin:14px 0 6px}
+.article-body p{margin:8px 0}
+.article-body ul,.article-body ol{margin:8px 0 8px 20px}
+.article-body li{margin:4px 0}
+.article-body code{background:var(--bg2);padding:1px 5px;border-radius:4px;font-size:12px}
+.article-body pre{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:10px;overflow-x:auto;margin:8px 0}
+.article-body pre code{background:none;padding:0}
+.article-body blockquote{border-left:3px solid var(--accent);padding-left:12px;margin:8px 0;color:var(--text2)}
+.article-body hr{border:none;border-top:1px solid var(--border);margin:16px 0}
+.correction-section{margin-top:8px;border-top:1px solid var(--border);padding-top:8px}
+.correction-label{font-size:12px;font-weight:600;color:var(--yellow);margin-bottom:4px;display:flex;align-items:center;gap:4px}
+.correction-ta{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:var(--input-r);padding:8px 10px;color:var(--text);font-size:13px;line-height:1.4;resize:vertical;min-height:60px;font-family:inherit;box-sizing:border-box}
+.correction-ta:focus{outline:none;border-color:var(--yellow)}
+.correction-save{margin-top:4px;padding:4px 12px;border:1px solid rgba(255,212,0,.3);border-radius:var(--pill);background:none;color:var(--yellow);font-size:11px;font-weight:600;cursor:pointer}
+.correction-save:hover{background:rgba(255,212,0,.1)}
+
+/* Detail view */
+.detail-view{display:none;flex-direction:column;flex:1;overflow:hidden}
+.detail-view.active{display:flex}
+.detail-header{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-shrink:0}
+.detail-back{background:none;border:1px solid var(--border);border-radius:var(--pill);padding:6px 14px;color:var(--text);font-size:13px;font-weight:600;cursor:pointer;transition:background .15s}
+.detail-back:hover{background:var(--bg2)}
+.detail-title{font-size:16px;font-weight:700;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.detail-content{flex:1;overflow-y:auto;padding:16px}
+.detail-body-text{white-space:pre-wrap;word-break:break-word;line-height:1.6;font-size:15px;color:var(--text);padding:12px 0}
+.detail-meta{display:flex;gap:16px;font-size:12px;color:var(--text2);padding:8px 0;border-bottom:1px solid var(--border);margin-bottom:12px;flex-wrap:wrap}
+.detail-actions{display:flex;gap:6px;flex-wrap:wrap;padding:12px 0;border-top:1px solid var(--border)}
+.rewrite-top{position:sticky;top:0;z-index:10;background:var(--bg);border-bottom:2px solid var(--accent);padding:10px 0 12px;margin-bottom:14px}
+.rewrite-top-label{font-size:11px;font-weight:700;color:var(--accent);letter-spacing:.5px;margin-bottom:6px}
+.rewrite-top-row{display:flex;gap:8px;align-items:flex-end}
+.rewrite-input{flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:var(--input-r);padding:10px 12px;color:var(--text);font-size:14px;line-height:1.4;resize:vertical;font-family:inherit;min-height:60px}
+.rewrite-input:focus{outline:none;border-color:var(--accent)}
+.rewrite-input::placeholder{color:var(--text2)}
+.rewrite-btn{padding:10px 20px;border:none;border-radius:var(--pill);background:var(--accent);color:#fff;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;transition:opacity .15s}
+.rewrite-btn:hover{opacity:.85}
+.rewrite-btn:disabled{opacity:.5;cursor:not-allowed}
+.rewrite-preview{margin-top:16px;border:1px solid var(--border);border-radius:var(--card-r);overflow:hidden}
+.rewrite-label{font-size:12px;font-weight:600;padding:8px 12px;border-bottom:1px solid var(--border)}
+.rewrite-label--old{color:var(--red);background:rgba(244,33,46,.06)}
+.rewrite-label--new{color:var(--green);background:rgba(0,186,124,.06)}
+.rewrite-text{padding:12px;font-size:14px;line-height:1.5;white-space:pre-wrap;word-break:break-word}
+.rewrite-actions{display:flex;gap:8px;justify-content:flex-end;padding:12px;border-top:1px solid var(--border)}
+.rewrite-accept{padding:8px 20px;border:none;border-radius:var(--pill);background:var(--green);color:#fff;font-size:13px;font-weight:700;cursor:pointer}
+.rewrite-accept:hover{opacity:.85}
+.rewrite-discard{padding:8px 20px;border:1px solid var(--border);border-radius:var(--pill);background:none;color:var(--text2);font-size:13px;font-weight:600;cursor:pointer}
+.rewrite-discard:hover{background:var(--bg2)}
+
 /* Responsive */
 @media(max-width:700px){.main{flex-direction:column}.cal-panel{width:100%;border-right:none;border-bottom:1px solid var(--border);max-height:50vh}}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/marked@15/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
 </head>
 <body>
 <div class="app">
@@ -200,6 +258,13 @@ button{font-family:inherit;cursor:pointer} input,textarea,select{font-family:inh
         </div>
       </div>
       <div class="panel-list" id="panel-list"></div>
+      <div class="detail-view" id="detail-view">
+        <div class="detail-header">
+          <button class="detail-back" id="detail-back">&larr; 一覧に戻る</button>
+          <span class="detail-title" id="detail-title-label"></span>
+        </div>
+        <div class="detail-content" id="detail-content"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -284,11 +349,14 @@ var calYear,calMonth; // current calendar view
 var selectedDate=null; // YYYY-MM-DD or null
 var panelMode='drafts'; // drafts|all|failed|archived|date
 var editingId=null;
+var articleBodies={};
 var schedId=null;
 var searchQ='';
 var meta={}; // /api/meta response (accounts, statuses, cli_commands, etc.)
 var STATUSES=['draft','approved','scheduled','posted','rejected','failed','archived']; // fallback
 var bookmarksData=[]; // /api/bookmarks response
+var detailId=null;
+var previousPanelMode='drafts';
 
 /* ===== Init ===== */
 (function(){var n=new Date();calYear=n.getFullYear();calMonth=n.getMonth();fetchMeta();fetchData()})();
@@ -303,6 +371,7 @@ async function fetchData(){
     var r=await fetch(API+'/api/drafts');allData=await r.json();
     await fetchMeta();
   }catch(e){allData=[];toast('Load failed')}
+  articleBodies={};allData.forEach(function(d){if(d.template_type==='make_article'&&d.metadata&&d.metadata.article_body)articleBodies[d.news_id]=d.metadata.article_body;});
   renderAll();
 }
 async function apiStatus(id,status,extra){
@@ -319,6 +388,7 @@ async function apiEdit(id,data){
 function esc(s){if(!s)return'';var d=document.createElement('div');d.textContent=s;return d.innerHTML}
 function fmtDate(s){if(!s)return'';var d=new Date(s);if(isNaN(d))return s;return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate())+' '+p2(d.getHours())+':'+p2(d.getMinutes())}
 function p2(n){return String(n).padStart(2,'0')}
+function fmtN(n){return n!=null?(n>=1000?(n/1000).toFixed(1)+'K':n):'-'}
 function toDateKey(d){var jst=new Date(d.getTime()+9*3600000);return jst.getUTCFullYear()+'-'+p2(jst.getUTCMonth()+1)+'-'+p2(jst.getUTCDate())}
 function toJstIso(dateStr){if(!dateStr)return null;var d=new Date(dateStr);if(isNaN(d))return null;var jst=new Date(d.getTime()+9*3600000);return jst.toISOString().replace('Z','+09:00')}
 function fullLen(body,tags){var l=body?body.length:0;if(tags&&tags.length){var t=tags.join(' ');if(l+t.length+2<=280)l+=2+t.length}return l}
@@ -417,6 +487,7 @@ document.getElementById('panel-tabs').addEventListener('click',function(e){
 /* ===== Panel ===== */
 function renderPanel(){
   var title,items;
+  if(panelMode==='detail'){renderDetail();return}
   // Update tab active state
   document.querySelectorAll('.ptab').forEach(function(b){
     if(panelMode==='date') b.classList.remove('active');
@@ -501,15 +572,16 @@ function renderCard(item){
     imgHtml+='</div>';
   }
 
-  // impressions
+  // impressions (plan.md M1 T1.4: ER 表示追加)
   var impHtml='';
   if(item.impressions){
     var imp=item.impressions;
-    var fmtN=function(n){return n!=null?(n>=1000?(n/1000).toFixed(1)+'K':n):'-'};
-    impHtml='<div style="display:flex;gap:10px;font-size:11px;color:var(--text2);margin-top:4px">'+
+    var er=(typeof imp.engagement_rate==='number')?(imp.engagement_rate*100).toFixed(2)+'%':'-';
+    impHtml='<div style="display:flex;gap:10px;flex-wrap:wrap;font-size:11px;color:var(--text2);margin-top:4px">'+
       '<span title="Views">\uD83D\uDC41 '+fmtN(imp.impressions)+'</span>'+
       '<span title="Likes">\u2661 '+fmtN(imp.likes)+'</span>'+
       '<span title="RT">\uD83D\uDD04 '+fmtN(imp.retweets)+'</span>'+
+      '<span title="Engagement Rate">ER '+er+'</span>'+
       '</div>';
   }
 
@@ -535,23 +607,65 @@ function renderCard(item){
     else if(s==='archived')act=abtn('restore','Restore',id);
   }
 
+  // article preview (make_article only)
+  var articleHtml='';
+  if(item.template_type==='make_article'&&articleBodies[id]){
+    articleHtml='<div class="article-section"><div class="article-toggle" onclick="toggleArticle(\''+esc(id)+'\',this,event)">&#9654; 記事全文を表示</div><div class="article-body" id="article-'+esc(id)+'"></div></div>';
+  }
+  // correction instructions (make_article only)
+  var corrHtml='';
+  if(item.template_type==='make_article'){
+    var ci=item.correction_instructions||'';
+    corrHtml='<div class="correction-section"><div class="correction-label">&#9998; 修正指示</div><textarea class="correction-ta" id="corr-'+esc(id)+'" placeholder="修正内容を記入..." onclick="event.stopPropagation()">'+esc(ci)+'</textarea><button class="correction-save" onclick="saveCorrection(\''+esc(id)+'\',event)">保存</button></div>';
+  }
+
   var charClass=item.char_class?('char-'+item.char_class):charClsLocal(rem);
   return '<div class="'+cls+'" data-id="'+esc(id)+'">'+
     '<div class="card-top"><div class="badges">'+bg+'</div></div>'+
     '<div class="card-title">'+esc(item.title||'(no title)')+'</div>'+
     '<div class="card-body">'+esc(body)+'</div>'+
     '<div class="card-meta"><span>'+fmtDate(item.created_at)+'</span><span class="'+charClass+'">'+rem+' chars</span></div>'+
-    sch+imgHtml+err+impHtml+urlHtml+
+    sch+imgHtml+err+impHtml+urlHtml+articleHtml+corrHtml+
     '<div class="card-footer">'+act+'</div></div>';
 }
 function abtn(a,l,id){return '<button class="cbtn cbtn--'+a+'" data-action="'+a+'" data-id="'+esc(id)+'">'+l+'</button>'}
 
-/* ===== Card actions ===== */
-document.getElementById('panel-list').addEventListener('click',function(e){
-  var b=e.target.closest('[data-action]');
-  if(!b)return;
+
+/* ===== Article preview & Correction ===== */
+function toggleArticle(newsId,toggleEl,e){
   e.stopPropagation();
-  handleAction(b.getAttribute('data-action'),b.getAttribute('data-id'));
+  var bodyEl=document.getElementById('article-'+newsId);
+  if(!bodyEl)return;
+  if(bodyEl.classList.contains('expanded')){
+    bodyEl.classList.remove('expanded');
+    toggleEl.innerHTML='&#9654; 記事全文を表示';
+  }else{
+    if(!bodyEl.innerHTML){
+      var raw=articleBodies[newsId]||'';
+      bodyEl.innerHTML=DOMPurify.sanitize(marked.parse(raw));
+    }
+    bodyEl.classList.add('expanded');
+    toggleEl.innerHTML='&#9660; 記事全文を閉じる';
+  }
+}
+async function saveCorrection(newsId,e){
+  e.stopPropagation();
+  var ta=document.getElementById('corr-'+newsId);
+  if(!ta)return;
+  await apiEdit(newsId,{correction_instructions:ta.value});
+  toast('修正指示を保存しました');
+}
+
+/* ===== Card click → detail / actions ===== */
+document.getElementById('panel-list').addEventListener('click',function(e){
+  // Action buttons
+  var b=e.target.closest('[data-action]');
+  if(b){e.stopPropagation();handleAction(b.getAttribute('data-action'),b.getAttribute('data-id'));return}
+  // Correction textarea / buttons — don't navigate
+  if(e.target.closest('.correction-ta')||e.target.closest('.correction-save'))return;
+  // Card click → open detail
+  var card=e.target.closest('.card[data-id]');
+  if(card){openDetail(card.getAttribute('data-id'))}
 });
 
 async function handleAction(action,id){
@@ -561,6 +675,208 @@ async function handleAction(action,id){
   else if(action==='archive'){await apiStatus(id,'archived',{reason:'manual'});toast('Archived')}
   else if(action==='restore'){await apiStatus(id,'draft');toast('Restored')}
   else if(action==='retry'){await apiStatus(id,'approved');toast('Reset for retry')}
+}
+
+/* ===== Detail View ===== */
+function openDetail(id){
+  var item=allData.find(function(i){return i.news_id===id});
+  if(!item)return;
+  previousPanelMode=panelMode;
+  detailId=id;
+  panelMode='detail';
+  renderDetail();
+}
+function closeDetail(){
+  detailId=null;
+  panelMode=previousPanelMode;
+  document.getElementById('detail-view').classList.remove('active');
+  document.getElementById('panel-list').style.display='';
+  document.querySelector('.panel-header').style.display='';
+  var ri=document.getElementById('rewrite-input');if(ri)ri.value='';
+  renderPanel();
+}
+function renderDetail(){
+  var item=allData.find(function(i){return i.news_id===detailId});
+  if(!item){closeDetail();return}
+
+  // Hide list, show detail
+  document.getElementById('panel-list').style.display='none';
+  document.querySelector('.panel-header').style.display='none';
+  document.getElementById('detail-view').classList.add('active');
+  document.getElementById('detail-title-label').textContent=item.title||'(no title)';
+
+  var body=item.body||'';
+  var rem=item.char_remaining!=null?item.char_remaining:(280-fullLen(body,item.hashtags));
+  var charClass=item.char_class?('char-'+item.char_class):charClsLocal(rem);
+
+  // badges
+  var bg='<span class="badge badge--'+item.status+'">'+esc(item.status)+'</span>';
+  if(item.template_type)bg+=' <span class="badge badge--type">'+esc(item.template_type)+'</span>';
+  if(item.account_label||item.account_id)bg+=' <span class="badge badge--type">@'+esc(item.account_label||item.account_id)+'</span>';
+  if(item.is_stale)bg+=' <span class="badge badge--stale">stale</span>';
+
+  // scheduled
+  var schHtml='';
+  if(item.scheduled_at){schHtml='<div style="color:var(--yellow);font-size:13px">&#128197; '+esc(item.scheduled_at_display||item.scheduled_at)+'</div>'}
+
+  // hashtags
+  var tagsHtml='';
+  if(item.hashtags&&item.hashtags.length){
+    tagsHtml='<div style="color:var(--accent);font-size:13px;margin-top:8px">'+esc(item.hashtags.join(' '))+'</div>';
+  }
+
+  // images
+  var imgHtml='';
+  if(item.images_base64&&item.images_base64.length){
+    imgHtml='<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">';
+    item.images_base64.forEach(function(img){
+      imgHtml+='<img src="'+esc(img.data||'')+'" style="max-height:120px;border-radius:8px;border:1px solid var(--border)" title="'+esc(img.description||'')+'">';
+    });
+    imgHtml+='</div>';
+  }
+
+  // impressions (plan.md M1 T1.4: ER + interval 表示追加)
+  var impHtml='';
+  if(item.impressions){
+    var imp=item.impressions;
+    var er=(typeof imp.engagement_rate==='number')?(imp.engagement_rate*100).toFixed(2)+'%':'-';
+    var ih=(imp.interval_hours!=null)?' <span style="opacity:0.6">(+'+imp.interval_hours+'h)</span>':'';
+    impHtml='<div style="display:flex;gap:14px;font-size:13px;color:var(--text2);margin-top:8px;flex-wrap:wrap">'+
+      '<span>&#128065; '+fmtN(imp.impressions)+'</span>'+
+      '<span>&#9825; '+fmtN(imp.likes)+'</span>'+
+      '<span>&#128260; '+fmtN(imp.retweets)+'</span>'+
+      '<span title="Engagement Rate">ER '+er+ih+'</span>'+
+      '</div>';
+  }
+
+  // posted URL
+  var urlHtml='';
+  if(item.posted_url){
+    urlHtml='<div style="margin-top:8px"><a href="'+esc(item.posted_url)+'" target="_blank" rel="noopener" style="color:var(--link);font-size:13px">View post &rarr;</a></div>';
+  }
+
+  // action buttons
+  var act='';
+  if(item.available_actions&&item.available_actions.length){
+    item.available_actions.forEach(function(a){
+      act+='<button class="cbtn cbtn--'+a+'" onclick="handleDetailAction(\''+a+'\',\''+esc(detailId)+'\')">'+a.charAt(0).toUpperCase()+a.slice(1)+'</button>';
+    });
+  } else {
+    var s=item.status;
+    if(s==='draft'||s==='rejected'){act='<button class="cbtn cbtn--approve" onclick="handleDetailAction(\'approve\',\''+esc(detailId)+'\')">Approve</button><button class="cbtn cbtn--edit" onclick="handleDetailAction(\'edit\',\''+esc(detailId)+'\')">Edit</button><button class="cbtn cbtn--archive" onclick="handleDetailAction(\'archive\',\''+esc(detailId)+'\')">Archive</button>'}
+    else if(s==='approved'){act='<button class="cbtn cbtn--edit" onclick="handleDetailAction(\'edit\',\''+esc(detailId)+'\')">Edit</button><button class="cbtn cbtn--reject" onclick="handleDetailAction(\'reject\',\''+esc(detailId)+'\')">Reject</button><button class="cbtn cbtn--archive" onclick="handleDetailAction(\'archive\',\''+esc(detailId)+'\')">Archive</button>'}
+    else if(s==='scheduled'){act='<button class="cbtn cbtn--edit" onclick="handleDetailAction(\'edit\',\''+esc(detailId)+'\')">Edit</button><button class="cbtn cbtn--reject" onclick="handleDetailAction(\'reject\',\''+esc(detailId)+'\')">Reject</button>'}
+    else if(s==='failed'){act='<button class="cbtn cbtn--retry" onclick="handleDetailAction(\'retry\',\''+esc(detailId)+'\')">Retry</button><button class="cbtn cbtn--archive" onclick="handleDetailAction(\'archive\',\''+esc(detailId)+'\')">Archive</button>'}
+    else if(s==='archived'){act='<button class="cbtn cbtn--restore" onclick="handleDetailAction(\'restore\',\''+esc(detailId)+'\')">Restore</button>'}
+  }
+
+  var rewriteBar='<div class="rewrite-top">'+
+    '<div class="rewrite-top-label">AI\u4fee\u6b63</div>'+
+    '<div class="rewrite-top-row">'+
+      '<textarea class="rewrite-input" id="rewrite-input" placeholder="\u4fee\u6b63\u6307\u793a\u3092\u5165\u529b\uff08\u4f8b: \u3082\u3063\u3068\u30ab\u30b8\u30e5\u30a2\u30eb\u306b\u3001\u77ed\u304f\u3057\u3066\uff09" rows="2"></textarea>'+
+      '<button class="rewrite-btn" id="rewrite-btn">AI\u3067\u66f8\u304d\u76f4\u3059</button>'+
+    '</div>'+
+  '</div>';
+
+  var html=rewriteBar+
+    '<div class="detail-meta">'+bg+' <span class="'+charClass+'">'+rem+' chars left</span> <span>'+fmtDate(item.created_at)+'</span></div>'+
+    '<div class="detail-body-text">'+esc(body)+'</div>'+
+    tagsHtml+schHtml+imgHtml+impHtml+urlHtml+
+    '<div id="rewrite-preview-area"></div>'+
+    '<div class="detail-actions">'+act+'</div>';
+
+  document.getElementById('detail-content').innerHTML=html;
+
+  // 動的要素にイベントリスナーをバインド
+  document.getElementById('rewrite-btn').addEventListener('click',submitRewrite);
+}
+
+function handleDetailAction(action,id){
+  if(action==='approve'){openScheduleModal(id);return}
+  if(action==='edit'){openEditModal(id);return}
+  handleAction(action,id).then(function(){
+    // Refresh detail after action
+    var item=allData.find(function(i){return i.news_id===id});
+    if(item)renderDetail();
+    else closeDetail();
+  });
+}
+
+/* ===== Rewrite ===== */
+document.getElementById('detail-back').addEventListener('click',closeDetail);
+
+var pendingRewrite={instruction:'',originalBody:'',rewrittenBody:''};
+
+async function submitRewrite(){
+  var input=document.getElementById('rewrite-input');
+  var btn=document.getElementById('rewrite-btn');
+  var instruction=input.value.trim();
+  if(!instruction){toast('修正指示を入力してください');return}
+
+  var item=allData.find(function(i){return i.news_id===detailId});
+  pendingRewrite={instruction:instruction,originalBody:item?item.body:''};
+
+  btn.disabled=true;btn.textContent='処理中...';
+  input.disabled=true;
+
+  try{
+    var r=await fetch(API+'/api/drafts/'+detailId+'/rewrite',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({instruction:instruction})
+    });
+    var result=await r.json();
+    if(!result.ok){toast(result.error||'エラーが発生しました');return}
+    renderRewritePreview(result.original_body,result.body);
+  }catch(e){
+    toast('通信エラー: '+e.message);
+  }finally{
+    btn.disabled=false;btn.textContent='AIで書き直す';
+    input.disabled=false;
+  }
+}
+
+function renderRewritePreview(oldBody,newBody){
+  var area=document.getElementById('rewrite-preview-area');
+  if(!area)return;
+  pendingRewrite.rewrittenBody=newBody;
+  area.innerHTML='<div class="rewrite-preview">'+
+    '<div class="rewrite-label rewrite-label--old">変更前</div>'+
+    '<div class="rewrite-text" style="color:var(--text2)">'+esc(oldBody)+'</div>'+
+    '<div class="rewrite-label rewrite-label--new">変更後</div>'+
+    '<div class="rewrite-text">'+esc(newBody)+'</div>'+
+    '<div class="rewrite-actions">'+
+      '<button class="rewrite-discard" onclick="discardRewrite()">破棄</button>'+
+      '<button class="rewrite-accept" onclick="acceptRewrite()">この内容で更新</button>'+
+    '</div>'+
+  '</div>';
+  area.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+async function acceptRewrite(){
+  var newBody=pendingRewrite.rewrittenBody||'';
+  if(!newBody)return;
+  fetch(API+'/api/drafts/'+detailId+'/rewrite/accept',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      instruction:pendingRewrite.instruction,
+      original_body:pendingRewrite.originalBody,
+      rewritten_body:newBody
+    })
+  }).then(function(r){return r.json()}).then(function(j){
+    if(!j.ok)console.warn('学習データ保存失敗:',j.error);
+  }).catch(function(e){console.warn('学習データ保存エラー:',e)});
+  await apiEdit(detailId,{body:newBody});
+  document.getElementById('rewrite-preview-area').innerHTML='';
+  var ri=document.getElementById('rewrite-input');if(ri)ri.value='';
+  pendingRewrite={instruction:'',originalBody:'',rewrittenBody:''};
+  renderDetail();
+  toast('本文を更新しました');
+}
+
+function discardRewrite(){
+  document.getElementById('rewrite-preview-area').innerHTML='';
 }
 
 /* ===== Schedule Modal ===== */
@@ -678,7 +994,10 @@ document.getElementById('btn-compact').addEventListener('click',async function()
 
 /* ===== Keyboard ===== */
 document.addEventListener('keydown',function(e){
-  if(e.key==='Escape'){closeEditModal();closeScheduleModal()}
+  if(e.key==='Escape'){
+    if(detailId){closeDetail();return}
+    closeEditModal();closeScheduleModal();
+  }
   if((e.ctrlKey||e.metaKey)&&e.key==='s'&&editingId){e.preventDefault();saveEdit()}
 });
 

@@ -12,7 +12,7 @@
 ## カテゴリ
 
 1. **オススメしている資産・セクター** - 買い推奨、注目銘柄
-2. **個人で購入・保有している資産** - 実際の売買報告
+2. **個人で売買している資産** - 購入・売却・損益報告（旧 sold_assets/winning_trades 統合）
 3. **申し込んだIPO** - IPO関連
 4. **市況トレンドに関する見解** - 相場観、マクロ分析
 5. **高騰している資産** - 急騰銘柄
@@ -78,11 +78,16 @@ pip install -r requirements.txt
 playwright install chromium
 ```
 
-### 初回セットアップ
+### 初回 Cookie 取得（macOS のみ）
+
+普段使い Chrome で X にログイン済みのプロファイルから Cookie を抽出（VNC Playwright 経由は X の bot 検知で不可、2026-04-21）:
 
 ```bash
-python scripts/setup_profile.py
+python3 scripts/import_chrome_cookies.py --chrome-profile "Profile 2" --account kabuki666999
+python3 scripts/import_chrome_cookies.py --chrome-profile "Default"   --account maaaki
 ```
+
+詳細は `.claude/skills/refresh-x-cookies/SKILL.md` 参照。
 
 ### ツイート収集
 
@@ -159,7 +164,7 @@ xstock/
 │   ├── x_collector.py     # 収集クラス
 │   └── classifier.py      # 分類クラス
 ├── scripts/
-│   ├── setup_profile.py   # 初回セットアップ
+│   ├── import_chrome_cookies.py  # ホスト Chrome から X Cookie 抽出（唯一の確実経路）
 │   ├── collect_tweets.py  # 収集スクリプト
 │   └── start.sh           # 起動スクリプト
 ├── data/                  # データ保存用

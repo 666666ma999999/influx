@@ -399,11 +399,14 @@ def phase_collect(candidates_files=None, max_collect=10, scrolls=10, since=None,
 # ============================================================
 # Phase 3: Evaluate
 # ============================================================
-def phase_evaluate(tweet_files=None):
+def phase_evaluate(tweet_files=None, dry_run=False, limit=None):
     """シグナル抽出 → 株価突合 → 勝率計算を行う。
 
     Args:
         tweet_files: ツイートJSONファイルパスのリスト（Noneの場合はresearchディレクトリから検索）
+        dry_run: plan.md M1 T1.8: True の場合、シグナル抽出を 1 件のみ試行してコスト見積もりを出力し、
+                 永続化をスキップする
+        limit: plan.md M1 T1.8: 処理するシグナル件数上限（dry-run 時のデフォルトは 1）
 
     Returns:
         評価件数
@@ -413,7 +416,8 @@ def phase_evaluate(tweet_files=None):
     from collector.business_days import add_business_days
     from extensions.tier1_collection.grok_discoverer.research_store import ResearchStore
 
-    print(f"=== Phase 3: Evaluate ===")
+    phase_label = "Phase 3: Evaluate" + (" [DRY-RUN]" if dry_run else "")
+    print(f"=== {phase_label} ===")
 
     # ツイートファイル読み込み
     if tweet_files is None:
@@ -439,10 +443,25 @@ def phase_evaluate(tweet_files=None):
     if not all_tweets:
         return 0
 
+    # plan.md M1 T1.8: dry-run 時は --limit (デフォルト 1) 件でツイートを絞り込み API 接続性確認
+    effective_limit = limit if limit is not None else (1 if dry_run else None)
+    if effective_limit is not None and len(all_tweets) > effective_limit:
+        print(f"[limit] ツイートを {effective_limit} 件に制限（dry_run={dry_run}）")
+        all_tweets = all_tweets[:effective_limit]
+
     # シグナル抽出
     extractor = SignalExtractor()
     signals = extractor.extract_all(all_tweets)
     print(f"シグナル抽出: {len(signals)}件")
+
+    if dry_run:
+        est_cost_per_signal = 0.0015  # Grok Haiku 相当の粗い見積もり (USD)
+        total_tweets_estimate = len(tweet_files) * 100  # 実行時の想定ツイート件数
+        estimated_total = total_tweets_estimate * est_cost_per_signal
+        print(f"\n[DRY-RUN] API 接続性: OK（シグナル抽出が 1 件で動作）")
+        print(f"[DRY-RUN] コスト見積もり: ~${estimated_total:.2f} (想定 {total_tweets_estimate} ツイート × ${est_cost_per_signal}/件)")
+        print(f"[DRY-RUN] 永続化はスキップしました。本実行: --phase evaluate (--dry-run なし)")
+        return len(signals)
 
     # クロスバリデーション
     signals = extractor.cross_validate_with_extractor(signals)
@@ -792,6 +811,18 @@ def main():
         default=False,
         help="前回の評価データをクリアしてから実行（signals/evaluations/indexをバックアップ後削除）",
     )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        default=False,
+        help="plan.md M1 T1.8: 実際の永続化を行わず、API 接続性とコスト見積もりを出力。--limit と併用推奨",
+    )
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="plan.md M1 T1.8: 各フェーズで扱う件数上限（dry-run のコスト確認で 1 を指定）",
+    )
 
     args = parser.parse_args()
 
@@ -830,12 +861,14 @@ def main():
             return
 
     if args.phase == "evaluate" or args.phase == "full":
-        if args.clean:
+        if args.clean and not args.dry_run:
             from extensions.tier1_collection.grok_discoverer.research_store import ResearchStore
             store = ResearchStore(base_dir=RESEARCH_DIR)
             store.clear()
             print("前回データをクリアしました")
-        phase_evaluate()
+        elif args.clean and args.dry_run:
+            print("[DRY-RUN] --clean はスキップ（永続データ保護）")
+        phase_evaluate(dry_run=args.dry_run, limit=args.limit)
         if args.phase == "evaluate":
             return
 

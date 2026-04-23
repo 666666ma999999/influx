@@ -318,48 +318,55 @@ CLASSIFICATION_RULES = {
         ]
     },
     "purchased_assets": {
-        "name": "個人で購入・保有している資産",
+        "name": "個人で売買している資産",
         "keywords": [
+            # 購入系
             "買った", "購入", "追加", "ナンピン", "買い増し",
-            "エントリー", "仕込んだ",
+            "エントリー", "仕込んだ", "仕込み",
+            "突っ込んだ", "突っ込み",            # aggressive buying (2026-04-19 拡充)
             "現物", "田中貴金属", "地金", "金貨",
             "イーサリアム", "ETH", "暗号資産", "仮想通貨",
             "インデックス", "積立",
             "ポートフォリオ", "保有", "含み益", "含み損",
-            "約定", "指値", "成行", "NISA"
+            "約定", "指値", "成行", "NISA",
+            # ポジション系（FX/信用/デリバ含む、2026-04-19 拡充）
+            "ポジる", "ポジった", "ポジション構築",
+            "ガチホ",
+            "レバレッジ",  # "レバ" 単独は "レバ焼き" 等で誤発火するため除外、patterns で金融文脈に限定
+            # 以下は全て多義語のため bare keyword から除外、patterns で金融文脈マッチ:
+            # "ロング", "ショート", "スワップ", "塩漬け", "レバ", "ホールド"
+            # 売却系（旧 sold_assets を統合）
+            "売った", "売却", "利確", "利食い", "損切り", "ロスカット",
+            "手放した", "全売り", "一部売却", "ポジション解消",
+            "エグジット", "出金", "引き揚げ",
+            # 損益報告系（旧 winning_trades を統合）
+            "爆益", "勝ち", "勝った", "大勝ち", "プラス転換",
+            "利益確定", "プラ転", "勝率",
+            "リターン", "パフォーマンス", "運用益", "配当金",
+            "儲かった", "儲けた", "黒字"
         ],
         "patterns": [
             r"[ぁ-んァ-ン一-龥A-Za-z0-9]+をイン",
             r"(全力|株|銘柄|ドル|ゴールド|ビットコイン|BTC|ETH).*イン(?!フ|サ|タ|デ|ス|パ|ド|ナ)",
             r"[ぁ-んァ-ン一-龥A-Za-z0-9]+エントリー",
-            r"[ぁ-んァ-ン一-龥A-Za-z0-9]+仕込んだ"
-        ]
-    },
-    "sold_assets": {
-        "name": "売却した資産",
-        "keywords": [
-            "売った", "売却", "利確", "利食い", "損切り", "ロスカット",
-            "手放した", "全売り", "一部売却", "ポジション解消",
-            "エグジット", "出金", "引き揚げ"
-        ],
-        "patterns": [
+            r"[ぁ-んァ-ン一-龥A-Za-z0-9]+仕込(んだ|み)",
+            r"[ぁ-んァ-ン一-龥A-Za-z0-9]+(に|を)突っ込",  # 2026-04-19 拡充
             r"(売り|売却).*?(完了|済み|した)",
             r"(利確|利食い|損切り).*?(した|済み|完了)",
-            r"(ポジション|持ち株).*?(解消|整理|縮小)"
-        ]
-    },
-    "winning_trades": {
-        "name": "勝ちトレード・利益報告",
-        "keywords": [
-            "爆益", "勝ち", "勝った", "大勝ち", "プラス転換",
-            "利益確定", "含み益", "プラ転", "勝率",
-            "リターン", "パフォーマンス", "運用益", "配当金",
-            "儲かった", "儲けた", "黒字", "プラス"
-        ],
-        "patterns": [
+            r"(ポジション|持ち株).*?(解消|整理|縮小|構築)",
+            # 多義語は金融文脈必須（2026-04-19 FP 対策）
+            r"(株|銘柄|円|ドル|日経|TOPIX|FX|CFD|BTC|ETH|XRP|コイン|仮想通貨|暗号資産|先物|金融)\w*(ロング|ショート)",
+            r"(ロング|ショート)\w*(持|乗|エントリー|仕込|利確|損切|撤退|爆益)",
+            r"(ポジション|持ち株|銘柄|株|FX|ドル|円|BTC|ETH)\w*塩漬け",
+            r"塩漬け\w*(ポジ|株|銘柄)",
+            r"(株|銘柄|FX|BTC|コイン|ポジション|ガチ|長期)\w*ホールド",
+            r"ホールド\w*(株|銘柄|ポジ|BTC|ETH|コイン|投資)",
+            r"(FX|ドル|通貨|金利|為替|ポジション)\w*スワップ",
+            r"スワップ\w*(収益|金|狙い|取|付|乗|ポイント)",
+            r"レバ\w*(倍|\d|エントリー|ポジ|ポジション|効か|掛け)",
+            r"(\d|証拠金|CFD|信用|先物)\w*レバ",
             r"[+＋][0-9].*?(万|%|円|pips)",
             r"(利益|収益|リターン).*?[0-9]+(万|%|円)",
-            r"(年初来|月間|週間).*?(パフォーマンス|リターン|成績)",
             r"(勝率|的中率).*?[0-9]"
         ]
     },
@@ -429,6 +436,89 @@ CLASSIFICATION_RULES = {
             r"(機関投資家|ヘッジファンド).*?(売り|ショート)"
         ]
     }
+}
+
+
+# カテゴリ → テンプレート対応表（plan.md M1 T1.0 で正規化）
+# tier3_posting/cli/compose.py から参照され、ドラフト生成時の振り分けを決定する
+CATEGORY_TEMPLATE_MAP = {
+    "recommended_assets": "hot_picks",
+    "purchased_assets":   "trade_activity",
+    "ipo":                "hot_picks",          # IPO サブテンプレート扱い
+    "market_trend":       "market_summary",
+    "bullish_assets":     "hot_picks",
+    "bearish_assets":     "market_summary",     # 従来未割り当てだったため明示化
+    "warning_signals":    "contrarian_signal",
+}
+
+# 旧 9 カテゴリ → 新 7 カテゴリ マッピング（過去データ移行用）
+LEGACY_CATEGORY_MAP = {
+    "sold_assets":     "purchased_assets",   # 売買活動として統合
+    "winning_trades":  "purchased_assets",   # 個人の損益報告として統合
+}
+
+
+# 逆指標アカウントの発言が warning_signals 扱いされるトリガーカテゴリ
+# Single Source of Truth (plan.md M1 残タスク + ユーザー指示 2026-04-19)
+#
+# ユーザー方針: gihuboy は「逆神」として投資関連カテゴリが 1 つでも付いたら警戒シグナル化する。
+# 日常投稿（カテゴリ空のツイート）のみ除外。これにより 6/7 カテゴリが警戒トリガーになる。
+# （warning_signals 自身は除外 — 自己重複を避けるため）
+CONTRARIAN_TRIGGER_CATEGORIES = {
+    "recommended_assets",
+    "purchased_assets",
+    "ipo",
+    "market_trend",
+    "bullish_assets",
+    "bearish_assets",
+}
+
+
+def apply_contrarian_override(
+    is_contrarian: bool, categories: list
+) -> list:
+    """逆指標アカウントの投資関連カテゴリ該当時に warning_signals を追加する。
+
+    plan.md: classifier.py と llm_classifier.py の両経路で同一ロジックを強制するため、
+    本モジュールを Single Source of Truth とする。
+
+    ユーザー指示 (2026-04-19): gihuboy は「逆神」のため、投資関連カテゴリ (6/7) が
+    1 つでも付いたら warning_signals を追加する。日常投稿（カテゴリ空）のみ除外。
+
+    Args:
+        is_contrarian: 逆指標アカウントかどうか
+        categories: 分類結果カテゴリリスト（ミュータブル想定だが非破壊で返す）
+
+    Returns:
+        必要に応じて warning_signals を末尾追加した新リスト
+    """
+    if not is_contrarian:
+        return list(categories)
+    result = list(categories)
+    if set(result) & CONTRARIAN_TRIGGER_CATEGORIES and "warning_signals" not in result:
+        result.append("warning_signals")
+    return result
+
+
+# カテゴリ → 投稿アカウント Single Source of Truth (plan.md M5 T5.3 で正規化)
+# tier3_posting/account_routing.py から参照され、TEMPLATE_ROUTING を自動導出する
+# 全 7 カテゴリは現在 @kabuki666999 に振り分け（投資/仮想通貨アカウント）
+# @maaaki は Claude/AI/経営系の手動投稿用に温存
+CATEGORY_ACCOUNT_MAP = {
+    "recommended_assets": "kabuki666999",
+    "purchased_assets":   "kabuki666999",
+    "ipo":                "kabuki666999",
+    "market_trend":       "kabuki666999",
+    "bullish_assets":     "kabuki666999",
+    "bearish_assets":     "kabuki666999",
+    "warning_signals":    "kabuki666999",
+}
+
+# カテゴリ駆動でないテンプレート（週次/勝率ランキング/決算）の明示マッピング
+NON_CATEGORY_TEMPLATE_ACCOUNT_MAP = {
+    "win_rate_ranking": "kabuki666999",
+    "weekly_report":    "kabuki666999",
+    "earnings_flash":   "kabuki666999",
 }
 
 

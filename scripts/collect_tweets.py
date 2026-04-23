@@ -12,7 +12,9 @@ import json
 import time
 import random
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
+
+JST = timezone(timedelta(hours=9))
 
 # プロジェクトルートをパスに追加
 project_root = Path(__file__).parent.parent
@@ -33,6 +35,75 @@ from collector.config import (
     build_collect_tasks,
 )
 from collector.inactive_checker import run_inactive_check, detect_inactive_accounts
+
+
+def _emit_collection_metrics(
+    all_tweets: list, output_dir: Path, date_str: str,
+    min_tweets_per_day: int = 100, min_active_accounts: int = 20,
+) -> dict:
+    """日次収集メトリクスを output/collection_metrics.jsonl に追記する。
+
+    plan.md M1 T1.7: 日次合計・アカウント別・カテゴリ別件数を記録し、
+    閾値割れ時に stderr 警告を出して未達を運用者に可視化する。
+
+    Args:
+        all_tweets: 収集ツイート list
+        output_dir: 出力ルート（output/）
+        date_str: 集計日 YYYY-MM-DD
+        min_tweets_per_day: 日次収集量の閾値（デフォルト 100）
+        min_active_accounts: アクティブアカウント数の閾値（デフォルト 20）
+
+    Returns:
+        メトリクス dict（追記内容と同じ）
+    """
+    from collections import Counter
+
+    per_account = Counter(t.get("username", "unknown") for t in all_tweets)
+    per_category: Counter = Counter()
+    for t in all_tweets:
+        for cat in t.get("categories") or []:
+            per_category[cat] += 1
+        for cat in t.get("llm_categories") or []:
+            per_category[cat] += 1
+
+    warnings = []
+    if len(all_tweets) < min_tweets_per_day:
+        warnings.append(
+            f"total_tweets={len(all_tweets)} < {min_tweets_per_day} (前提未達)"
+        )
+    if len(per_account) < min_active_accounts:
+        warnings.append(
+            f"active_accounts={len(per_account)} < {min_active_accounts} (前提未達)"
+        )
+
+    metrics = {
+        "date": date_str,
+        "collected_at": datetime.now(JST).isoformat(),
+        "total_tweets": len(all_tweets),
+        "active_accounts": len(per_account),
+        "per_account": dict(per_account.most_common()),
+        "per_category": dict(per_category),
+        "thresholds": {
+            "min_tweets_per_day": min_tweets_per_day,
+            "min_active_accounts": min_active_accounts,
+        },
+        "warnings": warnings,
+    }
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    metrics_path = output_dir / "collection_metrics.jsonl"
+    with open(metrics_path, "a", encoding="utf-8") as f:
+        f.write(json.dumps(metrics, ensure_ascii=False) + "\n")
+
+    if warnings:
+        for w in warnings:
+            print(f"[WARNING] 収集量モニタリング: {w}", file=sys.stderr)
+        print(
+            f"[INFO] 詳細: {metrics_path}（plan.md M1 T1.7 のベースライン確認手順を参照）",
+            file=sys.stderr,
+        )
+
+    return metrics
 
 
 def _execute_collect_task(task: CollectTask, profile_path: str, max_scrolls: int,
@@ -271,9 +342,10 @@ def main():
     profile_path = Path(args.profile).resolve()
     if not profile_path.exists():
         print("[エラー] ブラウザプロファイルが見つかりません。")
-        print("先に以下のコマンドでセットアップしてください:")
+        print("先に以下のコマンドで Cookie を取得してください（Chrome に X ログイン済みが前提）:")
         print()
-        print("  python scripts/setup_profile.py")
+        print("  python3 scripts/import_chrome_cookies.py --chrome-profile \"Profile 2\" --account kabuki666999")
+        print("  （詳細: refresh-x-cookies スキル参照）")
         print()
         sys.exit(1)
 
@@ -403,7 +475,7 @@ def main():
                 break
             elif result.status == "login_required":
                 print("\n[エラー] ログインが必要です。")
-                print("scripts/setup_profile.py を実行してログインしてください")
+                print("scripts/import_chrome_cookies.py で Chrome から Cookie を抽出してください（refresh-x-cookies スキル参照）")
                 sys.exit(1)
             else:
                 task.status = "failed"
@@ -529,11 +601,16 @@ def main():
             json.dump(news_data, f, ensure_ascii=False, indent=2)
         print(f"ニュースデータ保存: {news_path}")
 
+    # plan.md M1 T1.7: 日次収集メトリクスを output/collection_metrics.jsonl に追記
+    metrics = _emit_collection_metrics(all_tweets, output_dir, date_str)
+
     print()
     print("=" * 60)
     print("収集完了!")
     print("=" * 60)
-    print(f"総ツイート数: {len(all_tweets)}")
+    print(f"総ツイート数: {len(all_tweets)} (アクティブアカウント: {metrics['active_accounts']})")
+    if metrics["warnings"]:
+        print(f"[WARNING] 閾値未達: {', '.join(metrics['warnings'])}")
     print()
 
 

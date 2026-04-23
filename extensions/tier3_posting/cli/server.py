@@ -18,6 +18,8 @@ from ..x_poster.post_store import PostStore
 from ..account_routing import resolve_account, get_account_list, ACCOUNTS
 from ..services.view_model import enrich_draft_for_ui, build_meta, build_cli_commands
 from ..services.draft_service import build_draft
+from ..services.style_prompt_builder import build_rewrite_prompt
+from ..services.rewrite_store import record_rewrite
 
 UI_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "ui")
 
@@ -121,6 +123,14 @@ class ReviewHandler(SimpleHTTPRequestHandler):
         elif re.match(r"^/api/drafts/[a-f0-9]+/edit$", path):
             news_id = path.split("/")[3]
             self._api_edit_draft(news_id, body)
+        # /api/drafts/<id>/rewrite/accept (must be before /rewrite)
+        elif re.match(r"^/api/drafts/[a-f0-9]+/rewrite/accept$", path):
+            news_id = path.split("/")[3]
+            self._api_accept_rewrite(news_id, body)
+        # /api/drafts/<id>/rewrite
+        elif re.match(r"^/api/drafts/[a-f0-9]+/rewrite$", path):
+            news_id = path.split("/")[3]
+            self._api_rewrite_draft(news_id, body)
         else:
             self.send_error(404)
 
@@ -195,26 +205,28 @@ class ReviewHandler(SimpleHTTPRequestHandler):
             self._json_response({"ok": False, "error": str(e)}, status=500)
 
     def _api_get_bookmarks(self):
-        """GET /api/bookmarks — ブックマークJSONL読み込み。"""
+        """GET /api/bookmarks — ブックマークJSONL読み込み（plan.md M1 T1.3 でパス修正）。"""
         try:
-            output_dir = os.path.dirname(self.base_dir)  # output/
-            jsonl_path = os.path.join(output_dir, "bookmarks_test.jsonl")
-            if not os.path.exists(jsonl_path):
-                # bookmarks.jsonl も試す
-                jsonl_path = os.path.join(output_dir, "bookmarks.jsonl")
-            if not os.path.exists(jsonl_path):
-                self._json_response([])
+            from pathlib import Path
+            from ..services.style_prompt_builder import _read_jsonl
+
+            # 正規パス: data/writing_style/bookmarks/normalized.jsonl（教師データ169件）
+            # cli/server.py → tier3_posting/ → extensions/ → プロジェクトルート (parents[3])
+            project_root = Path(__file__).resolve().parents[3]
+            primary = project_root / "data" / "writing_style" / "bookmarks" / "normalized.jsonl"
+            if primary.exists():
+                self._json_response(_read_jsonl(primary))
                 return
-            items = []
-            with open(jsonl_path, "r", encoding="utf-8") as f:
-                for line in f:
-                    line = line.strip()
-                    if line:
-                        try:
-                            items.append(json.loads(line))
-                        except json.JSONDecodeError:
-                            continue
-            self._json_response(items)
+
+            # フォールバック: 旧 output/ 配下（収集後の整形前データ）
+            output_dir = Path(self.base_dir).parent  # output/
+            for fallback in ("bookmarks.jsonl", "bookmarks_test.jsonl"):
+                candidate = output_dir / fallback
+                if candidate.exists():
+                    self._json_response(_read_jsonl(candidate))
+                    return
+
+            self._json_response([])
         except Exception as e:
             self._json_response({"ok": False, "error": str(e)}, status=500)
 
@@ -275,16 +287,17 @@ class ReviewHandler(SimpleHTTPRequestHandler):
         except Exception as e:
             self._json_response({"ok": False, "error": str(e)}, status=500)
 
+    def _find_draft(self, news_id: str) -> dict:
+        """news_idでドラフトを検索する。見つからない場合はNone。"""
+        for d in self.store.load_drafts():
+            if d.get("news_id") == news_id:
+                return d
+        return None
+
     def _api_edit_draft(self, news_id: str, body: dict):
         """POST /api/drafts/<news_id>/edit — ドラフト編集。"""
         try:
-            # 現在のステータスを取得
-            drafts = self.store.load_drafts()
-            current_draft = None
-            for d in drafts:
-                if d.get("news_id") == news_id:
-                    current_draft = d
-                    break
+            current_draft = self._find_draft(news_id)
 
             if current_draft is None:
                 self._json_response(
@@ -301,7 +314,7 @@ class ReviewHandler(SimpleHTTPRequestHandler):
 
             # 編集フィールドを extra として渡す
             fields = {}
-            for key in ("title", "body", "hashtags", "scheduled_at", "account_id"):
+            for key in ("title", "body", "hashtags", "scheduled_at", "account_id", "correction_instructions"):
                 if key in body:
                     fields[key] = body[key]
 
@@ -415,7 +428,7 @@ class ReviewHandler(SimpleHTTPRequestHandler):
 
             ok = self.store.add_draft(draft)
             if ok:
-                self._json_response({"ok": True, "news_id": news_id})
+                self._json_response({"ok": True, "news_id": draft["news_id"]})
             else:
                 self._json_response(
                     {"ok": False, "error": "duplicate news_id"}, status=409
@@ -491,6 +504,114 @@ class ReviewHandler(SimpleHTTPRequestHandler):
             self.wfile.write(data)
         except Exception as e:
             self.send_error(500, f"Error: {e}")
+
+    @staticmethod
+    def _call_llm(prompt: str) -> str:
+        """claude CLIを呼び出してテキストを返す（APIキー不要）。"""
+        import subprocess
+
+        try:
+            result = subprocess.run(
+                ["claude", "-p", prompt],
+                capture_output=True,
+                text=True,
+                timeout=120,
+            )
+            if result.returncode != 0:
+                print(f"WARNING: claude CLI failed (rc={result.returncode}): {result.stderr[:200]}")
+                return ""
+            return result.stdout.strip()
+        except FileNotFoundError:
+            print("WARNING: claude CLI not found in PATH")
+            return ""
+        except subprocess.TimeoutExpired:
+            print("WARNING: claude CLI timed out (120s)")
+            return ""
+        except Exception as e:
+            print(f"WARNING: claude CLI call failed: {e}")
+            return ""
+
+    def _api_rewrite_draft(self, news_id: str, body: dict):
+        """POST /api/drafts/<id>/rewrite — LLMでドラフト本文をリライト。"""
+        try:
+            instruction = body.get("instruction", "").strip()
+            if not instruction:
+                self._json_response(
+                    {"ok": False, "error": "instruction is required"}, status=400
+                )
+                return
+
+            draft = self._find_draft(news_id)
+            if draft is None:
+                self._json_response(
+                    {"ok": False, "error": f"news_id not found: {news_id}"},
+                    status=404,
+                )
+                return
+
+            original_body = draft.get("body", "")
+            account_id = draft.get("account_id", "")
+
+            # プロンプト構築 + LLM呼び出し
+            prompt = build_rewrite_prompt(original_body, instruction, account_id)
+            rewritten = self._call_llm(prompt)
+
+            if not rewritten:
+                self._json_response(
+                    {"ok": False, "error": "LLM呼び出しに失敗しました（APIキー未設定または通信エラー）"},
+                    status=500,
+                )
+                return
+
+            self._json_response({
+                "ok": True,
+                "body": rewritten,
+                "original_body": original_body,
+            })
+        except Exception as e:
+            self._json_response({"ok": False, "error": str(e)}, status=500)
+
+    def _api_accept_rewrite(self, news_id: str, body: dict):
+        """POST /api/drafts/<id>/rewrite/accept — 承認されたリライトペアを学習データとして保存。"""
+        try:
+            instruction = body.get("instruction", "").strip()
+            original_body = body.get("original_body", "").strip()
+            rewritten_body = body.get("rewritten_body", "").strip()
+
+            if not instruction or not rewritten_body:
+                self._json_response(
+                    {"ok": False, "error": "instruction and rewritten_body are required"},
+                    status=400,
+                )
+                return
+
+            draft = self._find_draft(news_id)
+            if draft is None:
+                self._json_response(
+                    {"ok": False, "error": f"news_id not found: {news_id}"},
+                    status=404,
+                )
+                return
+
+            account_id = draft.get("account_id") or resolve_account(draft) or "unknown"
+            draft_metadata = {
+                "template_type": draft.get("template_type", ""),
+                "char_len_before": len(original_body),
+                "char_len_after": len(rewritten_body),
+            }
+
+            rewrite_id = record_rewrite(
+                account_id=account_id,
+                news_id=news_id,
+                instruction=instruction,
+                original_body=original_body,
+                rewritten_body=rewritten_body,
+                draft_metadata=draft_metadata,
+            )
+
+            self._json_response({"ok": True, "rewrite_id": rewrite_id})
+        except Exception as e:
+            self._json_response({"ok": False, "error": str(e)}, status=500)
 
 
 def main():

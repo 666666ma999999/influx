@@ -181,7 +181,7 @@
       "text": "含み益が20%超えたのでトヨタ株を半分利確しました。残りはホールド",
       "is_contrarian": false,
       "categories": [
-        "sold_assets"
+        "purchased_assets"
       ],
       "reasoning": "自身の売却報告。「利確しました」「半分」という表現から一部売却が明確"
     },
@@ -189,7 +189,7 @@
       "text": "損切りラインに到達したので全部売った。次の銘柄探す",
       "is_contrarian": false,
       "categories": [
-        "sold_assets"
+        "purchased_assets"
       ],
       "reasoning": "損切りによる全売却の報告。「売った」「損切りライン」が売却行動を示す"
     },
@@ -197,7 +197,7 @@
       "text": "ポートフォリオ整理でグロース株3銘柄を売却。ディフェンシブにシフト中",
       "is_contrarian": false,
       "categories": [
-        "sold_assets"
+        "purchased_assets"
       ],
       "reasoning": "複数銘柄の売却報告。「売却」「ポートフォリオ整理」が売却行動を示す"
     },
@@ -205,7 +205,7 @@
       "text": "今月の運用成績+15%！S&P500のおかげで爆益です",
       "is_contrarian": false,
       "categories": [
-        "winning_trades"
+        "purchased_assets"
       ],
       "reasoning": "運用成績の利益報告。「+15%」「爆益」が具体的な利益を示す"
     },
@@ -213,7 +213,7 @@
       "text": "エヌビディアの決算前に仕込んで大勝ち。含み益が50万超えた",
       "is_contrarian": false,
       "categories": [
-        "winning_trades"
+        "purchased_assets"
       ],
       "reasoning": "具体的な金額を伴う勝ちトレード報告。「大勝ち」「含み益50万」が利益を示す"
     },
@@ -221,7 +221,7 @@
       "text": "今年の投資リターンが年初来+30%。配当金も合わせると過去最高のパフォーマンス",
       "is_contrarian": false,
       "categories": [
-        "winning_trades"
+        "purchased_assets"
       ],
       "reasoning": "年間パフォーマンスの利益報告。「+30%」「過去最高」が好成績を示す"
     },
@@ -322,7 +322,7 @@
       "text": "オフ会やDMなどで「ゆーきはいつ売ってるの？」とよく聞かれるので、たまには売るタイミングもポストしてみます。\n三週間前に買ったJマテリアルを売りました。\n三週間前に1640円で買い、2075円で売れたので、わずか三週間で4万円以上儲けたことになります。単元で充分なので真似しやすいと思います。",
       "is_contrarian": false,
       "categories": [
-        "sold_assets"
+        "purchased_assets"
       ],
       "reasoning": "Sold J-Material 1640 to 2075 profit"
     },
@@ -330,7 +330,7 @@
       "text": "2025年に稼いだヘッジファンドマネージャーランキング。1位はPoint72のSteve Cohenで年収34億ドル（約5,200億円）。\n\n・日給：約14億円\n・時給：約6,000万円\n・分給：約100万円\n\n毎分100万円を稼ぐ世界。",
       "is_contrarian": false,
       "categories": [
-        "winning_trades"
+        "market_trend"
       ],
       "reasoning": "HF manager ranking"
     },

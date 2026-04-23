@@ -9,11 +9,14 @@ import re
 import time
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
 JST = timezone(timedelta(hours=9))
+
+# CookieExpiredError は x_poster.exceptions が Single Source of Truth (plan.md M1 T1.5)
+from ..x_poster.exceptions import CookieExpiredError  # noqa: F401, E402
 
 
 class ImpressionScraper:
@@ -23,39 +26,50 @@ class ImpressionScraper:
         profile_path: ログイン済みブラウザプロファイルのパス
     """
 
-    def __init__(self, profile_path: str = "./x_profile") -> None:
+    def __init__(
+        self,
+        profile_path: str = "./x_profile",
+        screenshot_dir: Optional[str] = None,
+    ) -> None:
         self.profile_path = Path(profile_path).resolve()
+        self._screenshot_dir = screenshot_dir
 
-    def scrape(self, tweet_url: str) -> Dict[str, Any]:
-        """ツイートのエンゲージメント指標を取得。
+    def scrape_batch(
+        self,
+        urls: List[str],
+        screenshot_dir: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
+        """複数ツイートURLのエンゲージメント指標を1ブラウザセッションで取得。
 
         Args:
-            tweet_url: ツイートURL (https://twitter.com/.../status/...)
+            urls: ツイートURLのリスト
+            screenshot_dir: エラー時スクリーンショット保存先（Noneなら self._screenshot_dir を使用）
 
         Returns:
-            dict: {
-                "tweet_url": str,
-                "impressions": int,
-                "likes": int,
-                "retweets": int,
-                "replies": int,
-                "bookmarks": int,
-                "engagement_rate": float,
-                "scraped_at": str  # ISO 8601 JST
-            }
-            エラー時: {"error": str}
+            List[dict]: 各URLの結果 (T0スキーマ)
+                成功: {"url", "status": "ok", "likes", "views", "retweets", "replies", "bookmarks", "scraped_at"}
+                失敗: {"url", "status": <分類>, "error_detail", "scraped_at"}
+
+        Raises:
+            CookieExpiredError: バッチ先頭のCookie pre-flightで /login へのリダイレクトを検出した場合
         """
         from playwright.sync_api import sync_playwright
 
+        # Save/restore to avoid persistent instance state mutation.
+        original_screenshot_dir = self._screenshot_dir
+        if screenshot_dir:
+            self._screenshot_dir = screenshot_dir
+
         cookies = self._load_cookies()
         if not cookies:
-            return {
-                "error": "Cookie読込失敗: cookies.jsonが見つからないか空です",
-            }
+            self._screenshot_dir = original_screenshot_dir
+            raise CookieExpiredError("Cookie読込失敗: cookies.jsonが見つからないか空です")
 
+        pw = None
         browser = None
         context = None
-        pw = None
+        results: List[Dict[str, Any]] = []
+
         try:
             pw = sync_playwright().start()
             browser = pw.chromium.launch(headless=False)
@@ -65,67 +79,45 @@ class ImpressionScraper:
                 timezone_id="Asia/Tokyo",
             )
             context.add_cookies(cookies)
-
             page = context.new_page()
 
-            # ツイートページに遷移
-            page.goto(tweet_url, wait_until="domcontentloaded")
+            # Cookie pre-flight: ログインセッションが有効か確認
+            page.goto("https://x.com/home", wait_until="domcontentloaded")
             self._human_wait(2.0, 4.0)
-
-            # ツイート本文の読み込み待ち
-            try:
-                page.wait_for_selector(
-                    '[data-testid="tweetText"]', timeout=15000
+            if "/i/flow/login" in page.url or "/login" in page.url:
+                raise CookieExpiredError(
+                    f"Cookie期限切れを検出: {page.url}"
                 )
-            except Exception:
-                logger.warning(
-                    "ツイート本文が見つかりません: %s", tweet_url
-                )
-                self._take_error_screenshot(page)
-                return {"error": f"ツイート本文が見つかりません: {tweet_url}"}
 
-            self._human_wait(1.0, 2.0)
+            consecutive_login_required = 0
 
-            # エンゲージメント指標の取得
-            impressions = self._scrape_impressions(page)
-            likes = self._scrape_metric(page, "like")
-            retweets = self._scrape_metric(page, "retweet")
-            replies = self._scrape_metric(page, "reply")
-            bookmarks = self._scrape_metric(page, "bookmark")
+            for url in urls:
+                self._human_wait(2.0, 4.0)
+                result = self._run_on_page(page, url)
 
-            # エンゲージメント率の算出
-            engagement_rate = (
-                (likes + retweets + replies) / max(impressions, 1)
-            )
+                # Rate limit: 30秒待機して1回だけretry。再発したら停止。
+                if result.get("status") == "rate_limited":
+                    logger.warning("rate_limited 検出、30秒待機してretry: %s", url)
+                    time.sleep(30)
+                    retry_result = self._run_on_page(page, url)
+                    results.append(retry_result)
+                    if retry_result.get("status") == "rate_limited":
+                        logger.error("retry後もrate_limited、バッチ停止")
+                        break
+                    consecutive_login_required = 0
+                    continue
 
-            result = {
-                "tweet_url": tweet_url,
-                "impressions": impressions,
-                "likes": likes,
-                "retweets": retweets,
-                "replies": replies,
-                "bookmarks": bookmarks,
-                "engagement_rate": round(engagement_rate, 6),
-                "scraped_at": datetime.now(JST).isoformat(),
-            }
+                results.append(result)
 
-            logger.info(
-                "インプレッション取得成功: %s (views=%d, likes=%d, RT=%d)",
-                tweet_url,
-                impressions,
-                likes,
-                retweets,
-            )
-            return result
-
-        except Exception as exc:
-            logger.exception("インプレッション取得中にエラーが発生: %s", tweet_url)
-            try:
-                if page:
-                    self._take_error_screenshot(page)
-            except Exception:
-                pass
-            return {"error": str(exc)}
+                # login_required が連続3回でバッチ停止（Cookie失効とみなす）
+                if result.get("status") == "login_required":
+                    consecutive_login_required += 1
+                    if consecutive_login_required >= 3:
+                        raise CookieExpiredError(
+                            "バッチ途中でlogin_requiredが3回連続: Cookie失効"
+                        )
+                else:
+                    consecutive_login_required = 0
 
         finally:
             if context:
@@ -143,6 +135,176 @@ class ImpressionScraper:
                     pw.stop()
                 except Exception:
                     pass
+            self._screenshot_dir = original_screenshot_dir
+
+        return results
+
+    def _run_on_page(self, page, url: str) -> Dict[str, Any]:
+        """1URLのエンゲージメント取得（scrape_batch内のURL毎処理）。
+
+        Args:
+            page: Playwrightのページオブジェクト（セッション共有）
+            url: ツイートURL
+
+        Returns:
+            T0スキーマの dict
+        """
+        now = datetime.now(JST).isoformat()
+        try:
+            page.goto(url, wait_until="domcontentloaded")
+
+            try:
+                page.wait_for_selector('[data-testid="tweetText"]', timeout=15000)
+            except Exception as wait_exc:
+                status, error_detail = self._classify_error(page, wait_exc)
+                self._take_error_screenshot(page)
+                logger.warning("ツイート本文が見つかりません (%s): %s", status, url)
+                return {"url": url, "status": status, "error_detail": error_detail, "scraped_at": now}
+
+            self._human_wait(1.0, 2.0)
+
+            views = self._scrape_impressions(page)
+            likes = self._scrape_metric(page, "like")
+            retweets = self._scrape_metric(page, "retweet")
+            replies = self._scrape_metric(page, "reply")
+            bookmarks = self._scrape_metric(page, "bookmark")
+
+            logger.info(
+                "取得成功: %s (views=%d, likes=%d, RT=%d)",
+                url, views, likes, retweets,
+            )
+            return {
+                "url": url,
+                "status": "ok",
+                "likes": likes,
+                "views": views,
+                "retweets": retweets,
+                "replies": replies,
+                "bookmarks": bookmarks,
+                "scraped_at": now,
+            }
+
+        except Exception as exc:
+            logger.exception("取得エラー: %s", url)
+            try:
+                self._take_error_screenshot(page)
+            except Exception:
+                pass
+            status, error_detail = self._classify_error(page, exc)
+            return {"url": url, "status": status, "error_detail": error_detail, "scraped_at": now}
+
+    def _classify_error(
+        self, page, exc: Optional[Exception] = None
+    ) -> Tuple[str, str]:
+        """ページ状態と例外からエラーステータスを分類する。
+
+        Args:
+            page: Playwrightのページオブジェクト
+            exc: 発生した例外（任意）
+
+        Returns:
+            (status, error_detail) のタプル
+            status: "login_required" | "deleted" | "rate_limited" | "protected" | "other"
+        """
+        try:
+            current_url = page.url or ""
+        except Exception:
+            current_url = ""
+
+        # 1. ログインリダイレクト
+        if "/login" in current_url or "/i/flow/login" in current_url:
+            return ("login_required", current_url)
+
+        try:
+            body = page.content() or ""
+        except Exception:
+            body = ""
+
+        # 2. 削除済みツイート
+        for phrase in (
+            "Hmm\u2026this page doesn't exist",
+            "このページは存在しません",
+            "Page not found",
+        ):
+            if phrase in body:
+                snippet = body[max(0, body.find(phrase) - 20):body.find(phrase) + 60]
+                return ("deleted", snippet.strip())
+
+        # 3. レート制限
+        for phrase in ("Rate limit", "レート制限"):
+            if phrase in body:
+                return ("rate_limited", phrase)
+
+        # 4. 鍵アカ（保護されたアカウント）
+        for phrase in ("These posts are protected", "保護されています"):
+            if phrase in body:
+                return ("protected", phrase)
+        try:
+            protected_el = page.query_selector('[data-testid="empty_state_header_text"]')
+            if protected_el:
+                return ("protected", protected_el.text_content() or "protected")
+        except Exception:
+            pass
+
+        # 5. 例外メッセージ
+        if exc is not None:
+            return ("other", str(exc))
+
+        return ("other", "Unknown")
+
+    def scrape(self, tweet_url: str) -> Dict[str, Any]:
+        """ツイートのエンゲージメント指標を取得（後方互換ラッパー）。
+
+        **T0/T1 スキーマ境界**（plan.md M1 T1.4 レビュー指摘対応）:
+        - T0 (`scrape_batch` / `_run_on_page` の戻り値): 生指標 `views`/`likes`/.../`status`/`error_detail`
+        - T1 (`scrape` の戻り値): UI/PostStore 向け正規化 `impressions` (views より rename) + `engagement_rate` 付与
+        - T0 を直接 `PostStore.add_impression` / `review.html` に渡してはいけない（フィールド名不一致で UI が `ER -` になる）
+        - T0→T1 変換は本関数内でのみ行う
+
+        Args:
+            tweet_url: ツイートURL (https://twitter.com/.../status/...)
+
+        Returns:
+            dict: {
+                "tweet_url": str,
+                "impressions": int,
+                "likes": int,
+                "retweets": int,
+                "replies": int,
+                "bookmarks": int,
+                "engagement_rate": float,
+                "scraped_at": str  # ISO 8601 JST
+            }
+            エラー時: {"error": str}
+        """
+        try:
+            results = self.scrape_batch([tweet_url])
+            r = results[0]
+        except CookieExpiredError as exc:
+            return {"error": str(exc)}
+        except Exception as exc:
+            logger.exception("インプレッション取得中にエラーが発生: %s", tweet_url)
+            return {"error": str(exc)}
+
+        if r.get("status") != "ok":
+            return {"error": r.get("error_detail", r.get("status", "unknown error"))}
+
+        impressions = r.get("views", 0)
+        likes = r.get("likes", 0)
+        retweets = r.get("retweets", 0)
+        replies = r.get("replies", 0)
+        engagement_rate = (likes + retweets + replies) / max(impressions, 1)
+
+        return {
+            "tweet_url": tweet_url,
+            "impressions": impressions,
+            "likes": likes,
+            "retweets": retweets,
+            "replies": replies,
+            "bookmarks": r.get("bookmarks", 0),
+            "engagement_rate": round(engagement_rate, 6),
+            "scraped_at": r.get("scraped_at", datetime.now(JST).isoformat()),
+        }
 
     def _load_cookies(self) -> list:
         """x_profile/cookies.jsonからCookie読込。
@@ -351,8 +513,7 @@ class ImpressionScraper:
         """
         time.sleep(random.uniform(min_sec, max_sec))
 
-    @staticmethod
-    def _take_error_screenshot(page) -> None:
+    def _take_error_screenshot(self, page) -> None:
         """エラー時のスクリーンショットを保存。
 
         Args:
@@ -360,7 +521,7 @@ class ImpressionScraper:
         """
         try:
             timestamp = datetime.now(JST).strftime("%Y%m%d_%H%M%S")
-            screenshot_dir = Path("output/posting")
+            screenshot_dir = Path(self._screenshot_dir or "output/posting")
             screenshot_dir.mkdir(parents=True, exist_ok=True)
             path = screenshot_dir / f"impression_error_{timestamp}.png"
             page.screenshot(path=str(path))

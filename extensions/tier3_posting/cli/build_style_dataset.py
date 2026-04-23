@@ -78,16 +78,8 @@ CTA_PATTERNS = re.compile(
 
 def read_jsonl(path: Path) -> list:
     """JSONLファイルを読み込む。"""
-    items = []
-    with open(path, "r", encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if line:
-                try:
-                    items.append(json.loads(line))
-                except json.JSONDecodeError:
-                    continue
-    return items
+    from ..services.style_prompt_builder import _read_jsonl
+    return _read_jsonl(path)
 
 
 def write_jsonl(path: Path, items: list) -> None:
@@ -131,10 +123,11 @@ def extract_features(text: str) -> dict:
 
 def detect_topic_domains(text: str) -> list:
     """テキストからtopic_domainをルールベースで判定する。"""
+    text_lower = text.lower()
     domains = []
     for domain, keywords in TOPIC_KEYWORDS.items():
         for kw in keywords:
-            if kw.lower() in text.lower():
+            if kw.lower() in text_lower:
                 domains.append(domain)
                 break
     return domains if domains else ["general"]
@@ -189,19 +182,23 @@ def detect_tone(text: str, features: dict) -> list:
     return tones
 
 
-def call_llm_for_style_notes(text: str, api_key: str) -> list:
-    """Claude Haikuにスタイル特徴を問い合わせる。"""
-    url = "https://api.anthropic.com/v1/messages"
-    prompt = (
+def _style_notes_prompt(text: str) -> str:
+    """style_notes生成用プロンプト。"""
+    return (
         "以下のX(Twitter)投稿テキストの文体・スタイル上の特徴を3〜5個、"
         "日本語の短い文で列挙してください。"
         "JSONの文字列配列として出力してください。説明は不要です。\n\n"
         f"投稿テキスト:\n{text[:500]}"
     )
+
+
+def call_llm_for_style_notes(text: str, api_key: str) -> list:
+    """Claude Haikuにスタイル特徴を問い合わせる。"""
+    url = "https://api.anthropic.com/v1/messages"
     body = json.dumps({
         "model": "claude-3-5-haiku-20241022",
         "max_tokens": 256,
-        "messages": [{"role": "user", "content": prompt}],
+        "messages": [{"role": "user", "content": _style_notes_prompt(text)}],
     }).encode("utf-8")
 
     req = urllib.request.Request(
@@ -219,15 +216,62 @@ def call_llm_for_style_notes(text: str, api_key: str) -> list:
         with urllib.request.urlopen(req, timeout=30) as resp:
             result = json.loads(resp.read().decode("utf-8"))
         content_text = result.get("content", [{}])[0].get("text", "[]")
-        # JSONの配列部分を抽出
-        match = re.search(r"\[.*\]", content_text, re.DOTALL)
-        if match:
-            notes = json.loads(match.group())
-            if isinstance(notes, list):
-                return [str(n) for n in notes[:5]]
+        return _parse_style_notes(content_text)
     except (urllib.error.URLError, json.JSONDecodeError, KeyError, IndexError) as e:
         print(f"  LLM呼び出しエラー: {e}", file=sys.stderr)
 
+    return []
+
+
+def call_xai_for_style_notes(text: str, api_key: str, max_retries: int = 3) -> list:
+    """xAI Grokにスタイル特徴を問い合わせる（リトライ付き）。"""
+    import time as _time
+
+    url = "https://api.x.ai/v1/chat/completions"
+    body = json.dumps({
+        "model": "grok-3-mini-fast",
+        "max_tokens": 256,
+        "messages": [{"role": "user", "content": _style_notes_prompt(text)}],
+    }).encode("utf-8")
+
+    for attempt in range(max_retries):
+        req = urllib.request.Request(
+            url,
+            data=body,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {api_key}",
+                "Accept": "application/json",
+                "User-Agent": "influx-style-labeler/1.0",
+            },
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=60) as resp:
+                result = json.loads(resp.read().decode("utf-8"))
+            content_text = result.get("choices", [{}])[0].get("message", {}).get("content", "[]")
+            return _parse_style_notes(content_text)
+        except Exception as e:
+            if attempt < max_retries - 1:
+                wait = 2 ** (attempt + 1)
+                print(f" リトライ({attempt + 1}/{max_retries}, {wait}s待機)...", end="", flush=True)
+                _time.sleep(wait)
+            else:
+                print(f"  xAI呼び出しエラー: {e}", file=sys.stderr)
+
+    return []
+
+
+def _parse_style_notes(content_text: str) -> list:
+    """LLMレスポンスからstyle_notes配列を抽出する。"""
+    match = re.search(r"\[.*\]", content_text, re.DOTALL)
+    if match:
+        try:
+            notes = json.loads(match.group())
+            if isinstance(notes, list):
+                return [str(n) for n in notes[:5]]
+        except json.JSONDecodeError:
+            pass
     return []
 
 
@@ -303,7 +347,13 @@ def main():
     parser.add_argument(
         "--use-llm",
         action="store_true",
-        help="Claude Haikuでstyle_notesを補助ラベリングする",
+        help="LLMでstyle_notesを補助ラベリングする（Anthropic or xAI）",
+    )
+    parser.add_argument(
+        "--llm-backend",
+        choices=["anthropic", "xai"],
+        default=None,
+        help="LLMバックエンド選択（デフォルト: 利用可能なキーを自動検出）",
     )
     args = parser.parse_args()
 
@@ -314,13 +364,29 @@ def main():
         print(f"エラー: 入力ファイルが見つかりません: {input_path}", file=sys.stderr)
         sys.exit(1)
 
-    # LLM使用時のAPIキー確認
+    # LLM使用時のAPIキー確認（自動検出）
     api_key = None
+    llm_backend = args.llm_backend
     if args.use_llm:
-        api_key = os.environ.get("ANTHROPIC_API_KEY", "")
-        if not api_key:
-            print("警告: ANTHROPIC_API_KEYが未設定のためLLMラベリングをスキップします", file=sys.stderr)
+        anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "")
+        xai_key = os.environ.get("XAI_API_KEY", "")
+
+        if llm_backend == "anthropic" and anthropic_key:
+            api_key = anthropic_key
+        elif llm_backend == "xai" and xai_key:
+            api_key = xai_key
+        elif anthropic_key:
+            api_key = anthropic_key
+            llm_backend = "anthropic"
+        elif xai_key:
+            api_key = xai_key
+            llm_backend = "xai"
+        else:
+            print("警告: ANTHROPIC_API_KEY/XAI_API_KEY両方未設定のためLLMラベリングをスキップします", file=sys.stderr)
             args.use_llm = False
+
+        if api_key:
+            print(f"LLMバックエンド: {llm_backend}")
 
     # 1. 読み込み
     print(f"入力ファイル読み込み: {input_path}")
@@ -344,14 +410,33 @@ def main():
     normalized = deduplicate(normalized)
     print(f"  重複除去: {before_dedup} → {len(normalized)}件")
 
-    # 4. LLM補助ラベリング
+    # 4. LLM補助ラベリング（既存style_notesの復元 + 逐次保存）
     if args.use_llm and api_key:
-        print("LLM補助ラベリング開始...")
+        # 既存出力ファイルからstyle_notesを復元
+        if output_path.exists():
+            existing = {item["bookmark_id"]: item.get("style_notes", []) for item in read_jsonl(output_path)}
+            restored = 0
+            for item in normalized:
+                notes = existing.get(item["bookmark_id"], [])
+                if notes:
+                    item["style_notes"] = notes
+                    restored += 1
+            if restored:
+                print(f"既存style_notes復元: {restored}件")
+
+        call_fn = call_xai_for_style_notes if llm_backend == "xai" else call_llm_for_style_notes
+        print(f"LLM補助ラベリング開始... ({llm_backend})")
+        llm_call_count = 0
         for i, item in enumerate(normalized):
-            print(f"  [{i + 1}/{len(normalized)}] {item['bookmark_id'][:8]}...", end=" ")
-            notes = call_llm_for_style_notes(item["text"], api_key)
+            if item.get("style_notes"):
+                continue
+            print(f"  [{i + 1}/{len(normalized)}] {item['bookmark_id'][:8]}...", end=" ", flush=True)
+            notes = call_fn(item["text"], api_key)
             item["style_notes"] = notes
             print(f"→ {len(notes)}個の特徴を取得")
+            llm_call_count += 1
+            if llm_call_count % 10 == 0:
+                write_jsonl(output_path, normalized)
 
     # 5. 出力
     write_jsonl(output_path, normalized)

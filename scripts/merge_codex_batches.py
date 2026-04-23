@@ -10,9 +10,9 @@ from collections import Counter
 # パス定義
 BATCH_DIR = Path("/tmp")
 BATCH_FILES = [BATCH_DIR / f"codex_batch_{i}.json" for i in range(5)]
-TWEETS_PATH = Path("/Users/masaaki_nagasawa/Desktop/prm/influx/output/2026-02-19/tweets.json")
-OUTPUT_PATH = Path("/Users/masaaki_nagasawa/Desktop/prm/influx/output/2026-02-19/classified_llm.json")
-VIEWER_PATH = Path("/Users/masaaki_nagasawa/Desktop/prm/influx/output/viewer.html")
+TWEETS_PATH = Path(__file__).resolve().parent.parent / "output/2026-02-19/tweets.json"
+OUTPUT_PATH = Path(__file__).resolve().parent.parent / "output/2026-02-19/classified_llm.json"
+VIEWER_PATH = Path(__file__).resolve().parent.parent / "output/viewer.html"
 
 
 def load_batch_results():

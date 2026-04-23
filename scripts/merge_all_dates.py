@@ -169,7 +169,7 @@ def validate_viewer_json(viewer_path: Path) -> bool:
 
 
 def main():
-    output_dir = Path("/Users/masaaki_nagasawa/Desktop/prm/influx/output")
+    output_dir = Path(__file__).resolve().parent.parent / "output"
     viewer_path = output_dir / "viewer.html"
     merged_path = output_dir / "merged_all.json"
 

@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""投稿済みツイートのインプレッションを追跡するスクリプト
+"""投稿済みツイートのインプレッションを追跡するスクリプト。
+
+plan.md M1 T1.1 で `ImpressionScraper.scrape_batch()` (Canonical) に統合。
+本ファイルは PostStore からの対象抽出 + 結果書き込みの薄い CLI ラッパー。
 
 Usage:
     python -m extensions.tier3_posting.cli.track [--days 7] [--news-id ID] [--limit 10]
@@ -10,381 +13,175 @@ Usage:
 """
 
 import argparse
-import os
-import random
-import re
 import sys
-import time
 from datetime import datetime, timedelta, timezone
+from typing import Any, Dict, List, Optional
 
+from ..impression_tracker.scraper import ImpressionScraper
+from ..x_poster.exceptions import CookieExpiredError
 from ..x_poster.post_store import PostStore
 
 JST = timezone(timedelta(hours=9))
 
 
-def _parse_count(text: str) -> int:
-    """数値文字列をパース（1.2K, 2.3M など対応）。
-
-    Args:
-        text: 数値を含む文字列
-
-    Returns:
-        パースした整数値。パース失敗時は0
-    """
-    if not text:
-        return 0
-
-    text = text.strip().upper().replace(",", "")
-
-    try:
-        if "K" in text:
-            return int(float(text.replace("K", "")) * 1000)
-        elif "M" in text:
-            return int(float(text.replace("M", "")) * 1000000)
-        else:
-            return int(text)
-    except (ValueError, TypeError):
-        return 0
-
-
-def scrape_impressions(page, tweet_url: str) -> dict:
-    """単一ツイートのインプレッション情報をスクレイプする。
-
-    Args:
-        page: Playwrightのページオブジェクト
-        tweet_url: ツイートのURL
-
-    Returns:
-        インプレッションデータの辞書
-    """
-    result = {
-        "tweet_url": tweet_url,
-        "impressions": 0,
-        "likes": 0,
-        "retweets": 0,
-        "replies": 0,
-        "bookmarks": 0,
-        "quotes": 0,
-        "scraped_at": datetime.now(JST).isoformat(),
-    }
-
-    # ツイートページに遷移
-    page.goto(tweet_url, wait_until="domcontentloaded")
-    time.sleep(random.uniform(2.0, 4.0))
-
-    # ツイートカードの読み込みを待機
-    try:
-        page.wait_for_selector('[data-testid="tweet"]', timeout=15000)
-    except Exception:
-        raise RuntimeError(f"ツイートの読み込みに失敗: {tweet_url}")
-
-    time.sleep(random.uniform(1.0, 2.0))
-
-    # --- メトリクス取得 ---
-
-    # いいね数
-    like_elem = page.query_selector('[data-testid="like"] span span')
-    if like_elem:
-        result["likes"] = _parse_count(like_elem.inner_text())
-
-    # リツイート数
-    retweet_elem = page.query_selector('[data-testid="retweet"] span span')
-    if retweet_elem:
-        result["retweets"] = _parse_count(retweet_elem.inner_text())
-
-    # リプライ数
-    reply_elem = page.query_selector('[data-testid="reply"] span span')
-    if reply_elem:
-        result["replies"] = _parse_count(reply_elem.inner_text())
-
-    # ブックマーク数
-    bookmark_elem = page.query_selector('[data-testid="bookmark"] span span')
-    if bookmark_elem:
-        result["bookmarks"] = _parse_count(bookmark_elem.inner_text())
-
-    # インプレッション数（ツイート詳細ページの閲覧数表示）
-    # analyticsButton または viewCount 等のセレクタで取得を試みる
-    for selector in [
-        '[data-testid="analyticsButton"] span span',
-        '[aria-label*="view"] span',
-        '[aria-label*="表示"] span',
-        'a[href*="/analytics"] span span',
-    ]:
-        try:
-            elem = page.query_selector(selector)
-            if elem:
-                text = elem.inner_text().strip()
-                count = _parse_count(text)
-                if count > 0:
-                    result["impressions"] = count
-                    break
-        except Exception:
-            continue
-
-    # エンゲージメント率の計算
-    total_engagement = (
-        result["likes"]
-        + result["retweets"]
-        + result["replies"]
-        + result["bookmarks"]
-    )
-    if result["impressions"] > 0:
-        result["engagement_rate"] = round(
-            total_engagement / result["impressions"], 6
-        )
-    else:
-        result["engagement_rate"] = 0.0
-
-    return result
-
-
-def main():
-    parser = argparse.ArgumentParser(
-        description="投稿済みツイートのインプレッションを追跡"
-    )
-    parser.add_argument(
-        "--days",
-        type=int,
-        default=7,
-        help="過去N日以内の投稿を対象（デフォルト: 7）",
-    )
-    parser.add_argument(
-        "--news-id",
-        help="特定のnews_idのみ追跡",
-    )
-    parser.add_argument(
-        "--limit",
-        type=int,
-        default=10,
-        help="1回の実行で追跡するツイート数上限（デフォルト: 10）",
-    )
-    parser.add_argument(
-        "--profile",
-        default="./x_profile",
-        help="ブラウザプロファイルパス（デフォルト: ./x_profile）",
-    )
-    parser.add_argument(
-        "--output",
-        default="./output/posting",
-        help="出力ディレクトリ（デフォルト: ./output/posting）",
-    )
-    parser.add_argument(
-        "--wait",
-        nargs=2,
-        type=float,
-        default=[60, 120],
-        metavar=("MIN", "MAX"),
-        help="スクレイプ間の待機秒数（デフォルト: 60 120）",
-    )
-    args = parser.parse_args()
-
-    store = PostStore(base_dir=args.output)
-
-    # 投稿履歴から対象ツイートを取得
+def _build_targets(
+    store: PostStore, days: int, news_id: str, limit: int
+) -> List[Dict[str, Any]]:
+    """PostStore 履歴から追跡対象ツイートを抽出する。"""
     history = store.load_history()
     posted = [
-        rec
-        for rec in history
+        rec for rec in history
         if rec.get("status") == "posted"
         and rec.get("posted_url")
         and not rec.get("dry_run")
     ]
-
-    if not posted:
-        print("投稿済みツイートがありません")
-        return
-
-    # フィルタリング
-    if args.news_id:
-        posted = [rec for rec in posted if rec.get("news_id") == args.news_id]
-        if not posted:
-            print(f"news_id '{args.news_id}' の投稿が見つかりません")
-            return
+    if news_id:
+        posted = [rec for rec in posted if rec.get("news_id") == news_id]
     else:
-        cutoff = datetime.now(timezone.utc) - timedelta(days=args.days)
-        cutoff_iso = cutoff.isoformat()
-        posted = [
-            rec
-            for rec in posted
-            if rec.get("posted_at", "") >= cutoff_iso
-        ]
-        if not posted:
-            print(f"過去{args.days}日以内の投稿がありません")
-            return
+        cutoff_iso = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+        posted = [rec for rec in posted if rec.get("posted_at", "") >= cutoff_iso]
 
-    # posted_urlが無いものを除外（安全策）
-    posted = [rec for rec in posted if rec.get("posted_url")]
-
-    # 重複排除（同じnews_idが複数ある場合は最新のみ）
-    seen_ids = {}
+    # news_id 重複は最新のみ
+    seen: Dict[str, Dict[str, Any]] = {}
     for rec in posted:
         nid = rec.get("news_id", "")
-        if nid not in seen_ids:
-            seen_ids[nid] = rec
-        else:
-            existing_at = seen_ids[nid].get("posted_at", "")
-            current_at = rec.get("posted_at", "")
-            if current_at > existing_at:
-                seen_ids[nid] = rec
-    posted = list(seen_ids.values())
+        if nid not in seen or rec.get("posted_at", "") > seen[nid].get("posted_at", ""):
+            seen[nid] = rec
+    return list(seen.values())[:limit]
 
-    # limit適用
-    targets = posted[: args.limit]
+
+def _build_schedule_targets(store: PostStore, limit: int) -> List[Dict[str, Any]]:
+    """plan.md M1 T1.2 follow-up: 期限到来した予約追跡エントリを取得（url/news_id/interval_hours 付き）。"""
+    due = store.load_due_schedules()
+    # 追跡対象フォーマットに合わせる（posted_url が主キー）
+    targets = []
+    for rec in due:
+        targets.append({
+            "news_id": rec.get("news_id"),
+            "posted_url": rec.get("tweet_url", ""),
+            "posted_at": rec.get("scheduled_at", ""),
+            "account_id": rec.get("account_id", ""),
+            "interval_hours": rec.get("interval_hours"),
+            "_source": "schedule",
+        })
+    return targets[:limit]
+
+
+def _to_impression_record(
+    scrape_result: Dict[str, Any],
+    news_id: str,
+    account_id: str = "",
+    interval_hours: Optional[float] = None,
+) -> Dict[str, Any]:
+    """ImpressionScraper の T0 スキーマを PostStore.add_impression のスキーマに変換。"""
+    likes = scrape_result.get("likes", 0) or 0
+    retweets = scrape_result.get("retweets", 0) or 0
+    replies = scrape_result.get("replies", 0) or 0
+    bookmarks = scrape_result.get("bookmarks", 0) or 0
+    views = scrape_result.get("views", 0) or 0
+    total_eng = likes + retweets + replies + bookmarks
+    eng_rate = round(total_eng / views, 6) if views > 0 else 0.0
+    rec = {
+        "news_id": news_id,
+        "tweet_url": scrape_result.get("url", ""),
+        "impressions": views,
+        "likes": likes,
+        "retweets": retweets,
+        "replies": replies,
+        "bookmarks": bookmarks,
+        "engagement_rate": eng_rate,
+        "scraped_at": scrape_result.get("scraped_at", ""),
+        "status": scrape_result.get("status", "unknown"),
+    }
+    if account_id:
+        rec["account_id"] = account_id
+    if interval_hours is not None:
+        rec["interval_hours"] = interval_hours
+    return rec
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="投稿済みツイートのインプレッションを追跡")
+    parser.add_argument("--days", type=int, default=7, help="過去N日以内（デフォルト: 7）")
+    parser.add_argument("--news-id", help="特定の news_id のみ")
+    parser.add_argument("--limit", type=int, default=10, help="1回の上限（デフォルト: 10）")
+    parser.add_argument("--profile", default="./x_profile", help="プロファイルパス")
+    parser.add_argument("--output", default="./output/posting", help="出力ディレクトリ")
+    parser.add_argument("--screenshot-dir", default=None, help="エラー時 SS 保存先")
+    parser.add_argument(
+        "--from-schedule",
+        action="store_true",
+        help="plan.md M1 T1.2: add_impression_schedule で記録した予約エントリのうち期限到来分を取得",
+    )
+    args = parser.parse_args()
+
+    store = PostStore(base_dir=args.output)
+    if args.from_schedule:
+        targets = _build_schedule_targets(store, args.limit)
+        mode_label = "予約エントリ (scheduled_at 到来分)"
+    else:
+        targets = _build_targets(store, args.days, args.news_id, args.limit)
+        mode_label = f"過去{args.days}日"
+
+    if not targets:
+        print("追跡対象がありません")
+        return 0
 
     print(f"{'='*60}")
-    print(f"インプレッション追跡")
-    print(f"  対象: {len(targets)}件 (全{len(posted)}件中)")
-    print(f"  期間: 過去{args.days}日")
-    print(f"  待機: {args.wait[0]:.0f}-{args.wait[1]:.0f}秒")
+    print(f"インプレッション追跡 (Canonical: ImpressionScraper.scrape_batch)")
+    print(f"  対象: {len(targets)}件 / {mode_label}")
     print(f"{'='*60}\n")
 
-    # Playwright起動
-    from pathlib import Path
+    url_to_meta = {
+        rec["posted_url"]: {
+            "news_id": rec.get("news_id", "unknown"),
+            "account_id": rec.get("account_id", ""),
+            "interval_hours": rec.get("interval_hours"),
+        }
+        for rec in targets
+    }
+    urls = list(url_to_meta.keys())
 
-    from playwright.sync_api import sync_playwright
-
-    profile_path = Path(args.profile).resolve()
-    cookie_file = profile_path / "cookies.json"
-
+    scraper = ImpressionScraper(profile_path=args.profile, screenshot_dir=args.screenshot_dir)
     try:
-        from collector.cookie_crypto import load_cookies_encrypted
+        results = scraper.scrape_batch(urls)
+    except CookieExpiredError as e:
+        print(f"[ERROR] Cookie 期限切れ: {e}", file=sys.stderr)
+        return 2
 
-        cookies = load_cookies_encrypted(cookie_file)
-    except Exception as exc:
-        print(f"Cookie読込エラー: {exc}")
-        sys.exit(1)
-
-    if not cookies:
-        print("Cookie読込失敗: cookies.jsonが見つからないか空です")
-        sys.exit(1)
-
-    print(f"Cookie読込完了 ({len(cookies)}個)\n")
-
-    tracked_count = 0
-    failed_count = 0
-    all_impressions = []
-
-    pw = None
-    browser = None
-    context = None
-
-    try:
-        pw = sync_playwright().start()
-        browser = pw.chromium.launch(headless=False)
-        context = browser.new_context(
-            viewport={"width": 1280, "height": 900},
-            locale="ja-JP",
-            timezone_id="Asia/Tokyo",
+    tracked, failed = 0, 0
+    all_impressions: List[Dict[str, Any]] = []
+    for r in results:
+        meta = url_to_meta.get(r.get("url", ""), {"news_id": "unknown"})
+        nid = meta["news_id"]
+        rec = _to_impression_record(
+            r, nid,
+            account_id=meta.get("account_id", ""),
+            interval_hours=meta.get("interval_hours"),
         )
-        context.add_cookies(cookies)
-        page = context.new_page()
-
-        # ログイン確認
-        page.goto("https://twitter.com/home", wait_until="domcontentloaded")
-        time.sleep(random.uniform(2.0, 4.0))
-
-        try:
-            page.wait_for_selector(
-                '[data-testid="SideNav_AccountSwitcher_Button"], '
-                '[data-testid="AppTabBar_Home_Link"]',
-                timeout=10000,
-            )
-        except Exception:
-            print("ログインしていません。setup_profile.pyを実行してください")
-            sys.exit(1)
-
-        print("ログイン確認OK\n")
-
-        for i, rec in enumerate(targets):
-            news_id = rec.get("news_id", "unknown")
-            posted_url = rec["posted_url"]
-            posted_at = rec.get("posted_at", "不明")
-
+        if rec["status"] == "ok":
+            store.add_impression(rec)
+            tracked += 1
+            all_impressions.append(rec)
             print(
-                f"[{i+1}/{len(targets)}] {news_id}"
+                f"  ✓ {nid} imp={rec['impressions']:,} "
+                f"like={rec['likes']:,} rt={rec['retweets']:,} "
+                f"eng={rec['engagement_rate']:.4%}"
             )
-            print(f"  URL: {posted_url}")
-            print(f"  投稿日時: {posted_at}")
+        else:
+            failed += 1
+            print(f"  ✗ {nid} status={rec['status']} error={r.get('error_detail', '')}")
 
-            try:
-                result = scrape_impressions(page, posted_url)
-                result["news_id"] = news_id
-
-                store.add_impression(result)
-
-                print(
-                    f"  \U0001f4ca "
-                    f"imp={result['impressions']:,} "
-                    f"like={result['likes']:,} "
-                    f"rt={result['retweets']:,} "
-                    f"reply={result['replies']:,} "
-                    f"bm={result['bookmarks']:,} "
-                    f"eng={result['engagement_rate']:.4%}"
-                )
-
-                tracked_count += 1
-                all_impressions.append(result)
-
-            except Exception as exc:
-                print(f"  \u274c 取得失敗: {exc}")
-                failed_count += 1
-
-            # 最後のツイート以外は待機
-            if i < len(targets) - 1:
-                wait_sec = random.uniform(args.wait[0], args.wait[1])
-                print(f"  \u23f3 次のスクレイプまで {wait_sec:.0f}秒 待機...")
-                time.sleep(wait_sec)
-
-            print()
-
-    finally:
-        if context:
-            try:
-                context.close()
-            except Exception:
-                pass
-        if browser:
-            try:
-                browser.close()
-            except Exception:
-                pass
-        if pw:
-            try:
-                pw.stop()
-            except Exception:
-                pass
-
-    # サマリー表示
-    print(f"{'='*60}")
-    print(f"追跡結果サマリー:")
-    print(f"  成功: {tracked_count}件")
-    print(f"  失敗: {failed_count}件")
-
+    print(f"\n{'='*60}")
+    print(f"結果: 成功 {tracked} / 失敗 {failed}")
     if all_impressions:
-        avg_imp = sum(r["impressions"] for r in all_impressions) / len(
-            all_impressions
-        )
-        avg_likes = sum(r["likes"] for r in all_impressions) / len(
-            all_impressions
-        )
-        avg_eng = sum(r["engagement_rate"] for r in all_impressions) / len(
-            all_impressions
-        )
-        print(f"\n  平均インプレッション: {avg_imp:,.0f}")
-        print(f"  平均いいね: {avg_likes:,.0f}")
-        print(f"  平均エンゲージメント率: {avg_eng:.4%}")
-
-        # トップパフォーマー
-        top = max(all_impressions, key=lambda r: r["impressions"])
-        print(f"\n  \U0001f3c6 トップパフォーマー:")
-        print(f"    news_id: {top['news_id']}")
-        print(f"    インプレッション: {top['impressions']:,}")
-        print(f"    いいね: {top['likes']:,}")
-        print(f"    エンゲージメント率: {top['engagement_rate']:.4%}")
-        print(f"    URL: {top['tweet_url']}")
-
-    print(f"\n  データ保存先: {store.impressions_path}")
+        avg_imp = sum(r["impressions"] for r in all_impressions) / len(all_impressions)
+        avg_eng = sum(r["engagement_rate"] for r in all_impressions) / len(all_impressions)
+        print(f"  平均 impressions: {avg_imp:,.0f}")
+        print(f"  平均 engagement_rate: {avg_eng:.4%}")
+    print(f"  保存先: {store.impressions_path}")
+    return 0 if failed == 0 else 1
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

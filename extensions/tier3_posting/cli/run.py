@@ -30,6 +30,7 @@ from ..account_routing import get_account_label, get_profile_path, resolve_accou
 from ..services.post_preparation import DEFAULT_OFFSET_DAYS, build_final_post_text
 from ..x_poster.post_store import PostStore
 from ..x_poster.poster import XPoster
+from ..x_poster.exceptions import CookieExpiredError
 
 JST = timezone(timedelta(hours=9))
 
@@ -166,19 +167,31 @@ def execute_post(
     """
     images = image_paths or None
 
-    if mode == "schedule":
-        return poster.schedule_post(
-            body=post_body,
-            scheduled_at=scheduled_time.isoformat(),
-            images=images,
-            dry_run=dry_run,
-        )
-    else:
-        return poster.post(
-            body=post_body,
-            images=images,
-            dry_run=dry_run,
-        )
+    try:
+        if mode == "schedule":
+            return poster.schedule_post(
+                body=post_body,
+                scheduled_at=scheduled_time.isoformat(),
+                images=images,
+                dry_run=dry_run,
+            )
+        else:
+            return poster.post(
+                body=post_body,
+                images=images,
+                dry_run=dry_run,
+            )
+    except CookieExpiredError as e:
+        # plan.md M1 T1.5: Cookie 失効をサイレント失敗にせず構造化エラーで返す
+        print(f"[ERROR] Cookie 期限切れ: {e}", file=sys.stderr)
+        return {
+            "success": False,
+            "posted_url": "" if mode != "schedule" else None,
+            "scheduled_at": scheduled_time.isoformat() if mode == "schedule" else None,
+            "error": f"CookieExpiredError: {e}",
+            "error_type": "cookie_expired",
+            "dry_run": dry_run,
+        }
 
 
 def build_success_history(
@@ -229,6 +242,7 @@ def build_failure_history(
     error: str,
     now: str,
     account_id: str,
+    error_type: str = None,
 ) -> dict:
     """失敗時の履歴エントリを組み立てる。
 
@@ -237,17 +251,21 @@ def build_failure_history(
         error: エラーメッセージ
         now: 現在日時 ISO文字列
         account_id: アカウントID
+        error_type: 構造化エラー種別（例: cookie_expired）。plan.md M1 T1.5 で追加
 
     Returns:
         履歴辞書
     """
-    return {
+    record = {
         "news_id": news_id,
         "status": "failed",
         "error": error,
         "attempted_at": now,
         "account_id": account_id,
     }
+    if error_type:
+        record["error_type"] = error_type
+    return record
 
 
 def main(argv: List[str] = None) -> None:
@@ -385,14 +403,37 @@ def main(argv: List[str] = None) -> None:
             )
             if not dry_run:
                 store.update_draft_status(news_id, target_status, account_id=account_id)
+                # plan.md M1 T1.2: 投稿成功時に 1h/4h/24h 後の追跡予約を impressions.jsonl に記録
+                # plan.md M2 T2.5: experiment_id をドラフトから継承
+                posted_url = result.get("posted_url") or ""
+                if posted_url:
+                    base_time = (
+                        scheduled_time.isoformat()
+                        if mode == "schedule" and scheduled_time
+                        else now
+                    )
+                    store.add_impression_schedule(
+                        news_id=news_id,
+                        tweet_url=posted_url,
+                        account_id=account_id,
+                        posted_at=base_time,
+                        experiment_id=draft.get("experiment_id", ""),
+                    )
             results["success"] += 1
         else:
             error_msg = result.get("error", "Unknown error")
+            error_type = result.get("error_type")
             print(f"  失敗: {error_msg}")
-            store.add_history(build_failure_history(news_id, error_msg, now, account_id))
+            store.add_history(
+                build_failure_history(news_id, error_msg, now, account_id, error_type=error_type)
+            )
             if not dry_run:
                 store.update_draft_status(news_id, "failed")
             results["failed"] += 1
+            # plan.md M1 T1.5: Cookie 失効は以降の投稿も全て失敗するためバッチ停止
+            if error_type == "cookie_expired":
+                print("[FATAL] Cookie 失効を検出。後続の投稿を中止します。", file=sys.stderr)
+                break
 
         interval_index += 1
 
