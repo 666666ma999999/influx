@@ -20,11 +20,12 @@ from __future__ import annotations
 import argparse
 import json
 import random
+import re
 import sys
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional, Set
 
 JST = timezone(timedelta(hours=9))
 
@@ -34,6 +35,45 @@ ALLOWED_CATEGORIES = {
 }
 
 CANDIDATE_FIELDS = ["news_id", "tweet_url", "username", "display_name", "posted_at", "text"]
+
+_STATUS_ID = re.compile(r"/(?:i/web|@?[^/]+)/status/(\d+)")
+
+
+def _extract_tweet_id(url: str) -> str:
+    """ツイート URL から tweet ID（末尾数字）を抽出。取れなければ空文字。"""
+    if not url:
+        return ""
+    m = _STATUS_ID.search(url)
+    return m.group(1) if m else ""
+
+
+def _load_annotated_ids(path: Path) -> Set[str]:
+    """human_annotations.json から annotator='human' 確認後、tweet ID 集合を返す。
+
+    存在しない・annotator 非 human は fail-fast（中立性前提保護）。
+    """
+    if not path.exists():
+        raise FileNotFoundError(f"annotations が見つかりません: {path}")
+    data = json.loads(path.read_text(encoding="utf-8"))
+    annotator = data.get("annotator")
+    if annotator != "human":
+        raise ValueError(
+            f"annotator='{annotator}' は受け付けません（'human' のみ許可）"
+        )
+    ids: Set[str] = set()
+    missing = 0
+    for a in data.get("annotations", []):
+        tid = _extract_tweet_id(a.get("url", ""))
+        if tid:
+            ids.add(tid)
+        else:
+            missing += 1
+    if missing:
+        print(
+            f"[WARN] human_annotations.json の {missing} 件で tweet ID を抽出できず除外",
+            file=sys.stderr,
+        )
+    return ids
 
 
 def _month_bucket(posted_at: str) -> str:
@@ -59,15 +99,21 @@ def _news_id_from(tweet: Dict[str, Any]) -> str:
 
 def _load_all_tweets(root: Path) -> List[Dict[str, Any]]:
     files = sorted(root.glob("*/classified_llm*.json")) + sorted(root.glob("*/tweets.json"))
-    seen_ids: set = set()
+    seen_ids: Set[str] = set()
     tweets: List[Dict[str, Any]] = []
+    skipped = 0
     for fp in files:
         try:
-            data = json.load(open(fp))
-        except Exception:
+            with open(fp, encoding="utf-8") as f:
+                data = json.load(f)
+        except (OSError, json.JSONDecodeError) as e:
+            print(f"[WARN] 読み込み失敗 {fp}: {e}", file=sys.stderr)
+            skipped += 1
             continue
         arr = data["tweets"] if isinstance(data, dict) and "tweets" in data else data
         if not isinstance(arr, list):
+            print(f"[WARN] 形式不正 {fp}: tweets 配列なし", file=sys.stderr)
+            skipped += 1
             continue
         for t in arr:
             if not isinstance(t, dict):
@@ -78,6 +124,8 @@ def _load_all_tweets(root: Path) -> List[Dict[str, Any]]:
             seen_ids.add(nid)
             t["_news_id"] = nid
             tweets.append(t)
+    if skipped:
+        print(f"[WARN] 合計 {skipped} ファイルをスキップ", file=sys.stderr)
     return tweets
 
 
@@ -86,11 +134,19 @@ def _stratified_sample(
     per_category: int,
     months_cap: int,
     seed: int,
+    preferred_ids: Optional[Set[str]] = None,
 ) -> List[Dict[str, Any]]:
-    """カテゴリ × 月次バケットで層化サンプリング。"""
+    """カテゴリ × 月次バケットで層化サンプリング。
+
+    `preferred_ids` 指定時:
+    - バケット内順序: ID 一致ツイートを優先、不足分を残りから充当
+    - 月順序: `months_cap` ウィンドウ内の月集合は不変だが、annotated 件数降順で並べ替え
+      （同数は新しい月優先）。`extra = per_category % len(months)` 分の追加 quota は
+      annotated 件数の多い月へ寄る。`months_cap` 範囲内での偏りに留まり季節的偏向は
+      回避しつつ、overlap を最大化するための意図的なトレードオフ。
+    """
     random.seed(seed)
 
-    # カテゴリ → 月バケット → tweet リスト
     buckets: Dict[str, Dict[str, List[Dict[str, Any]]]] = defaultdict(lambda: defaultdict(list))
     for t in tweets:
         cats = t.get("llm_categories") or t.get("categories") or []
@@ -100,34 +156,64 @@ def _stratified_sample(
                 buckets[c][month].append(t)
 
     selected: List[Dict[str, Any]] = []
-    seen_ids: set = set()
+    seen_ids: Set[str] = set()
+    preferred_hit = 0
+    prefer_mode = preferred_ids is not None
 
     for category in sorted(ALLOWED_CATEGORIES):
         month_dict = buckets.get(category, {})
-        months = sorted(month_dict.keys(), reverse=True)[:months_cap]
-        if not months:
+        months_window = sorted(month_dict.keys(), reverse=True)[:months_cap]
+        if not months_window:
             print(f"  [WARN] {category}: 該当ツイートなし", file=sys.stderr)
             continue
-        # 月あたりの割当: per_category を月数で等分（端数は先頭月に）
+        if prefer_mode:
+            # 層化窓 (months_cap) は維持したまま、overlap 最大化のため
+            # annotated 件数降順で月を並べ替える（同数は新しい月優先）。
+            months = sorted(
+                months_window,
+                key=lambda m: (
+                    -sum(1 for t in month_dict[m] if t["_news_id"] in preferred_ids),
+                    months_window.index(m),
+                ),
+            )
+        else:
+            months = months_window
         base = per_category // len(months)
         extra = per_category % len(months)
         picked = 0
+        pref_in_cat = 0
         for i, m in enumerate(months):
             quota = base + (1 if i < extra else 0)
             pool = [t for t in month_dict[m] if t["_news_id"] not in seen_ids]
             if not pool:
                 continue
-            sample = random.sample(pool, min(quota, len(pool)))
+            if prefer_mode:
+                pref = [t for t in pool if t["_news_id"] in preferred_ids]
+                rest = [t for t in pool if t["_news_id"] not in preferred_ids]
+                random.shuffle(pref)
+                random.shuffle(rest)
+                ordered = pref + rest
+                sample = ordered[:min(quota, len(ordered))]
+            else:
+                sample = random.sample(pool, min(quota, len(pool)))
             for t in sample:
                 seen_ids.add(t["_news_id"])
+                if prefer_mode and t["_news_id"] in preferred_ids:
+                    pref_in_cat += 1
                 selected.append({"_sampled_category": category, "tweet": t})
                 picked += 1
                 if picked >= per_category:
                     break
             if picked >= per_category:
                 break
-        print(f"  {category}: {picked}/{per_category} 件（月次層化 {len(months)} ヶ月）")
+        preferred_hit += pref_in_cat
+        if prefer_mode:
+            print(f"  {category}: {picked}/{per_category} 件（月次層化 {len(months)} ヶ月 / annotated {pref_in_cat}）")
+        else:
+            print(f"  {category}: {picked}/{per_category} 件（月次層化 {len(months)} ヶ月）")
 
+    if prefer_mode:
+        print(f"\n  annotated overlap 合計: {preferred_hit}/{len(selected)} 件")
     return selected
 
 
@@ -138,6 +224,10 @@ def main() -> int:
     parser.add_argument("--per-category", type=int, default=5, help="カテゴリあたりサンプル数")
     parser.add_argument("--months-cap", type=int, default=6, help="層化対象の月数上限（直近N ヶ月）")
     parser.add_argument("--seed", type=int, default=42, help="再現性のためのシード")
+    parser.add_argument("--prefer-annotated", action="store_true",
+                        help="human_annotations.json で人手ラベル済みのツイートを優先（層化内順序のみ）")
+    parser.add_argument("--annotations-path", default="output/human_annotations.json",
+                        help="--prefer-annotated 指定時の annotator='human' ファイル")
     args = parser.parse_args()
 
     root = Path(args.source_dir).resolve()
@@ -145,12 +235,25 @@ def main() -> int:
         print(f"ERROR: ソースディレクトリが存在しません: {root}", file=sys.stderr)
         return 1
 
+    preferred_ids: Optional[Set[str]] = None
+    if args.prefer_annotated:
+        ann_path = Path(args.annotations_path).resolve()
+        try:
+            preferred_ids = _load_annotated_ids(ann_path)
+        except (FileNotFoundError, ValueError) as e:
+            print(f"ERROR: {e}", file=sys.stderr)
+            return 2
+        print(f"annotated 優先 ON: {ann_path} から {len(preferred_ids)} 件の tweet ID を取得")
+
     print(f"ツイート読み込み: {root}")
     tweets = _load_all_tweets(root)
     print(f"重複排除後ツイート: {len(tweets)} 件")
 
     print(f"\n層化サンプリング (per_category={args.per_category}, months_cap={args.months_cap}):")
-    sampled = _stratified_sample(tweets, args.per_category, args.months_cap, args.seed)
+    sampled = _stratified_sample(
+        tweets, args.per_category, args.months_cap, args.seed,
+        preferred_ids=preferred_ids,
+    )
 
     out_dir = Path(args.output_dir).resolve()
     out_dir.mkdir(parents=True, exist_ok=True)

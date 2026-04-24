@@ -84,10 +84,12 @@ plan.md の Phase 分解に対応する横串トラッカー。
 
 - [x] `scripts/sample_gold_set_candidates.py` 実装済（M1 T1.6）
 - [x] `scripts/measure_f1.py` 実装済（Wilson 95% CI 含む、2026-04-19）
-- [x] `data/gold_set/candidates.jsonl` 生成済（35 件、中立性ルール準拠）
+- [x] `data/gold_set/candidates.jsonl` 生成済（35 件、中立性ルール準拠、`--prefer-annotated` 対応）
 - [x] `data/gold_set/answer_key.jsonl` 生成済（35 件、LLM 推測保存）
 - [x] `scripts/build_gold_set_labeler.py` + HTML UI 整備（commit `5eef9c8`, 2026-04-24）
-- [ ] **`data/gold_set/gold_set.jsonl` 人手ラベル付け 0/35 件**（ユーザー作業、推定 30 分）
+- [x] `scripts/apply_human_annotations.py` 自動マッピング（commit `f86425f`, 2026-04-24）
+- [x] `scripts/sample_gold_set_candidates.py --prefer-annotated` 再サンプリング（2026-04-24、20/35 件 overlap）
+- [ ] **`data/gold_set/gold_set.jsonl` 人手ラベル付け 20/35 件（残 15 件）**（ユーザー作業、推定 15 分）
 - [ ] `python scripts/measure_f1.py` 実行 → macro F1 算出
 - [ ] macro F1 ≥ 0.80 判定 → M2 着手 or フォールバック戦略適用
 
