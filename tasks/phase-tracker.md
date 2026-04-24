@@ -86,17 +86,32 @@ plan.md の Phase 分解に対応する横串トラッカー。
 - [x] `scripts/measure_f1.py` 実装済（Wilson 95% CI 含む、2026-04-19）
 - [x] `data/gold_set/candidates.jsonl` 生成済（35 件、中立性ルール準拠）
 - [x] `data/gold_set/answer_key.jsonl` 生成済（35 件、LLM 推測保存）
+- [x] `scripts/build_gold_set_labeler.py` + HTML UI 整備（commit `5eef9c8`, 2026-04-24）
 - [ ] **`data/gold_set/gold_set.jsonl` 人手ラベル付け 0/35 件**（ユーザー作業、推定 30 分）
 - [ ] `python scripts/measure_f1.py` 実行 → macro F1 算出
 - [ ] macro F1 ≥ 0.80 判定 → M2 着手 or フォールバック戦略適用
 
-### ラベル付け手順（ユーザー向け）
+### ラベル付け手順（ユーザー向け / HTML UI 経由）
 
-1. `data/gold_set/candidates.jsonl` を 1 行ずつ読む（35 件）
-2. `text` を読んで 7 カテゴリのどれか（複数可）を判断
-3. `data/gold_set/gold_set.jsonl` に `{news_id, tweet_url, username, posted_at, text, labels, labeler, labeled_at, notes}` で追記
-4. 中立性ルール: ラベリング中 `answer_key.jsonl` を見ない（F1 計測の独立性担保のため）
-5. 詳細スキーマ: `data/gold_set/README.md`
+```bash
+# 1. HTML 再生成（candidates.jsonl 更新時のみ必要）
+python3 scripts/build_gold_set_labeler.py
+
+# 2. ブラウザで開く
+open output/label_gold_set.html
+
+# 3. UI 上で 35 件ラベル付け（キーボード 1-7 / Enter / Shift+Enter、localStorage 自動保存）
+
+# 4. 完了後「gold_set.jsonl をダウンロード」→ data/gold_set/ に配置
+mv ~/Downloads/gold_set.jsonl data/gold_set/gold_set.jsonl
+
+# 5. F1 計測
+python3 scripts/measure_f1.py --gold data/gold_set/gold_set.jsonl
+```
+
+**中立性**: UI は Python 側で `llm_categories` / `categories` / `sampled_from_category` 等を除外済（`answer_key.jsonl` も参照しない）。ラベリング中は `answer_key.jsonl` を開かない。
+
+詳細スキーマ: `data/gold_set/README.md`
 
 ### 残タスク（着手ゲート通過後）
 
