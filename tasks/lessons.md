@@ -127,6 +127,19 @@
 - plan.md 恒久対策節: M0 完了後に 3 Batch (cookie_health_check / refresh_all_cookies / import_safari_cookies) を実装する計画として記録
 - 教訓: X 検知強化で「手動ログイン」経路が塞がれたら、既存の別ブラウザ（普段使い Chrome）のログイン状態を再利用する経路に切り替える。Playwright で再現しようとしてはならない
 
+## 2026-04-24: バッチパイプラインの jsonl ログは run_id + pipeline_start で多重実行耐性を確保する
+- `scripts/daily_pipeline.py` 初版は `collect_start_at` を `_finish` 内で決めていたため、collect 途中でクラッシュすると開始時刻が残らず、classify→collect の所要時間が集計できなかった
+- 同日再実行時、jsonl には複数 run のレコードが混在し、`_summarize_log` が過去 run の duration も合算して誤集計していた（Codex Stage 1 MUST 指摘）
+- 対策: `uuid4().hex` の `run_id` を各レコードに付与し、集計関数で `rec["run_id"] != run_id` を必ずフィルタ。起動直後に `pipeline_start` レコードを `_append_log` で即保存し、途中クラッシュでも `collect_start_at` が必ず残るようにした
+- 教訓 (バッチ基盤汎用): (1) append-only jsonl は `run_id` 必須 (2) 起動時の即時記録で「長時間処理の途中で落ちても開始時刻は残る」を担保 (3) 集計は必ず `run_id` でフィルタ
+- 横展開チェック: 他の長時間バッチ（scheduler, impression_tracker 等）で jsonl ログを集計するコードが `run_id` を無視して duration を合算していないか grep
+
+## 2026-04-24: 監視ログの書き込み失敗はパイプライン本処理を止めない（degraded warning で継続）
+- `daily_pipeline.py` の `_append_log` / `_notify_pending` / `_summarize_log` で OSError 未捕捉のため、`/output` の permission/disk full で本処理ごと落ちる設計になっていた（Codex Stage 2 MUST 指摘）
+- 対策: 各関数で `try/except OSError` して `[pipeline] <context> 失敗: {e}` を stderr に出して継続。書き込み失敗 → 当該レコードのみ欠落。読み取り失敗 → 空サマリで fallback
+- 原則: **「監視するものが監視対象を壊してはいけない」(monitoring must not crash the thing it monitors)**。observability 層は本処理より壊れやすくて構わない、ただし壊れても本処理を道連れにしない
+- 横展開: 同様のログ系（viewer 更新、drafts.jsonl の読み書き等）も I/O 失敗で本処理を止めていないか確認
+
 ## Session: 2026-04-24 12:47:51 (from: tasks/kabuki_strategy_sync.md)
 ### Decisions
 ## Decision Log
