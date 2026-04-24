@@ -134,6 +134,14 @@
 - 教訓 (バッチ基盤汎用): (1) append-only jsonl は `run_id` 必須 (2) 起動時の即時記録で「長時間処理の途中で落ちても開始時刻は残る」を担保 (3) 集計は必ず `run_id` でフィルタ
 - 横展開チェック: 他の長時間バッチ（scheduler, impression_tracker 等）で jsonl ログを集計するコードが `run_id` を無視して duration を合算していないか grep
 
+## 2026-04-24: T0.2「XQuartz/VNC DISPLAY 整備」は実態として不要だった（headless モードで解決）
+- phase-tracker の記述「#2 TOP5 の 4 名以上アクティブ → T0.2 保留（XQuartz/VNC DISPLAY 未整備）」が M1 残課題として残っていた
+- 実際のコード確認で `collector/inactive_checker.py:226` が `p.chromium.launch(headless=headless)` を受け取り、`check_inactive_accounts.py` に `--headless` フラグが存在
+- `docker-compose.yml` も `./x_profile:/app/x_profile` を mount 済み。DISPLAY 不要な経路が既に成立していた
+- 実行: `docker compose run --rm -T xstock python3 scripts/check_inactive_accounts.py --headless --no-cache` → 32/32 巡回成功、当日付 `output/2026-04-24/inactive_check_result.json` 生成
+- 教訓: phase-tracker の「保留理由」は定期的に実コード状態と照合する。「環境未整備」と書かれていても `--headless` 等の回避路が実装済みだと気づきにくい
+- 横展開チェック: 他の「保留」項目も同様に、現行コードで既に解決できる経路がないか確認する癖をつける
+
 ## 2026-04-24: 監視ログの書き込み失敗はパイプライン本処理を止めない（degraded warning で継続）
 - `daily_pipeline.py` の `_append_log` / `_notify_pending` / `_summarize_log` で OSError 未捕捉のため、`/output` の permission/disk full で本処理ごと落ちる設計になっていた（Codex Stage 2 MUST 指摘）
 - 対策: 各関数で `try/except OSError` して `[pipeline] <context> 失敗: {e}` を stderr に出して継続。書き込み失敗 → 当該レコードのみ欠落。読み取り失敗 → 空サマリで fallback
