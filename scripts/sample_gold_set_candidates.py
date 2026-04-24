@@ -26,6 +26,7 @@ from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
+from urllib.parse import urlparse
 
 JST = timezone(timedelta(hours=9))
 
@@ -36,33 +37,60 @@ ALLOWED_CATEGORIES = {
 
 CANDIDATE_FIELDS = ["news_id", "tweet_url", "username", "display_name", "posted_at", "text"]
 
-_STATUS_ID = re.compile(r"/(?:i/web|@?[^/]+)/status/(\d+)")
+# `_STATUS_ID` と `_TWITTER_HOSTS` は apply_human_annotations.py と同一定義を lockstep で維持する
+# （candidates と human_annotations の突合は両側で同じ正規化をしないと overlap が取れない）。
+# anchored 形式により `/settings/.../status/1`・`/foo/with_replies/status/1` 等の誤マッチを避ける。
+_STATUS_ID = re.compile(
+    r"^/(?:i/web|@?[^/]+)/status/(\d+)(?:/(?:photo|video)/\d+)?/?$"
+)
+_TWITTER_HOSTS = {
+    "twitter.com", "x.com",
+    "mobile.twitter.com", "mobile.x.com",
+    "www.twitter.com", "www.x.com",
+}
 
 
-def _extract_tweet_id(url: str) -> str:
-    """ツイート URL から tweet ID（末尾数字）を抽出。取れなければ空文字。"""
-    if not url:
+def _extract_tweet_id(url: Any) -> str:
+    """ツイート URL から tweet ID を抽出。非文字列・非 Twitter ホスト・変則パスは空文字。"""
+    if not isinstance(url, str) or not url:
         return ""
-    m = _STATUS_ID.search(url)
+    try:
+        parsed = urlparse(url)
+    except ValueError:
+        return ""
+    if (parsed.netloc or "").lower() not in _TWITTER_HOSTS:
+        return ""
+    m = _STATUS_ID.search(parsed.path or "")
     return m.group(1) if m else ""
 
 
 def _load_annotated_ids(path: Path) -> Set[str]:
     """human_annotations.json から annotator='human' 確認後、tweet ID 集合を返す。
 
-    存在しない・annotator 非 human は fail-fast（中立性前提保護）。
+    annotator 非 human は fail-fast（中立性前提保護）。schema 逸脱（top-level/entry が dict でない）
+    も ValueError に正規化する。読み込み失敗は OSError を raise。
     """
-    if not path.exists():
-        raise FileNotFoundError(f"annotations が見つかりません: {path}")
     data = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        raise ValueError(
+            f"human_annotations.json の top-level が dict ではありません: type={type(data).__name__}"
+        )
     annotator = data.get("annotator")
     if annotator != "human":
         raise ValueError(
             f"annotator='{annotator}' は受け付けません（'human' のみ許可）"
         )
+    annotations = data.get("annotations", [])
+    if not isinstance(annotations, list):
+        raise ValueError(
+            f"annotations は list である必要があります: type={type(annotations).__name__}"
+        )
     ids: Set[str] = set()
     missing = 0
-    for a in data.get("annotations", []):
+    for a in annotations:
+        if not isinstance(a, dict):
+            missing += 1
+            continue
         tid = _extract_tweet_id(a.get("url", ""))
         if tid:
             ids.add(tid)
@@ -240,7 +268,7 @@ def main() -> int:
         ann_path = Path(args.annotations_path).resolve()
         try:
             preferred_ids = _load_annotated_ids(ann_path)
-        except (FileNotFoundError, ValueError) as e:
+        except (OSError, ValueError) as e:
             print(f"ERROR: {e}", file=sys.stderr)
             return 2
         print(f"annotated 優先 ON: {ann_path} から {len(preferred_ids)} 件の tweet ID を取得")
