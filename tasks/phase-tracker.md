@@ -17,9 +17,9 @@ plan.md の Phase 分解に対応する横串トラッカー。
 
 **親**: [plan.md#phase-m0](../plan.md#phase-m0)
 **タスク**: [m0-execution](./m0_execution.md)
-**Status**: 🟢 Exit Criteria 6/7 達成（#2 のみ残、優先度低）— Codex レビュー blocked（クォータ超過）→ commit 承認待ち
-**開始**: 2026-04-20 / **着手ゲート**: Exit Criteria 全 7 項目達成 = M1 開始条件
-**最終更新**: 2026-04-24（実装完了・セッション中断時の進捗保存）
+**Status**: ✅ M0 完了（commit b854c23, 2026-04-24）/ Exit Criteria 6/7 達成（#2 のみ優先度低で M1 期間に解消）
+**開始**: 2026-04-20 / **完了**: 2026-04-24
+**最終更新**: 2026-04-24（Codex 2-stage PASS / /simplify 完了 / tests 24/24 PASS / commit b854c23）
 
 ### Exit Criteria 進捗
 
@@ -34,20 +34,13 @@ plan.md の Phase 分解に対応する横串トラッカー。
 ### Blocker
 
 - なし（#2 は優先度低、M1 期間内で解消予定）
-- Codex MCP クォータ超過で 2-stage レビュー未完了（次セッション再開時に ping → 復旧確認）
-- 代替検証済: 統合アサーション 8 件 PASS、自己レビュー完了（詳細は [m0_execution.md Failures/Stuck Context](./m0_execution.md#failures--stuck-context)）
 
-### 未コミット変更（M0 まとめコミット対象）
+### Commit
 
-- `collector/inactive_checker.py` (T0.4 + T0.6)
-- `collector/x_collector.py` (T0.6)
-- `collector/config.py` (PROFILE_PATH 修正 + group_grok_top + group_reserve + is_active フィルタ)
-- `collector/exceptions.py` (新規・T0.6 SST)
-- `extensions/tier3_posting/x_poster/exceptions.py` (T0.6 再エクスポート)
-- `scripts/promote_grok_candidates.py` (新規・T0.7)
-- `plan.md` (Exit #3 緩和記録、M0 phase-m0 アンカー追加)
-- `tasks/m0_execution.md` (task.md テンプレ準拠リライト + 進捗反映)
-- `tasks/phase-tracker.md` (新規)
+- `b854c23` M0 complete: Cookie SST, INACTIVE 7 days, grok_score/is_priority, reserve group
+  - 18 files changed / +1091 / -114
+  - /simplify: `_load_cookies()` 5 箇所を `cookie_crypto.load_cookies_or_raise()` に集約
+  - tests/ 追加: test_collector_exceptions, test_research_scorecard (24/24 PASS)
 
 ---
 
@@ -56,7 +49,19 @@ plan.md の Phase 分解に対応する横串トラッカー。
 <a id="phase-m1"></a>
 
 **親**: [plan.md#phase-m1](../plan.md#m1-土台固め-2026-05)
-**Status**: ⏳ Pending（M0 Exit Criteria 達成待ち）
+**Status**: 🟡 Ready（M0 commit 完了 2026-04-24, 着手可能）
+
+### 残タスク
+
+- **T1.8** Grok 20BD 再評価（M0 T0.3 で先行対応済、追加評価があれば着手）
+- **T1.9** 収集→素材提供の時間計測基盤（`daily_pipeline.py` + `output/pipeline_log/{date}.jsonl`）
+- **T0.2 解消** XQuartz/VNC DISPLAY 整備 → `inactive_check_result.json` 当日付取得
+
+### Exit Criteria
+
+1. `pipeline_log/{date}.jsonl` に時刻記録が出力される
+2. `INFLUENCER_GROUPS` が Grok 再評価結果を反映済
+3. M0 T0.1-T0.8 全て完了（#2 含む）
 
 ---
 
