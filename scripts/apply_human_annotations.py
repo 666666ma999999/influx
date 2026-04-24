@@ -1,4 +1,4 @@
-"""Gold Set ラベル付けを human_annotations.json から自動マッピング（plan.md M2 T2.0）。
+"""Gold Set ラベル付けを human_annotations.json から自動マッピング。
 
 `output/human_annotations.json` は人手アノテーション済みの教師データ（annotator: "human"）。
 `data/gold_set/candidates.jsonl` の各候補を URL キーで突合し、一致するものを
@@ -26,7 +26,7 @@ import sys
 import tempfile
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Tuple
 from urllib.parse import urlparse
 
 JST = timezone(timedelta(hours=9))
