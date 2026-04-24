@@ -23,6 +23,7 @@ services:
       - ./core:/app/core:ro
       - ./extensions:/app/extensions:ro
       - ./configs:/app/configs:ro
+      - ./tests:/app/tests:ro
 
       # データ永続化
       - ./output:/app/output
@@ -71,6 +72,7 @@ services:
       - ./core:/app/core:ro
       - ./extensions:/app/extensions:ro
       - ./configs:/app/configs:ro
+      - ./tests:/app/tests:ro
       - ./x_profile:/app/x_profile
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
 

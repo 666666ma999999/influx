@@ -607,12 +607,13 @@ def phase_report():
     builder.save(scorecard, json_path)
     print(f"スコアカード保存: {json_path}")
 
-    # ランキング表示
-    print("\n=== ランキング (20BD勝率) ===")
+    # ランキング表示（plan.md M0 Exit #4: score 降順、tiebreak=avg_return_pct）
+    print("\n=== ランキング (20BD score順) ===")
     ranking = builder.rank_influencers(scorecard, horizon="horizon_20bd")
     for i, entry in enumerate(ranking[:20]):
         print(
             f"  {i+1:2d}. @{entry['username']:<20s} "
+            f"score: {entry.get('score', 0.0):5.1f} "
             f"勝率: {entry['win_rate']:5.1f}% "
             f"({entry['winners']}/{entry['trackable']}) "
             f"平均リターン: {entry['avg_return_pct']:+.2f}%"
@@ -638,6 +639,8 @@ def _generate_html_report(scorecard, ranking, output_path):
     for i, entry in enumerate(ranking):
         win_rate_class = "positive" if entry["win_rate"] >= 50 else "negative"
         return_class = "positive" if entry["avg_return_pct"] >= 0 else "negative"
+        score_value = entry.get("score", 0.0)
+        score_class = "positive" if score_value >= 50 else "negative"
         ranking_rows += f"""
         <tr>
             <td>{i+1}</td>
@@ -646,6 +649,7 @@ def _generate_html_report(scorecard, ranking, output_path):
             <td>{entry['total_signals']}</td>
             <td>{entry['trackable']}</td>
             <td>{entry['winners']}</td>
+            <td class="{score_class}">{score_value:.1f}</td>
             <td class="{win_rate_class}">{entry['win_rate']:.1f}%</td>
             <td class="{return_class}">{entry['avg_return_pct']:+.2f}%</td>
         </tr>"""
@@ -707,7 +711,8 @@ def _generate_html_report(scorecard, ranking, output_path):
             </div>
         </div>
 
-        <h2>ランキング (20BD勝率順)</h2>
+        <h2>ランキング (20BD score順)</h2>
+        <p class="meta">score = win_rate × min(trackable/10, 1.0)（plan.md M0 Exit #3）。tiebreak: avg_return_pct 20BD</p>
         <table>
             <thead>
                 <tr>
@@ -717,6 +722,7 @@ def _generate_html_report(scorecard, ranking, output_path):
                     <th>シグナル数</th>
                     <th>評価可能</th>
                     <th>勝ち</th>
+                    <th>score</th>
                     <th>勝率</th>
                     <th>平均リターン</th>
                 </tr>

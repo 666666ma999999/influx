@@ -30,7 +30,7 @@ from ..account_routing import get_account_label, get_profile_path, resolve_accou
 from ..services.post_preparation import DEFAULT_OFFSET_DAYS, build_final_post_text
 from ..x_poster.post_store import PostStore
 from ..x_poster.poster import XPoster
-from ..x_poster.exceptions import CookieExpiredError
+from collector.exceptions import CookieExpiredError
 
 JST = timezone(timedelta(hours=9))
 
