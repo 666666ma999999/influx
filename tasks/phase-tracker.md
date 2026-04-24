@@ -49,12 +49,17 @@ plan.md の Phase 分解に対応する横串トラッカー。
 <a id="phase-m1"></a>
 
 **親**: [plan.md#phase-m1](../plan.md#m1-土台固め-2026-05)
-**Status**: 🟡 Ready（M0 commit 完了 2026-04-24, 着手可能）
+**Status**: 🟢 進行中（T1.9 完了 2026-04-24 / 残 T1.8, T0.2）
 
 ### 残タスク
 
 - **T1.8** Grok 20BD 再評価（M0 T0.3 で先行対応済、追加評価があれば着手）
-- **T1.9** 収集→素材提供の時間計測基盤（`daily_pipeline.py` + `output/pipeline_log/{date}.jsonl`）
+- [x] **T1.9** 収集→素材提供の時間計測基盤 → commit `265b2ac`（2026-04-24）
+  - `pipeline_start` で `collect_start_at` 即時記録
+  - `pipeline_metric` で `classify_done_at` / `collect_to_classify_sec` 永続化
+  - `run_id` (uuid) で同日再実行汚染防止
+  - 40 分超過時 stderr WARN（M4 ゲート監視）
+  - `_append_log` / `_notify_pending` / `_summarize_log` の OSError は degraded warning で継続
 - **T0.2 解消** XQuartz/VNC DISPLAY 整備 → `inactive_check_result.json` 当日付取得
 
 ### Exit Criteria
