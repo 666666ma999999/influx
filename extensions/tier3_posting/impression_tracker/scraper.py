@@ -15,8 +15,7 @@ logger = logging.getLogger(__name__)
 
 JST = timezone(timedelta(hours=9))
 
-# CookieExpiredError は x_poster.exceptions が Single Source of Truth (plan.md M1 T1.5)
-from ..x_poster.exceptions import CookieExpiredError  # noqa: F401, E402
+from collector.exceptions import CookieExpiredError  # noqa: F401, E402
 
 
 class ImpressionScraper:
@@ -60,10 +59,11 @@ class ImpressionScraper:
         if screenshot_dir:
             self._screenshot_dir = screenshot_dir
 
-        cookies = self._load_cookies()
-        if not cookies:
+        try:
+            cookies = self._load_cookies()
+        except CookieExpiredError:
             self._screenshot_dir = original_screenshot_dir
-            raise CookieExpiredError("Cookie読込失敗: cookies.jsonが見つからないか空です")
+            raise
 
         pw = None
         browser = None
@@ -85,9 +85,7 @@ class ImpressionScraper:
             page.goto("https://x.com/home", wait_until="domcontentloaded")
             self._human_wait(2.0, 4.0)
             if "/i/flow/login" in page.url or "/login" in page.url:
-                raise CookieExpiredError(
-                    f"Cookie期限切れを検出: {page.url}"
-                )
+                raise CookieExpiredError.login_redirect(page.url, detail="pre-flight")
 
             consecutive_login_required = 0
 
@@ -113,8 +111,8 @@ class ImpressionScraper:
                 if result.get("status") == "login_required":
                     consecutive_login_required += 1
                     if consecutive_login_required >= 3:
-                        raise CookieExpiredError(
-                            "バッチ途中でlogin_requiredが3回連続: Cookie失効"
+                        raise CookieExpiredError.login_redirect(
+                            page.url, detail="batch login_required x3"
                         )
                 else:
                     consecutive_login_required = 0
@@ -311,15 +309,12 @@ class ImpressionScraper:
 
         Returns:
             Playwright形式のCookieリスト
-        """
-        cookie_file = self.profile_path / "cookies.json"
-        try:
-            from collector.cookie_crypto import load_cookies_encrypted
 
-            return load_cookies_encrypted(cookie_file)
-        except Exception as exc:
-            logger.warning("Cookie読込エラー: %s", exc)
-            return []
+        Raises:
+            CookieExpiredError: cookies.json が存在しない／空の場合。
+        """
+        from collector.cookie_crypto import load_cookies_or_raise
+        return load_cookies_or_raise(self.profile_path / "cookies.json")
 
     def _scrape_impressions(self, page) -> int:
         """ツイートのインプレッション(Views)数を取得。

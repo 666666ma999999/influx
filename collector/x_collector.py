@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import List, Dict, Optional
 
 from .config import COLLECTION_SETTINGS, PROFILE_PATH, OUTPUT_DIR
+from .exceptions import CookieExpiredError
 from collector.logger import get_logger
 from dataclasses import dataclass
 
@@ -52,10 +53,13 @@ class SafeXCollector:
         self._shared_mode = shared_collected_urls is not None
 
     def _load_cookies(self) -> List[Dict]:
-        """保存済みCookieを読み込む（暗号化対応）"""
-        cookie_file = self.profile_path / "cookies.json"
-        from collector.cookie_crypto import load_cookies_encrypted
-        return load_cookies_encrypted(cookie_file)
+        """保存済みCookieを読み込む（暗号化対応）。
+
+        Raises:
+            CookieExpiredError: cookies.json が存在しない／空の場合。
+        """
+        from collector.cookie_crypto import load_cookies_or_raise
+        return load_cookies_or_raise(self.profile_path / "cookies.json")
 
     def collect(
         self,
@@ -162,10 +166,7 @@ class SafeXCollector:
                 # ログイン状態確認
                 if not self._check_login_status(page):
                     logger.warning("ログイン未確認", extra={"extra_data": {"url": search_url, "action": "scripts/import_chrome_cookies.py で Chrome から Cookie を抽出してください（refresh-x-cookies スキル参照）"}})
-                    return CollectionResult(
-                        tweets=[], status="login_required",
-                        error_message="ログインしていない可能性があります"
-                    )
+                    raise CookieExpiredError.login_redirect(page.url or search_url)
 
                 logger.info("ログイン確認OK", extra={"extra_data": {"url": search_url}})
 
@@ -212,6 +213,8 @@ class SafeXCollector:
                         if random.random() < self.settings["reading_probability"]:
                             self._simulate_reading(page)
 
+            except CookieExpiredError:
+                raise
             except Exception as e:
                 error_str = str(e)
                 error_type = self._classify_error(error_str)

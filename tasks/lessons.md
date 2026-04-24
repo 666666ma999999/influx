@@ -1,5 +1,11 @@
 # Lessons Learned
 
+## 2026-04-23: plan.md の数式例は単位を明示する / 実装時は実装側の単位に合わせて解釈
+- plan.md T0.3 の例 `score = win_rate * min(trackable/10, 1.0) * 100` — win_rate が 0-100% (パーセント) なら末尾 `* 100` で 10,000 スケールになり Exit Criteria の `score ≥ 70` と整合しない
+- `_calc_horizon_stats` は `win_rate = round(len(winners)/len(trackable)*100, 1)` で 0-100 を返している → 実装では `* 100` を省略して 0-100 スケールに正規化
+- 教訓: plan.md に数式例を書くときは「win_rate は 0-1 想定 / 0-100 想定」を明記。実装者は実装側の単位で読み替える
+- 横展開: 他の KPI 式（engagement_rate 重み・noise_filter 閾値 等）も 0-1 / 0-100 / 0-1000 のどれか、docstring で単位を明示
+
 ## 2026-04-19: 統計量のラベルは計算対象と一致させる（`f1_95ci` vs `recall_95ci`）
 - measure_f1.py で Wilson CI を F1 のラベルで出力していたが、実計算は recall ベース（k=TP, n=TP+FN）
 - レビューで「ラベルと意味が一致しない」と HIGH 指摘。`recall_95ci` にリネーム + コメントで近似根拠明示
@@ -120,3 +126,11 @@
 - 追従参照更新: `collector/x_collector.py`, `scripts/{fetch_bookmarks, fetch_engagement, collect_tweets, scheduler/README.md}`, `CLAUDE.md`, `README.md`, `plan.md` 全て新スクリプト参照に変更
 - plan.md 恒久対策節: M0 完了後に 3 Batch (cookie_health_check / refresh_all_cookies / import_safari_cookies) を実装する計画として記録
 - 教訓: X 検知強化で「手動ログイン」経路が塞がれたら、既存の別ブラウザ（普段使い Chrome）のログイン状態を再利用する経路に切り替える。Playwright で再現しようとしてはならない
+
+## Session: 2026-04-24 12:47:51 (from: tasks/kabuki_strategy_sync.md)
+### Decisions
+## Decision Log
+- 2026-04-24: task.md 起票。M4 の日次頻度を SSoT の週2に上書き（アカウント別頻度は SSoT が決定）
+### Failures/Stuck
+## Failures / Stuck Context
+（未記録）

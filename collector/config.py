@@ -80,6 +80,33 @@ INFLUENCER_GROUPS = {
             {"username": "gihuboy", "min_faves": 50},
         ],
         "is_contrarian": True  # 逆指標フラグ
+    },
+    # plan.md M0 T0.5: Grok 20BD 再評価で score ≥ 50 を満たした TOP
+    "group_grok_top": {
+        "name": "Grok 20BD 評価 TOP（is_priority）",
+        "accounts": [
+            {"username": "t_ryoma1985", "min_faves": 30,
+             "grok_score": 60.0, "is_priority": True},
+            {"username": "serikura", "min_faves": 30,
+             "grok_score": 50.0, "is_priority": True},
+        ]
+    },
+    # plan.md M0 T0.8: 予備候補（collect/evaluate 対象外、is_active=False）
+    # is_active を参照する side ロジックは M1 で実装（現状フィールド定義のみ）
+    "group_reserve": {
+        "name": "Grok 予備候補",
+        "accounts": [
+            {"username": "kazzn_blog", "min_faves": 30,
+             "grok_score": 45.5, "is_active": False, "is_reserve": True},
+            {"username": "kabuknight", "min_faves": 30,
+             "grok_score": 31.2, "is_active": False, "is_reserve": True},
+            {"username": "m_kkkiii", "min_faves": 30,
+             "grok_score": 20.0, "is_active": False, "is_reserve": True},
+            {"username": "purazumakoi", "min_faves": 30,
+             "grok_score": 20.0, "is_active": False, "is_reserve": True},
+            {"username": "sorave55", "min_faves": 30,
+             "grok_score": 20.0, "is_active": False, "is_reserve": True},
+        ]
     }
 }
 
@@ -89,6 +116,38 @@ MAX_FROM_ACCOUNTS = 5
 # min_faves引き下げ係数（Xインデックスの概算値ずれを吸収）
 MIN_FAVES_SEARCH_RATIO = 0.33
 MIN_FAVES_FLOOR = 3  # 検索用min_favesの最低値
+
+
+def iter_active_accounts(groups=None):
+    """INFLUENCER_GROUPS から is_active=True のアカウントのみを列挙する。
+
+    plan.md M0 T0.8 で追加した is_active フィールドを参照する Canonical Owner。
+    収集系・非活動チェック系など「本日の処理対象アカウント集合」を
+    決める箇所は全てこの helper 経由で取得する。
+
+    Args:
+        groups: 対象グループキーのリスト（None で全グループ）
+
+    Yields:
+        (group_key, account_dict) のタプル
+    """
+    target_keys = list(INFLUENCER_GROUPS.keys()) if groups is None else list(groups)
+    for group_key in target_keys:
+        group = INFLUENCER_GROUPS.get(group_key)
+        if not group:
+            continue
+        for acc in group.get("accounts", []):
+            if acc.get("is_active", True):
+                yield group_key, acc
+
+
+def get_all_active_usernames(groups=None):
+    """is_active=True のユーザー名をフラットリストで返す。
+
+    `iter_active_accounts` の薄い便宜ラッパー。順序は INFLUENCER_GROUPS の
+    宣言順を保持する（collect/inactive_check のログ並びと一致させるため）。
+    """
+    return [acc["username"] for _, acc in iter_active_accounts(groups)]
 
 
 # X検索URL生成
@@ -122,6 +181,10 @@ def generate_search_urls(group_key: str, since: str = None, until: str = None,
 
     group = INFLUENCER_GROUPS[group_key]
     accounts = group["accounts"]
+    # plan.md M0 T0.8: is_active=False は収集対象外（group_reserve 等の予備アカウント）
+    accounts = [acc for acc in accounts if acc.get("is_active", True)]
+    if not accounts:
+        return []
     if exclude_accounts:
         accounts = [acc for acc in accounts if acc["username"] not in exclude_accounts]
         if not accounts:
@@ -200,9 +263,12 @@ def generate_search_urls(group_key: str, since: str = None, until: str = None,
 
 
 # 事前定義された検索URL（各グループはURLリスト、generate_search_urls()で自動生成）
+# is_active=False のみで構成されるグループは空 URL リストとなり、ここで除外する
 SEARCH_URLS = {
-    group_key: generate_search_urls(group_key)
+    group_key: urls
     for group_key in INFLUENCER_GROUPS
+    for urls in [generate_search_urls(group_key)]
+    if urls
 }
 
 
@@ -557,7 +623,9 @@ BLOCK_ERROR_PATTERNS = [
 
 
 # プロファイルパス
-PROFILE_PATH = "./x_profile"
+# plan.md M0: マルチアカウント移行に伴い x_profiles/maaaki を既定とする
+# （旧 x_profile/ パスは廃止、import_chrome_cookies.py が x_profiles/<account>/ に書き込む）
+PROFILE_PATH = "./x_profiles/maaaki"
 
 # 出力ディレクトリ
 OUTPUT_DIR = "./output"

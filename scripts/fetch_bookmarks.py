@@ -45,22 +45,17 @@ class Bookmark:
     created_at: str = ""
 
 
-from extensions.tier3_posting.x_poster.exceptions import CookieExpiredError
+from collector.exceptions import CookieExpiredError
 
 
 def load_cookies(profile_path: str = "./x_profile") -> list:
-    cookie_file = Path(profile_path).resolve() / "cookies.json"
-    try:
-        from collector.cookie_crypto import load_cookies_encrypted
-        return load_cookies_encrypted(cookie_file)
-    except Exception as exc:
-        logger.warning("Cookie暗号化読込失敗、直接読込を試行: %s", exc)
-        try:
-            with open(cookie_file, "r") as f:
-                return json.load(f)
-        except Exception:
-            logger.error("Cookie読込失敗: %s", cookie_file)
-            return []
+    """x_profile/cookies.json から Cookie を読み込む（暗号化対応）。
+
+    Raises:
+        CookieExpiredError: cookies.json が存在しない／空の場合。
+    """
+    from collector.cookie_crypto import load_cookies_or_raise
+    return load_cookies_or_raise(Path(profile_path).resolve() / "cookies.json")
 
 
 # ── チェックポイント管理 ───────────────────────────────────────
@@ -384,8 +379,6 @@ def fetch_bookmarks(
 
     if not persistent:
         cookies = load_cookies(profile_path)
-        if not cookies:
-            raise CookieExpiredError("Cookieが見つからないか期限切れです。scripts/import_chrome_cookies.py で Chrome から抽出してください（refresh-x-cookies スキル参照）。")
     else:
         cookies = None
 
@@ -517,7 +510,7 @@ def fetch_bookmarks(
         time.sleep(random.uniform(4.0, 6.0))
 
         if "/login" in page.url or "/i/flow/login" in page.url:
-            raise CookieExpiredError("Cookieが期限切れです。scripts/import_chrome_cookies.py で Chrome から再抽出してください（refresh-x-cookies スキル参照）。")
+            raise CookieExpiredError.login_redirect(page.url)
 
         # ツイートカードの表示を待つ
         try:

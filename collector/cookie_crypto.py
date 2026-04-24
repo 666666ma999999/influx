@@ -84,3 +84,23 @@ def load_cookies_encrypted(cookie_file: Path) -> list:
                 return json.load(f)
         except Exception:
             return []
+
+
+def load_cookies_or_raise(cookie_file: Path) -> list:
+    """Cookieを読み込み、不在なら missing、空なら empty を送出する。
+
+    Canonical loader — 呼び出し側は `except CookieExpiredError as e: if e.reason == ...`
+    で理由別分岐ができる。
+
+    Raises:
+        CookieExpiredError: cookies.json が存在しない／空の場合。
+    """
+    from collector.exceptions import CookieExpiredError
+
+    cookie_file = Path(cookie_file)
+    if not cookie_file.exists():
+        raise CookieExpiredError.missing(cookie_file)
+    cookies = load_cookies_encrypted(cookie_file)
+    if not cookies:
+        raise CookieExpiredError.empty(cookie_file)
+    return cookies

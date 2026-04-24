@@ -28,6 +28,7 @@
 | **Grok アーキテクトスタイル学習・3 テーマ戦略（investment / tech_tips / ceo_perspective）** | **`make_article`** |
 | **連携①（make_article → influx）** | make_article `/post-article` → influx の `run.py`（予約投稿 API） |
 | **連携②（influx → make_article）** | 分類済ツイート素材 API（M2 以降で実装予定・タスク未起票）＋ 読者反応 JSONL（T6.4 成果物 `output/reader_feedback.jsonl`、Pattern Library 還流用） |
+| **運用アカウント戦略（`@twittora_` 主軸・`@kabuki666999` 準主軸、bio・投稿頻度・KPI）** | 横断 SSoT [`../account_strategy.md`](../account_strategy.md)（本 plan.md には数値を重複させない。M4 日次パイプラインは SSoT の頻度に従う） |
 
 ---
 
@@ -149,6 +150,12 @@ M1 で土台（カテゴリ整理・Gold Set・収集量モニタリング・Gro
 
 ---
 
+## 現状スナップショット (2026-04-24 更新)
+
+> **アカウント運用状況**（詳細は [`../account_strategy.md`](../account_strategy.md)）:
+> - `@twittora_` — 14年休眠中、復活予定（make_article 側 `tasks/account_strategy_kickoff.md` で下書き準備中）
+> - `@kabuki666999` — 週2投稿目標（火木 20:00）。bio 改修案1 適用予定（`tasks/kabuki_strategy_sync.md`）
+
 ## 現状スナップショット (2026-04-22 更新)
 
 > **⚠️ 最上位前提が崩壊中** — TOP5 特定不能 / Grok 20BD 期限超過 / 到達性未測定。§M0 参照。
@@ -213,6 +220,8 @@ graph TD
 ---
 
 ## M0: 前提崩壊の緊急復旧 (2026-04-20 開始)
+<!-- phase-id: phase-m0 — tasks/m0_execution.md から参照される安定アンカー -->
+<a id="phase-m0"></a>
 
 **Why**: 最上位前提が崩壊状態では M1 以降全工程が空転する。
 
@@ -249,8 +258,10 @@ graph TD
 
 1. ✅ Cookie が当日付更新済み、`cookies.json` mtime 7 日以内
 2. `output/inactive_check_result.json` が当日付生成、TOP5 のうち 4 名以上アクティブ
-3. `research_scorecard.json` に `score` フィールド付与、score ≥ 70 が 5 名以上特定
-4. `INFLUENCER_GROUPS` に `grok_score` / `is_priority` 付与、TOP5 明示
+3. `research_scorecard.json` に `score` フィールド付与、**score ≥ 50 が 2 名以上**特定
+   - 2026-04-24 Decision: 第 2 回パイプライン（3ヶ月拡大）の構造的上限が 60.0（@t_ryoma1985）と判明。score=`win_rate × min(trackable/10, 1.0) × 100` 式で「勝率 70%+ かつ trackable 10+」が必要だが、trackable≥10 群は勝率 31-45% に留まる。70 閾値は現データ構造では不可能と確認 → 閾値 70→50 緩和、必要 5 名→2 名緩和
+4. `INFLUENCER_GROUPS` に `grok_score` / `is_priority` 付与、**score ≥ 50 の全員**を `group_grok_top` に明示（現状: @t_ryoma1985 60.0 / @serikura 50.0 の 2 名、tiebreak: `avg_return_pct` 20BD）
+   - 2026-04-24 Decision: Exit #3 緩和に連動。構造的上限 60.0 の現データでは TOP5 を埋めても中身は score < 50 の低信頼候補になるため、閾値連動で必要数も 2 名に揃える
 5. `INACTIVE_THRESHOLD_DAYS=7` に変更済
 6. `CookieExpiredError` が収集系でも raise
 7. `group_reserve` に予備 5 名登録

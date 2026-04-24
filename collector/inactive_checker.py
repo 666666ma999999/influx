@@ -13,23 +13,25 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-from collector.config import INFLUENCER_GROUPS
+from collector.config import INFLUENCER_GROUPS, get_all_active_usernames
+from collector.exceptions import CookieExpiredError
 
 # 非活動判定の閾値（日数）
-INACTIVE_THRESHOLD_DAYS = 30
+# plan.md M0 T0.4: 30日 → 7日に短縮（グロース鈍化の早期検知）
+INACTIVE_THRESHOLD_DAYS = 7
 
 
 def get_all_usernames() -> list[str]:
-    """INFLUENCER_GROUPSから全ユーザー名をフラットリストで返す。
+    """チェック対象（is_active=True）のユーザー名をフラットリストで返す。
+
+    plan.md M0 T0.8 以降、is_active=False（group_reserve 等の予備候補）は
+    本日の収集・非活動チェック対象から外す。Canonical helper
+    `collector.config.get_all_active_usernames()` に委譲する。
 
     Returns:
-        全グループのユーザー名リスト
+        is_active=True のユーザー名リスト
     """
-    usernames = []
-    for group in INFLUENCER_GROUPS.values():
-        for acc in group["accounts"]:
-            usernames.append(acc["username"])
-    return usernames
+    return get_all_active_usernames()
 
 
 def check_account_status(page, username: str) -> dict:
@@ -216,8 +218,6 @@ def run_inactive_check(
     usernames = get_all_usernames()
     profile_path_obj = Path(profile_path)
     cookies = _load_cookies(profile_path_obj)
-    if not cookies:
-        print("警告: Cookieが見つかりません。ログインが必要な場合があります。")
 
     from playwright.sync_api import sync_playwright
 
@@ -308,7 +308,7 @@ def detect_inactive_accounts(
 
 
 def _load_cookies(profile_path: Path) -> list:
-    """ブラウザプロファイルからCookieを読み込む。
+    """ブラウザプロファイルからCookieを読み込む（暗号化対応）。
 
     ファイルパーミッションのセキュリティチェックと、
     Cookie有効期限のチェックも行い、警告を表示する。
@@ -317,29 +317,31 @@ def _load_cookies(profile_path: Path) -> list:
         profile_path: x_profileディレクトリのPath
 
     Returns:
-        Cookieのリスト（ファイルが存在しない場合は空リスト）
+        Cookieのリスト
+
+    Raises:
+        CookieExpiredError: cookies.json が存在しない／空の場合。
     """
+    from collector.cookie_crypto import load_cookies_or_raise
+
     cookies_file = profile_path / "cookies.json"
+
+    # ファイルパーミッションチェック（world-readableの場合は警告）
     if cookies_file.exists():
-        # ファイルパーミッションチェック（world-readableの場合は警告）
-        file_stat = os.stat(cookies_file)
-        file_mode = file_stat.st_mode
+        file_mode = os.stat(cookies_file).st_mode
         if file_mode & 0o004:  # others-readable
             print(f"セキュリティ警告: {cookies_file} が他のユーザーから読み取り可能です。")
             print(f"  推奨: chmod 600 {cookies_file}")
 
-        with open(cookies_file, 'r') as f:
-            cookies = json.load(f)
+    cookies = load_cookies_or_raise(cookies_file)
 
-        # Cookie有効期限チェック
-        now_timestamp = time.time()
-        expired_count = 0
-        for cookie in cookies:
-            expiry = cookie.get("expires", -1)
-            if expiry > 0 and expiry < now_timestamp:
-                expired_count += 1
-        if expired_count > 0:
-            print(f"警告: {expired_count}件の期限切れCookieが含まれています。再ログインを推奨します。")
+    # Cookie有効期限チェック
+    now_timestamp = time.time()
+    expired_count = sum(
+        1 for c in cookies
+        if 0 < c.get("expires", -1) < now_timestamp
+    )
+    if expired_count > 0:
+        print(f"警告: {expired_count}件の期限切れCookieが含まれています。再ログインを推奨します。")
 
-        return cookies
-    return []
+    return cookies

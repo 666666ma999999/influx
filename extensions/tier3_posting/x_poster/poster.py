@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Optional
 
 from dateutil.parser import parse as parse_datetime
 
-from .exceptions import CookieExpiredError
+from collector.exceptions import CookieExpiredError
 
 logger = logging.getLogger(__name__)
 
@@ -48,10 +48,6 @@ class XPoster:
         from playwright.sync_api import sync_playwright
 
         cookies = self._load_cookies()
-        if not cookies:
-            raise CookieExpiredError(
-                f"Cookie読込失敗: {self.profile_path}/cookies.json が見つからないか空です"
-            )
 
         browser = None
         context = None
@@ -72,9 +68,7 @@ class XPoster:
             self._human_wait(2.0, 4.0)
 
             if not self._check_login_status(page):
-                raise CookieExpiredError(
-                    f"ログイン画面へリダイレクト（Cookie失効）: {page.url}"
-                )
+                raise CookieExpiredError.login_redirect(page.url)
 
             # 投稿画面に遷移
             page.goto(
@@ -134,6 +128,8 @@ class XPoster:
                 "dry_run": False,
             }
 
+        except CookieExpiredError:
+            raise
         except Exception as exc:
             logger.exception("投稿中にエラーが発生")
             return {
@@ -183,10 +179,6 @@ class XPoster:
         from playwright.sync_api import sync_playwright
 
         cookies = self._load_cookies()
-        if not cookies:
-            raise CookieExpiredError(
-                f"Cookie読込失敗: {self.profile_path}/cookies.json が見つからないか空です"
-            )
 
         browser = None
         context = None
@@ -207,9 +199,7 @@ class XPoster:
             self._human_wait(2.0, 4.0)
 
             if not self._check_login_status(page):
-                raise CookieExpiredError(
-                    f"ログイン画面へリダイレクト（Cookie失効）: {page.url}"
-                )
+                raise CookieExpiredError.login_redirect(page.url)
 
             # 投稿画面に遷移
             page.goto(
@@ -304,6 +294,8 @@ class XPoster:
                 "error": None,
             }
 
+        except CookieExpiredError:
+            raise
         except Exception as exc:
             logger.exception("予約投稿中にエラーが発生")
             try:
@@ -558,14 +550,12 @@ class XPoster:
 
         Returns:
             Playwright形式のCookieリスト
+
+        Raises:
+            CookieExpiredError: cookies.json が存在しない／空の場合。
         """
-        cookie_file = self.profile_path / "cookies.json"
-        try:
-            from collector.cookie_crypto import load_cookies_encrypted
-            return load_cookies_encrypted(cookie_file)
-        except Exception as exc:
-            logger.warning("Cookie読込エラー: %s", exc)
-            return []
+        from collector.cookie_crypto import load_cookies_or_raise
+        return load_cookies_or_raise(self.profile_path / "cookies.json")
 
     def _click_with_retry(self, page, selector: str, max_retries: int = 3, timeout: int = 10000) -> bool:
         """Click an element with retry on stale reference."""

@@ -57,18 +57,23 @@ class ResearchScorecardBuilder:
         }
 
     def rank_influencers(self, scorecard: Dict[str, Any], horizon: str = "horizon_20bd") -> List[Dict[str, Any]]:
-        """インフルエンサーを勝率でランキングする。
+        """インフルエンサーを score でランキングする（plan.md M0 Exit #4）。
 
         Args:
             scorecard: build() の出力
-            horizon: ランキング基準のホライズン (horizon_5bd or horizon_20bd)
+            horizon: 表示する win_rate / avg_return_pct のホライズン (horizon_5bd or horizon_20bd)。
+                score はホライズンごとに `horizon_stats["score"]` に保存されており、
+                ここで指定されたホライズンの score を第1キーとしてソートする。
 
         Returns:
-            ランキングリスト（win_rate降順）
+            ランキングリスト。ソートキー: (score, avg_return_pct) 降順。
+            tiebreak は plan.md M0 T0.5 で明示した avg_return_pct（win_rate は含めない）。
         """
         ranking = []
         for username, stats in scorecard.get("influencers", {}).items():
             horizon_stats = stats.get(horizon, {})
+            # ホライズン別 score を優先、未設定なら influencer トップレベル score
+            score = horizon_stats.get("score", stats.get("score", 0.0))
             ranking.append({
                 "username": username,
                 "display_name": stats.get("display_name", ""),
@@ -77,9 +82,10 @@ class ResearchScorecardBuilder:
                 "winners": horizon_stats.get("winners", 0),
                 "win_rate": horizon_stats.get("win_rate", 0.0),
                 "avg_return_pct": horizon_stats.get("avg_return_pct", 0.0),
+                "score": score,
             })
 
-        ranking.sort(key=lambda x: (x["win_rate"], x["avg_return_pct"]), reverse=True)
+        ranking.sort(key=lambda x: (x["score"], x["avg_return_pct"]), reverse=True)
         return ranking
 
     def save(self, scorecard: Dict[str, Any], path: str) -> None:
@@ -102,12 +108,36 @@ class ResearchScorecardBuilder:
                 display_name = ev["display_name"]
                 break
 
+        h5 = self._calc_horizon_stats(evals, "horizon_5bd")
+        h20 = self._calc_horizon_stats(evals, "horizon_20bd")
+        # horizon 別 score を horizon_stats 内に埋める（plan.md M0 T0.3 後方互換 +
+        # rank_influencers の API 契約正常化: horizon 引数で正しく score を引ける）
+        h5["score"] = self._calc_score(h5)
+        h20["score"] = self._calc_score(h20)
+
         return {
             "display_name": display_name,
             "total_signals": len(evals),
-            "horizon_5bd": self._calc_horizon_stats(evals, "horizon_5bd"),
-            "horizon_20bd": self._calc_horizon_stats(evals, "horizon_20bd"),
+            "horizon_5bd": h5,
+            "horizon_20bd": h20,
+            # トップレベル score は 20BD 基準（後方互換、plan.md M0 Exit #3 評価用）
+            "score": h20["score"],
         }
+
+    @staticmethod
+    def _calc_score(horizon_stats: Dict[str, Any]) -> float:
+        """plan.md M0 T0.3: 勝率×trackable信頼性の合成スコア（0-100スケール）。
+
+        score = win_rate * min(trackable / 10, 1.0)
+        - win_rate: `_calc_horizon_stats` が返す 0-100 スケール（パーセント）
+        - trackable が 10 未満の influencer は信頼性ペナルティ
+        - horizon_stats は呼び出し側が 5BD / 20BD どちらでも渡せる（API 契約：
+          rank_influencers(horizon=...) はこの horizon 別 score を使う）
+        """
+        win_rate = horizon_stats.get("win_rate", 0.0)
+        trackable = horizon_stats.get("trackable", 0)
+        reliability = min(trackable / 10.0, 1.0)
+        return round(win_rate * reliability, 1)
 
     @staticmethod
     def _calc_horizon_stats(evals: List[Dict[str, Any]], horizon_key: str) -> Dict[str, Any]:
