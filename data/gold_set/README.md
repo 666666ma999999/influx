@@ -48,10 +48,17 @@ plan.md M1 T1.6 の成果物。7 カテゴリ LLM 分類 (`collector/llm_classif
 # 1. 候補生成（本プロジェクトで1回のみ、追加時は --per-category を増やす）
 python scripts/sample_gold_set_candidates.py --per-category 5
 
-# 2. ラベリング
-#    - candidates.jsonl を 1 行ずつ読む
-#    - text を読んで labels を決める
-#    - gold_set.jsonl に上記スキーマで追記
+# 2-a. 既存の人手教師データ（output/human_annotations.json, annotator="human"）から自動マッピング
+#      URL キーで突合し、一致分だけ gold_set.jsonl に書き出す。LLM 出力は一切触らない。
+#      annotator != "human" は fail-fast で拒否される（中立性保護）。
+python3 scripts/apply_human_annotations.py                # 実行
+python3 scripts/apply_human_annotations.py --dry-run       # 差分確認のみ
+python3 scripts/apply_human_annotations.py --labeler foo   # labeler 上書き
+
+# 2-b. 2-a で一致しなかった候補を HTML UI で手動ラベル付け
+python3 scripts/build_gold_set_labeler.py   # HTML ビルド
+open output/label_gold_set.html             # ブラウザで 35 件をラベル付け
+# 完了後ダウンロードした gold_set.jsonl を data/gold_set/gold_set.jsonl にマージ
 
 # 3. 検証（30 分以内で 35 件、できれば 2 名でダブルラベル）
 #    - 2 名のラベルが一致しない場合は話し合って確定
