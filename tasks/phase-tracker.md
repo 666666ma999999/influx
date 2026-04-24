@@ -72,6 +72,48 @@ plan.md の Phase 分解に対応する横串トラッカー。
 
 ---
 
+## Phase M2: 学習ループ + 品質フィルタ (2026-06)
+<!-- phase-id: phase-m2 -->
+<a id="phase-m2"></a>
+
+**親**: [plan.md#m2-学習ループ--品質フィルタ-2026-06](../plan.md#m2-学習ループ--品質フィルタ-2026-06)
+**Status**: 🟠 着手ゲート待ち（T2.0 人手ラベル付け 0/35 件）
+**着手ゲート**: Gold Set macro F1 ≥ 0.80（未達時はフォールバック戦略あり、plan.md 参照）
+
+### 着手ゲート進捗（T2.0）
+
+- [x] `scripts/sample_gold_set_candidates.py` 実装済（M1 T1.6）
+- [x] `scripts/measure_f1.py` 実装済（Wilson 95% CI 含む、2026-04-19）
+- [x] `data/gold_set/candidates.jsonl` 生成済（35 件、中立性ルール準拠）
+- [x] `data/gold_set/answer_key.jsonl` 生成済（35 件、LLM 推測保存）
+- [ ] **`data/gold_set/gold_set.jsonl` 人手ラベル付け 0/35 件**（ユーザー作業、推定 30 分）
+- [ ] `python scripts/measure_f1.py` 実行 → macro F1 算出
+- [ ] macro F1 ≥ 0.80 判定 → M2 着手 or フォールバック戦略適用
+
+### ラベル付け手順（ユーザー向け）
+
+1. `data/gold_set/candidates.jsonl` を 1 行ずつ読む（35 件）
+2. `text` を読んで 7 カテゴリのどれか（複数可）を判断
+3. `data/gold_set/gold_set.jsonl` に `{news_id, tweet_url, username, posted_at, text, labels, labeler, labeled_at, notes}` で追記
+4. 中立性ルール: ラベリング中 `answer_key.jsonl` を見ない（F1 計測の独立性担保のため）
+5. 詳細スキーマ: `data/gold_set/README.md`
+
+### 残タスク（着手ゲート通過後）
+
+- **T2.2** `engagement_rate` 高位ドラフトの自動ブックマーク化
+- **T2.3** ノイズ/重複除去フィルタ + 偽陽性ガード
+- **T2.4** 有益度スコアリング
+- **T2.5** A/B テスト基盤（`experiment_id`）
+
+### Exit Criteria
+
+1. F1 ≥ 0.80 を Gold Set で達成
+2. ノイズ率 < 10%
+3. 有益度スコア上位のみがドラフト素材
+4. `experiment_id` が投稿〜インプレッションに一貫付与
+
+---
+
 ## Sprint 枠
 
 （未使用）
