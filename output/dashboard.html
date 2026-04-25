@@ -619,11 +619,15 @@ a:hover { text-decoration: underline; }
 <!-- PQ Confirm Delete -->
 <div class="pq-confirm-overlay" id="pq-confirm-overlay">
   <div class="pq-confirm-box">
-    <h3>Delete post?</h3>
-    <p>This action cannot be undone.</p>
-    <div class="pq-confirm-actions">
-      <button class="pq-confirm-btn pq-confirm-btn--cancel" id="pq-confirm-cancel">Cancel</button>
-      <button class="pq-confirm-btn pq-confirm-btn--delete" id="pq-confirm-delete">Delete</button>
+    <h3>この記事を削除しますか？</h3>
+    <p id="pq-confirm-message" style="font-size:13px; line-height:1.6;">
+      <strong style="color:var(--color-text-primary);">非表示</strong>: 一覧から消します（ステータスを <code>deleted</code> に変更）。<br>
+      <strong style="color:var(--color-rejected);">完全削除</strong>: 記事をtombstoneに登録し、ダッシュボード再ビルド後も復活しません。
+    </p>
+    <div class="pq-confirm-actions" style="flex-wrap:wrap;">
+      <button class="pq-confirm-btn pq-confirm-btn--cancel" id="pq-confirm-cancel">キャンセル</button>
+      <button class="pq-confirm-btn pq-confirm-btn--hide" id="pq-confirm-hide" style="background:var(--color-text-secondary); color:#fff;">非表示</button>
+      <button class="pq-confirm-btn pq-confirm-btn--delete" id="pq-confirm-delete">完全削除</button>
     </div>
   </div>
 </div>
@@ -802,6 +806,8 @@ renderLifecycle(); renderAlerts(); renderActions(); renderHistory(); renderBTC()
 var POSTING_DATA = [{"news_id": "0f2f4782c058e75d", "source_items": [], "title": "勝率ランキングTOP5 (20260310)", "body": "📈勝率ランキングTOP5\n\n1位 弐億貯男 100.0%（3件中0件的中）\n2位 ななし＠氷河期ブログの人 100.0%（2件中0件的中）\n3位 後藤達也 100.0%（1件中0件的中）\n4位 HUTCH ハッチ (岡元兵八郎) 100.0%（1件中0件的中）\n5位 ゆーき 100.0%（1件中0件的中）\n\n#投資 #株式 #インフルエンサー", "format": "x_post", "scheduled_at": "2026-03-10T10:21:33.111191", "hashtags": ["#投資", "#株式", "#インフルエンサー"], "status": "archived", "template_type": "win_rate_ranking", "created_at": "2026-03-10T10:21:33.111619+00:00", "updated_at": "2026-03-15T06:44:22.478861+00:00", "archived_reason": "scheduled_time_passed"}, {"news_id": "8910aaf401d9349f", "source_items": ["https://twitter.com/gihuboy/status/100007"], "title": "逆指標シグナル: 岐阜暴威 (20260310)", "body": "⚠️逆指標シグナル検知\n\n岐阜暴威(@gihuboy)が強気発言:\n「日経4万円突破！全力ロング！ここからさらに上がる！強気でいきます！爆上げ相場に乗り遅れるな！」\n\n逆指標アカウントの強気発言は警戒シグナルとして注目\n\n#逆指標 #投資 #株式", "format": "x_post", "scheduled_at": "2026-03-10T10:21:33.111473", "hashtags": ["#逆指標", "#投資", "#株式"], "status": "rejected", "template_type": "contrarian_signal", "created_at": "2026-03-10T10:21:33.112419+00:00", "updated_at": "2026-03-15T04:59:29.545046+00:00", "posted_at": "2026-03-10T10:22:14.997690+00:00"}, {"news_id": "932ecc84d0c44b7a", "source_items": [], "title": "週間レポート (20260310)", "body": "📊今週の投資インフルエンサー動向\n\n・推奨銘柄: 2件\n・購入報告: 2件\n・IPO情報: 1件\n・市況トレンド: 2件\n・高騰銘柄: 2件\n・下落銘柄: 1件\n・警戒シグナル: 2件\nアクティブ: 10名\n\n#週間レポート #投資 #株式", "format": "x_post", "scheduled_at": "2026-03-10T10:21:33.111485", "hashtags": ["#週間レポート", "#投資", "#株式"], "status": "archived", "template_type": "weekly_report", "created_at": "2026-03-10T10:21:33.112761+00:00", "updated_at": "2026-03-15T06:44:22.479421+00:00", "archived_reason": "scheduled_time_passed"}, {"news_id": "62255878086c5b80", "source_items": [], "title": "勝率ランキングTOP5 (20260315)", "body": "📈勝率ランキングTOP5\n\n1位 弐億貯男 100.0%（3件中0件的中）\n2位 ななし＠氷河期ブログの人 100.0%（2件中0件的中）\n3位 後藤達也 100.0%（1件中0件的中）\n4位 HUTCH ハッチ (岡元兵八郎) 100.0%（1件中0件的中）\n5位 ゆーき 100.0%（1件中0件的中）\n\n#投資 #株式 #インフルエンサー", "format": "x_post", "scheduled_at": "2026-03-15T13:57:02.791307", "hashtags": ["#投資", "#株式", "#インフルエンサー"], "status": "approved", "template_type": "win_rate_ranking", "created_at": "2026-03-15T04:57:02.791933+00:00", "updated_at": "2026-03-19T06:30:00.634288+00:00", "posted_at": "2026-03-19T06:30:00.767291+00:00"}, {"news_id": "5cf61aced533cfe2", "source_items": ["https://twitter.com/gihuboy/status/2032375213456048214"], "title": "逆指標シグナル: 岐阜暴威 (20260315)", "body": "⚠️逆指標シグナル検知\n\n岐阜暴威(@gihuboy)が強気発言:\n「今日買いポジ増やしちゃったよ、、、\nおわった、、、」\n\n逆指標アカウントの強気発言は警戒シグナルとして注目\n\n#逆指標 #投資 #株式", "format": "x_post", "scheduled_at": "2026-03-15T13:57:02.791344", "hashtags": ["#逆指標", "#投資", "#株式"], "status": "approved", "template_type": "contrarian_signal", "created_at": "2026-03-15T04:57:02.793225+00:00", "updated_at": "2026-03-19T06:30:00.635433+00:00", "posted_at": "2026-03-19T06:30:00.767717+00:00"}, {"news_id": "53adc60ebfd9c3ec", "source_items": [], "title": "週間レポート (20260315)", "body": "📊今週の投資インフルエンサー動向\n\n・推奨銘柄: 13件\n・購入報告: 13件\n・IPO情報: 4件\n・市況トレンド: 17件\n・高騰銘柄: 7件\n・下落銘柄: 12件\n・警戒シグナル: 10件\nアクティブ: 18名\n\n#週間レポート #投資 #株式", "format": "x_post", "scheduled_at": "2026-03-15T13:57:02.791393", "hashtags": ["#週間レポート", "#投資", "#株式"], "status": "failed", "template_type": "weekly_report", "created_at": "2026-03-15T04:57:02.793526+00:00", "updated_at": "2026-03-15T05:06:03.787674+00:00", "error": "ElementHandle.click: Timeout 30000ms exceeded.\nCall log:\n  - attempting click action\n    2 × waiting for element to be visible, enabled and stable\n      - element is visible, enabled and stable\n      - scrolling into view if needed\n      - done scrolling\n      - <div class=\"css-175oi2r r-1p0dtai r-1d2f490 r-1xcajam r-zchlnj r-ipm5af\"></div> from <div class=\"css-175oi2r r-aqfbo4 r-zchlnj r-1d2f490 r-1xcajam r-1p0dtai r-12vffkv\">…</div> subtree intercepts pointer events\n    - retrying click action\n    - waiting 20ms\n    2 × waiting for element to be visible, enabled and stable\n      - element is visible, enabled and stable\n      - scrolling into view if needed\n      - done scrolling\n      - <div class=\"css-175oi2r r-1p0dtai r-1d2f490 r-1xcajam r-zchlnj r-ipm5af\"></div> from <div class=\"css-175oi2r r-aqfbo4 r-zchlnj r-1d2f490 r-1xcajam r-1p0dtai r-12vffkv\">…</div> subtree intercepts pointer events\n    - retrying click action\n      - waiting 100ms\n    56 × waiting for element to be visible, enabled and stable\n       - element is visible, enabled and stable\n       - scrolling into view if needed\n       - done scrolling\n       - <div class=\"css-175oi2r r-1p0dtai r-1d2f490 r-1xcajam r-zchlnj r-ipm5af\"></div> from <div class=\"css-175oi2r r-aqfbo4 r-zchlnj r-1d2f490 r-1xcajam r-1p0dtai r-12vffkv\">…</div> subtree intercepts pointer events\n     - retrying click action\n       - waiting 500ms\n"}];
 
 var PQ_STORAGE_KEY = 'dashboard_posting_data';
+var PQ_TOMBSTONE_KEY = 'dashboard_posting_tombstones';
+var PQ_STATUS_DELETED = 'deleted';
 var PQ_CHAR_LIMIT = 280;
 var pqAllData = pqLoadData();
 var pqCurrentTab = 'needs_review';
@@ -810,11 +816,34 @@ var pqDeletingId = null;
 
 function pqGetItemId(item) { return item.news_id || item.id || ''; }
 
+function pqLoadTombstones() {
+  try {
+    var raw = localStorage.getItem(PQ_TOMBSTONE_KEY);
+    var parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch(e) { return []; }
+}
+
+function pqSaveTombstones(ids) {
+  try { localStorage.setItem(PQ_TOMBSTONE_KEY, JSON.stringify(ids)); return true; }
+  catch(e) { pqShowToast('Failed to save tombstones: storage may be full'); return false; }
+}
+
+function pqAddTombstone(id) {
+  var ids = pqLoadTombstones();
+  if (ids.indexOf(id) !== -1) return true;
+  ids.push(id);
+  return pqSaveTombstones(ids);
+}
+
 function pqLoadData() {
   var stored = localStorage.getItem(PQ_STORAGE_KEY);
   var local = [];
   if (stored) { try { local = JSON.parse(stored); } catch(e) { local = []; } }
-  return pqMergeData(POSTING_DATA, local);
+  var merged = pqMergeData(POSTING_DATA, local);
+  var tombstones = pqLoadTombstones();
+  if (!tombstones.length) return merged;
+  return merged.filter(function(item) { return tombstones.indexOf(pqGetItemId(item)) === -1; });
 }
 
 function pqMergeData(base, overlay) {
@@ -875,6 +904,7 @@ function pqGetFilteredData(tabName) {
   if (tabName === 'needs_review') statusFilter = ['draft','failed','rejected'];
   else statusFilter = [tabName];
   return pqAllData.filter(function(item) {
+    if (item.status === PQ_STATUS_DELETED) return false;
     return statusFilter.indexOf(item.status) !== -1;
   }).sort(function(a,b) {
     var da = a.created_at || '', db = b.created_at || '';
@@ -886,6 +916,7 @@ function pqGetTabCounts() {
   var c = { needs_review: 0, approved: 0, scheduled: 0, posted: 0 };
   for (var i = 0; i < pqAllData.length; i++) {
     var s = pqAllData[i].status;
+    if (s === PQ_STATUS_DELETED) continue;
     if (s === 'draft' || s === 'failed' || s === 'rejected') c.needs_review++;
     else if (s === 'approved') c.approved++;
     else if (s === 'scheduled') c.scheduled++;
@@ -1226,7 +1257,17 @@ function pqUpdateStatus(id, newStatus) {
   pqSaveData(pqAllData); pqRenderAll();
 }
 
+// soft: status='deleted' in pqAllData (hidden but recoverable via import/merge).
+// hard: tombstone entry (survives dashboard rebuild; item removed from pqAllData).
+function pqSoftDeleteItem(id) {
+  var item = pqFindItem(id); if (!item) return;
+  item.status = PQ_STATUS_DELETED;
+  item.updated_at = new Date().toISOString();
+  pqSaveData(pqAllData); pqRenderAll();
+}
+
 function pqRemoveItem(id) {
+  if (!pqAddTombstone(id)) return;
   pqAllData = pqAllData.filter(function(item) { return pqGetItemId(item) !== id; });
   pqSaveData(pqAllData); pqRenderAll();
 }
@@ -1315,10 +1356,14 @@ var pqConfirmOverlay = document.getElementById('pq-confirm-overlay');
 
 function pqOpenConfirmDelete(id) { pqDeletingId = id; pqConfirmOverlay.classList.add('active'); }
 function pqCloseConfirmDelete() { pqDeletingId = null; pqConfirmOverlay.classList.remove('active'); }
-function pqConfirmDelete() { if (pqDeletingId !== null) { pqRemoveItem(pqDeletingId); pqCloseConfirmDelete(); pqShowToast('Post deleted'); } }
+function pqConfirmAction(action, toastMsg) {
+  if (pqDeletingId === null) return;
+  action(pqDeletingId); pqCloseConfirmDelete(); pqShowToast(toastMsg);
+}
 
 document.getElementById('pq-confirm-cancel').addEventListener('click', pqCloseConfirmDelete);
-document.getElementById('pq-confirm-delete').addEventListener('click', pqConfirmDelete);
+document.getElementById('pq-confirm-hide').addEventListener('click', function() { pqConfirmAction(pqSoftDeleteItem, '記事を非表示にしました'); });
+document.getElementById('pq-confirm-delete').addEventListener('click', function() { pqConfirmAction(pqRemoveItem, '記事を完全削除しました'); });
 pqConfirmOverlay.addEventListener('click', function(e) { if (e.target === pqConfirmOverlay) pqCloseConfirmDelete(); });
 
 /* Keyboard shortcuts */
@@ -1352,9 +1397,17 @@ pqFileInput.addEventListener('change', function(e) {
       var imported = JSON.parse(ev.target.result);
       if (!Array.isArray(imported)) { pqShowToast('Invalid JSON: expected array'); return; }
       var before = pqAllData.length;
+      var rawCount = imported.length;
+      var tombstones = pqLoadTombstones();
+      if (tombstones.length) {
+        imported = imported.filter(function(item) { return tombstones.indexOf(pqGetItemId(item)) === -1; });
+      }
+      var suppressed = rawCount - imported.length;
       pqAllData = pqMergeData(pqAllData, imported);
       pqSaveData(pqAllData); pqRenderAll();
-      pqShowToast('Imported ' + imported.length + ' posts (' + (pqAllData.length - before) + ' new)');
+      var msg = 'Imported ' + imported.length + ' posts (' + (pqAllData.length - before) + ' new)';
+      if (suppressed > 0) msg += ', ' + suppressed + ' suppressed by tombstone';
+      pqShowToast(msg);
     } catch(err) { pqShowToast('Failed to parse JSON'); }
   };
   reader.readAsText(file); pqFileInput.value = '';
