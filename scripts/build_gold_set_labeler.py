@@ -251,6 +251,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
   <div><span class="shortcut">1-7</span> カテゴリトグル</div>
   <div><span class="shortcut">0</span> どれにも該当しない（notes 必須）</div>
   <div><span class="shortcut">Enter</span> 次へ（ラベル+Notes 空なら警告）</div>
+  <div><span class="shortcut">Cmd/Ctrl+Enter</span> notes 入力中でも次へ</div>
   <div><span class="shortcut">Shift+Enter</span> 戻る</div>
   <div>進捗は自動で localStorage に保存されます</div>
 </footer>
@@ -368,9 +369,8 @@ function render() {
     catDiv.appendChild(wrap);
   });
 
-  // "none" ボタン: ラベル空 + notes ありで「該当なし確定済み」、ラベル空 + notes 空で「未操作」を区別。
-  const noneBtn = document.getElementById("none-btn");
-  noneBtn.classList.toggle("active", rec.labels.length === 0 && !!(rec.notes && rec.notes.trim()));
+  // "none" ボタン: ラベル空 = 該当なし候補（クリック直後でも notes 未入力でも視覚的に押下を反映）。
+  document.getElementById("none-btn").classList.toggle("active", rec.labels.length === 0);
 
   // notes
   document.getElementById("notes").value = rec.notes || "";
@@ -538,7 +538,11 @@ document.addEventListener("keydown", (e) => {
   // none-btn にフォーカスがある時の Enter はボタン既定の click を発火させる（next() に奪われないようガード）。
   const isNoneBtnFocused = e.target && e.target.id === "none-btn";
 
-  if (e.key === "Enter" && !e.shiftKey && !e.metaKey && !e.ctrlKey) {
+  if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+    // Cmd/Ctrl+Enter: textarea/input にいても次へ進む（notes 入力後の唯一の前進手段）。
+    e.preventDefault();
+    next();
+  } else if (e.key === "Enter" && !e.shiftKey && !e.metaKey && !e.ctrlKey) {
     if (isFormField || isNoneBtnFocused) return;
     e.preventDefault();
     next();
