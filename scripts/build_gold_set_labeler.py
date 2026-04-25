@@ -378,7 +378,7 @@ function render() {
   });
 
   // "none" ボタン: 明示的に「該当なし」を選んだ場合のみ active。labels=[] かつ none_selected=false は「未操作」として区別する。
-  document.getElementById("none-btn").classList.toggle("active", rec.none_selected === true);
+  document.getElementById("none-btn").classList.toggle("active", !!rec.none_selected);
 
   // notes
   document.getElementById("notes").value = rec.notes || "";
@@ -398,9 +398,9 @@ function render() {
   const isLast = idx === CANDIDATES.length - 1;
   document.getElementById("next-btn").textContent = isLast ? "確定 (Enter)" : "次へ → (Enter)";
 
-  // status hint: labeled_at は「明示確定済み」のみ立つ。未操作 (labels=[] かつ !none_selected かつ !notes) は「未ラベル」と区別。
+  // status hint: labeled_at は「明示確定済み」のみ立つ。未操作 (selection なし かつ !notes) は「未ラベル」と区別。
   const hint = document.getElementById("status-hint");
-  const touched = rec.labels.length > 0 || rec.none_selected || rec.notes;
+  const touched = hasSelection(rec) || !!rec.notes;
   hint.textContent = rec.labeled_at ? "✓ ラベル済" : (touched ? "編集中" : "未ラベル");
   hint.style.color = rec.labeled_at ? "#10b981" : "#64748b";
 
@@ -408,22 +408,27 @@ function render() {
   document.getElementById("completed-banner").classList.toggle("visible", done === CANDIDATES.length);
 }
 
+// レコードが「ラベル済」昇格対象かを判定する単一の真偽。labels 付与か明示 none のどちらかが立っていれば true。
+// labels を空にしただけで none_selected を立てなかった場合は false（=「未操作 / 未ラベル」相当）。
+function hasSelection(rec) {
+  return rec.labels.length > 0 || !!rec.none_selected;
+}
+
 function toggleLabel(key, checked) {
   const cand = CANDIDATES[idx];
   const rec = state[cand.news_id];
   if (checked && !rec.labels.includes(key)) {
     rec.labels.push(key);
-    rec.none_selected = false; // ラベル追加で「該当なし」状態は自動解除
+    rec.none_selected = false;
   }
   if (!checked) rec.labels = rec.labels.filter(x => x !== key);
   saveState();
 }
 
-// 「どれにも該当しない」を明示選択。labels をクリアし none_selected=true で確定意思を記録する。notes は任意。
 function selectNone() {
   const cand = CANDIDATES[idx];
   const rec = state[cand.news_id];
-  if (rec.labels.length > 0 || rec.none_selected !== true) {
+  if (rec.labels.length > 0 || !rec.none_selected) {
     rec.labels = [];
     rec.none_selected = true;
     saveState();
@@ -436,11 +441,10 @@ function confirmCurrent() {
   const cand = CANDIDATES[idx];
   const rec = state[cand.news_id];
   rec.notes = document.getElementById("notes").value.trim();
-  // ラベル付与 OR 明示「該当なし」のいずれかで「ラベル済」に昇格させる。
   // 何も操作せず Enter で素通しした候補は labeled_at を立てず「未ラベル」のまま残し、後で見直せるようにする。
   // 既にラベル済みのレコードを「全解除 かつ none 未選択」に戻した場合は labeled_at をクリアして
   // 進捗カウンタ・ダウンロードに残らないよう未ラベル状態へ戻す（accidental empty 防止）。
-  if (rec.labels.length > 0 || rec.none_selected) {
+  if (hasSelection(rec)) {
     rec.labeled_at = nowJstIso();
     rec.labeler = getLabeler();
   } else if (rec.labeled_at !== null) {
