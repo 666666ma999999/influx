@@ -156,9 +156,14 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
   .cat-label.checked .cat-key { background: #3b82f6; color: #fff; }
   .cat-label input { margin: 0; }
   .cat-key-en { font-family: monospace; font-size: 11px; color: #64748b; margin-left: auto; }
-  .cat-none { border-color: #475569; color: #cbd5e1; }
-  .cat-none.active { border-color: #f59e0b; background: #422006; color: #fed7aa; }
-  .cat-none.active .cat-key { background: #f59e0b; color: #fff; }
+  /* button#none-btn: cat-label を継承するため background/font/text-align を上書きしブラウザ既定スタイルを潰す。 */
+  button.cat-none {
+    width: 100%; background: transparent; color: #cbd5e1;
+    border-color: #475569; font: inherit; text-align: left;
+  }
+  button.cat-none:hover { border-color: #64748b; background: #263244; }
+  button.cat-none.active { border-color: #f59e0b; background: #422006; color: #fed7aa; }
+  button.cat-none.active .cat-key { background: #f59e0b; color: #fff; }
   .notes {
     width: 100%; background: #0f172a; color: #e2e8f0;
     border: 1px solid #334155; border-radius: 6px;
@@ -223,11 +228,11 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     <div class="meta" id="meta"></div>
     <div class="tweet-text" id="text"></div>
     <div class="categories" id="categories"></div>
-    <label class="cat-label cat-none" id="none-btn" style="margin-top: 8px;">
+    <button type="button" class="cat-label cat-none" id="none-btn" style="margin-top: 8px;">
       <span class="cat-key">0</span>
       <span>どれにも該当しない（空配列 + notes 必須）</span>
       <span class="cat-key-en">none</span>
-    </label>
+    </button>
     <label for="notes" class="sr-only" style="position:absolute;left:-9999px;">メモ</label>
     <textarea class="notes" id="notes" placeholder="メモ（「どれにも該当しない」選択時は理由必須）" rows="2"></textarea>
     <div class="nav">
@@ -531,13 +536,15 @@ document.addEventListener("keydown", (e) => {
   // labeler 入力 (input[type=text]) で Enter を奪うと名前入力中に誤って次に進む。
   // textarea (notes) と input (labeler) の両方で Enter は通し、ボタン/body フォーカス時のみ next()/prev() を発火。
   const isFormField = isTextarea || isInput;
+  // none-btn にフォーカスがある時の Enter はボタン既定の click を発火させる（next() に奪われないようガード）。
+  const isNoneBtnFocused = e.target && e.target.id === "none-btn";
 
   if (e.key === "Enter" && !e.shiftKey && !e.metaKey && !e.ctrlKey) {
-    if (isFormField) return;
+    if (isFormField || isNoneBtnFocused) return;
     e.preventDefault();
     next();
   } else if (e.key === "Enter" && e.shiftKey) {
-    if (isFormField) return;
+    if (isFormField || isNoneBtnFocused) return;
     e.preventDefault();
     prev();
   } else if (/^[1-7]$/.test(e.key) && !isFormField) {
