@@ -39,7 +39,7 @@ plan.md M1 T1.6 の成果物。7 カテゴリ LLM 分類 (`collector/llm_classif
 - 必ず 7 カテゴリのいずれかから選ぶ:
   `recommended_assets`, `purchased_assets`, `ipo`, `market_trend`, `bullish_assets`, `bearish_assets`, `warning_signals`
 - 複数カテゴリ該当時は配列で全て記録（順序は重要度順）
-- どのカテゴリにも該当しない場合は空配列 `[]` と `notes` に理由記録
+- どのカテゴリにも該当しない場合は空配列 `[]`（HTML UI では「どれにも該当しない」を明示選択する。`notes` は任意で「雑談のみ」「告知のみ」等の理由を補足してよい）
 - `is_contrarian=True` アカウント (gihuboy) の強気発言 → `warning_signals`
 
 ## ラベリング手順

@@ -230,11 +230,11 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     <div class="categories" id="categories"></div>
     <button type="button" class="cat-label cat-none" id="none-btn" style="margin-top: 8px;">
       <span class="cat-key">0</span>
-      <span>どれにも該当しない（notes に理由必須）</span>
+      <span>どれにも該当しない</span>
       <span class="cat-key-en">none</span>
     </button>
     <label for="notes" class="sr-only" style="position:absolute;left:-9999px;">メモ</label>
-    <textarea class="notes" id="notes" placeholder="メモ（「どれにも該当しない」選択時は理由必須）" rows="2"></textarea>
+    <textarea class="notes" id="notes" placeholder="メモ（任意）" rows="2"></textarea>
     <div class="nav">
       <button class="secondary" id="prev-btn">← 戻る (Shift+Enter)</button>
       <span style="align-self: center; color: #64748b; font-size: 12px;" id="status-hint" aria-live="polite"></span>
@@ -249,8 +249,8 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
 
 <footer class="footer">
   <div><span class="shortcut">1-7</span> カテゴリトグル</div>
-  <div><span class="shortcut">0</span> どれにも該当しない（notes 必須）</div>
-  <div><span class="shortcut">Enter</span> 次へ（ラベル+Notes 空なら警告）</div>
+  <div><span class="shortcut">0</span> どれにも該当しない</div>
+  <div><span class="shortcut">Enter</span> 次へ</div>
   <div><span class="shortcut">Cmd/Ctrl+Enter</span> notes 入力中でも次へ</div>
   <div><span class="shortcut">Shift+Enter</span> 戻る</div>
   <div>進捗は自動で localStorage に保存されます</div>
@@ -284,14 +284,22 @@ function loadState() {
   for (const c of CANDIDATES) {
     const prev = stored[c.news_id];
     if (prev && typeof prev === "object") {
+      const labels = Array.isArray(prev.labels) ? prev.labels.slice() : [];
+      const labeled_at = typeof prev.labeled_at === "string" ? prev.labeled_at : null;
+      // 旧 schema 互換: none_selected 未定義かつ「labels=[] で確定済み」なら明示 none と推定する。
+      // 旧 UI（alert ガード版）では labels=[] && labeled_at!=null は「該当なし」を意味した。
+      const none_selected = typeof prev.none_selected === "boolean"
+        ? prev.none_selected
+        : (labels.length === 0 && labeled_at !== null);
       fresh[c.news_id] = {
-        labels: Array.isArray(prev.labels) ? prev.labels.slice() : [],
+        labels,
         notes: typeof prev.notes === "string" ? prev.notes : "",
-        labeled_at: typeof prev.labeled_at === "string" ? prev.labeled_at : null,
+        labeled_at,
         labeler: typeof prev.labeler === "string" ? prev.labeler : undefined,
+        none_selected,
       };
     } else {
-      fresh[c.news_id] = { labels: [], notes: "", labeled_at: null };
+      fresh[c.news_id] = { labels: [], notes: "", labeled_at: null, none_selected: false };
     }
   }
   return fresh;
@@ -369,8 +377,8 @@ function render() {
     catDiv.appendChild(wrap);
   });
 
-  // "none" ボタン: ラベル空 = 該当なし候補（クリック直後でも notes 未入力でも視覚的に押下を反映）。
-  document.getElementById("none-btn").classList.toggle("active", rec.labels.length === 0);
+  // "none" ボタン: 明示的に「該当なし」を選んだ場合のみ active。labels=[] かつ none_selected=false は「未操作」として区別する。
+  document.getElementById("none-btn").classList.toggle("active", rec.none_selected === true);
 
   // notes
   document.getElementById("notes").value = rec.notes || "";
@@ -390,9 +398,10 @@ function render() {
   const isLast = idx === CANDIDATES.length - 1;
   document.getElementById("next-btn").textContent = isLast ? "確定 (Enter)" : "次へ → (Enter)";
 
-  // status hint
+  // status hint: labeled_at は「明示確定済み」のみ立つ。未操作 (labels=[] かつ !none_selected かつ !notes) は「未ラベル」と区別。
   const hint = document.getElementById("status-hint");
-  hint.textContent = rec.labeled_at ? "✓ ラベル済" : (rec.labels.length > 0 || rec.notes ? "編集中" : "未ラベル");
+  const touched = rec.labels.length > 0 || rec.none_selected || rec.notes;
+  hint.textContent = rec.labeled_at ? "✓ ラベル済" : (touched ? "編集中" : "未ラベル");
   hint.style.color = rec.labeled_at ? "#10b981" : "#64748b";
 
   // completed banner
@@ -402,17 +411,21 @@ function render() {
 function toggleLabel(key, checked) {
   const cand = CANDIDATES[idx];
   const rec = state[cand.news_id];
-  if (checked && !rec.labels.includes(key)) rec.labels.push(key);
+  if (checked && !rec.labels.includes(key)) {
+    rec.labels.push(key);
+    rec.none_selected = false; // ラベル追加で「該当なし」状態は自動解除
+  }
   if (!checked) rec.labels = rec.labels.filter(x => x !== key);
   saveState();
 }
 
-// 既存のラベルを全部外し、notes 入力にフォーカスする。notes 必須は confirmCurrent() で強制される。
+// 「どれにも該当しない」を明示選択。labels をクリアし none_selected=true で確定意思を記録する。notes は任意。
 function selectNone() {
   const cand = CANDIDATES[idx];
   const rec = state[cand.news_id];
-  if (rec.labels.length > 0) {
+  if (rec.labels.length > 0 || rec.none_selected !== true) {
     rec.labels = [];
+    rec.none_selected = true;
     saveState();
     render();
   }
@@ -423,20 +436,22 @@ function confirmCurrent() {
   const cand = CANDIDATES[idx];
   const rec = state[cand.news_id];
   rec.notes = document.getElementById("notes").value.trim();
-  // README 中立性: 空配列ラベル時は「該当なし」理由の notes 必須（F1 計測時の判断根拠担保）。
-  if (rec.labels.length === 0 && !rec.notes) {
-    alert("「どれにも該当しない」を選んだ場合は notes に理由を記載してください（例: 「雑談のみ」「告知のみ」）。");
-    document.getElementById("notes").focus();
-    return false;
+  // ラベル付与 OR 明示「該当なし」のいずれかで「ラベル済」に昇格させる。
+  // 何も操作せず Enter で素通しした候補は labeled_at を立てず「未ラベル」のまま残し、後で見直せるようにする。
+  // 既にラベル済みのレコードを「全解除 かつ none 未選択」に戻した場合は labeled_at をクリアして
+  // 進捗カウンタ・ダウンロードに残らないよう未ラベル状態へ戻す（accidental empty 防止）。
+  if (rec.labels.length > 0 || rec.none_selected) {
+    rec.labeled_at = nowJstIso();
+    rec.labeler = getLabeler();
+  } else if (rec.labeled_at !== null) {
+    rec.labeled_at = null;
+    rec.labeler = undefined;
   }
-  rec.labeled_at = nowJstIso();
-  rec.labeler = getLabeler();
   saveState();
-  return true;
 }
 
 function next() {
-  if (!confirmCurrent()) return;
+  confirmCurrent();
   if (idx < CANDIDATES.length - 1) {
     idx++;
     render();
