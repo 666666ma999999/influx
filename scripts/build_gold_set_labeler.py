@@ -230,7 +230,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     <div class="categories" id="categories"></div>
     <button type="button" class="cat-label cat-none" id="none-btn" style="margin-top: 8px;">
       <span class="cat-key">0</span>
-      <span>どれにも該当しない（空配列 + notes 必須）</span>
+      <span>どれにも該当しない（notes に理由必須）</span>
       <span class="cat-key-en">none</span>
     </button>
     <label for="notes" class="sr-only" style="position:absolute;left:-9999px;">メモ</label>
@@ -407,17 +407,16 @@ function toggleLabel(key, checked) {
   saveState();
 }
 
-// 「どれにも該当しない」: ラベルを空配列にし、notes 入力にフォーカスして理由記入を促す。
-// confirmCurrent() の空配列チェックで notes 必須は強制される。
+// 既存のラベルを全部外し、notes 入力にフォーカスする。notes 必須は confirmCurrent() で強制される。
 function selectNone() {
   const cand = CANDIDATES[idx];
   const rec = state[cand.news_id];
-  rec.labels = [];
-  saveState();
-  render();
-  const notes = document.getElementById("notes");
-  notes.focus();
-  if (!rec.notes) notes.placeholder = "理由を記入してください（例: 「雑談のみ」「告知のみ」）";
+  if (rec.labels.length > 0) {
+    rec.labels = [];
+    saveState();
+    render();
+  }
+  document.getElementById("notes").focus();
 }
 
 function confirmCurrent() {
@@ -426,7 +425,7 @@ function confirmCurrent() {
   rec.notes = document.getElementById("notes").value.trim();
   // README 中立性: 空配列ラベル時は「該当なし」理由の notes 必須（F1 計測時の判断根拠担保）。
   if (rec.labels.length === 0 && !rec.notes) {
-    alert("空配列ラベル時は notes に理由を記載してください（例: 「雑談のみ」「告知のみ」）。");
+    alert("「どれにも該当しない」を選んだ場合は notes に理由を記載してください（例: 「雑談のみ」「告知のみ」）。");
     document.getElementById("notes").focus();
     return false;
   }
@@ -566,10 +565,7 @@ document.getElementById("prev-btn").addEventListener("click", prev);
 document.getElementById("next-btn").addEventListener("click", next);
 document.getElementById("download-btn").addEventListener("click", download);
 document.getElementById("reset-btn").addEventListener("click", resetAll);
-document.getElementById("none-btn").addEventListener("click", (e) => {
-  e.preventDefault();
-  selectNone();
-});
+document.getElementById("none-btn").addEventListener("click", selectNone);
 document.getElementById("labeler-input").addEventListener("input", (e) => {
   localStorage.setItem(LABELER_KEY, e.target.value.trim());
 });
