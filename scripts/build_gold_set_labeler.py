@@ -156,6 +156,9 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
   .cat-label.checked .cat-key { background: #3b82f6; color: #fff; }
   .cat-label input { margin: 0; }
   .cat-key-en { font-family: monospace; font-size: 11px; color: #64748b; margin-left: auto; }
+  .cat-none { border-color: #475569; color: #cbd5e1; }
+  .cat-none.active { border-color: #f59e0b; background: #422006; color: #fed7aa; }
+  .cat-none.active .cat-key { background: #f59e0b; color: #fff; }
   .notes {
     width: 100%; background: #0f172a; color: #e2e8f0;
     border: 1px solid #334155; border-radius: 6px;
@@ -220,8 +223,13 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     <div class="meta" id="meta"></div>
     <div class="tweet-text" id="text"></div>
     <div class="categories" id="categories"></div>
+    <label class="cat-label cat-none" id="none-btn" style="margin-top: 8px;">
+      <span class="cat-key">0</span>
+      <span>どれにも該当しない（空配列 + notes 必須）</span>
+      <span class="cat-key-en">none</span>
+    </label>
     <label for="notes" class="sr-only" style="position:absolute;left:-9999px;">メモ</label>
-    <textarea class="notes" id="notes" placeholder="メモ（空配列ラベル時は理由必須）" rows="2"></textarea>
+    <textarea class="notes" id="notes" placeholder="メモ（「どれにも該当しない」選択時は理由必須）" rows="2"></textarea>
     <div class="nav">
       <button class="secondary" id="prev-btn">← 戻る (Shift+Enter)</button>
       <span style="align-self: center; color: #64748b; font-size: 12px;" id="status-hint" aria-live="polite"></span>
@@ -236,6 +244,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
 
 <footer class="footer">
   <div><span class="shortcut">1-7</span> カテゴリトグル</div>
+  <div><span class="shortcut">0</span> どれにも該当しない（notes 必須）</div>
   <div><span class="shortcut">Enter</span> 次へ（ラベル+Notes 空なら警告）</div>
   <div><span class="shortcut">Shift+Enter</span> 戻る</div>
   <div>進捗は自動で localStorage に保存されます</div>
@@ -354,6 +363,10 @@ function render() {
     catDiv.appendChild(wrap);
   });
 
+  // "none" ボタン: ラベル空 + notes ありで「該当なし確定済み」、ラベル空 + notes 空で「未操作」を区別。
+  const noneBtn = document.getElementById("none-btn");
+  noneBtn.classList.toggle("active", rec.labels.length === 0 && !!(rec.notes && rec.notes.trim()));
+
   // notes
   document.getElementById("notes").value = rec.notes || "";
 
@@ -387,6 +400,19 @@ function toggleLabel(key, checked) {
   if (checked && !rec.labels.includes(key)) rec.labels.push(key);
   if (!checked) rec.labels = rec.labels.filter(x => x !== key);
   saveState();
+}
+
+// 「どれにも該当しない」: ラベルを空配列にし、notes 入力にフォーカスして理由記入を促す。
+// confirmCurrent() の空配列チェックで notes 必須は強制される。
+function selectNone() {
+  const cand = CANDIDATES[idx];
+  const rec = state[cand.news_id];
+  rec.labels = [];
+  saveState();
+  render();
+  const notes = document.getElementById("notes");
+  notes.focus();
+  if (!rec.notes) notes.placeholder = "理由を記入してください（例: 「雑談のみ」「告知のみ」）";
 }
 
 function confirmCurrent() {
@@ -522,6 +548,9 @@ document.addEventListener("keydown", (e) => {
     const has = rec.labels.includes(key);
     toggleLabel(key, !has);
     render();
+  } else if (e.key === "0" && !isFormField) {
+    e.preventDefault();
+    selectNone();
   }
 });
 
@@ -530,6 +559,10 @@ document.getElementById("prev-btn").addEventListener("click", prev);
 document.getElementById("next-btn").addEventListener("click", next);
 document.getElementById("download-btn").addEventListener("click", download);
 document.getElementById("reset-btn").addEventListener("click", resetAll);
+document.getElementById("none-btn").addEventListener("click", (e) => {
+  e.preventDefault();
+  selectNone();
+});
 document.getElementById("labeler-input").addEventListener("input", (e) => {
   localStorage.setItem(LABELER_KEY, e.target.value.trim());
 });
