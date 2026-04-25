@@ -376,15 +376,18 @@ a:hover { text-decoration: underline; }
 }
 .pq-confirm-box h3 { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
 .pq-confirm-box p { font-size: 14px; color: var(--color-text-secondary); margin-bottom: 20px; line-height: 1.5; }
-.pq-confirm-actions { display: flex; gap: 8px; justify-content: center; }
+.pq-confirm-actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
 .pq-confirm-btn {
   padding: 8px 24px; border-radius: var(--radius-pill); font-size: 14px; font-weight: 700;
   border: none; cursor: pointer; transition: background 0.2s;
 }
 .pq-confirm-btn--cancel { background: rgba(231,233,234,0.1); color: var(--color-text-primary); }
 .pq-confirm-btn--cancel:hover { background: rgba(231,233,234,0.15); }
+.pq-confirm-btn--hide { background: var(--color-text-secondary); color: #fff; }
 .pq-confirm-btn--delete { background: var(--color-rejected); color: #fff; }
 .pq-confirm-btn--delete:hover { background: #dc1d28; }
+.pq-confirm-box strong.hide { color: var(--color-text-primary); }
+.pq-confirm-box strong.delete { color: var(--color-rejected); }
 
 /* PQ Toast */
 .pq-toast {
@@ -620,13 +623,13 @@ a:hover { text-decoration: underline; }
 <div class="pq-confirm-overlay" id="pq-confirm-overlay">
   <div class="pq-confirm-box">
     <h3>この記事を削除しますか？</h3>
-    <p id="pq-confirm-message" style="font-size:13px; line-height:1.6;">
-      <strong style="color:var(--color-text-primary);">非表示</strong>: 一覧から消します（ステータスを <code>deleted</code> に変更）。<br>
-      <strong style="color:var(--color-rejected);">完全削除</strong>: 記事をtombstoneに登録し、ダッシュボード再ビルド後も復活しません。
+    <p id="pq-confirm-message">
+      <strong class="hide">非表示</strong>: 一覧から消します（ステータスを <code>deleted</code> に変更）。<br>
+      <strong class="delete">完全削除</strong>: 記事をtombstoneに登録し、ダッシュボード再ビルド後も復活しません。
     </p>
-    <div class="pq-confirm-actions" style="flex-wrap:wrap;">
+    <div class="pq-confirm-actions">
       <button class="pq-confirm-btn pq-confirm-btn--cancel" id="pq-confirm-cancel">キャンセル</button>
-      <button class="pq-confirm-btn pq-confirm-btn--hide" id="pq-confirm-hide" style="background:var(--color-text-secondary); color:#fff;">非表示</button>
+      <button class="pq-confirm-btn pq-confirm-btn--hide" id="pq-confirm-hide">非表示</button>
       <button class="pq-confirm-btn pq-confirm-btn--delete" id="pq-confirm-delete">完全削除</button>
     </div>
   </div>
@@ -807,7 +810,6 @@ var POSTING_DATA = [{"news_id": "0f2f4782c058e75d", "source_items": [], "title":
 
 var PQ_STORAGE_KEY = 'dashboard_posting_data';
 var PQ_TOMBSTONE_KEY = 'dashboard_posting_tombstones';
-var PQ_STATUS_DELETED = 'deleted';
 var PQ_CHAR_LIMIT = 280;
 var pqAllData = pqLoadData();
 var pqCurrentTab = 'needs_review';
@@ -816,17 +818,25 @@ var pqDeletingId = null;
 
 function pqGetItemId(item) { return item.news_id || item.id || ''; }
 
-function pqLoadTombstones() {
+function pqStorageGet(key, fallback) {
   try {
-    var raw = localStorage.getItem(PQ_TOMBSTONE_KEY);
-    var parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch(e) { return []; }
+    var raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch(e) { return fallback; }
+}
+
+function pqStorageSet(key, value, errorMsg) {
+  try { localStorage.setItem(key, JSON.stringify(value)); return true; }
+  catch(e) { pqShowToast(errorMsg); return false; }
+}
+
+function pqLoadTombstones() {
+  var ids = pqStorageGet(PQ_TOMBSTONE_KEY, []);
+  return Array.isArray(ids) ? ids : [];
 }
 
 function pqSaveTombstones(ids) {
-  try { localStorage.setItem(PQ_TOMBSTONE_KEY, JSON.stringify(ids)); return true; }
-  catch(e) { pqShowToast('Failed to save tombstones: storage may be full'); return false; }
+  return pqStorageSet(PQ_TOMBSTONE_KEY, ids, 'Failed to save tombstones: storage may be full');
 }
 
 function pqAddTombstone(id) {
@@ -837,9 +847,8 @@ function pqAddTombstone(id) {
 }
 
 function pqLoadData() {
-  var stored = localStorage.getItem(PQ_STORAGE_KEY);
-  var local = [];
-  if (stored) { try { local = JSON.parse(stored); } catch(e) { local = []; } }
+  var local = pqStorageGet(PQ_STORAGE_KEY, []);
+  if (!Array.isArray(local)) local = [];
   var merged = pqMergeData(POSTING_DATA, local);
   var tombstones = pqLoadTombstones();
   if (!tombstones.length) return merged;
@@ -863,8 +872,7 @@ function pqMergeData(base, overlay) {
 }
 
 function pqSaveData(data) {
-  try { localStorage.setItem(PQ_STORAGE_KEY, JSON.stringify(data)); }
-  catch(e) { pqShowToast('Failed to save: storage may be full'); }
+  pqStorageSet(PQ_STORAGE_KEY, data, 'Failed to save: storage may be full');
 }
 
 function pqFormatDate(dateStr) {
@@ -904,7 +912,7 @@ function pqGetFilteredData(tabName) {
   if (tabName === 'needs_review') statusFilter = ['draft','failed','rejected'];
   else statusFilter = [tabName];
   return pqAllData.filter(function(item) {
-    if (item.status === PQ_STATUS_DELETED) return false;
+    if (item.status === 'deleted') return false;
     return statusFilter.indexOf(item.status) !== -1;
   }).sort(function(a,b) {
     var da = a.created_at || '', db = b.created_at || '';
@@ -916,7 +924,7 @@ function pqGetTabCounts() {
   var c = { needs_review: 0, approved: 0, scheduled: 0, posted: 0 };
   for (var i = 0; i < pqAllData.length; i++) {
     var s = pqAllData[i].status;
-    if (s === PQ_STATUS_DELETED) continue;
+    if (s === 'deleted') continue;
     if (s === 'draft' || s === 'failed' || s === 'rejected') c.needs_review++;
     else if (s === 'approved') c.approved++;
     else if (s === 'scheduled') c.scheduled++;
@@ -1261,7 +1269,7 @@ function pqUpdateStatus(id, newStatus) {
 // hard: tombstone entry (survives dashboard rebuild; item removed from pqAllData).
 function pqSoftDeleteItem(id) {
   var item = pqFindItem(id); if (!item) return;
-  item.status = PQ_STATUS_DELETED;
+  item.status = 'deleted';
   item.updated_at = new Date().toISOString();
   pqSaveData(pqAllData); pqRenderAll();
 }
