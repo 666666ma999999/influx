@@ -222,6 +222,84 @@ docker compose run xstock python -m extensions.tier3_posting.cli.run --mode imme
 }
 ```
 
+## 外部利用 I/F 契約（External Integration Contract）
+
+> **重要**: 本セクションで定義する I/F は、外部プロジェクト（make_article 等）が依存する **公開契約**である。
+> ここに記載の CLI 引数仕様・パス・コンテナ名を変更する場合は **breaking change** として扱い、
+> 該当外部プロジェクトの SSoT（make_article では `plan.md`）に通知すること。
+
+### 1. ドラフト登録 / 修正指示 / 投稿後ステータス CLI
+
+外部プロジェクトは `extensions.tier3_posting.x_poster.post_store.PostStore` を**直接 import してはならない**。
+代わりに以下 3 本の CLI を `subprocess.run` 経由で呼び出すこと（cwd = influx repo root, `python3 -m <module>`）。
+
+| 用途 | モジュール | 入力 | 出力（stdout 1 行 JSON） |
+|---|---|---|---|
+| ドラフト登録（upsert） | `extensions.tier3_posting.cli.register_external` | `--json -` で stdin JSON or 個別フラグ | `{"news_id":"...","action":"added\|updated","ok":true}` |
+| 修正指示取得 | `extensions.tier3_posting.cli.get_correction` | `--identifier <news_id\|make_article_id>` | `{"news_id":"...","correction_instructions":"..."}` または null |
+| 投稿後ステータス更新 | `extensions.tier3_posting.cli.mark_posted` | `--news-id <hex16> [--status posted] [--posted-url ...] [--dry-run]` | `{"news_id":"...","ok":true,"actions":["history","status"]}` |
+
+#### stdin JSON スキーマ（register_external 用）
+
+```jsonc
+{
+  "news_id": "<sha256(title:promo_text)[:16]>",  // 必須
+  "title": "...",                                  // 必須
+  "promo_text": "...",                             // 必須（Xタイムライン本文）
+  "article_body": "...",                           // 任意（記事全文）
+  "image_paths": ["output/posting/images/a.png"],  // 任意（influx 相対パス）
+  "format": "x_article",                           // 任意 既定: x_article
+  "template_type": "make_article",                 // 任意 既定: make_article
+  "metadata": {                                    // 任意（自由フィールド）
+    "make_article_id": "art_013",
+    "category": "tech_tips",
+    "score": "8.5",
+    "source_file": "output/drafts/...md"
+  }
+}
+```
+
+#### Exit codes（全 CLI 共通）
+
+| code | 意味 |
+|---|---|
+| 0 | 成功 |
+| 1 | 実行時エラー（PostStore 初期化失敗等） |
+| 2 | 引数不足・JSON パース失敗 |
+
+### 2. 画像配置パス契約
+
+外部プロジェクトが `image_paths` で参照するファイルは事前に以下へコピーすること:
+
+- **配置先**: `output/posting/images/<file>.png`
+- **CLI 渡し時のパス**: `output/posting/images/<file>.png`（influx repo root 起点の相対パス）
+
+### 3. x_profiles レイアウト
+
+マルチアカウント Cookie の保管先と分離規約:
+
+- **配置先**: `x_profiles/<account>/state.json`（例: `x_profiles/twittora_/state.json`）
+- **再取得経路**: `python -m scripts.import_chrome_cookies`（VNC 方式は 2026-04-21 に廃止）
+- 外部プロジェクトはこの配置を前提に `--profile <account>` を渡す
+
+### 4. xstock-vnc コンテナ名
+
+VNC 経由で稼働するコンテナ識別子（廃止済みだが互換性検証用に予約）:
+
+- **コンテナ名**: `xstock-vnc`
+- 現在は本番フローから外れているため、参照のみ。新規依存禁止
+
+### 5. Breaking change 通知ルール
+
+以下のいずれかを変更する場合は、make_article の `plan.md` に変更通知を起票し、両プロジェクトを同期更新する:
+- CLI モジュール名・引数名・出力 JSON スキーマ
+- 入出力 exit code 体系
+- `output/posting/images/` の配置パス
+- `x_profiles/<account>/` のディレクトリ構造
+- `xstock-vnc` コンテナ名
+
+外部プロジェクト側の修正なしに本契約を変更してはならない。
+
 ## コーディング規約
 
 | 対象 | 規約 | 例 |
