@@ -68,6 +68,60 @@ def encode_images_base64(drafts: list, allowed_dirs: list = None) -> list:
     return drafts
 
 
+_ARTICLE_BODY_MD_IMG = re.compile(
+    r"""!\[([^\]]*)\]\(\s*([^\s)]+)(\s+["'][^"']*["'])?\s*\)"""
+)
+_ARTICLE_BODY_HTML_IMG = re.compile(
+    r"""<img\b([^>]*?)\bsrc=(['"])([^'"]+)\2""", re.IGNORECASE
+)
+_ARTICLE_BODY_ABSOLUTE_URL = re.compile(r"^(?:[a-z][a-z0-9+\-.]*:|/|#)", re.IGNORECASE)
+
+
+def _rewrite_relative_image_url(url: str) -> str:
+    """相対パスの画像 URL のみ /api/images/<basename> に変換。絶対 URL（scheme:, /, #）はそのまま。"""
+    url = url.strip()
+    if _ARTICLE_BODY_ABSOLUTE_URL.match(url):
+        return url
+    basename = os.path.basename(url)
+    if not basename:
+        return url
+    return f"/api/images/{basename}"
+
+
+def normalize_article_body_image_urls(draft: dict) -> None:
+    """make_article 由来の article_body 内の相対パス画像参照を canonical URL に変換する。
+
+    保存データは変更せず、API 返却用 draft の `metadata.article_body` のみを書き換える。
+    make_article の markdown は `![alt](../images/foo.png)` 形式の相対パスを含み、
+    review UI でレンダリングすると `http://host/images/foo.png` に解決されて 404 になる。
+    `/api/images/<basename>` に書き換えることで既存 `_serve_image` 経路から配信可能になる。
+    """
+    if draft.get("template_type") != "make_article":
+        return
+    metadata = draft.get("metadata") or {}
+    raw = metadata.get("article_body")
+    if not raw:
+        return
+
+    def repl_md(match: "re.Match[str]") -> str:
+        alt = match.group(1)
+        new_url = _rewrite_relative_image_url(match.group(2))
+        title = match.group(3) or ""
+        return f"![{alt}]({new_url}{title})"
+
+    def repl_html(match: "re.Match[str]") -> str:
+        attrs = match.group(1)
+        quote = match.group(2)
+        new_url = _rewrite_relative_image_url(match.group(3))
+        return f"<img{attrs}src={quote}{new_url}{quote}"
+
+    normalized = _ARTICLE_BODY_MD_IMG.sub(repl_md, raw)
+    normalized = _ARTICLE_BODY_HTML_IMG.sub(repl_html, normalized)
+    if normalized != raw:
+        metadata["article_body"] = normalized
+        draft["metadata"] = metadata
+
+
 class ReviewHandler(SimpleHTTPRequestHandler):
     """review.html配信 + PostStore操作REST APIハンドラ。"""
 
@@ -197,6 +251,8 @@ class ReviewHandler(SimpleHTTPRequestHandler):
                 # screenshot_paths をファイル名のみに変換
                 paths = draft.get("screenshot_paths", [])
                 draft["screenshot_paths"] = [os.path.basename(p) for p in paths]
+                # article_body 内の相対パス画像 URL を canonical 化
+                normalize_article_body_image_urls(draft)
                 # UI用ビューモデル変換（account_id, char_remaining, actions等）
                 enrich_draft_for_ui(draft)
 

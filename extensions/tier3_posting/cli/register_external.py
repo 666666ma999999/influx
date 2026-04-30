@@ -60,9 +60,19 @@ def _parse_image_paths(raw: Optional[str]) -> list:
     return [p.strip() for p in raw.split(",") if p.strip()]
 
 
+def _normalize_images(image_paths: list) -> list:
+    """外部 I/F の `image_paths: [str]` を内部 canonical な `images: [{path,type,description}]` に変換。
+
+    UI 表示（server.py）・X 投稿（run.py）・オフライン HTML（build_html.py）は
+    すべて draft トップレベルの `images` を読むため、ここで正規化して dual-path を防ぐ。
+    """
+    return [{"path": p, "type": "", "description": ""} for p in image_paths]
+
+
 def _build_payload_from_args(args: argparse.Namespace) -> dict:
     article_body = _read_article_body(args)
     image_paths = _parse_image_paths(args.image_paths)
+    images_present = args.image_paths is not None
 
     metadata = {
         "make_article_id": args.make_article_id or "",
@@ -74,7 +84,7 @@ def _build_payload_from_args(args: argparse.Namespace) -> dict:
     if image_paths:
         metadata["image_paths"] = image_paths
 
-    return {
+    payload = {
         "news_id": args.news_id,
         "title": args.title,
         "body": args.promo_text,
@@ -84,6 +94,9 @@ def _build_payload_from_args(args: argparse.Namespace) -> dict:
         "status": "draft",
         "metadata": metadata,
     }
+    if images_present:
+        payload["images"] = _normalize_images(image_paths)
+    return payload
 
 
 def _build_payload_from_stdin() -> dict:
@@ -104,11 +117,12 @@ def _build_payload_from_stdin() -> dict:
     metadata = data.get("metadata") or {}
     if "article_body" in data and "article_body" not in metadata:
         metadata["article_body"] = data["article_body"]
-    image_paths = data.get("image_paths")
+    images_present = "image_paths" in data
+    image_paths = data.get("image_paths") or []
     if image_paths and "image_paths" not in metadata:
         metadata["image_paths"] = image_paths
 
-    return {
+    payload = {
         "news_id": news_id,
         "title": title,
         "body": promo_text,
@@ -118,6 +132,9 @@ def _build_payload_from_stdin() -> dict:
         "status": "draft",
         "metadata": metadata,
     }
+    if images_present:
+        payload["images"] = _normalize_images(image_paths)
+    return payload
 
 
 def parse_args(argv=None) -> argparse.Namespace:
@@ -153,6 +170,8 @@ def register(payload: dict, store: PostStore) -> dict:
         "body": payload.get("body", ""),
         "metadata": payload.get("metadata", {}),
     }
+    if "images" in payload:
+        extra["images"] = payload["images"]
     ok = store.update_draft_status(news_id, "draft", **extra)
     if ok:
         return {"news_id": news_id, "action": "updated", "ok": True}
