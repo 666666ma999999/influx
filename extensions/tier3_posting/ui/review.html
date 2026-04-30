@@ -160,7 +160,8 @@ button{font-family:inherit;cursor:pointer} input,textarea,select{font-family:inh
 .article-section{margin-top:8px;border-top:1px solid var(--border);padding-top:8px}
 .article-toggle{font-size:12px;color:var(--accent);cursor:pointer;font-weight:600;display:flex;align-items:center;gap:4px}
 .article-toggle:hover{text-decoration:underline}
-.article-body{display:none;margin-top:8px;padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:var(--input-r);font-size:13px;line-height:1.7;color:var(--text);max-height:500px;overflow-y:auto}
+.article-body{display:none;margin-top:8px;padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:var(--input-r);font-size:13px;line-height:1.7;color:var(--text)}
+.article-body img{max-width:100%;height:auto;display:block;margin:12px 0}
 .article-body.expanded{display:block}
 .article-body h2{font-size:16px;font-weight:700;margin:18px 0 8px;padding-bottom:4px;border-bottom:1px solid var(--border)}
 .article-body h3{font-size:14px;font-weight:700;margin:14px 0 6px}
@@ -173,11 +174,22 @@ button{font-family:inherit;cursor:pointer} input,textarea,select{font-family:inh
 .article-body blockquote{border-left:3px solid var(--accent);padding-left:12px;margin:8px 0;color:var(--text2)}
 .article-body hr{border:none;border-top:1px solid var(--border);margin:16px 0}
 .correction-section{margin-top:8px;border-top:1px solid var(--border);padding-top:8px}
-.correction-label{font-size:12px;font-weight:600;color:var(--yellow);margin-bottom:4px;display:flex;align-items:center;gap:4px}
+.correction-toggle{font-size:12px;font-weight:600;color:var(--yellow);cursor:pointer;display:flex;align-items:center;gap:4px;user-select:none}
+.correction-toggle:hover{text-decoration:underline}
+.correction-toggle .corr-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--yellow);margin-left:4px}
+.correction-body{display:none;margin-top:6px}
+.correction-body.expanded{display:block}
 .correction-ta{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:var(--input-r);padding:8px 10px;color:var(--text);font-size:13px;line-height:1.4;resize:vertical;min-height:60px;font-family:inherit;box-sizing:border-box}
 .correction-ta:focus{outline:none;border-color:var(--yellow)}
 .correction-save{margin-top:4px;padding:4px 12px;border:1px solid rgba(255,212,0,.3);border-radius:var(--pill);background:none;color:var(--yellow);font-size:11px;font-weight:600;cursor:pointer}
 .correction-save:hover{background:rgba(255,212,0,.1)}
+.cal-panel.collapsed{width:42px;min-width:42px;overflow:hidden}
+.cal-panel.collapsed .cal-content{display:none}
+.cal-collapse-btn{background:none;border:none;color:var(--text2);font-size:14px;padding:6px 10px;cursor:pointer;align-self:flex-end}
+.cal-collapse-btn:hover{color:var(--text)}
+.cal-panel.collapsed .cal-collapse-btn{align-self:center;padding:8px 6px}
+.card.kb-focus{outline:2px solid var(--accent);outline-offset:-2px}
+.kb-help{position:fixed;bottom:12px;right:12px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-size:11px;color:var(--text2);font-family:ui-monospace,monospace;line-height:1.6;pointer-events:none;opacity:.7}
 
 /* Detail view */
 .detail-view{display:none;flex-direction:column;flex:1;overflow:hidden}
@@ -229,21 +241,24 @@ button{font-family:inherit;cursor:pointer} input,textarea,select{font-family:inh
   </div>
   <div class="main">
     <!-- Left: Calendar -->
-    <div class="cal-panel">
-      <div class="cal-header">
-        <button class="cal-nav" id="cal-prev">&#9664;</button>
-        <span class="cal-title" id="cal-title"></span>
-        <button class="cal-nav" id="cal-next">&#9654;</button>
+    <div class="cal-panel" id="cal-panel">
+      <button class="cal-collapse-btn" id="cal-collapse" title="カレンダーを折りたたむ">&laquo;</button>
+      <div class="cal-content">
+        <div class="cal-header">
+          <button class="cal-nav" id="cal-prev">&#9664;</button>
+          <span class="cal-title" id="cal-title"></span>
+          <button class="cal-nav" id="cal-next">&#9654;</button>
+        </div>
+        <div class="cal-grid" id="cal-grid"></div>
+        <div class="cal-legend">
+          <div class="cal-legend-item"><div class="cal-legend-dot" style="background:var(--green)"></div>Approved</div>
+          <div class="cal-legend-item"><div class="cal-legend-dot" style="background:var(--yellow)"></div>Scheduled</div>
+          <div class="cal-legend-item"><div class="cal-legend-dot" style="background:var(--purple)"></div>Posted</div>
+          <div class="cal-legend-item"><div class="cal-legend-dot" style="background:var(--red)"></div>Failed</div>
+        </div>
+        <div class="cal-stats" id="cal-stats"></div>
+        <div class="cli-bar" id="cli-bar"></div>
       </div>
-      <div class="cal-grid" id="cal-grid"></div>
-      <div class="cal-legend">
-        <div class="cal-legend-item"><div class="cal-legend-dot" style="background:var(--green)"></div>Approved</div>
-        <div class="cal-legend-item"><div class="cal-legend-dot" style="background:var(--yellow)"></div>Scheduled</div>
-        <div class="cal-legend-item"><div class="cal-legend-dot" style="background:var(--purple)"></div>Posted</div>
-        <div class="cal-legend-item"><div class="cal-legend-dot" style="background:var(--red)"></div>Failed</div>
-      </div>
-      <div class="cal-stats" id="cal-stats"></div>
-      <div class="cli-bar" id="cli-bar"></div>
     </div>
     <!-- Right: Panel -->
     <div class="right-panel">
@@ -450,6 +465,37 @@ document.getElementById('cal-grid').addEventListener('click',function(e){
 document.getElementById('cal-prev').addEventListener('click',function(){calMonth--;if(calMonth<0){calMonth=11;calYear--}renderCal()});
 document.getElementById('cal-next').addEventListener('click',function(){calMonth++;if(calMonth>11){calMonth=0;calYear++}renderCal()});
 
+/* ===== Calendar collapse toggle ===== */
+(function(){
+  var panel=document.getElementById('cal-panel');
+  var btn=document.getElementById('cal-collapse');
+  if(!panel||!btn)return;
+  var KEY='cal-collapsed-v1';
+  function apply(collapsed){
+    panel.classList.toggle('collapsed',collapsed);
+    btn.innerHTML=collapsed?'&raquo;':'&laquo;';
+    btn.title=collapsed?'カレンダーを開く':'カレンダーを折りたたむ';
+  }
+  apply(localStorage.getItem(KEY)==='1');
+  btn.addEventListener('click',function(){
+    var collapsed=!panel.classList.contains('collapsed');
+    localStorage.setItem(KEY,collapsed?'1':'0');
+    apply(collapsed);
+  });
+})();
+
+/* ===== Correction toggle ===== */
+function toggleCorrection(newsId,e){
+  if(e){e.stopPropagation();e.preventDefault()}
+  var body=document.getElementById('corr-body-'+newsId);
+  if(!body)return;
+  body.classList.toggle('expanded');
+  if(body.classList.contains('expanded')){
+    var ta=document.getElementById('corr-'+newsId);
+    if(ta)ta.focus();
+  }
+}
+
 /* ===== Stats ===== */
 function renderStats(){
   var statuses=meta.statuses||STATUSES;
@@ -616,7 +662,10 @@ function renderCard(item){
   var corrHtml='';
   if(item.template_type==='make_article'){
     var ci=item.correction_instructions||'';
-    corrHtml='<div class="correction-section"><div class="correction-label">&#9998; 修正指示</div><textarea class="correction-ta" id="corr-'+esc(id)+'" placeholder="修正内容を記入..." onclick="event.stopPropagation()">'+esc(ci)+'</textarea><button class="correction-save" onclick="saveCorrection(\''+esc(id)+'\',event)">保存</button></div>';
+    var hasCi=!!ci.trim();
+    var corrLabel=hasCi?'&#9998; 修正指示<span class="corr-dot" title="記入あり"></span>':'&#9998; 修正指示を書く';
+    var bodyExpanded=hasCi?' expanded':'';
+    corrHtml='<div class="correction-section"><div class="correction-toggle" onclick="toggleCorrection(\''+esc(id)+'\',event)">'+corrLabel+'</div><div class="correction-body'+bodyExpanded+'" id="corr-body-'+esc(id)+'"><textarea class="correction-ta" id="corr-'+esc(id)+'" placeholder="修正内容を記入..." onclick="event.stopPropagation()">'+esc(ci)+'</textarea><button class="correction-save" onclick="saveCorrection(\''+esc(id)+'\',event)">保存</button></div></div>';
   }
 
   var charClass=item.char_class?('char-'+item.char_class):charClsLocal(rem);
@@ -993,12 +1042,50 @@ document.getElementById('btn-compact').addEventListener('click',async function()
 });
 
 /* ===== Keyboard ===== */
+var focusedCardIdx=-1;
+function focusCard(idx){
+  var cards=document.querySelectorAll('#panel-list .card[data-id]');
+  if(!cards.length)return;
+  if(idx<0)idx=0;if(idx>=cards.length)idx=cards.length-1;
+  cards.forEach(function(c){c.classList.remove('kb-focus')});
+  var c=cards[idx];
+  c.classList.add('kb-focus');
+  c.scrollIntoView({block:'nearest',behavior:'smooth'});
+  focusedCardIdx=idx;
+}
+function focusedCardId(){
+  var c=document.querySelector('#panel-list .card.kb-focus');
+  return c?c.getAttribute('data-id'):null;
+}
+function isTypingTarget(t){
+  if(!t)return false;
+  var tag=t.tagName;
+  return tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT'||t.isContentEditable;
+}
 document.addEventListener('keydown',function(e){
   if(e.key==='Escape'){
     if(detailId){closeDetail();return}
     closeEditModal();closeScheduleModal();
   }
-  if((e.ctrlKey||e.metaKey)&&e.key==='s'&&editingId){e.preventDefault();saveEdit()}
+  if((e.ctrlKey||e.metaKey)&&e.key==='s'&&editingId){e.preventDefault();saveEdit();return}
+  if(isTypingTarget(e.target))return;
+  if(e.metaKey||e.ctrlKey||e.altKey)return;
+  if(detailId)return;
+  if(document.querySelector('.modal-bg.active'))return;
+  var k=e.key.toLowerCase();
+  if(k==='j'){e.preventDefault();focusCard(focusedCardIdx+1);return}
+  if(k==='k'){e.preventDefault();focusCard(focusedCardIdx-1);return}
+  var id=focusedCardId();
+  if(!id)return;
+  if(k==='a'){e.preventDefault();handleAction('approve',id);return}
+  if(k==='e'){e.preventDefault();handleAction('edit',id);return}
+  if(k==='x'){e.preventDefault();handleAction('archive',id);return}
+  if(k==='enter'||e.key==='Enter'){e.preventDefault();openDetail(id);return}
+  if(k==='c'){
+    e.preventDefault();
+    var t=document.querySelector('.card.kb-focus .correction-toggle');
+    if(t)t.click();
+  }
 });
 
 /* ===== Compose (New Post) ===== */
