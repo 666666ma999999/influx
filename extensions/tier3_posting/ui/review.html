@@ -165,8 +165,22 @@ button{font-family:inherit;cursor:pointer} input,textarea,select{font-family:inh
 .article-toolbar{display:flex;gap:6px;justify-content:flex-end;margin-bottom:8px}
 .article-edit-btn{font-size:11px;padding:4px 10px;border:1px solid var(--border);border-radius:var(--pill);background:none;color:var(--text2);cursor:pointer}
 .article-edit-btn:hover{color:var(--text);border-color:var(--text2)}
-.article-edit-ta{width:100%;min-height:400px;background:var(--bg);border:1px solid var(--border);border-radius:var(--input-r);padding:10px;color:var(--text);font:13px ui-monospace,monospace;line-height:1.5;resize:vertical;box-sizing:border-box}
+.article-edit-ta{width:100%;height:500px;background:var(--bg);border:1px solid var(--border);border-radius:var(--input-r);padding:10px;color:var(--text);font:13px ui-monospace,monospace;line-height:1.5;resize:vertical;box-sizing:border-box}
 .article-edit-ta:focus{outline:none;border-color:var(--accent)}
+.article-edit-split{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.article-edit-pane{display:flex;flex-direction:column;min-width:0}
+.article-edit-pane-label{font-size:11px;color:var(--text2);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px}
+.article-edit-preview{height:500px;overflow-y:auto;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:var(--input-r);font-size:13px;line-height:1.7;color:var(--text);box-sizing:border-box}
+.article-edit-preview img{max-width:100%;height:auto;display:block;margin:8px 0}
+.article-edit-preview h2{font-size:16px;font-weight:700;margin:14px 0 6px;padding-bottom:4px;border-bottom:1px solid var(--border)}
+.article-edit-preview h3{font-size:14px;font-weight:700;margin:12px 0 4px}
+.article-edit-preview p{margin:6px 0}
+.article-edit-preview ul,.article-edit-preview ol{margin:6px 0 6px 20px}
+.article-edit-preview code{background:var(--bg2);padding:1px 5px;border-radius:4px;font-size:12px}
+.article-edit-preview pre{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:8px;overflow-x:auto;margin:6px 0}
+.article-edit-preview pre code{background:none;padding:0}
+.article-edit-preview blockquote{border-left:3px solid var(--accent);padding-left:10px;margin:6px 0;color:var(--text2)}
+@media(max-width:780px){.article-edit-split{grid-template-columns:1fr}.article-edit-ta,.article-edit-preview{height:360px}}
 .article-edit-actions{display:flex;gap:8px;margin-top:8px;justify-content:flex-end}
 .article-edit-save{padding:6px 14px;border:1px solid var(--accent);border-radius:var(--pill);background:var(--accent);color:#fff;font-size:12px;font-weight:600;cursor:pointer}
 .article-edit-cancel{padding:6px 14px;border:1px solid var(--border);border-radius:var(--pill);background:none;color:var(--text2);font-size:12px;cursor:pointer}
@@ -715,22 +729,40 @@ function renderArticleView(newsId){
   bodyEl.innerHTML='<div class="article-toolbar"><button class="article-edit-btn" onclick="editArticle(\''+esc(newsId)+'\',event)">&#9998; 編集</button></div><div class="article-rendered">'+rendered+'</div>';
   bodyEl.dataset.rendered='1';
 }
+var _articlePreviewTimers={};
+function _renderMd(raw){return DOMPurify.sanitize(marked.parse(raw||''))}
 function editArticle(newsId,e){
   if(e){e.stopPropagation();e.preventDefault()}
   var bodyEl=document.getElementById('article-'+newsId);
   if(!bodyEl)return;
   var raw=articleBodies[newsId]||'';
-  var ta=document.createElement('textarea');
-  ta.className='article-edit-ta';
-  ta.id='article-edit-'+newsId;
-  ta.value=raw;
-  bodyEl.innerHTML='';
-  bodyEl.appendChild(ta);
-  var actions=document.createElement('div');
-  actions.className='article-edit-actions';
-  actions.innerHTML='<button class="article-edit-cancel" onclick="cancelArticleEdit(\''+esc(newsId)+'\',event)">キャンセル</button><button class="article-edit-save" onclick="saveArticleEdit(\''+esc(newsId)+'\',event)">保存</button>';
-  bodyEl.appendChild(actions);
+  var idEsc=esc(newsId);
+  bodyEl.innerHTML=
+    '<div class="article-edit-split">'+
+      '<div class="article-edit-pane">'+
+        '<div class="article-edit-pane-label">Markdown</div>'+
+        '<textarea class="article-edit-ta" id="article-edit-'+idEsc+'"></textarea>'+
+      '</div>'+
+      '<div class="article-edit-pane">'+
+        '<div class="article-edit-pane-label">プレビュー</div>'+
+        '<div class="article-edit-preview" id="article-preview-'+idEsc+'"></div>'+
+      '</div>'+
+    '</div>'+
+    '<div class="article-edit-actions">'+
+      '<button class="article-edit-cancel" onclick="cancelArticleEdit(\''+idEsc+'\',event)">キャンセル</button>'+
+      '<button class="article-edit-save" onclick="saveArticleEdit(\''+idEsc+'\',event)">保存</button>'+
+    '</div>';
   bodyEl.dataset.rendered='';
+  var ta=document.getElementById('article-edit-'+newsId);
+  var preview=document.getElementById('article-preview-'+newsId);
+  ta.value=raw;
+  preview.innerHTML=_renderMd(raw);
+  ta.addEventListener('input',function(){
+    clearTimeout(_articlePreviewTimers[newsId]);
+    _articlePreviewTimers[newsId]=setTimeout(function(){
+      preview.innerHTML=_renderMd(ta.value);
+    },200);
+  });
   ta.focus();
 }
 async function saveArticleEdit(newsId,e){
