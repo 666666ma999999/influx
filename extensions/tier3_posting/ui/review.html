@@ -162,6 +162,14 @@ button{font-family:inherit;cursor:pointer} input,textarea,select{font-family:inh
 .article-toggle:hover{text-decoration:underline}
 .article-body{display:none;margin-top:8px;padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:var(--input-r);font-size:13px;line-height:1.7;color:var(--text)}
 .article-body img{max-width:100%;height:auto;display:block;margin:12px 0}
+.article-toolbar{display:flex;gap:6px;justify-content:flex-end;margin-bottom:8px}
+.article-edit-btn{font-size:11px;padding:4px 10px;border:1px solid var(--border);border-radius:var(--pill);background:none;color:var(--text2);cursor:pointer}
+.article-edit-btn:hover{color:var(--text);border-color:var(--text2)}
+.article-edit-ta{width:100%;min-height:400px;background:var(--bg);border:1px solid var(--border);border-radius:var(--input-r);padding:10px;color:var(--text);font:13px ui-monospace,monospace;line-height:1.5;resize:vertical;box-sizing:border-box}
+.article-edit-ta:focus{outline:none;border-color:var(--accent)}
+.article-edit-actions{display:flex;gap:8px;margin-top:8px;justify-content:flex-end}
+.article-edit-save{padding:6px 14px;border:1px solid var(--accent);border-radius:var(--pill);background:var(--accent);color:#fff;font-size:12px;font-weight:600;cursor:pointer}
+.article-edit-cancel{padding:6px 14px;border:1px solid var(--border);border-radius:var(--pill);background:none;color:var(--text2);font-size:12px;cursor:pointer}
 .article-body.expanded{display:block}
 .article-body h2{font-size:16px;font-weight:700;margin:18px 0 8px;padding-bottom:4px;border-bottom:1px solid var(--border)}
 .article-body h3{font-size:14px;font-weight:700;margin:14px 0 6px}
@@ -395,7 +403,10 @@ async function apiStatus(id,status,extra){
   await fetchData();
 }
 async function apiEdit(id,data){
-  await fetch(API+'/api/drafts/'+id+'/edit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+  var r=await fetch(API+'/api/drafts/'+id+'/edit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+  if(!r.ok)throw new Error('HTTP '+r.status);
+  var p=null;try{p=await r.json()}catch(_){}
+  if(p&&p.ok===false)throw new Error(p.error||'unknown');
   await fetchData();
 }
 
@@ -689,20 +700,73 @@ function toggleArticle(newsId,toggleEl,e){
     bodyEl.classList.remove('expanded');
     toggleEl.innerHTML='&#9654; 記事全文を表示';
   }else{
-    if(!bodyEl.innerHTML){
-      var raw=articleBodies[newsId]||'';
-      bodyEl.innerHTML=DOMPurify.sanitize(marked.parse(raw));
+    if(!bodyEl.dataset.rendered){
+      renderArticleView(newsId);
     }
     bodyEl.classList.add('expanded');
     toggleEl.innerHTML='&#9660; 記事全文を閉じる';
   }
 }
+function renderArticleView(newsId){
+  var bodyEl=document.getElementById('article-'+newsId);
+  if(!bodyEl)return;
+  var raw=articleBodies[newsId]||'';
+  var rendered=DOMPurify.sanitize(marked.parse(raw));
+  bodyEl.innerHTML='<div class="article-toolbar"><button class="article-edit-btn" onclick="editArticle(\''+esc(newsId)+'\',event)">&#9998; 編集</button></div><div class="article-rendered">'+rendered+'</div>';
+  bodyEl.dataset.rendered='1';
+}
+function editArticle(newsId,e){
+  if(e){e.stopPropagation();e.preventDefault()}
+  var bodyEl=document.getElementById('article-'+newsId);
+  if(!bodyEl)return;
+  var raw=articleBodies[newsId]||'';
+  var ta=document.createElement('textarea');
+  ta.className='article-edit-ta';
+  ta.id='article-edit-'+newsId;
+  ta.value=raw;
+  bodyEl.innerHTML='';
+  bodyEl.appendChild(ta);
+  var actions=document.createElement('div');
+  actions.className='article-edit-actions';
+  actions.innerHTML='<button class="article-edit-cancel" onclick="cancelArticleEdit(\''+esc(newsId)+'\',event)">キャンセル</button><button class="article-edit-save" onclick="saveArticleEdit(\''+esc(newsId)+'\',event)">保存</button>';
+  bodyEl.appendChild(actions);
+  bodyEl.dataset.rendered='';
+  ta.focus();
+}
+async function saveArticleEdit(newsId,e){
+  if(e){e.stopPropagation();e.preventDefault()}
+  var ta=document.getElementById('article-edit-'+newsId);
+  if(!ta)return;
+  var newBody=ta.value;
+  var bodyEl=document.getElementById('article-'+newsId);
+  var saveBtn=bodyEl?bodyEl.querySelector('.article-edit-save'):null;
+  if(saveBtn)saveBtn.disabled=true;
+  try{
+    // apiEdit は内部で fetchData() を走らせ、サーバー側の正規化済み article_body で
+    // articleBodies と allData を上書きする。ローカル sync は不要（正規化を破壊するため）
+    await apiEdit(newsId,{article_body:newBody});
+  }catch(err){
+    if(saveBtn)saveBtn.disabled=false;
+    toast('保存失敗: '+(err.message||err));
+    return;
+  }
+  // fetchData→renderAll で DOM 再構築済み。新しい article-toggle をクリックして再展開
+  var toggle=document.querySelector('.card[data-id="'+newsId+'"] .article-toggle');
+  if(toggle)toggle.click();
+  toast('記事全文を保存しました');
+}
+function cancelArticleEdit(newsId,e){
+  if(e){e.stopPropagation();e.preventDefault()}
+  renderArticleView(newsId);
+}
 async function saveCorrection(newsId,e){
   e.stopPropagation();
   var ta=document.getElementById('corr-'+newsId);
   if(!ta)return;
-  await apiEdit(newsId,{correction_instructions:ta.value});
-  toast('修正指示を保存しました');
+  try{
+    await apiEdit(newsId,{correction_instructions:ta.value});
+    toast('修正指示を保存しました');
+  }catch(err){toast('保存失敗: '+(err.message||err))}
 }
 
 /* ===== Card click → actions only (no detail navigation) ===== */
@@ -912,7 +976,7 @@ async function acceptRewrite(){
   }).then(function(r){return r.json()}).then(function(j){
     if(!j.ok)console.warn('学習データ保存失敗:',j.error);
   }).catch(function(e){console.warn('学習データ保存エラー:',e)});
-  await apiEdit(detailId,{body:newBody});
+  try{await apiEdit(detailId,{body:newBody})}catch(err){toast('保存失敗: '+(err.message||err));return}
   document.getElementById('rewrite-preview-area').innerHTML='';
   var ri=document.getElementById('rewrite-input');if(ri)ri.value='';
   pendingRewrite={instruction:'',originalBody:'',rewrittenBody:''};
@@ -1004,12 +1068,14 @@ async function saveEdit(){
   var ht=document.getElementById('ed-tags').value.trim();
   var tags=ht?ht.split(',').map(function(s){return s.trim()}).filter(Boolean):[];
   var sv=document.getElementById('ed-sched').value;
-  await apiEdit(editingId,{
-    title:document.getElementById('ed-title').value.trim(),
-    body:document.getElementById('ed-body').value,
-    hashtags:tags,
-    scheduled_at:sv?toJstIso(sv):null
-  });
+  try{
+    await apiEdit(editingId,{
+      title:document.getElementById('ed-title').value.trim(),
+      body:document.getElementById('ed-body').value,
+      hashtags:tags,
+      scheduled_at:sv?toJstIso(sv):null
+    });
+  }catch(err){toast('保存失敗: '+(err.message||err));return}
   closeEditModal();toast('Saved');
 }
 function updateEditCounter(){

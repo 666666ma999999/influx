@@ -375,6 +375,12 @@ class ReviewHandler(SimpleHTTPRequestHandler):
                 if key in body:
                     fields[key] = body[key]
 
+            # article_body は metadata 配下なので shallow-merge で全 metadata を再構築
+            if "article_body" in body:
+                new_metadata = dict(current_draft.get("metadata") or {})
+                new_metadata["article_body"] = body["article_body"]
+                fields["metadata"] = new_metadata
+
             ok = self.store.update_draft_status(news_id, current_status, **fields)
             if ok:
                 self._json_response({"ok": True})
