@@ -705,16 +705,12 @@ async function saveCorrection(newsId,e){
   toast('修正指示を保存しました');
 }
 
-/* ===== Card click → detail / actions ===== */
+/* ===== Card click → actions only (no detail navigation) ===== */
 document.getElementById('panel-list').addEventListener('click',function(e){
-  // Action buttons
+  // Action buttons (Approve/Edit/Archive 等)
   var b=e.target.closest('[data-action]');
   if(b){e.stopPropagation();handleAction(b.getAttribute('data-action'),b.getAttribute('data-id'));return}
-  // Correction textarea / buttons — don't navigate
-  if(e.target.closest('.correction-ta')||e.target.closest('.correction-save'))return;
-  // Card click → open detail
-  var card=e.target.closest('.card[data-id]');
-  if(card){openDetail(card.getAttribute('data-id'))}
+  // それ以外（カード本体クリック）は何もしない。記事は ▶ 記事全文を表示 トグル経由で開く
 });
 
 async function handleAction(action,id){
@@ -1080,7 +1076,12 @@ document.addEventListener('keydown',function(e){
   if(k==='a'){e.preventDefault();handleAction('approve',id);return}
   if(k==='e'){e.preventDefault();handleAction('edit',id);return}
   if(k==='x'){e.preventDefault();handleAction('archive',id);return}
-  if(k==='enter'||e.key==='Enter'){e.preventDefault();openDetail(id);return}
+  if(k==='enter'||e.key==='Enter'){
+    e.preventDefault();
+    var t=document.querySelector('.card.kb-focus .article-toggle');
+    if(t)t.click();
+    return;
+  }
   if(k==='c'){
     e.preventDefault();
     var t=document.querySelector('.card.kb-focus .correction-toggle');
