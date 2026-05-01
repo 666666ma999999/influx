@@ -285,7 +285,7 @@ if [[ "$MODE" == "execute" ]]; then
   echo "Next steps (manual):"
   echo "  1. cd $DST"
   echo "  2. docker compose build   # (optional, rebuild)"
-  echo "  3. python3 -c 'from extensions.tier3_posting.x_poster.post_store import PostStore; print(PostStore)'"
+  echo "  3. (post-Phase 3 注: tier3_posting は ~/Desktop/biz/autopost に分離済み。検証は: cd ~/Desktop/biz/autopost && python3 -c 'from tier3_posting.x_poster.post_store import PostStore; print(PostStore)')"
   echo "  4. Start a NEW Claude Code session from $DST"
 fi
 echo "======================================="
