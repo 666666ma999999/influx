@@ -200,7 +200,7 @@ docker compose run xstock python scripts/check_inactive_accounts.py
 
 x_profiles/ Cookie SST は依然 influx 側に残置。tier3_posting からは symlink 経由で参照される:
 
-- **配置先**: `x_profiles/<account>/state.json`
+- **配置先**: `x_profiles/<account>/cookies.json`
 - **再取得経路**: `python3 scripts/import_chrome_cookies.py --chrome-profile "<profile>" --account <account>`
 
 ## コーディング規約
