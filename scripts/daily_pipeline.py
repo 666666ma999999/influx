@@ -173,8 +173,8 @@ def main() -> int:
 
         start = datetime.now(JST).isoformat()
         t0 = time.time()
-        # 2026-05-01 Phase 3: tier3_posting は別リポへ。subprocess の cwd を切替
-        tier3_root = os.environ.get("TIER3_REPO", str(Path.home() / "Desktop" / "biz" / "tier3_posting"))
+        # 2026-05-01 Phase 3: tier3_posting は別リポ（autopost）へ。subprocess の cwd を切替
+        tier3_root = os.environ.get("TIER3_REPO", str(Path.home() / "Desktop" / "biz" / "autopost"))
         cmd = [
             "python3", "-m", "tier3_posting.cli.compose",
             "--input", str(latest),
