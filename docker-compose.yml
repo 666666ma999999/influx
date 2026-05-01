@@ -89,27 +89,5 @@ services:
     profiles:
       - setup  # docker-compose --profile setup up で起動
 
-  # 投稿管理画面（review.html + API）
-  review:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: xstock-review
-
-    environment:
-      - TZ=Asia/Tokyo
-
-    volumes:
-      - ./scripts:/app/scripts:ro
-      - ./extensions:/app/extensions:ro
-      - ./core:/app/core:ro
-      - ./collector:/app/collector:ro
-      - ./output:/app/output
-
-    ports:
-      - "8080:8080"
-
-    command: python -m extensions.tier3_posting.cli.server --port 8080
-
-    profiles:
-      - review  # docker-compose --profile review up で起動
+  # 2026-05-01 Phase 3: 投稿管理画面 (review) サービスは tier3_posting リポへ移管。
+  # 起動方法: cd ~/Desktop/biz/tier3_posting && python3 -m tier3_posting.cli.server --port 8080

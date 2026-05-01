@@ -84,18 +84,8 @@ class TestDefaultConstructor(unittest.TestCase):
         self.assertEqual(exc.reason, REASON_EMPTY)
 
 
-class TestTier3BehavioralCompat(unittest.TestCase):
-    """Phase 1（2026-05-01）以降、tier3_posting は shared/ で独立 SST を持つ。
-    両クラスは別物だが、API（.reason, .factory）は互換であることを保証する。
-    Phase 3 物理分離後は collector 側が見えなくなるためこの互換テストも消える想定。
-    """
-    def test_factory_from_tier3_has_reason(self):
-        from extensions.tier3_posting.x_poster.exceptions import (
-            CookieExpiredError as Tier3CookieExpiredError,
-        )
-        exc = Tier3CookieExpiredError.empty(Path("/tmp/cookies.json"))
-        self.assertEqual(exc.reason, REASON_EMPTY)
-
+# 2026-05-01 Phase 3: tier3_posting を別リポに物理分離。compat テストは
+# tier3_posting リポに移管した（influx 側からは tier3_posting を import 不能）。
 
 class TestBranchingByReason(unittest.TestCase):
     """呼び出し側が except CookieExpiredError as e: if e.reason == ... で分岐できることを確認。"""

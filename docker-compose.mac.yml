@@ -57,28 +57,5 @@ services:
     profiles:
       - setup
 
-  review:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: xstock-review
-
-    environment:
-      - TZ=Asia/Tokyo
-      - COOKIE_ENCRYPTION_KEY
-
-    volumes:
-      - ./scripts:/app/scripts:ro
-      - ./extensions:/app/extensions:ro
-      - ./core:/app/core:ro
-      - ./collector:/app/collector:ro
-      - ./output:/app/output
-      - ./x_profiles:/app/x_profiles
-
-    ports:
-      - "8080:8080"
-
-    command: python -m extensions.tier3_posting.cli.server --port 8080
-
-    profiles:
-      - review
+  # 2026-05-01 Phase 3: review サービスは tier3_posting リポへ移管
+  # 起動: cd ~/Desktop/biz/tier3_posting && python3 -m tier3_posting.cli.server --port 8080

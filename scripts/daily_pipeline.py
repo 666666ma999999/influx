@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 import time
@@ -45,11 +46,11 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 COLLECT_TO_CLASSIFY_WARN_SEC = 40 * 60
 
 
-def _run(cmd: List[str], step: str, allow_nonzero: bool = False) -> int:
+def _run(cmd: List[str], step: str, allow_nonzero: bool = False, cwd: Optional[str] = None) -> int:
     """サブコマンド実行。失敗時は stderr にログを残して呼び出し元へ返す。"""
     print(f"\n===== [{step}] =====")
     print(f"$ {' '.join(cmd)}")
-    proc = subprocess.run(cmd, cwd=str(PROJECT_ROOT))
+    proc = subprocess.run(cmd, cwd=cwd or str(PROJECT_ROOT))
     if proc.returncode != 0 and not allow_nonzero:
         print(f"[ERROR] {step} が exit code {proc.returncode} で失敗", file=sys.stderr)
     return proc.returncode
@@ -172,14 +173,16 @@ def main() -> int:
 
         start = datetime.now(JST).isoformat()
         t0 = time.time()
+        # 2026-05-01 Phase 3: tier3_posting は別リポへ。subprocess の cwd を切替
+        tier3_root = os.environ.get("TIER3_REPO", str(Path.home() / "Desktop" / "biz" / "tier3_posting"))
         cmd = [
-            "python3", "-m", "extensions.tier3_posting.cli.compose",
+            "python3", "-m", "tier3_posting.cli.compose",
             "--input", str(latest),
             "--output-dir", args.posting_output,
         ]
         if args.no_llm_compose:
             cmd.append("--no-llm")
-        rc = _run(cmd, "compose")
+        rc = _run(cmd, "compose", cwd=tier3_root)
         _log_run(log_path, run_id, "compose", start, rc, time.time() - t0)
         if rc != 0:
             failures.append("compose")
