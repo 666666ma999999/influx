@@ -93,6 +93,7 @@ def collect_posting_data(data_dir: str) -> dict:
     }
 
     try:
+        # TODO(Phase 3 物理分離): tier3_posting/scripts/ へ移動予定
         from extensions.tier3_posting.x_poster.post_store import PostStore
         store = PostStore(base_dir=data_dir)
         result["drafts"] = store.load_drafts()
@@ -193,6 +194,7 @@ def build_posting_data(data_dir: str) -> list:
         ドラフトのリスト（履歴・インプレッション・画像base64マージ済み）
     """
     try:
+        # TODO(Phase 3 物理分離): tier3_posting/scripts/ へ移動予定
         from extensions.tier3_posting.x_poster.post_store import PostStore
         store = PostStore(base_dir=data_dir)
         drafts = store.load_drafts()

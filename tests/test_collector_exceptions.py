@@ -84,15 +84,11 @@ class TestDefaultConstructor(unittest.TestCase):
         self.assertEqual(exc.reason, REASON_EMPTY)
 
 
-class TestSingleSourceOfTruth(unittest.TestCase):
-    def test_tier3_reexport_identity(self):
-        # extensions/tier3_posting/x_poster/exceptions.py が collector.exceptions を再エクスポートし、
-        # 両経路で捕捉した例外が同一クラスであることを保証
-        from extensions.tier3_posting.x_poster.exceptions import (
-            CookieExpiredError as Tier3CookieExpiredError,
-        )
-        self.assertIs(Tier3CookieExpiredError, CookieExpiredError)
-
+class TestTier3BehavioralCompat(unittest.TestCase):
+    """Phase 1（2026-05-01）以降、tier3_posting は shared/ で独立 SST を持つ。
+    両クラスは別物だが、API（.reason, .factory）は互換であることを保証する。
+    Phase 3 物理分離後は collector 側が見えなくなるためこの互換テストも消える想定。
+    """
     def test_factory_from_tier3_has_reason(self):
         from extensions.tier3_posting.x_poster.exceptions import (
             CookieExpiredError as Tier3CookieExpiredError,

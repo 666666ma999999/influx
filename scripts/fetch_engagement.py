@@ -32,6 +32,8 @@ logger = logging.getLogger(__name__)
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+# TODO(Phase 3 物理分離): このスクリプトは tier3_posting/scripts/ へ移動予定。
+# 現状は monorepo 状態のため tier3_posting を直接 import する。
 from extensions.tier3_posting.impression_tracker.scraper import (
     CookieExpiredError,
     ImpressionScraper,
