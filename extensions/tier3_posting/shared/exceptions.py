@@ -1,8 +1,9 @@
-"""collector パッケージ共通の例外クラス（Single Source of Truth）。
+"""tier3_posting 用の例外クラス（Phase 1 で collector からフォーク）。
 
-plan.md M0 T0.6: `CookieExpiredError` を収集系・投稿系で共通 SST 化。
-tier3_posting 側は `extensions/tier3_posting/x_poster/exceptions.py` から
-この定義を再エクスポートする。
+2026-05-01 Phase 1: 物理分離前段として collector/exceptions.py をコピーし、
+ここを tier3_posting の SST にした。Phase 3 物理分離後は collector との
+関係が完全に切れる想定。当面は collector 側と API parity（reason 定数群、
+factory メソッド名、メッセージ形状）を維持する必要がある。
 """
 from __future__ import annotations
 
