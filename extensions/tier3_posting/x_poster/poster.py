@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Optional
 
 from dateutil.parser import parse as parse_datetime
 
-from collector.exceptions import CookieExpiredError
+from ..shared.exceptions import CookieExpiredError
 
 logger = logging.getLogger(__name__)
 
@@ -554,7 +554,7 @@ class XPoster:
         Raises:
             CookieExpiredError: cookies.json が存在しない／空の場合。
         """
-        from collector.cookie_crypto import load_cookies_or_raise
+        from ..shared.cookie_crypto import load_cookies_or_raise
         return load_cookies_or_raise(self.profile_path / "cookies.json")
 
     def _click_with_retry(self, page, selector: str, max_retries: int = 3, timeout: int = 10000) -> bool:

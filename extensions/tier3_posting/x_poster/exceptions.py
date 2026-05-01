@@ -1,9 +1,9 @@
-"""tier3_posting/x_poster の共有例外（collector SST の再エクスポート）。
+"""tier3_posting/x_poster の共有例外（shared/ への薄い re-export）。
 
-plan.md M0 T0.6: `CookieExpiredError` の SST を `collector.exceptions` に移設し、
-tier3_posting は backward compat のため同名で再エクスポートする。
+Phase 1 (2026-05-01): SST を tier3_posting/shared/exceptions.py に移し、
+ここは backward compat のための再エクスポート。
 """
 
-from collector.exceptions import CookieExpiredError  # noqa: F401
+from ..shared.exceptions import CookieExpiredError  # noqa: F401
 
 __all__ = ["CookieExpiredError"]

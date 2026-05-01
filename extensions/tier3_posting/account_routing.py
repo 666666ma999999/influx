@@ -37,13 +37,7 @@ DEFAULT_ACCOUNT = "kabuki666999"
 # CATEGORY_TEMPLATE_MAP + CATEGORY_ACCOUNT_MAP から自動導出。
 # カテゴリ非依存テンプレート (win_rate_ranking 等) は NON_CATEGORY_TEMPLATE_ACCOUNT_MAP で明示。
 
-# プロジェクトルートを sys.path に追加して collector を core/shared 相当として import
-import sys as _sys
-import os as _os
-_PROJECT_ROOT = _os.path.abspath(_os.path.join(_os.path.dirname(__file__), "..", ".."))
-if _PROJECT_ROOT not in _sys.path:
-    _sys.path.insert(0, _PROJECT_ROOT)
-from collector.config import (  # noqa: E402
+from .shared.posting_config import (
     CATEGORY_TEMPLATE_MAP,
     CATEGORY_ACCOUNT_MAP,
     NON_CATEGORY_TEMPLATE_ACCOUNT_MAP,

@@ -18,7 +18,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
 from ..impression_tracker.scraper import ImpressionScraper
-from collector.exceptions import CookieExpiredError
+from ..shared.exceptions import CookieExpiredError
 from ..x_poster.post_store import PostStore
 
 JST = timezone(timedelta(hours=9))

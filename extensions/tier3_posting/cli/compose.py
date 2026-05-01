@@ -23,11 +23,7 @@ from ..services.style_prompt_builder import build_style_aware_prompt
 from ..account_routing import resolve_account
 
 # Single Source of Truth for カテゴリ → テンプレート対応（plan.md M1 T1.0）
-# プロジェクトルートを sys.path に追加して collector を core/shared 相当として import
-_PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
-if _PROJECT_ROOT not in sys.path:
-    sys.path.insert(0, _PROJECT_ROOT)
-from collector.config import CATEGORY_TEMPLATE_MAP  # noqa: E402
+from ..shared.posting_config import CATEGORY_TEMPLATE_MAP
 
 
 def _categories_for_template(template_name: str) -> set:

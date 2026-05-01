@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 JST = timezone(timedelta(hours=9))
 
-from collector.exceptions import CookieExpiredError  # noqa: F401, E402
+from ..shared.exceptions import CookieExpiredError  # noqa: F401, E402
 
 
 class ImpressionScraper:
@@ -313,7 +313,7 @@ class ImpressionScraper:
         Raises:
             CookieExpiredError: cookies.json が存在しない／空の場合。
         """
-        from collector.cookie_crypto import load_cookies_or_raise
+        from ..shared.cookie_crypto import load_cookies_or_raise
         return load_cookies_or_raise(self.profile_path / "cookies.json")
 
     def _scrape_impressions(self, page) -> int:
