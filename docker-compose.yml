@@ -89,5 +89,5 @@ services:
     profiles:
       - setup  # docker-compose --profile setup up で起動
 
-  # 2026-05-01 Phase 3: 投稿管理画面 (review) サービスは tier3_posting リポへ移管。
-  # 起動方法: cd ~/Desktop/biz/tier3_posting && python3 -m tier3_posting.cli.server --port 8080
+  # 2026-05-01 Phase 3: 投稿管理画面 (review) サービスは autopost リポへ移管。
+  # 起動方法: cd ~/Desktop/biz/autopost && python3 -m tier3_posting.cli.server --port 8080

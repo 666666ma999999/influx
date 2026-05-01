@@ -33,5 +33,5 @@ services:
     security_opt:
       - seccomp:./docker/chromium-seccomp.json
 
-  # 2026-05-01 Phase 3: review サービスは tier3_posting リポへ移管
-  # 起動: cd ~/Desktop/biz/tier3_posting && python3 -m tier3_posting.cli.server --port 8080
+  # 2026-05-01 Phase 3: review サービスは autopost リポへ移管
+  # 起動: cd ~/Desktop/biz/autopost && python3 -m tier3_posting.cli.server --port 8080

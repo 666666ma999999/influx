@@ -17,9 +17,9 @@ influx/
 │   ├── x_collector.py         # SafeXCollector: Playwright+Cookie認証によるツイート収集
 │   ├── classifier.py          # TweetClassifier: キーワード/正規表現ベース分類
 │   └── llm_classifier.py      # LLMClassifier: Claude API(urllib)によるバッチ分類
-# 2026-05-01 Phase 3: extensions/tier3_posting/ は ~/Desktop/biz/tier3_posting/ に物理分離
+# 2026-05-01 Phase 3: extensions/tier3_posting/ は ~/Desktop/biz/autopost/ に物理分離
 # 投稿管理（管理画面・register_external/mark_posted/get_correction CLI 等）は
-# 別リポ tier3_posting で稼働。詳細はそちらの CLAUDE.md 参照。
+# 別リポ autopost（旧 tier3_posting）で稼働。詳細はそちらの CLAUDE.md 参照。
 ├── scripts/                    # 収集・分類スクリプト
 │   ├── collect_tweets.py      # ツイート収集 + キーワード分類 + JSON/CSV保存
 │   ├── classify_tweets.py     # LLM分類実行 + viewer.html更新
@@ -90,8 +90,8 @@ docker compose run xstock python scripts/classify_tweets.py --input output/tweet
 # アカウント状態確認
 docker compose run xstock python scripts/check_inactive_accounts.py
 
-# === 投稿管理は tier3_posting リポへ移管（2026-05-01 Phase 3）===
-# cd ~/Desktop/biz/tier3_posting
+# === 投稿管理は autopost リポへ移管（2026-05-01 Phase 3）===
+# cd ~/Desktop/biz/autopost
 # python3 -m tier3_posting.cli.server --port 8080
 # 詳細はそちらの CLAUDE.md 参照
 ```
@@ -190,10 +190,10 @@ docker compose run xstock python scripts/check_inactive_accounts.py
 }
 ```
 
-## 外部利用 I/F 契約（2026-05-01 Phase 3 で tier3_posting リポへ移管）
+## 外部利用 I/F 契約（2026-05-01 Phase 3 で autopost リポへ移管）
 
 投稿管理側の I/F 契約（register_external / get_correction / mark_posted の 3 CLI、
-画像配置パス、x_profiles レイアウト等）は `~/Desktop/biz/tier3_posting/CLAUDE.md`
+画像配置パス、x_profiles レイアウト等）は `~/Desktop/biz/autopost/CLAUDE.md`
 に記載。**make_article 等の外部プロジェクトはそちらを参照すること**。
 
 ### influx 残存契約（X Cookie 管理）
