@@ -13,6 +13,15 @@ output/*/
 
 # Claude ワークスペース（ローカル監査メモ等）
 .claude/workspace/
+.claude/settings.local.json
+
+# Claude Code / MCP / claude-mem の自動生成成果物
+AGENTS.md
+.playwright-mcp/
+
+# ルート直下のスクショ（UI 検証で生成される作業用画像）
+# output/*.png は別途追跡対象なのでルート限定にする
+/*.png
 
 # Python
 __pycache__/
