@@ -73,3 +73,13 @@ scripts/run_research.sh --phase report
 | 型ヒント | 使用する | `List[Dict]`, `Optional[str]`, `Dict[str, Any]` |
 | 文字列 | f-string 推奨 | `f"収集完了: {len(self.tweets)}件"` |
 | エンコーディング | UTF-8 | JSON: `ensure_ascii=False`, CSV: `utf-8-sig` |
+
+## リサーチ運用（worktree / データ格納 / ファイル数）
+
+探索的分析・計測（few-shot 実験 / `measure_*` / `btc_*_analysis` 等）を「main を汚さず・データを
+散らかさず・ファイルを増やさず」回す規約は **[`docs/research-workflow.md`](docs/research-workflow.md)** が SSoT。
+思想・Why は global skill `research-isolation`。influx 固有の要点:
+
+- 試行錯誤は `analysis/<topic>` worktree（`../influx-<topic>`）で隔離 → 確定だけ main へ昇格
+- 一度きりの探索スクリプトは `_tmp_<name>.py`（gitignore で追跡外）。`measure_*` 等の定常計測は無印 tracked
+- 実験出力は `output/`（gitignore 済）/ 学習データ `data/few_shot_examples.json` 等は tracked 正本

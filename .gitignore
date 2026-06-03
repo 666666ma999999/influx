@@ -58,3 +58,8 @@ Thumbs.db
 .env.local
 .envrc
 docker-compose.override.yml
+
+# 探索・使い捨てスクリプト（research-isolation ③・docs/research-workflow.md）
+_tmp_*.py
+scripts/_tmp_*.py
+scripts/_scratch/
