@@ -1,0 +1,237 @@
+#!/usr/bin/env python3
+"""@twittora_ 向けバズ投稿収集スクリプト (Grok x_search 経由)。
+
+Claude Code / AI 活用ジャンルで過去 N 日の高エンゲージメント X 投稿を取得し、
+Vault material-bank 互換の jsonl + md 形式で保存する。
+
+実行 (influx Docker):
+    docker compose run --rm xstock python scripts/grok_collect_twittora.py
+    docker compose run --rm xstock python scripts/grok_collect_twittora.py --days 14 --min-likes 100
+
+出力:
+    /app/output/grok_twittora/grok-twittora-YYYY-MM-DD.jsonl
+    /app/output/grok_twittora/grok-twittora-YYYY-MM-DD.md
+ホスト側 mount: influx/output/grok_twittora/
+
+その後 host から ~/Documents/Obsidian Vault/.raw/ に転記する (skill 側で実行)。
+"""
+
+import argparse
+import json
+import os
+import sys
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+from typing import Any
+
+from pydantic import BaseModel, Field
+from xai_sdk import Client
+from xai_sdk.chat import system, user
+from xai_sdk.tools import x_search
+
+
+JST = timezone(timedelta(hours=9))
+
+DEFAULT_QUERIES = [
+    "Claude Code 使い方",
+    "Claude Code tips",
+    "MCP server 自作",
+    "Claude hooks 自動化",
+    "AI コーディング ワークフロー",
+    "Claude Sonnet 活用",
+    "Cursor vs Claude",
+    "Anthropic Claude API",
+    "AI エージェント 開発",
+    "subagent 並列",
+]
+
+DEFAULT_MIN_LIKES = 50
+DEFAULT_DAYS = 7
+DEFAULT_PER_QUERY = 8
+MODEL = "grok-4-1-fast-non-reasoning"
+
+
+class BuzzTweet(BaseModel):
+    id: str = Field(description="X post ID (URL の status/<id> 部分の数字)")
+    url: str = Field(description="完全な X 投稿 URL https://x.com/<user>/status/<id>")
+    author: str = Field(description="X handle、@ は付けない")
+    display_name: str = Field(default="", description="表示名")
+    content: str = Field(description="投稿本文 (改行は \\n)")
+    likes: int = Field(default=0, ge=0)
+    impressions: int = Field(default=0, ge=0)
+    retweets: int = Field(default=0, ge=0)
+    replies: int = Field(default=0, ge=0)
+    posted_at: str = Field(default="", description="YYYY-MM-DD")
+
+
+class BuzzCollectionResult(BaseModel):
+    tweets: list[BuzzTweet] = Field(default_factory=list)
+
+
+def build_prompt(query: str, days: int, min_likes: int, max_results: int) -> str:
+    return (
+        f"過去 {days} 日以内に X (Twitter) に投稿された、"
+        f"「{query}」に関連する高エンゲージメント投稿を最大 {max_results} 件探してください。\n"
+        f"- {min_likes} likes 以上\n"
+        "- 個人の知見・体験談・チュートリアル・lessons learned を優先\n"
+        "- 除外: 広告/宣伝/bot/単なる RT/タイトルだけのリンク投稿\n"
+        "- 日本語または英語の投稿\n"
+        "- スレッドの 1 投稿目を優先 (返信ぶらさがりは除く)\n\n"
+        "各投稿について BuzzTweet スキーマ通りに構造化して返してください。\n"
+        "id は URL の status/ の後の数字、url は https://x.com/<author>/status/<id> 形式。"
+    )
+
+
+def search_query(client: Client, query: str, days: int, min_likes: int, per_query: int) -> list[dict[str, Any]]:
+    to_dt = datetime.now(timezone.utc)
+    from_dt = to_dt - timedelta(days=days)
+    chat = client.chat.create(
+        model=MODEL,
+        tools=[x_search(from_date=from_dt, to_date=to_dt)],
+    )
+    chat.append(system(
+        "あなたは X (Twitter) 上のバズ投稿を発見する分析アナリストです。"
+        "実在する投稿のみを返し、URL/ID を捏造しないこと。"
+    ))
+    chat.append(user(build_prompt(query, days, min_likes, per_query)))
+    try:
+        _, parsed = chat.parse(BuzzCollectionResult)
+    except Exception as exc:
+        print(f"  ✗ '{query}' parse 失敗: {exc}", file=sys.stderr)
+        return []
+    if not parsed:
+        return []
+    rows = []
+    for tw in parsed.tweets:
+        d = tw.model_dump()
+        if d["likes"] < min_likes:
+            continue
+        if not d["id"] or not d["url"]:
+            continue
+        d["query"] = query
+        d["captured_at"] = datetime.now(JST).isoformat(timespec="seconds")
+        rows.append(d)
+    return rows
+
+
+def dedupe(tweets: list[dict]) -> list[dict]:
+    seen = set()
+    out = []
+    for t in tweets:
+        if t["id"] in seen:
+            continue
+        seen.add(t["id"])
+        out.append(t)
+    return out
+
+
+def write_jsonl(tweets: list[dict], path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8") as f:
+        for t in tweets:
+            f.write(json.dumps(t, ensure_ascii=False) + "\n")
+
+
+def write_index(tweets: list[dict], jsonl_path: Path, md_path: Path,
+                queries: list[str], days: int, min_likes: int) -> None:
+    today = datetime.now(JST).date().isoformat()
+    by_query: dict[str, int] = {}
+    total_likes = 0
+    for t in tweets:
+        by_query[t["query"]] = by_query.get(t["query"], 0) + 1
+        total_likes += t["likes"]
+
+    lines = [
+        "---",
+        "type: source-index",
+        f"source: \"grok_collect_twittora.py (xai_sdk x_search)\"",
+        f"imported: {today}",
+        f"entries: {len(tweets)}",
+        "target_account: \"@twittora_\"",
+        "target_genre: \"Claude Code / AI 活用\"",
+        f"period_days: {days}",
+        f"min_likes: {min_likes}",
+        "---",
+        "",
+        f"# Grok Collect — @twittora_ buzz pool ({today})",
+        "",
+        f"X (Twitter) で過去 {days} 日に投稿された Claude Code / AI 活用関連の高エンゲージメント投稿プール。",
+        "",
+        f"- 生データ: [[{jsonl_path.name}]]",
+        f"- 件数: {len(tweets)}",
+        f"- 合計 likes: {total_likes:,}",
+        f"- 検索 query 数: {len(queries)}",
+        "",
+        "## query 別の収集件数",
+        "",
+        "| query | 件数 |",
+        "|---|---:|",
+    ]
+    for q in queries:
+        lines.append(f"| {q} | {by_query.get(q, 0)} |")
+    lines += [
+        "",
+        "## トップ 10 (likes 順)",
+        "",
+        "| likes | author | 抜粋 | URL |",
+        "|---:|---|---|---|",
+    ]
+    top = sorted(tweets, key=lambda t: t["likes"], reverse=True)[:10]
+    for t in top:
+        excerpt = t["content"].replace("\n", " ").replace("|", "\\|")[:80]
+        lines.append(f"| {t['likes']:,} | @{t['author']} | {excerpt} | {t['url']} |")
+    lines += [
+        "",
+        "## 取り込み",
+        "",
+        "Obsidian で本ファイルが [[wiki/sources]] に展開可能 (将来 /ingest 連携)。",
+    ]
+    md_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--queries", nargs="+", default=DEFAULT_QUERIES)
+    ap.add_argument("--days", type=int, default=DEFAULT_DAYS)
+    ap.add_argument("--min-likes", type=int, default=DEFAULT_MIN_LIKES)
+    ap.add_argument("--per-query", type=int, default=DEFAULT_PER_QUERY,
+                    help="query 1 件あたりの最大取得数")
+    ap.add_argument("--output-dir", default="/app/output/grok_twittora",
+                    help="出力ディレクトリ (Docker 内パス)")
+    args = ap.parse_args()
+
+    api_key = os.environ.get("XAI_API_KEY")
+    if not api_key:
+        print("ERROR: XAI_API_KEY 環境変数が未設定", file=sys.stderr)
+        return 1
+
+    client = Client(api_key=api_key)
+
+    print(f"=== Grok Collect (@twittora_) ===")
+    print(f"queries: {len(args.queries)}, days: {args.days}, min_likes: {args.min_likes}")
+
+    all_tweets: list[dict] = []
+    for q in args.queries:
+        print(f"  → searching: {q!r}")
+        rows = search_query(client, q, args.days, args.min_likes, args.per_query)
+        print(f"    got {len(rows)} tweets")
+        all_tweets.extend(rows)
+
+    deduped = dedupe(all_tweets)
+    print(f"\nTotal: {len(all_tweets)} fetched, {len(deduped)} unique")
+
+    today = datetime.now(JST).date().isoformat()
+    out_dir = Path(args.output_dir)
+    jsonl_path = out_dir / f"grok-twittora-{today}.jsonl"
+    md_path = out_dir / f"grok-twittora-{today}.md"
+
+    write_jsonl(deduped, jsonl_path)
+    write_index(deduped, jsonl_path, md_path, args.queries, args.days, args.min_likes)
+
+    print(f"\n✓ {jsonl_path} ({len(deduped)} entries)")
+    print(f"✓ {md_path}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
