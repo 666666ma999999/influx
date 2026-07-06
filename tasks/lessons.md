@@ -157,3 +157,15 @@
 ### Failures/Stuck
 ## Failures / Stuck Context
 （未記録）
+
+## 2026-07-06: 同一データセットへのフェッチャー並行起動で .tmp 衝突リスク（自己検出・実害なし）
+- 症状: サブエージェントが自セッション内で jq_fetch を起動中（ps で 2 プロセス）なのに気づかず、親セッションからも nohup で同一 dataset(shortsale) のフェッチを追加起動 → 一時 3 本並走
+- リスク: write_json_gz の一時ファイルパスが `<target>.tmp` 固定のため、同一ターゲットへの同時書き込みで tmp が混線 → os.replace 後に破損 gzip が残り、読み側は path.exists() のみで skip するため**破損が永続化**する
+- 対処: pkill で全停止 → gunzip -t で全件整合性検査（破損ゼロ確認）→ 単独プロセスで再開
+- 教訓: (1) **フェッチャー起動前に `ps aux | grep <script>` で既走プロセス確認を必須化** (2) 排他が必要な長時間ジョブは flock 等のロックファイルを実装に入れるべき（jq_fetch 将来改修時の TODO） (3) サブエージェントに「フェッチ実行」まで委譲したら、親は同じフェッチを起動しない（所有権を明確に）
+
+## 2026-07-06: launchd から Desktop 配下のスクリプトを直接実行すると TCC でブロックされる
+- 症状: `launchctl` 登録済みジョブが初回定時実行で exit 2。ログに `can't open file '...Desktop/biz/influx/...': [Errno 1] Operation not permitted`
+- 原因: macOS のプライバシー保護(TCC)。launchd 起動プロセスはデスクトップ等の保護フォルダへのアクセス権を継承しない。手動実行(ターミナル経由)では Terminal の権限で通るため気づきにくい
+- 解決: ProgramArguments を `/bin/bash -c 'exec /usr/bin/python3 <script>'` のラッパー方式に変更（この Mac では bash に既にフルディスクアクセス相当の許可があり、autopost/make-article の既存 LaunchAgents が同方式で exit 0 稼働中という実績を確認してから踏襲）
+- 教訓: (1) Desktop/Documents 配下を触る launchd ジョブは最初から bash ラッパーで書く (2) 新規 LaunchAgent は登録後に `launchctl kickstart gui/$UID/<label>` で即時テストし、定時を待たずに exit code とログを確認する (3) FDA の GUI 付与はファイル選択でグレーアウトすることがあり、既存の動いている方式の踏襲が速い
