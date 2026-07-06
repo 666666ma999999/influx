@@ -1,0 +1,255 @@
+{
+  "frozen_at": "2026-07-05",
+  "purpose": "インフルエンサー由来KPIのprospective評価用リスト凍結(遡及収集分は仮説出し専用)。後知恵バイアス防止のため、このリストの変更は新しい日付の凍結ファイル追加でのみ行う(本ファイルは変更禁止)",
+  "collection_groups": {
+    "group1": {
+      "name": "超大型インフルエンサー",
+      "accounts": [
+        {
+          "username": "goto_finance",
+          "min_faves": 400
+        },
+        {
+          "username": "cissan_9984",
+          "min_faves": 400
+        },
+        {
+          "username": "tesuta001",
+          "min_faves": 300
+        },
+        {
+          "username": "yurumazu",
+          "min_faves": 300
+        }
+      ]
+    },
+    "group2": {
+      "name": "大型インフルエンサー",
+      "accounts": [
+        {
+          "username": "2okutameo",
+          "min_faves": 150
+        },
+        {
+          "username": "tapazou29",
+          "min_faves": 150
+        },
+        {
+          "username": "kanpo_blog",
+          "min_faves": 80
+        },
+        {
+          "username": "haru_tachibana8",
+          "min_faves": 80
+        },
+        {
+          "username": "heihachiro888",
+          "min_faves": 80
+        }
+      ]
+    },
+    "group3": {
+      "name": "中型インフルエンサー",
+      "accounts": [
+        {
+          "username": "uehara_sato4",
+          "min_faves": 30
+        },
+        {
+          "username": "miku919191",
+          "min_faves": 30
+        },
+        {
+          "username": "yuki75868813751",
+          "min_faves": 30
+        },
+        {
+          "username": "shikiho_10",
+          "min_faves": 30
+        },
+        {
+          "username": "kakatothecat",
+          "min_faves": 30
+        },
+        {
+          "username": "yukimamax",
+          "min_faves": 30
+        },
+        {
+          "username": "tomoyaasakura",
+          "min_faves": 30
+        },
+        {
+          "username": "_teeeeest",
+          "min_faves": 30
+        },
+        {
+          "username": "paurooteri",
+          "min_faves": 30
+        }
+      ]
+    },
+    "group4": {
+      "name": "小型インフルエンサー",
+      "accounts": [
+        {
+          "username": "momoblog0214",
+          "min_faves": 20
+        },
+        {
+          "username": "pay_cashless",
+          "min_faves": 20
+        },
+        {
+          "username": "nobutaro_mane",
+          "min_faves": 20
+        },
+        {
+          "username": "w_coast_0330",
+          "min_faves": 20
+        }
+      ]
+    },
+    "group5": {
+      "name": "極小型インフルエンサー",
+      "accounts": [
+        {
+          "username": "YasLovesTech",
+          "min_faves": 10
+        },
+        {
+          "username": "Toushi_kensh",
+          "min_faves": 10
+        },
+        {
+          "username": "Kosukeitou",
+          "min_faves": 10
+        },
+        {
+          "username": "piya00piya",
+          "min_faves": 10
+        },
+        {
+          "username": "yys87495867",
+          "min_faves": 10
+        },
+        {
+          "username": "Adscience12000",
+          "min_faves": 10
+        },
+        {
+          "username": "hd_qu8",
+          "min_faves": 10
+        }
+      ]
+    },
+    "group6": {
+      "name": "逆指標インフルエンサー",
+      "accounts": [
+        {
+          "username": "gihuboy",
+          "min_faves": 50
+        }
+      ],
+      "is_contrarian": true
+    },
+    "group_grok_top": {
+      "name": "Grok 20BD 評価 TOP（is_priority）",
+      "accounts": [
+        {
+          "username": "t_ryoma1985",
+          "min_faves": 30,
+          "grok_score": 60.0,
+          "is_priority": true
+        },
+        {
+          "username": "serikura",
+          "min_faves": 30,
+          "grok_score": 50.0,
+          "is_priority": true
+        }
+      ]
+    },
+    "group_reserve": {
+      "name": "Grok 予備候補",
+      "accounts": [
+        {
+          "username": "kazzn_blog",
+          "min_faves": 30,
+          "grok_score": 45.5,
+          "is_active": false,
+          "is_reserve": true
+        },
+        {
+          "username": "kabuknight",
+          "min_faves": 30,
+          "grok_score": 31.2,
+          "is_active": false,
+          "is_reserve": true
+        },
+        {
+          "username": "m_kkkiii",
+          "min_faves": 30,
+          "grok_score": 20.0,
+          "is_active": false,
+          "is_reserve": true
+        },
+        {
+          "username": "purazumakoi",
+          "min_faves": 30,
+          "grok_score": 20.0,
+          "is_active": false,
+          "is_reserve": true
+        },
+        {
+          "username": "sorave55",
+          "min_faves": 30,
+          "grok_score": 20.0,
+          "is_active": false,
+          "is_reserve": true
+        }
+      ]
+    }
+  },
+  "research_accounts": [
+    "basharo320",
+    "beauty_oe",
+    "biz_zatukora",
+    "chaen159",
+    "duvpddso9i8rvcc",
+    "fxnia_kabu",
+    "gpmlbjrdoj",
+    "guoruihuab8v",
+    "igoldeneggs",
+    "investramza",
+    "kabu1000",
+    "kabu_kabuki",
+    "kabuknight",
+    "kabumoto_kabu",
+    "kazzn_blog",
+    "kuniindex2244",
+    "kuzyofire",
+    "m_kkkiii",
+    "mahiro543",
+    "nano_nano2001",
+    "nft_japanman",
+    "nicosokufx",
+    "nikkeisignal",
+    "pennyhunter_sub",
+    "purazumakoi",
+    "seirogann101",
+    "serikura",
+    "shin_stocker",
+    "sorave55",
+    "sts_stock",
+    "t_ryoma1985",
+    "tkmr_kato",
+    "u___a___53",
+    "yshida02161"
+  ],
+  "source_files": [
+    "collector/config.py",
+    "output/research/signals.jsonl",
+    "output/research/research_scorecard.json"
+  ]
+}

@@ -63,3 +63,6 @@ docker-compose.override.yml
 _tmp_*.py
 scripts/_tmp_*.py
 scripts/_scratch/
+
+# J-Quants APIキャッシュ（再生成可・解約後廃棄義務・コミット禁止）
+data/jquants/
