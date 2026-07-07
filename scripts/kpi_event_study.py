@@ -582,6 +582,13 @@ def write_report_md(
         f"パラメータ: `{json.dumps(params, ensure_ascii=False)}`",
         "",
         "## シグナル内訳",
+    ]
+    if diag.get("regime_filter"):
+        lines.append(
+            f"- レジームフィルタ: {diag['regime_filter']}（フィルタ前 {diag['pre_regime_filter_count']}件"
+            f" → フィルタ後 {diag['raw_signal_count']}件。TOPIX Close vs SMA200の既存レジーム判定を再利用）"
+        )
+    lines += [
         f"- 生シグナル数: {diag['raw_signal_count']}",
         f"- 重複除去（前シグナルのexit以前に発生）: {diag['duplicate_discarded']}",
         f"- エントリー不能（entry_missing）: {diag['entry_missing']}",
@@ -699,6 +706,7 @@ def run_event_study(
     universe_window: int = 21,
     trials_path: Path = DEFAULT_TRIALS_PATH,
     defer_entry: bool = False,
+    regime_filter: Optional[str] = None,
 ) -> dict:
     """KPIシグナルDataFrameを受け取り、検証〜レポート出力〜試行台帳追記までを一括実行する。
 
@@ -710,6 +718,13 @@ def run_event_study(
         defer_entry: True の場合、T+1にAdjOが無い（S高・売買停止等）シグナルを最大
             MAX_ENTRY_DEFER_BDAYS営業日まで繰り延べてエントリーする（第4周・§6手順6実装）。
             False（既定）は従来通りT+1固定・約定不能ならentry_missingでスキップ。
+        regime_filter: "bear"/"bull"/None（既定）。指定時は生シグナルを
+            signal_date時点のレジーム（measure_base_rate.build_regime_series・
+            TOPIX Close vs SMA200の既存判定をそのまま再利用）でこのレジームの日付のみに
+            絞り込んでから、通常のハーネス処理（重複除去・ユニバース判定・月次加重リフト・
+            ブートストラップCI）を行う（カタログ§0確認事項14「TOPIX 200日線レジーム=
+            全KPIのANDゲート」の実装。リフト分母のベースレートも同じ月次加重方式のため、
+            フィルタ後は自動的にbear/bull月のベースレート比になる＝別実装不要）。
 
     Returns:
         n/lift/ci_low/ci_high/ev_stop8/verdict/report_path/returns_path/diag/stats/defer_stats を含む dict。
@@ -719,6 +734,8 @@ def run_event_study(
     missing_cols = {"signal_date", "code"} - set(signals_df.columns)
     if missing_cols:
         raise SystemExit(f"FATAL: signals_df に必須列が不足しています: {missing_cols}")
+    if regime_filter is not None and regime_filter not in ("bear", "bull"):
+        raise SystemExit(f"FATAL: regime_filter は 'bear'/'bull' のみ対応です（指定値: {regime_filter}）")
 
     signals_df = signals_df[["signal_date", "code"]].copy()
     signals_df["signal_date"] = signals_df["signal_date"].astype(str)
@@ -730,12 +747,25 @@ def run_event_study(
     topix_close = measure_base_rate.load_topix_series()
     regime_by_day = measure_base_rate.build_regime_series(topix_close)
 
+    pre_regime_filter_count = int(len(signals_df))
+    if regime_filter is not None:
+        signals_df = signals_df[
+            signals_df["signal_date"].map(regime_by_day).eq(regime_filter)
+        ].reset_index(drop=True)
+        if signals_df.empty:
+            raise SystemExit(
+                f"FATAL: regime_filter={regime_filter} 適用後にシグナルが0件になりました"
+                f"（フィルタ前{pre_regime_filter_count}件）"
+            )
+
     base_rate_by_month = load_base_rate_by_month(base_rate_dir, universe_window)
     universes_by_month = load_universe_by_month(base_rate_dir, universe_window)
 
     returns_df, diag = compute_signal_returns(
         signals_df, bday_index, all_bdays, regime_by_day, universes_by_month, defer_entry=defer_entry
     )
+    diag["regime_filter"] = regime_filter
+    diag["pre_regime_filter_count"] = pre_regime_filter_count
     in_universe_df = (
         returns_df[returns_df["in_universe"]].reset_index(drop=True) if len(returns_df) else returns_df
     )
@@ -767,6 +797,7 @@ def run_event_study(
         "ev": stats["ev_stop8"],
         "verdict": verdict,
         "entry_mode": "defer_max3bd" if defer_entry else "fixed_t1",
+        "regime_filter": regime_filter,
     }
     append_trial(trial_record, trials_path)
 
@@ -800,6 +831,10 @@ def main() -> int:
         "--defer-entry", action="store_true",
         help="T+1にAdjOが無い場合、最大3営業日までエントリーを繰り延べる（第4周・§6手順6実装）",
     )
+    parser.add_argument(
+        "--regime-filter", choices=["bear", "bull"], default=None,
+        help="signal_date時点のTOPIX 200日線レジームでシグナルを絞り込んでから集計する（第8周実装）",
+    )
     args = parser.parse_args()
 
     if not MONTH_RE.match(args.start) or not MONTH_RE.match(args.end):
@@ -825,6 +860,7 @@ def main() -> int:
         universe_window=args.universe_window,
         trials_path=Path(args.trials_path),
         defer_entry=args.defer_entry,
+        regime_filter=args.regime_filter,
     )
     lift_str = f"{result['lift']:.2f}" if result["lift"] is not None else "-"
     ci_str = (

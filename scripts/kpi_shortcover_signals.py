@@ -30,6 +30,11 @@ docs/stock-algo-kpi-catalog.md の §2-B「空売り残高報告（0.5%超）合
       （集計から除外・genuine_deltaに加算しない）。それ以外は「変更/新規」として
       genuine_delta += (新ratio - 旧ratio) を積み上げる。
     - シグナル: (バッチ処理後の合計 >= AGGREGATE_THRESHOLD) AND (genuine_delta < 0)
+    - 上記条件が「成立した状態」に**遷移した公表日のみ**をシグナル確定日とする（状態型・
+      KPI#5 margin_urinaga_trendと同じ遷移日ベースの考え方。カタログ原義が「減少転換」
+      であり継続的な減少の毎日ではなく転換点を指すこと、および緩やかな複数日下落が続く
+      銘柄で開示イベントの度に発火すると同一下落トレンドが数百件の別シグナルに水増しされる
+      ことを確認したため、生成側で遷移検出まで行う。連続する同一状態の2日目以降は間引く）
 
 フォワードリターン計算・ユニバース判定・ブートストラップCI等は scripts/kpi_event_study.py の
 run_event_study() に委譲する（Canonical Module原則・再実装しない）。
@@ -121,6 +126,7 @@ def generate_shortcover_signals(
         "exit_events_total": 0,
         "gate_aggregate_pass": 0,
         "gate_aggregate_and_decrease_pass": 0,
+        "gate_transition_pass": 0,
         "skipped_disc_date_not_business_day": 0,
         "skipped_calendar_end": 0,
     }
@@ -128,6 +134,7 @@ def generate_shortcover_signals(
     rows: list[dict] = []
     for code, grp in df.groupby("Code", sort=False):
         state: dict[str, float] = {}
+        prev_gate = False  # 直前の公表日時点でシグナル条件が成立していたか（遷移検出用）
         for disc_date, batch in grp.groupby("DiscDate", sort=True):
             genuine_delta = 0.0
             has_exit_event = False
@@ -146,16 +153,23 @@ def generate_shortcover_signals(
             after_aggregate = sum(state.values())
             diag["disclosure_events_processed"] += 1
 
+            gate_aggregate = after_aggregate >= aggregate_threshold
+            gate_decrease = genuine_delta < 0
+            gate_now = gate_aggregate and gate_decrease
+            if gate_aggregate:
+                diag["gate_aggregate_pass"] += 1
+            if gate_now:
+                diag["gate_aggregate_and_decrease_pass"] += 1
+
+            is_transition = gate_now and not prev_gate
+            prev_gate = gate_now
+
             if disc_date not in bday_index:
                 diag["skipped_disc_date_not_business_day"] += 1
                 continue
 
-            gate_aggregate = after_aggregate >= aggregate_threshold
-            gate_decrease = genuine_delta < 0
-            if gate_aggregate:
-                diag["gate_aggregate_pass"] += 1
-            if gate_aggregate and gate_decrease:
-                diag["gate_aggregate_and_decrease_pass"] += 1
+            if is_transition:
+                diag["gate_transition_pass"] += 1
                 idx = bday_index[disc_date]
                 if idx + 1 >= len(all_bdays):
                     diag["skipped_calendar_end"] += 1
@@ -239,7 +253,8 @@ def main() -> int:
         f"disclosure_events_processed={diag['disclosure_events_processed']} "
         f"exit_events_total={diag['exit_events_total']} "
         f"gate_aggregate_pass={diag['gate_aggregate_pass']} "
-        f"gate_aggregate_and_decrease_pass={diag['gate_aggregate_and_decrease_pass']}"
+        f"gate_aggregate_and_decrease_pass={diag['gate_aggregate_and_decrease_pass']} "
+        f"gate_transition_pass={diag['gate_transition_pass']}"
     )
     print(f"出力: {signals_path}")
 
