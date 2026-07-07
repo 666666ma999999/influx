@@ -379,6 +379,15 @@ def append_new_signals(
                 "exit_reason": None,
                 "ret_gross": None,
                 "ret_net": None,
+                "ret_stop8": None,  # 第12周: ret_net(既存stop8/20bd満期)のエイリアス。closed確定時にscripts/paper_eval.pyが設定
+                "exit_date_nostop": None,
+                "exit_price_nostop": None,
+                "exit_reason_nostop": None,
+                "ret_nostop": None,  # 第12周並走記録: 損切りなし・20bd満期（カタログ§7-A C3相当）
+                "exit_date_e1": None,
+                "exit_price_e1": None,
+                "exit_reason_e1": None,
+                "ret_e1": None,  # 第12周並走記録: シナリオ崩壊(200日線割れ)exit（カタログ§7-A E1）
                 "mfe": None,
                 "mae": None,
                 "updated_at": jq_fetch.now_jst().isoformat(),
@@ -520,11 +529,12 @@ def main() -> int:
         print("[dry-run] ledger書込み・レポート生成は行いません")
         return 0
 
-    records, fill_diag, open_diag = paper_eval.run_update(records)
+    records, fill_diag, open_diag, parallel_diag = paper_eval.run_update(records)
     paper_eval.write_ledger_atomic(records)
     print(
         f"新規シグナル追加: {len(new_signal_records)}件 / entry確定: {fill_diag['filled']}件 / "
-        f"ポジションクローズ: {open_diag['closed_stop_loss'] + open_diag['closed_time_exit'] + open_diag['closed_delisted']}件"
+        f"ポジションクローズ: {open_diag['closed_stop_loss'] + open_diag['closed_time_exit'] + open_diag['closed_delisted']}件 / "
+        f"並走exit解決(nostop/e1): {parallel_diag['resolved_nostop']}/{parallel_diag['resolved_e1']}件"
     )
 
     scoreboard = paper_eval.compute_scoreboard(records)

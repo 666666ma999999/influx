@@ -51,6 +51,7 @@
       "max_defer_bdays": 3,
       "regime_filter": null,
       "role": "第11周複合検証: volshock_5x x 個別銘柄200日線の上（dev200>0）が最有望複合と判明。volshock_5x無印(主対象)は比較対照としてそのまま併存登録し、200日線下(below200・lift0.99でfail)は非採用",
+      "exit_variants": ["nostop", "stop8", "e1_ma200break"],
       "in_sample": {
         "period": "2016-11〜2022-11",
         "n": 180,
@@ -60,6 +61,13 @@
         "ev_none": 0.0112,
         "ev_stop10": 0.0036,
         "note": "§6判定はNG（ev_stop8=-0.33%<3%閾値・avg_monthly_n=2.47<5）だがEV(なし)+1.12%はvolshock_5x無印のEV(なし)+0.57%を上回るため前向き観察対象に追加"
+      },
+      "exit_design_round12": {
+        "period": "2016-11〜2022-11",
+        "n": 180,
+        "note": "第12周Exit設計ラウンド（scripts/kpi_exit_study.py・output/kpi/exit_study/report.md）で同一エントリーに対しC1/C2/C3/E1-E4の7ルールを比較。EV順位はC3(なし・+1.12%) > E1(シナリオ崩壊・+0.94%) > E4(3段階トレーリング・+0.85%) > C2(-10%) > E3(β調整) > E2(ATR適応) > C1(-8%)。E1は降ろされ損率11.76%(n=34発動中)でC1(24.69%)・C2(22.22%)より大幅に低く、良い離脱を捨てにくい。ret_stop8/ret_e1/ret_nostopをpaper_eval.pyで並走記録し前向きデータで順位を再検証する（exit_variants参照）",
+        "ev_e1": 0.0094,
+        "dropped_loss_rate_e1": 0.1176
       },
       "holdout_observation": null
     },
@@ -127,6 +135,10 @@
     {
       "date": "2026-07-07",
       "change": "追加登録: volshock_x_above200(observation)。第11周でvolshock_5x x 個別銘柄200日線上(dev200>0)が最有望複合と判明(in-sample n=180 lift=2.52[1.38,4.17] EV(なし)+1.12%)。scripts/daily_screen.pyのvolshock判定経路にfilter_ma200パラメータを配線し4KPI体制に拡張。volshock_5x無印は比較対照として引き続き併存"
+    },
+    {
+      "date": "2026-07-07",
+      "change": "volshock_x_above200に第12周Exit設計ラウンド(scripts/kpi_exit_study.py)の結果を追記(exit_design_round12・E1: EV+0.94%・降ろされ損11.8%)。exit_variants:[nostop,stop8,e1_ma200break]を追加し、scripts/paper_eval.pyでret_stop8(既存-8%固定/20bd満期の別名)/ret_e1(シナリオ崩壊exit)/ret_nostop(損切りなし)の3系統を並走記録する配線を実装。既存の正式なexit判定(status/exit_date/exit_price/exit_reason/ret_gross/ret_net)は変更せず、3系統いずれも「正」とせず前向きデータで順位を検証する"
     }
   ]
 }
