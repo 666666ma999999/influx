@@ -72,6 +72,44 @@
       "holdout_observation": null
     },
     {
+      "kpi_name": "volshock_x_above200_quiet",
+      "status": "observation",
+      "registered_date": "2026-07-07",
+      "module": "scripts/kpi_volshock_signals.py",
+      "generator_func": "generate_volshock_signals",
+      "params": {
+        "vol_multiplier": 5.0,
+        "day_ret_min": 0.02,
+        "day_ret_max": 0.08,
+        "filter_ma200": "above",
+        "ma200_window": 200,
+        "quiet_min": 1.2
+      },
+      "defer_entry": true,
+      "max_defer_bdays": 3,
+      "regime_filter": null,
+      "role": "第13周A複合検証: volshock_x_above200 x §7-B v2-2出来高「静→動」(quiet_ratio=mean(Va[D-10..D-1])/mean(Va[D-30..D-11])>=1.2)。volshock_x_above200は比較対照としてそのまま併存登録",
+      "exit_variants": ["nostop", "stop8", "e1_ma200break"],
+      "in_sample": {
+        "period": "2016-11〜2022-11",
+        "n": 73,
+        "lift": 4.16,
+        "ci95": [1.91, 7.10],
+        "ev_none": 0.0348,
+        "ev_e1": 0.0284,
+        "avg_monthly_signals": 1.0,
+        "note": "第13周A(scripts/kpi_volshock_v2_amplifiers.py・output/kpi/volshock_v2_amplifiers/report.md)。volshock_x_above200(n=180)のquiet_ratio>=1.2分割セル。EV(なし)+3.48%はvolshock_x_above200のEV(なし)+1.12%を大幅に上回るが、n=73・月約1件は§6のMIN_N=100/MIN_AVG_MONTHLY_SIGNALS=5に対し検出力不足で正式合否判定の対象外（pendingのまま前向き観察に回す）"
+      },
+      "exit_design_round13a": {
+        "period": "2016-11〜2022-11",
+        "n": 73,
+        "note": "第12周Exit設計(scripts/kpi_exit_study.py)で計算済みのE1(シナリオ崩壊)を第13周Aフォローアップ(scripts/kpi_volshock_v2_followup.py・output/kpi/volshock_v2_amplifiers/followup_report.md)でquiet_ratio>=1.2分割セルに再適用。EV(なし)+3.48% > EV(E1)+2.84%",
+        "ev_e1": 0.0284
+      },
+      "caution": "35試行後の分割セル(quiet_ratio>=1.2)につきwinner's curse警戒。事前登録上のin-sample合否対象外(検出力不足によりpending)であり、前向き成績(holdout_observation)が最終判定",
+      "holdout_observation": null
+    },
+    {
       "kpi_name": "shortcover_x_bear",
       "status": "observation",
       "registered_date": "2026-07-07",
@@ -139,6 +177,10 @@
     {
       "date": "2026-07-07",
       "change": "volshock_x_above200に第12周Exit設計ラウンド(scripts/kpi_exit_study.py)の結果を追記(exit_design_round12・E1: EV+0.94%・降ろされ損11.8%)。exit_variants:[nostop,stop8,e1_ma200break]を追加し、scripts/paper_eval.pyでret_stop8(既存-8%固定/20bd満期の別名)/ret_e1(シナリオ崩壊exit)/ret_nostop(損切りなし)の3系統を並走記録する配線を実装。既存の正式なexit判定(status/exit_date/exit_price/exit_reason/ret_gross/ret_net)は変更せず、3系統いずれも「正」とせず前向きデータで順位を検証する"
+    },
+    {
+      "date": "2026-07-07",
+      "change": "追加登録: volshock_x_above200_quiet(observation)。第13周A(scripts/kpi_volshock_v2_amplifiers.py・カタログ§7-B v2-2)でvolshock_x_above200(n=180) x quiet_ratio>=1.2(出来高「静→動」)の分割セルが最有望と判明(in-sample n=73 lift=4.16[1.91,7.10] EV(なし)+3.48% EV(E1)+2.84%)。scripts/daily_screen.pyのvolshock判定経路にquiet_min判定(kpi_volshock_v2_amplifiers.compute_quiet_ratio再利用)を配線し5KPI体制に拡張。n=73・月約1件は§6検出力基準未達のため事前登録合否はpending・35試行後の分割セルによるwinner's curse警戒を明記し前向き観察で最終判定する。volshock_x_above200は比較対照として引き続き併存"
     }
   ]
 }

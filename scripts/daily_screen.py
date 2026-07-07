@@ -13,6 +13,10 @@ config/paper_watchlist.json の観察対象KPI（volshock_5x/shortcover_x_bear/p
     - shortcover_x_bear -> kpi_shortcover_signals.generate_shortcover_signals()
                            + measure_base_rate.build_regime_series() でbear日のみ抽出
     - pead_gap8_vol3    -> kpi_pead_signals.generate_pead_signals()
+volshock系（volshock_5x/volshock_x_above200/volshock_x_above200_quiet）は params に
+"quiet_min" があれば、候補（当日は数件程度なので軽量）に第13周のquiet_ratio
+（kpi_volshock_v2_amplifiers.compute_quiet_ratio・§7-B v2-2）を計算し閾値でさらに絞り込む
+（汎用実装: kpi_nameをハードコード分岐せず、paramsにquiet_minがあるvolshock系エントリ全てに適用）。
 シグナルは §0確定の対象ユニバース（月次売買代金TOP500・window=21・measure_base_rate.build_universe
 を再利用）に属するものだけをledgerに記録する（in-sample/holdoutの検証スコープと整合させるため。
 TOP500外は観察対象から除外し件数のみ報告する）。
@@ -53,6 +57,7 @@ import jq_fetch  # noqa: E402  (Canonical Module: DATA_ROOT / read_json_gz / now
 import kpi_pead_signals  # noqa: E402  (Canonical Module: generate_pead_signals を再利用)
 import kpi_shortcover_signals  # noqa: E402  (Canonical Module: generate_shortcover_signals を再利用)
 import kpi_volshock_signals  # noqa: E402  (Canonical Module: generate_volshock_signals を再利用)
+import kpi_volshock_v2_amplifiers  # noqa: E402  (Canonical Module: compute_quiet_ratio を再利用・第13周A)
 import measure_base_rate  # noqa: E402  (Canonical Module: カレンダー・regime・universe構築を再利用)
 import paper_eval  # noqa: E402  (Canonical Module: ledger I/O・状態更新・scoreboard集計を再利用)
 
@@ -296,7 +301,7 @@ def generate_kpi_signals(
     kpi_name = entry["kpi_name"]
     params = entry["params"]
 
-    if kpi_name in ("volshock_5x", "volshock_x_above200"):
+    if kpi_name in ("volshock_5x", "volshock_x_above200", "volshock_x_above200_quiet"):
         # 第11周: volshock_x_above200 は kpi_volshock_signals.py 実装済みの filter_ma200
         # (dev200符号フィルタ) をそのまま再利用する (Canonical Module原則・判定ロジックの
         # 再実装はしない)。日次判定でも generate_volshock_signals 内部の SMA200 は
@@ -308,6 +313,21 @@ def generate_kpi_signals(
             day_ret_max=params["day_ret_max"],
             filter_ma200=params.get("filter_ma200"),
         )
+        if df.empty:
+            return df[["signal_date", "code"]]
+        quiet_min = params.get("quiet_min")
+        if quiet_min is not None:
+            # 第13周A v2-2: quiet_ratio（kpi_volshock_v2_amplifiers.compute_quiet_ratio）
+            # で閾値以上の「静→動」候補のみ残す。kpi_name分岐に依らずparamsにquiet_minが
+            # あれば適用する汎用実装（当日候補は数件程度なので銘柄毎の計算コストは軽量）。
+            df = df[df.apply(
+                lambda row: (
+                    (q := kpi_volshock_v2_amplifiers.compute_quiet_ratio(
+                        row["code"], row["signal_date"], bday_index, all_bdays,
+                    )) is not None and q >= quiet_min
+                ),
+                axis=1,
+            )]
         return df[["signal_date", "code"]] if not df.empty else df
 
     if kpi_name == "shortcover_x_bear":
