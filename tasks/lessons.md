@@ -169,3 +169,9 @@
 - 原因: macOS のプライバシー保護(TCC)。launchd 起動プロセスはデスクトップ等の保護フォルダへのアクセス権を継承しない。手動実行(ターミナル経由)では Terminal の権限で通るため気づきにくい
 - 解決: ProgramArguments を `/bin/bash -c 'exec /usr/bin/python3 <script>'` のラッパー方式に変更（この Mac では bash に既にフルディスクアクセス相当の許可があり、autopost/make-article の既存 LaunchAgents が同方式で exit 0 稼働中という実績を確認してから踏襲）
 - 教訓: (1) Desktop/Documents 配下を触る launchd ジョブは最初から bash ラッパーで書く (2) 新規 LaunchAgent は登録後に `launchctl kickstart gui/$UID/<label>` で即時テストし、定時を待たずに exit code とログを確認する (3) FDA の GUI 付与はファイル選択でグレーアウトすることがあり、既存の動いている方式の踏襲が速い
+
+## 2026-07-07: バックグラウンド実行の `| tail` パイプが exit code をマスクし「失敗が completed と誤通知」される（同日2回発生）
+- 症状1: `cmd 2>&1 | tail -N` のバックグラウンド実行で、cmd が引数エラー/OOM で死んでもパイプ全体の exit code は tail の 0 になり、タスク通知が completed になる（volshock holdout 観測の --defer-entry 引数エラー、第15周 T2 の未完了がこれで見逃されかけた）
+- 症状2: Docker 3 並列で各コンテナ約2.84GB × 3 > Docker Desktop 割当7.65GB → exit 137(OOMキル)。並列度はメモリ割当から逆算が必要
+- 対処: (1) 長時間ジョブは `> log 2>&1` の直接リダイレクトにして exit code を保存 (2) 完了判定は通知でなく**成果物の実在**（report.md/台帳行）で行う (3) 重い Docker ジョブは逐次 or 2並列まで（docker stats で実測してから決める）
+- 検知: 「completed 通知なのに台帳/レポートが無い」は本パターンをまず疑う

@@ -71,6 +71,18 @@ UNIVERSE_TOP_N = 500  # カタログ§0「月次売買代金TOP500」
 
 PEAD_LOOKBACK_BDAYS = 2  # 反応日Gが対象日に来る開示は前営業日にも起こりうるための走査開始オフセット
 
+VOLSHOCK_FAMILY_KPI_NAMES = ("volshock_5x", "volshock_x_above200", "volshock_x_above200_quiet")
+
+# 次点候補（team-lead 2026-07-07指示・「新規シグナルなしの日が続き市場で何が起きているか見えない」
+# への対応）: 判定基準（config/paper_watchlist.jsonのparams）そのものは一切変更せず、
+# 「惜しかった」候補を参考表示するためだけの近傍バンド下限。上限は各entryの実際の閾値
+# （vol_multiplier=5.0・dev200>0・quiet_min）をそのまま使う。表示専用でledger/state/scoreboardには
+# 一切影響しない。
+NEAR_MISS_VOL_MULTIPLIER_FLOOR = 4.0  # 出来高4.0〜5.0倍（5倍未達）
+NEAR_MISS_DEV200_FLOOR = -0.02  # dev200が-2%〜0%（200日線のわずか下）
+NEAR_MISS_QUIET_FLOOR = 1.0  # quiet_ratio 1.0〜1.2（未達）
+MAX_NEXT_CANDIDATES_ROWS = 10  # 次点候補セクション全体（カテゴリ1+2合計）の表示上限行数
+
 
 # --- watchlist設定読み込み -----------------------------------------------------------
 
@@ -254,6 +266,12 @@ class UniverseCache:
 
     measure_base_rate.build_universe() をそのまま再利用する（Canonical Module）。判定規約は
     kpi_event_study._universe_membership と同じ「signal_monthより厳密に前の直近月末」。
+
+    rank_for() は次点候補「ユニバース外の完全通過者」表示（2026-07-07team-lead指示）専用の
+    追加機能。同じbuild_universe()をtop_n=n_intersect（=その月の全候補数）で再度呼び出すだけで
+    全銘柄ランキングを取得する（judgment ロジック自体は一切変更しない・top_n引数を実際の候補数
+    ぴったりに指定するのでbuild_universe内蔵のWARN「ユニバースが{top_n}件未満」も誘発しない）。
+    universe_for_month()の在籍判定（TOP500・in_universe()の戻り値）には一切影響しない別キャッシュ。
     """
 
     def __init__(self, calendar_days: list[tuple[str, str]], bday_index: dict[str, int], all_bdays: list[str]):
@@ -261,18 +279,23 @@ class UniverseCache:
         self._bday_index = bday_index
         self._all_bdays = all_bdays
         self._cache: dict[str, Optional[set]] = {}
+        self._stats_cache: dict[str, dict] = {}
+        self._full_rank_cache: dict[str, Optional[dict[str, int]]] = {}
+
+    def _t_date_for_month(self, month: str) -> Optional[str]:
+        month_ends = measure_base_rate.month_ends_in_range(self._calendar_days, "2016-08", month)
+        prior_ends = [d for d in month_ends if d[:6] < month.replace("-", "")]
+        return prior_ends[-1] if prior_ends else None
 
     def universe_for_month(self, month: str) -> Optional[set]:
         if month in self._cache:
             return self._cache[month]
-        month_ends = measure_base_rate.month_ends_in_range(self._calendar_days, "2016-08", month)
-        prior_ends = [d for d in month_ends if d[:6] < month.replace("-", "")]
-        if not prior_ends:
+        t_date = self._t_date_for_month(month)
+        if t_date is None:
             self._cache[month] = None
             return None
-        t_date = prior_ends[-1]
         try:
-            selected, _stats = measure_base_rate.build_universe(
+            selected, stats = measure_base_rate.build_universe(
                 t_date, self._bday_index, self._all_bdays, UNIVERSE_WINDOW, UNIVERSE_TOP_N
             )
         except SystemExit as e:
@@ -281,6 +304,7 @@ class UniverseCache:
             return None
         codes = {code for code, _ in selected}
         self._cache[month] = codes
+        self._stats_cache[month] = stats
         return codes
 
     def in_universe(self, code: str, signal_date: str) -> bool:
@@ -289,6 +313,29 @@ class UniverseCache:
         if universe is None:
             return False
         return code in universe
+
+    def rank_for(self, code: str, signal_date: str) -> Optional[int]:
+        """全銘柄中の月間売買代金順位（1始まり）。次点候補「ユニバース外の完全通過者」表示専用
+        （§0確定のTOP500在籍判定・in_universe()には一切影響しない表示専用の追加計算）。
+        """
+        month = f"{signal_date[:4]}-{signal_date[4:6]}"
+        if month not in self._cache:
+            self.universe_for_month(month)
+        if self._cache.get(month) is None:
+            return None
+        if month not in self._full_rank_cache:
+            t_date = self._t_date_for_month(month)
+            n_intersect = self._stats_cache[month]["n_intersect"]
+            try:
+                selected_full, _stats = measure_base_rate.build_universe(
+                    t_date, self._bday_index, self._all_bdays, UNIVERSE_WINDOW, n_intersect
+                )
+            except SystemExit:
+                self._full_rank_cache[month] = None
+                return None
+            self._full_rank_cache[month] = {c: i for i, (c, _tv) in enumerate(selected_full, start=1)}
+        ranks = self._full_rank_cache[month]
+        return ranks.get(code) if ranks else None
 
 
 # --- KPI別シグナル生成ディスパッチ ------------------------------------------------------------
@@ -301,7 +348,7 @@ def generate_kpi_signals(
     kpi_name = entry["kpi_name"]
     params = entry["params"]
 
-    if kpi_name in ("volshock_5x", "volshock_x_above200", "volshock_x_above200_quiet"):
+    if kpi_name in VOLSHOCK_FAMILY_KPI_NAMES:
         # 第11周: volshock_x_above200 は kpi_volshock_signals.py 実装済みの filter_ma200
         # (dev200符号フィルタ) をそのまま再利用する (Canonical Module原則・判定ロジックの
         # 再実装はしない)。日次判定でも generate_volshock_signals 内部の SMA200 は
@@ -360,6 +407,144 @@ def generate_kpi_signals(
         return filtered[["signal_date", "code"]].reset_index(drop=True)
 
     raise SystemExit(f"FATAL: 未知のkpi_name={kpi_name}（config/paper_watchlist.json確認）")
+
+
+# --- 次点候補「1条件だけ惜しい銘柄」検出（volshock系限定・判定基準は変更しない） -------------------
+
+
+def find_volshock_near_misses(
+    entry: dict, start_bd: str, end_bd: str, bday_index: dict[str, int], all_bdays: list[str],
+    universe_cache: UniverseCache,
+) -> list[dict]:
+    """volshock系KPIの「1条件だけ惜しい」次点候補（カテゴリ2・TOP500内限定）を検出する。
+
+    generate_volshock_signals()自体・compute_quiet_ratio()自体は一切変更しない（判定基準は不変）。
+    vol_multiplierを近傍下限(NEAR_MISS_VOL_MULTIPLIER_FLOOR=4.0倍)まで緩め、filter_ma200=None
+    （符号を問わずdev200を取得するため）で呼び出すことで「実際の合格条件の厳密なスーパーセット」を
+    取得する（これは既存関数が公開済みの引数を正規に使うだけであり、シグナル判定ロジックの
+    再実装ではない）。そのスーパーセットの中から、対象3条件（出来高倍率・dev200・quiet_ratio。
+    entryのparamsに存在するものだけが判定対象＝volshock_5xはdev200/quiet_ratio判定なし）のうち
+    ちょうど1つだけが近傍未達バンドに入り、残り全てが実際の閾値をそのまま満たす行だけを
+    daily_screen.py側で独立に分類する（＝完全合格でも2条件以上の未達でもない候補のみ）。
+    """
+    params = entry["params"]
+    has_ma200 = params.get("filter_ma200") == "above"
+    has_quiet = params.get("quiet_min") is not None
+
+    df, _diag = kpi_volshock_signals.generate_volshock_signals(
+        start_bd, end_bd,
+        vol_multiplier=NEAR_MISS_VOL_MULTIPLIER_FLOOR,
+        day_ret_min=params["day_ret_min"],
+        day_ret_max=params["day_ret_max"],
+        filter_ma200=None,
+    )
+    if df.empty:
+        return []
+
+    real_vol_multiplier = params["vol_multiplier"]
+    quiet_min = params.get("quiet_min")
+    results: list[dict] = []
+
+    for row in df.itertuples(index=False):
+        if not universe_cache.in_universe(row.code, row.signal_date):
+            continue  # カテゴリ2はTOP500内限定（team-lead仕様）
+
+        va_ratio = row.va / row.va_avg20
+        vol_class = (
+            "ok" if va_ratio >= real_vol_multiplier
+            else "near" if NEAR_MISS_VOL_MULTIPLIER_FLOOR <= va_ratio < real_vol_multiplier
+            else "fail"
+        )
+
+        if has_ma200:
+            if pd.isna(row.dev200):
+                continue  # 200日履歴不足で判定不能（既存シグナル生成のinsufficient_ma200_historyと同じ扱い）
+            dev200 = float(row.dev200)
+            ma200_class = (
+                "ok" if dev200 > 0
+                else "near" if NEAR_MISS_DEV200_FLOOR <= dev200 < 0
+                else "fail"
+            )
+        else:
+            ma200_class = "ok"
+
+        if has_quiet:
+            quiet_ratio = kpi_volshock_v2_amplifiers.compute_quiet_ratio(
+                row.code, row.signal_date, bday_index, all_bdays,
+            )
+            if quiet_ratio is None:
+                continue
+            quiet_class = (
+                "ok" if quiet_ratio >= quiet_min
+                else "near" if NEAR_MISS_QUIET_FLOOR <= quiet_ratio < quiet_min
+                else "fail"
+            )
+        else:
+            quiet_class = "ok"
+
+        classes = [vol_class, ma200_class, quiet_class]
+        if classes.count("near") != 1 or "fail" in classes:
+            continue  # 「ちょうど1条件だけ惜しい」以外（完全合格・2条件以上未達）は対象外
+
+        if vol_class == "near":
+            reason = f"出来高{va_ratio:.2f}倍(5倍未達)"
+        elif ma200_class == "near":
+            reason = f"dev200={dev200:+.2%}(200日線のわずか下)"
+        else:
+            reason = f"quiet_ratio={quiet_ratio:.2f}(1.2未達)"
+
+        results.append(
+            {
+                "kpi_name": entry["kpi_name"],
+                "code": row.code,
+                "signal_date": row.signal_date,
+                "reason": reason,
+            }
+        )
+    return results
+
+
+# --- 次点候補セクションのMarkdown整形（カテゴリ1+2） -----------------------------------------
+
+
+def format_next_candidates_section(out_of_universe: list[dict], near_miss: list[dict]) -> list[str]:
+    """次点候補（判定基準は満たしていないが参考表示する惜しい銘柄）セクションのMarkdown行を生成する。
+
+    表示専用（ledger/state/累計成績には一切影響しない・呼び出し元は本関数の戻り値を
+    write_today_report()に渡す、または--dry-run時はそのままprintするだけ）。
+    合計最大MAX_NEXT_CANDIDATES_ROWS行に収め、カテゴリ1（ユニバース外の完全通過者）を優先表示する。
+    """
+    lines = ["## 次点候補（判定基準は満たしていません・参考表示のみ）", "", "### ユニバース外の完全通過者", ""]
+
+    remaining = MAX_NEXT_CANDIDATES_ROWS
+    if out_of_universe:
+        shown = sorted(out_of_universe, key=lambda r: (r["signal_date"], r["kpi_name"], r["code"]))[:remaining]
+        lines.append("| KPI | 銘柄コード | signal_date | 月間売買代金ランク |")
+        lines.append("|---|---|---|---|")
+        for r in shown:
+            rank_str = str(r["rank"]) if r["rank"] is not None else "-"
+            lines.append(f"| {r['kpi_name']} | {r['code']} | {r['signal_date']} | {rank_str} |")
+        if len(out_of_universe) > len(shown):
+            lines.append(f"（他 {len(out_of_universe) - len(shown)} 件省略）")
+        remaining -= len(shown)
+    else:
+        lines.append("（該当候補なし）")
+
+    lines += ["", "### 1条件だけ惜しい銘柄（TOP500内限定）", ""]
+    if not near_miss:
+        lines.append("（該当候補なし）")
+    elif remaining <= 0:
+        lines.append(f"（{len(near_miss)}件該当・上記カテゴリで表示上限に達したため省略）")
+    else:
+        shown2 = sorted(near_miss, key=lambda r: (r["signal_date"], r["kpi_name"], r["code"]))[:remaining]
+        lines.append("| KPI | 銘柄コード | signal_date | 惜しい条件 |")
+        lines.append("|---|---|---|---|")
+        for r in shown2:
+            lines.append(f"| {r['kpi_name']} | {r['code']} | {r['signal_date']} | {r['reason']} |")
+        if len(near_miss) > len(shown2):
+            lines.append(f"（他 {len(near_miss) - len(shown2)} 件省略）")
+
+    return lines
 
 
 # --- ledgerへの新規シグナル追記 --------------------------------------------------------------
@@ -424,6 +609,7 @@ def append_new_signals(
 def write_today_report(
     new_signal_records: list[dict], records: list[dict], scoreboard: dict[str, dict],
     scan_start: Optional[str], scan_end: Optional[str], out_of_universe_counts: dict[str, int],
+    next_candidates_lines: list[str],
 ) -> None:
     lines = [
         "# ペーパートレード 当日スクリーニングレポート（scripts/daily_screen.py 自動生成）",
@@ -447,6 +633,8 @@ def write_today_report(
             "TOP500ユニバース外のため除外した候補件数: "
             + " / ".join(f"{k}={v}" for k, v in sorted(out_of_universe_counts.items()))
         )
+
+    lines += ["", *next_candidates_lines]
 
     lines += ["", "## 保有中ポジション（pending_entry / open）", ""]
     active = [r for r in records if r["status"] in ("pending_entry", "open")]
@@ -524,6 +712,8 @@ def main() -> int:
     records = paper_eval.read_ledger()
     new_signal_records: list[dict] = []
     out_of_universe_counts: dict[str, int] = {}
+    next_candidates_out_of_universe: list[dict] = []  # 次点候補カテゴリ1（表示専用・ledger非経由）
+    next_candidates_near_miss: list[dict] = []  # 次点候補カテゴリ2（表示専用・ledger非経由）
 
     for entry in watchlist:
         signals_df = generate_kpi_signals(entry, start_bd, end_bd, regime_by_day, bday_index, all_bdays)
@@ -532,11 +722,26 @@ def main() -> int:
             in_univ_mask = signals_df.apply(
                 lambda r: universe_cache.in_universe(r["code"], r["signal_date"]), axis=1
             )
-            out_count = int((~in_univ_mask).sum())
+            out_of_universe_rows = signals_df[~in_univ_mask]
+            out_count = len(out_of_universe_rows)
             if out_count:
                 out_of_universe_counts[entry["kpi_name"]] = out_count
+                for row in out_of_universe_rows.itertuples(index=False):
+                    next_candidates_out_of_universe.append(
+                        {
+                            "kpi_name": entry["kpi_name"],
+                            "code": row.code,
+                            "signal_date": row.signal_date,
+                            "rank": universe_cache.rank_for(row.code, row.signal_date),
+                        }
+                    )
             signals_df = signals_df[in_univ_mask].reset_index(drop=True)
         print(f"[{entry['kpi_name']}] 候補{n_raw}件 -> TOP500内{len(signals_df)}件")
+
+        if entry["kpi_name"] in VOLSHOCK_FAMILY_KPI_NAMES:
+            next_candidates_near_miss.extend(
+                find_volshock_near_misses(entry, start_bd, end_bd, bday_index, all_bdays, universe_cache)
+            )
 
         if args.dry_run:
             continue
@@ -545,7 +750,10 @@ def main() -> int:
         added = append_new_signals(records, entry, signals_df, bday_index, all_bdays, run_id)
         new_signal_records.extend(records[before : before + added])
 
+    next_candidates_lines = format_next_candidates_section(next_candidates_out_of_universe, next_candidates_near_miss)
+
     if args.dry_run:
+        print("\n".join(next_candidates_lines))
         print("[dry-run] ledger書込み・レポート生成は行いません")
         return 0
 
@@ -559,7 +767,7 @@ def main() -> int:
 
     scoreboard = paper_eval.compute_scoreboard(records)
     paper_eval.write_scoreboard_md(scoreboard, paper_eval.SCOREBOARD_PATH)
-    write_today_report(new_signal_records, records, scoreboard, start_bd, end_bd, out_of_universe_counts)
+    write_today_report(new_signal_records, records, scoreboard, start_bd, end_bd, out_of_universe_counts, next_candidates_lines)
     print(f"レポート出力: {TODAY_REPORT_PATH}")
 
     save_state({"last_screened_date": end_bd, "last_run_at": jq_fetch.now_jst().isoformat(), "last_run_id": run_id})
