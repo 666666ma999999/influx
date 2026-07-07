@@ -8,26 +8,41 @@ docs/stock-algo-kpi-catalog.md の §2-E「アクティビスト大量保有出�
 
 依存はすべて標準ライブラリ。pip install は一切不要。
 
-認証（2026-07-07 実疎通確認済み）:
+認証（2026-07-07 実疎通確認済み・実キーで動作確認済み）:
     EDINET API v2 は無効/未指定キーでも **HTTP 200** を返し、実際のエラーは JSON body 内の
     "StatusCode" フィールドに埋め込まれる（例: `{"StatusCode": 401, "message": "Access denied
     due to invalid subscription key..."}`）。したがって jq_fetch.py のような HTTP ステータス
     ベースの分岐だけでは検出できず、本モジュールは JSON body も必ず検査する。
-    キーはクエリパラメータ `Subscription-Key` で送る想定（EDINET API仕様書のサンプルに準拠。
-    ヘッダー方式〔Ocp-Apim-Subscription-Key〕である可能性も残るため、実キー入手後に
-    最初の1回で両方を試し疎通確認すること。誤りだった場合は `_inject_api_key()` の1箇所を
-    直すだけで良いよう設計してある）。
+    キーは **クエリパラメータ `Subscription-Key` で正解**（実キーでの疎通確認済み・
+    2026-07-07。ヘッダー方式は試していない）。
+
+**重要な制約（2026-07-07 実データで発見・確定）**: `/documents.json` は**「本日から遡って
+約5年」のローリングウィンドウ**でしか大量保有報告書系(ordinanceCode=060)のメタデータを
+返さない。5年より古い日付は該当日の総件数(count)は正しく返るが、個々のレコードの
+filerName/docTypeCode/docDescription等が全てnullになる（境界を日単位で特定済み:
+2021-07-06は0件・2021-07-07から通常どおり取得可能=本日2026-07-07からきっかり5年前）。
+書類本体(`/documents/{docID}`)も同様に404で取得不能（縦覧期間経過による削除と推定）。
+したがって `data/edinet/` は実質 **2021-07-07以降のみ有効なデータ**となる（それ以前は
+0件の空ファイルとして保存され、これは正常な結果である）。
+
+**docTypeCode 350/360 の分類は実データで訂正**: 当初想定（350=新規/360=変更）は誤りで、
+実際は **docTypeCode=350 が「大量保有報告書」(新規)と「変更報告書」の両方を含み、
+docTypeCode=360は「訂正報告書」（既存の大量保有報告書・変更報告書の訂正のみ）**。
+新規/変更/訂正の判別は `docTypeCode` ではなく `docDescription` のテキスト内容で行う
+必要がある（scripts/kpi_activist_signals.py の分類ロジック参照）。
 
 Usage:
     python3 scripts/edinet_fetch.py                                    # 既定期間を全取得
-    python3 scripts/edinet_fetch.py --start 20160801 --end 20221231
+    python3 scripts/edinet_fetch.py --start 20210707 --end 20260707     # 実際に取得可能な範囲
     python3 scripts/edinet_fetch.py --status                           # 期待件数 vs 取得済み件数
     python3 scripts/edinet_fetch.py --probe                            # 疎通確認のみ（1日分・保存しない）
+    python3 scripts/edinet_fetch.py --fetch-code-master                # EDINETコード→証券コード マスタ取得
 """
 from __future__ import annotations
 
 import argparse
 import datetime
+import io
 import json
 import re
 import sys
@@ -35,6 +50,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+import zipfile
 import uuid
 from pathlib import Path
 from typing import Optional
@@ -56,16 +72,29 @@ HTTP_429_MAX_RETRIES = 5
 SERVER_ERROR_WAIT_SECONDS = 20
 SERVER_ERROR_MAX_RETRIES = 3
 
-DEFAULT_START = "20160801"  # in-sample(2016-11〜)のルックバックを含む
-DEFAULT_END = "20221231"
+# 2026-07-07 実データで確定: documents.json は本日から遡って約5年しかメタデータを返さない
+# （5年より古い日付は該当日の総件数は返るが個々のレコードが全てnullになる。境界を日単位で
+# 特定済み: 2021-07-06は0件・2021-07-07から取得可能）。DEFAULT_START はこの実測境界に合わせる。
+DEFAULT_START = "20210707"
+DEFAULT_END = "20260707"
 
 PROGRESS_EVERY = 50
 
-# カタログ§2-E #11「大量保有報告書・変更報告書」対象の docTypeCode。
-# 実データ未確認（APIキー未入手のため）。EDINET書類一覧の公開コード体系（350=大量保有報告書・
-# 360=変更報告書）に基づく想定値。実キー入手後、初回取得分の docTypeCode 分布を必ず目視確認し、
-# 想定と異なればここを修正すること。
+# カタログ§2-E #11「大量保有報告書・変更報告書」対象の docTypeCode（実データで確認済み・
+# 2026-07-07）。ordinanceCode=060(大量保有府令)の全レコードはこの2値のいずれかに収まる
+# ことを実データで確認済み。ただし **350=新規/360=変更 という当初想定は誤り**:
+# 実際は docTypeCode=350 が「大量保有報告書」(新規)と「変更報告書」の両方を含み、
+# docTypeCode=360 は「訂正報告書」（既存の大量保有報告書・変更報告書に対する訂正のみ）。
+# 新規/変更/訂正の判別は scripts/kpi_activist_signals.py 側で docDescription のテキストを
+# 見て行う（本モジュールは350/360をまとめて素通しするだけで良い）。
 TARGET_DOC_TYPE_CODES = {"350", "360"}
+
+# EDINETコード -> 証券コード 変換用の公式マスタ（EDINET提出者一覧、無料・APIキー不要の静的ファイル）。
+# 大量保有報告書のリストAPIは secCode が null のことが多く（提出者=株主自身は非上場が通常のため）、
+# 対象会社は issuerEdinetCode で示される。これを証券コードへ変換するために必要
+# （2026-07-07 実疎通確認済み・APIキー不要）。
+EDINET_CODE_MASTER_URL = "https://disclosure2dl.edinet-fsa.go.jp/searchdocument/codelist/Edinetcode.zip"
+EDINET_CODE_MASTER_PATH = DATA_ROOT / "edinet_code_master.csv"
 
 ZSHRC_KEY_RE = re.compile(r'^export EDINET_API_KEY="(.*)"\s*$', re.MULTILINE)
 
@@ -281,8 +310,12 @@ def fetch_document_body(doc_id: str, body_type: str, api_key: Optional[str]) -> 
             raise AuthError(f"HTTP {e.code}: {err_body.decode('utf-8', errors='replace')}") from None
         raise RuntimeError(f"HTTP {e.code}: {err_body.decode('utf-8', errors='replace')}")
 
-    # EDINET特有の「HTTP200+body内StatusCodeでエラー」形にも対応（ZIP/PDFはJSONではないため
-    # 通常は該当しないが、認証エラー時はJSONエラーメッセージが返ってくることがあるため検査する）。
+    # EDINET特有の「HTTP200+JSON body内でエラーを表現する」形に対応（ZIP/PDFはJSONではないため
+    # 通常は該当しないが、エラー時はJSONメッセージが返ってくることがあるため検査する）。
+    # 2026-07-07 実疎通で判明: 認証エラーは {"StatusCode":401,...}（トップレベル）だが、
+    # 縦覧期間経過等で書類が既に存在しない場合は {"metadata":{"status":"404","message":"Not Found"}}
+    # （documents.json と同じ metadata.status 形）で返る。両形式とも検査しないと、
+    # このエラーJSONをそのまま「本体ファイル」として保存してしまう（実際にこのバグを1件確認・修正）。
     if body[:1] in (b"{", b"["):
         try:
             parsed = json.loads(body)
@@ -292,6 +325,12 @@ def fetch_document_body(doc_id: str, body_type: str, api_key: Optional[str]) -> 
                 if status in (401, 403):
                     raise AuthError(f"EDINET StatusCode {status}: {msg}")
                 raise RuntimeError(f"EDINET StatusCode {status}: {msg}")
+            metadata = parsed.get("metadata") if isinstance(parsed, dict) else None
+            if metadata is not None and str(metadata.get("status", "200")) != "200":
+                raise RuntimeError(
+                    f"EDINET metadata.status={metadata.get('status')}: {metadata.get('message', '')}"
+                    f"（縦覧期間経過等で書類本体が既に取得不能な可能性）"
+                )
         except json.JSONDecodeError:
             pass  # ZIP/PDFの生バイト列がたまたま '{'/'[' で始まっただけ（通常はJSONではない）
 
@@ -302,6 +341,45 @@ def fetch_document_body(doc_id: str, body_type: str, api_key: Optional[str]) -> 
     tmp_path.write_bytes(body)
     tmp_path.replace(out_path)
     return out_path
+
+
+def fetch_edinet_code_master(force: bool = False) -> Path:
+    """EDINETコード→証券コード変換用の公式マスタ(EdinetcodeDlInfo.csv)をダウンロードする。
+
+    APIキー不要の静的ZIP配布（2026-07-07 実疎通確認済み）。ZIP内のCSVはShift_JISのため
+    UTF-8に再エンコードして保存する（先頭のダウンロード実行日行はそのまま維持）。
+
+    大量保有報告書のリストAPIは secCode が null のことが多く（提出者=株主自身は非上場が
+    通常のため）、対象会社は issuerEdinetCode で示される。本マスタでEDINETコード->証券コード
+    へ変換する（scripts/kpi_activist_signals.py の load_edinet_code_master() が読み込む）。
+
+    Args:
+        force: True の場合、既存ファイルがあっても再ダウンロードする（マスタは日次更新のため）。
+
+    Returns:
+        保存先パス（data/edinet/edinet_code_master.csv）。
+    """
+    if EDINET_CODE_MASTER_PATH.exists() and not force:
+        return EDINET_CODE_MASTER_PATH
+
+    req = urllib.request.Request(EDINET_CODE_MASTER_URL)
+    with urllib.request.urlopen(req, timeout=TIMEOUT_SECONDS) as resp:
+        zip_bytes = resp.read()
+
+    with zipfile.ZipFile(io.BytesIO(zip_bytes)) as zf:
+        names = [n for n in zf.namelist() if n.lower().endswith(".csv")]
+        if not names:
+            raise RuntimeError(f"EDINETコードマスタZIPにCSVが見つかりません: {zf.namelist()}")
+        raw = zf.read(names[0])
+
+    # cp932(Windows-31J)を使用（strict shift_jisでは一部の拡張文字がデコード不能なため。
+    # 実データでデコードエラーを確認し修正済み・2026-07-07）。
+    text = raw.decode("cp932")
+    EDINET_CODE_MASTER_PATH.parent.mkdir(parents=True, exist_ok=True)
+    tmp_path = EDINET_CODE_MASTER_PATH.with_name(EDINET_CODE_MASTER_PATH.name + ".tmp")
+    tmp_path.write_text(text, encoding="utf-8")
+    tmp_path.replace(EDINET_CODE_MASTER_PATH)
+    return EDINET_CODE_MASTER_PATH
 
 
 def inspect_cached_date(date_str: str) -> None:
@@ -395,11 +473,26 @@ def main() -> int:
              "（中身の解析はしない・--body-typeと併用。CSVスキーマ調査の準備用）",
     )
     parser.add_argument("--body-type", default="5", help="--fetch-body用のtype（既定5=CSV。1=XBRL,2=PDF）")
+    parser.add_argument(
+        "--fetch-code-master", action="store_true",
+        help="EDINETコード→証券コード変換マスタ(EdinetcodeDlInfo.csv)を取得して終了"
+             "（APIキー不要・静的ファイル。data/edinet/edinet_code_master.csv に保存）",
+    )
+    parser.add_argument("--force", action="store_true", help="--fetch-code-master併用時、既存でも再取得する")
     args = parser.parse_args()
 
     if args.status:
         print_status(args.start, args.end)
         return 0
+
+    if args.fetch_code_master:
+        try:
+            out_path = fetch_edinet_code_master(force=args.force)
+            print(f"[fetch-code-master] 保存完了: {out_path}")
+            return 0
+        except (RuntimeError, urllib.error.URLError, OSError) as e:
+            print(f"FATAL: EDINETコードマスタ取得失敗: {e}", file=sys.stderr)
+            return 1
 
     if args.inspect:
         inspect_cached_date(args.inspect)

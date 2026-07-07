@@ -35,6 +35,35 @@
       }
     },
     {
+      "kpi_name": "volshock_x_above200",
+      "status": "observation",
+      "registered_date": "2026-07-07",
+      "module": "scripts/kpi_volshock_signals.py",
+      "generator_func": "generate_volshock_signals",
+      "params": {
+        "vol_multiplier": 5.0,
+        "day_ret_min": 0.02,
+        "day_ret_max": 0.08,
+        "filter_ma200": "above",
+        "ma200_window": 200
+      },
+      "defer_entry": true,
+      "max_defer_bdays": 3,
+      "regime_filter": null,
+      "role": "第11周複合検証: volshock_5x x 個別銘柄200日線の上（dev200>0）が最有望複合と判明。volshock_5x無印(主対象)は比較対照としてそのまま併存登録し、200日線下(below200・lift0.99でfail)は非採用",
+      "in_sample": {
+        "period": "2016-11〜2022-11",
+        "n": 180,
+        "lift": 2.52,
+        "ci95": [1.38, 4.17],
+        "ev_stop8": -0.0033,
+        "ev_none": 0.0112,
+        "ev_stop10": 0.0036,
+        "note": "§6判定はNG（ev_stop8=-0.33%<3%閾値・avg_monthly_n=2.47<5）だがEV(なし)+1.12%はvolshock_5x無印のEV(なし)+0.57%を上回るため前向き観察対象に追加"
+      },
+      "holdout_observation": null
+    },
+    {
       "kpi_name": "shortcover_x_bear",
       "status": "observation",
       "registered_date": "2026-07-07",
@@ -94,6 +123,10 @@
     {
       "date": "2026-07-07",
       "change": "初期登録: volshock_5x(observation)/shortcover_x_bear(observation)/pead_gap8_vol3(reference)の3KPIでペーパートレード観察リストを開始。scripts/daily_screen.py + scripts/paper_eval.py 実装に伴う初回登録"
+    },
+    {
+      "date": "2026-07-07",
+      "change": "追加登録: volshock_x_above200(observation)。第11周でvolshock_5x x 個別銘柄200日線上(dev200>0)が最有望複合と判明(in-sample n=180 lift=2.52[1.38,4.17] EV(なし)+1.12%)。scripts/daily_screen.pyのvolshock判定経路にfilter_ma200パラメータを配線し4KPI体制に拡張。volshock_5x無印は比較対照として引き続き併存"
     }
   ]
 }

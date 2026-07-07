@@ -25,9 +25,20 @@ scripts/measure_base_rate.py が既に出力済みの `output/base_rate/universe
 フォワードリターン計算・ユニバース判定・ブートストラップCI等は scripts/kpi_event_study.py の
 run_event_study() に委譲する。第5周より --defer-entry を既定Trueとする（team-lead方針）。
 
+第11周: 個別銘柄の200日線位置（BKLZ需給フラグ・カタログ§2-A）をvolshockの上に重ねる複合検証用に、
+各シグナルへ dev200 = (AdjC(D) - SMA200(D)) / SMA200(D) を付与する（SMA200はD自身を含む直近200回の
+有効AdjC観測値の平均。measure_base_rate.build_regime_series の「当日を含む直近200件平均」という
+既存のTOPIX SMA200と同じ「D含む」PIT規約に合わせた・こちらは個別銘柄なので別途計算する）。
+--filter-ma200 above|below を指定すると、そのdev200の符号でシグナルを絞り込む（未指定時は
+従来どおり全シグナルを出力し、dev200列はNaNを含み得るのみでシグナル件数・判定には一切影響しない
+＝既存のvolshock_5xベースラインとの比較可能性を壊さない）。200日分の有効履歴が無い銘柄・時期は
+insufficient_ma200_history としてスキップする（データ開始2016-07のため実質2017年5月頃以降が対象）。
+
 Usage:
     python3 scripts/kpi_volshock_signals.py --start 2016-11 --end 2022-11
     python3 scripts/kpi_volshock_signals.py --start 2016-11 --end 2022-11 --skip-harness
+    python3 scripts/kpi_volshock_signals.py --start 2016-11 --end 2022-11 --filter-ma200 above \\
+        --kpi-name volshock_x_above200
 """
 from __future__ import annotations
 
@@ -40,6 +51,7 @@ from typing import Optional
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).parent))
+import jq_fetch  # noqa: E402  (Canonical Module: DATA_ROOT を再利用。第11周dev200のウォームアップ計算用)
 import kpi_event_study  # noqa: E402  (Canonical Module: run_event_study を再利用)
 import kpi_pead_signals  # noqa: E402  (Canonical Module: IN_SAMPLE_START/END・MONTH_RE を再利用)
 import measure_base_rate  # noqa: E402  (Canonical Module: カレンダー・bars読み込みを再利用)
@@ -50,7 +62,28 @@ VOL_MULTIPLIER_DEFAULT = 5.0
 VOL_HISTORY_WINDOW = 20  # 直近何回の有効Va観測値を平均するか
 DAY_RET_MIN_DEFAULT = 0.02
 DAY_RET_MAX_DEFAULT = 0.08
-WARMUP_BDAYS = 40  # start_bdより前に確保するウォームアップ営業日数（VOL_HISTORY_WINDOWを確実に満たすための安全マージン）
+# 元は20日窓(VOL_HISTORY_WINDOW)向けの安全マージンとして40だったが、第11周のdev200(200日窓)を
+# 満たすため260に拡大した(200日窓が20日窓を包含するため、この拡大はva_hist側の判定結果を変えない
+# ＝deque(maxlen=20)は直近20件のみ保持するので、それより前のウォームアップをどれだけ延ばしても
+# idx_start到達時点の中身は変わらない。既存のvolshock_5xベースラインとの比較可能性は壊さない)。
+WARMUP_BDAYS = 260
+
+MA200_WINDOW = 200  # dev200用SMA200のウィンドウ（D自身を含む直近200回の有効AdjC観測値。第11周）
+MA200_FILTER_CHOICES = ("above", "below")
+
+
+def _earliest_bars_date() -> str:
+    """data/jquants/bars/ に実在する最古の営業日(YYYYMMDD)を返す(ハードコードしない)。
+
+    kpi_high52_signals.py の同名関数と同じ実装(252/200日といった長期ウィンドウを持つ
+    シグナル生成器が共通で必要とする単純な事前チェックのため、両スクリプトに意図的に複製している。
+    measure_base_rate.py は§6準拠のため変更禁止で、そちらに追加関数を足すのは避けた)。
+    """
+    bars_dir = jq_fetch.DATA_ROOT / "bars"
+    dates = sorted(p.name[:8] for p in bars_dir.glob("*.json.gz"))
+    if not dates:
+        raise SystemExit(f"FATAL: bars キャッシュが1件も見つかりません: {bars_dir}")
+    return dates[0]
 
 
 # --- シグナル生成 ---------------------------------------------------------------
@@ -62,26 +95,37 @@ def generate_volshock_signals(
     vol_multiplier: float = VOL_MULTIPLIER_DEFAULT,
     day_ret_min: float = DAY_RET_MIN_DEFAULT,
     day_ret_max: float = DAY_RET_MAX_DEFAULT,
+    filter_ma200: Optional[str] = None,
 ) -> tuple[pd.DataFrame, dict]:
     """[start_bd, end_bd]（YYYYMMDD営業日）内の全銘柄・全営業日から出来高ショックシグナルを生成する。
 
     1営業日1パスの逐次スキャンで実装する（各銘柄のVa履歴をdeque(maxlen=20)で保持し、
     20営業日分のbarsファイルを毎日読み直すことを避ける＝計算量O(全日数×全銘柄)に抑える）。
 
+    Args:
+        filter_ma200: "above"/"below"/None（既定）。指定時はdev200の符号（above: dev200>0,
+            below: dev200<0）でシグナルを絞り込む。200日分の有効履歴が無くdev200が計算できない
+            シグナルはフィルタ指定時のみ除外する（Noneの場合は従来どおり全件を出力し、
+            dev200/sma200列にNaNを含み得るのみ＝既存のvolshock_5xベースラインとの比較可能性を壊さない）。
+
     Returns:
-        (signals_df, diag)。signals_df の列: signal_date, code, va, va_avg20, day_ret, adjc, adjo。
-        diag はフィルタ段階別の件数内訳。
+        (signals_df, diag)。signals_df の列: signal_date, code, va, va_avg20, day_ret, adjc, adjo,
+        sma200, dev200。diag はフィルタ段階別の件数内訳。
     """
+    if filter_ma200 is not None and filter_ma200 not in MA200_FILTER_CHOICES:
+        raise SystemExit(f"FATAL: filter_ma200 は {MA200_FILTER_CHOICES} のみ対応です（指定値: {filter_ma200}）")
     calendar_days = measure_base_rate.load_calendar_days()
     all_bdays = measure_base_rate.all_business_days(calendar_days)
     bday_index = {d: i for i, d in enumerate(all_bdays)}
 
     idx_start = bday_index[start_bd]
     idx_end = bday_index[end_bd]
-    warmup_idx = max(0, idx_start - WARMUP_BDAYS)
+    idx_earliest_bars = bday_index[_earliest_bars_date()]
+    warmup_idx = max(idx_earliest_bars, idx_start - WARMUP_BDAYS)
     scan_days = all_bdays[warmup_idx : idx_end + 1]
 
     va_hist: dict[str, deque] = defaultdict(lambda: deque(maxlen=VOL_HISTORY_WINDOW))
+    adjc200_hist: dict[str, deque] = defaultdict(lambda: deque(maxlen=MA200_WINDOW))
     prev_bars: Optional[dict] = None
 
     diag = {
@@ -93,6 +137,8 @@ def generate_volshock_signals(
         "no_prev_close": 0,
         "day_ret_out_of_range": 0,
         "signals_volshock5x": 0,
+        "insufficient_ma200_history": 0,  # 200日分の有効AdjC観測値が無くdev200計算不能（signals_volshock5xの内数）
+        "filtered_by_ma200": 0,  # --filter-ma200指定時、dev200の符号が不一致で除外（signals_volshock5xの内数）
     }
 
     rows: list[dict] = []
@@ -105,6 +151,13 @@ def generate_volshock_signals(
 
         for code, rec in bars_d.items():
             va_d = rec.get("Va")
+            adjc_d = rec.get("AdjC")
+
+            # dev200用の200日履歴はD自身を含む規約（build_regime_seriesのSMA200と同じ「当日を
+            # 含む直近N件平均」）のため、当日の判定より先に更新する（va_histとは順序が逆）。
+            hist200 = adjc200_hist[code]
+            if adjc_d is not None:
+                hist200.append(adjc_d)
 
             if in_event_window:
                 diag["code_day_observations"] += 1
@@ -121,18 +174,53 @@ def generate_volshock_signals(
                             if prev_close:
                                 day_ret = adjc / prev_close - 1
                                 if day_ret_min <= day_ret <= day_ret_max:
-                                    diag["signals_volshock5x"] += 1
-                                    rows.append(
-                                        {
-                                            "signal_date": d,
-                                            "code": code,
-                                            "va": va_d,
-                                            "va_avg20": va_avg,
-                                            "day_ret": day_ret,
-                                            "adjc": adjc,
-                                            "adjo": adjo,
-                                        }
-                                    )
+                                    if len(hist200) == MA200_WINDOW:
+                                        sma200 = sum(hist200) / len(hist200)
+                                        dev200 = (adjc - sma200) / sma200 if sma200 else None
+                                    else:
+                                        sma200 = None
+                                        dev200 = None
+                                        diag["insufficient_ma200_history"] += 1
+
+                                    if filter_ma200 is not None:
+                                        if dev200 is None:
+                                            pass  # insufficient_ma200_historyに計上済み・行は追加しない
+                                        elif filter_ma200 == "above" and dev200 <= 0:
+                                            diag["filtered_by_ma200"] += 1
+                                        elif filter_ma200 == "below" and dev200 >= 0:
+                                            diag["filtered_by_ma200"] += 1
+                                        else:
+                                            diag["signals_volshock5x"] += 1
+                                            rows.append(
+                                                {
+                                                    "signal_date": d,
+                                                    "code": code,
+                                                    "va": va_d,
+                                                    "va_avg20": va_avg,
+                                                    "day_ret": day_ret,
+                                                    "adjc": adjc,
+                                                    "adjo": adjo,
+                                                    "sma200": sma200,
+                                                    "dev200": dev200,
+                                                }
+                                            )
+                                    else:
+                                        # フィルタ未指定＝従来どおり全件出力（既存ベースラインとの
+                                        # 比較可能性を壊さない。dev200/sma200はNaNを含み得る）
+                                        diag["signals_volshock5x"] += 1
+                                        rows.append(
+                                            {
+                                                "signal_date": d,
+                                                "code": code,
+                                                "va": va_d,
+                                                "va_avg20": va_avg,
+                                                "day_ret": day_ret,
+                                                "adjc": adjc,
+                                                "adjo": adjo,
+                                                "sma200": sma200,
+                                                "dev200": dev200,
+                                            }
+                                        )
                                 else:
                                     diag["day_ret_out_of_range"] += 1
                             else:
@@ -209,6 +297,10 @@ def main() -> int:
         "--no-defer-entry", action="store_true",
         help="第5周より--defer-entryが既定Trueのため、従来のT+1固定挙動に戻したい場合のみ指定",
     )
+    parser.add_argument(
+        "--filter-ma200", choices=list(MA200_FILTER_CHOICES), default=None,
+        help="dev200(個別銘柄の200日線乖離)の符号でシグナルを絞り込む(第11周・BKLZ需給フラグ検証用)",
+    )
     args = parser.parse_args()
 
     if not kpi_pead_signals.MONTH_RE.match(args.start) or not kpi_pead_signals.MONTH_RE.match(args.end):
@@ -231,7 +323,8 @@ def main() -> int:
         raise SystemExit("FATAL: 指定期間に営業日が見つかりません")
 
     signals_df, diag = generate_volshock_signals(
-        start_bd, end_bd, args.vol_multiplier, args.day_ret_min, args.day_ret_max
+        start_bd, end_bd, args.vol_multiplier, args.day_ret_min, args.day_ret_max,
+        filter_ma200=args.filter_ma200,
     )
 
     output_root = Path(args.output_dir)
@@ -250,6 +343,10 @@ def main() -> int:
         f"陽線でない除外={diag['not_green_candle']}, 前日終値なし={diag['no_prev_close']}, "
         f"前日比レンジ外={diag['day_ret_out_of_range']}, シグナル成立={diag['signals_volshock5x']})"
     )
+    print(
+        f"dev200: 200日履歴不足で計算不能={diag['insufficient_ma200_history']}"
+        + (f" / --filter-ma200={args.filter_ma200}で符号不一致除外={diag['filtered_by_ma200']}" if args.filter_ma200 else "")
+    )
     print(f"出力: {signals_path}")
 
     if args.skip_harness:
@@ -265,6 +362,8 @@ def main() -> int:
         "day_ret_min": args.day_ret_min,
         "day_ret_max": args.day_ret_max,
         "defer_entry": defer_entry,
+        "filter_ma200": args.filter_ma200,
+        "ma200_window": MA200_WINDOW,
     }
     result = kpi_event_study.run_event_study(
         signals_df=signals_df[["signal_date", "code"]],
@@ -297,6 +396,15 @@ def main() -> int:
             f"（`output/base_rate/universes_w{args.universe_window}.csv.gz`と突合。"
             f"membership判定ロジック自体はmeasure_base_rate.py側のCanonical Moduleをそのまま参照）\n"
         )
+        if args.filter_ma200:
+            f.write(
+                f"\n## dev200(200日線位置)フィルタ内訳（第11周・BKLZ需給フラグ検証）\n"
+                f"- --filter-ma200={args.filter_ma200}\n"
+                f"- 200日履歴不足でdev200計算不能(生シグナルからスキップ): {diag['insufficient_ma200_history']}件\n"
+                f"- フィルタ条件(dev200符号)不一致で除外: {diag['filtered_by_ma200']}件\n"
+                f"- 比較用ベースライン(volshock_5x無印・フィルタなし): n=292 lift=2.34[1.39,3.43] "
+                f"EV(なし)+0.57% EV(-8%損切り)-0.75%（過去実行分。本レポートのn/lift/EVと直接比較すること）\n"
+            )
 
     return 0
 

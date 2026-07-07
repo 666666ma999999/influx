@@ -296,12 +296,17 @@ def generate_kpi_signals(
     kpi_name = entry["kpi_name"]
     params = entry["params"]
 
-    if kpi_name == "volshock_5x":
+    if kpi_name in ("volshock_5x", "volshock_x_above200"):
+        # 第11周: volshock_x_above200 は kpi_volshock_signals.py 実装済みの filter_ma200
+        # (dev200符号フィルタ) をそのまま再利用する (Canonical Module原則・判定ロジックの
+        # 再実装はしない)。日次判定でも generate_volshock_signals 内部の SMA200 は
+        # 「D自身を含む直近200営業日終値平均」= PIT安全（同関数のdocstring参照）。
         df, _diag = kpi_volshock_signals.generate_volshock_signals(
             start_bd, end_bd,
             vol_multiplier=params["vol_multiplier"],
             day_ret_min=params["day_ret_min"],
             day_ret_max=params["day_ret_max"],
+            filter_ma200=params.get("filter_ma200"),
         )
         return df[["signal_date", "code"]] if not df.empty else df
 
