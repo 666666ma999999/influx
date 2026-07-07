@@ -66,3 +66,10 @@ scripts/_scratch/
 
 # J-Quants APIキャッシュ（再生成可・解約後廃棄義務・コミット禁止）
 data/jquants/
+
+# EDINET APIキャッシュ（再生成可・軽量メタデータのみだがAPI再取得で復元できるためコミット不要）
+data/edinet/
+
+# ペーパートレード日次レポート（daily_screen/paper_evalが毎日再生成）
+output/paper_today.md
+output/paper_scoreboard.md

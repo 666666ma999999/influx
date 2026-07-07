@@ -1,0 +1,233 @@
+{
+  "version": "2026-07-07",
+  "notes": [
+    "カタログ§2-E「アクティビスト大量保有出現」用の既知アクティビスト辞書。",
+    "2026-07-07: 全13エントリをWeb調査（ニュース記事・EDINET提出者コード等の二次情報源ベース）で裏取りし、",
+    "known_since_year・name_patterns・confidenceを修正。加えて2016-2022年に日本の上場企業へ大量保有報告書を",
+    "提出した著名アクティビスト8件を新規追加（elliott_management〜indus_capital_partners）。",
+    "EDINET書類検索(disclosure2.edinet-fsa.go.jp)はJSレンダリングのためWebFetch/WebSearch経由での直接取得は",
+    "不可だった。報道記事(日経・Japan Times等)・株探(kabutan.jp/holder)・irbank等の二次情報源での確認に留まり、",
+    "EDINET原本PDFとの文字列突き合わせは一部未完了。実運用前にさらなる一次資料確認を推奨する。",
+    "known_since_year は『そのエントリがアクティビストとして公知になった年』の概算。",
+    "シグナル判定では『known_since_year <= シグナル発生年』のエントリのみ使用すること",
+    "（後知恵防止・同一運用体でも初期は無名で後年に活動が公知化するケースを分離するため、",
+    "関連法人でも known_since_year が大きく異なる場合はエントリを分割してある）。",
+    "『公知になった年』の解釈は『大株主として知られた年』ではなく『対立的・提案的なアクティビスト行動が",
+    "報道された年』を優先する（silchesterエントリの2026-07-07修正を参照）。",
+    "name_patterns は EDINET filerName との部分一致マッチング用（正規化: Unicode NFKC + ",
+    "空白除去 + 主要な法人格サフィックス除去 + 英字大文字化。scripts/kpi_activist_signals.py",
+    "の normalize_name()/match_activist() 参照。NFKCにより全角/半角表記の差異は吸収される想定）。"
+  ],
+  "entries": [
+    {
+      "id": "murakami",
+      "display_name": "村上世彰系列",
+      "known_since_year": 2000,
+      "confidence": "high",
+      "name_patterns": ["シティインデックスイレブンス", "レノ", "南青山不動産", "村上世彰", "MURAKAMI", "エスグラントコーポレーション", "シティインデックスファースト", "C&Iホールディングス", "オフィスサポート"],
+      "source_note": "2000年の昭栄への日本初の敵対的TOB試行で初報道、2002年の東京スタイル事件で『物言う株主』として広く認知（後知恵防止のためTOB試行時点の2000年を採用）。複数の関連法人名義で大量保有報告書を提出することで知られ、シティインデックスイレブンス(EDINETコードE35393)・レノ(E24231)に加え、エスグラントコーポレーション・シティインデックスファースト・C&Iホールディングス・オフィスサポート(旧名義)も実在確認。",
+      "source_url": ["https://ja.wikipedia.org/wiki/村上ファンド", "https://kabutan.jp/holder/lists/?edicode=E35393"],
+      "verified_at": "2026-07-07"
+    },
+    {
+      "id": "effissimo",
+      "display_name": "エフィッシモ・キャピタル・マネジメント",
+      "known_since_year": 2007,
+      "confidence": "high",
+      "name_patterns": ["エフィッシモ", "EFFISSIMO"],
+      "source_note": "2007年7月に学研HD株13.41%取得で筆頭株主に浮上、同年8月には日産車体へも大量保有報告書提出し日本での活動が広く報道された（設立自体は2006年6月、旧村上ファンド出身者らにより）。EDINET提出者コードE11852「エフィッシモ キャピタル マネージメント ピーティーイー エルティーディー」(Effissimo Capital Management Pte Ltd)。",
+      "source_url": ["https://ib-consulting.jp/newspaper/1176/", "http://www.kabupro.jp/edx/E11852.htm"],
+      "verified_at": "2026-07-07"
+    },
+    {
+      "id": "oasis",
+      "display_name": "オアシス・マネジメント",
+      "known_since_year": 2014,
+      "confidence": "medium",
+      "name_patterns": ["オアシス・マネジメント", "オアシスマネジメント", "OASIS MANAGEMENT", "オアシス・マネージメント"],
+      "source_note": "任天堂の岩田社長への書簡送付自体は2013年6月開始だが非公開の私信であり、日本での活動が広く報道されたのは2014年2月26日の公開書簡(WSJ等)から。片倉工業への提案開始も2014年と報道。known_since_yearを2013年→2014年に修正。EDINET提出者コードE31883「Ｏａｓｉｓ Ｍａｎａｇｅｍｅｎｔ Ｃｏｍｐａｎｙ Ｌｔｄ．」（全角表記）。日本語メディアでは『オアシス・マネージメント』（長音入り）表記も頻出するため追加。",
+      "source_url": ["https://oasiscm.com/hedge-fund-wants-nintendo-make-mobile-games/", "http://www.kabupro.jp/edx/E31883.htm"],
+      "verified_at": "2026-07-07"
+    },
+    {
+      "id": "strategic_capital",
+      "display_name": "ストラテジックキャピタル",
+      "known_since_year": 2012,
+      "confidence": "medium",
+      "name_patterns": ["ストラテジックキャピタル", "STRATEGIC CAPITAL"],
+      "source_note": "2012年9月28日設立（丸木強氏、旧村上ファンド幹部）で確証あり。ただし最初の具体的活動事例（W-Scope等）の一次報道記事は確認できず、設立報道をもって known_since_year とする（未変更）。EDINET提出者コードE27325「株式会社ストラテジックキャピタル」で確証。",
+      "source_url": ["https://www.buffett-code.com/articles/27844"],
+      "verified_at": "2026-07-07"
+    },
+    {
+      "id": "3d_investment",
+      "display_name": "3Dインベストメント・パートナーズ",
+      "known_since_year": 2020,
+      "confidence": "high",
+      "name_patterns": ["3Dインベストメント", "3D INVESTMENT"],
+      "source_note": "EDINET上の大量保有報告書自体は2018年7月(オプトHD、5.64%)が最古だが、これは通常の5%ルール開示に過ぎない。『物言う株主』として広く報道されたのは東芝の2020年株主総会(車谷暢昭社長再任反対・社外取締役選任提案)。known_since_yearを2019年→2020年に修正。EDINET提出者コードE33309、登録名は全角英数字表記（NFKC正規化でマッチング想定通り）。",
+      "source_url": ["https://www.japantimes.co.jp/news/2020/08/17/business/corporate-business/toshiba-3d-investment-probe-shareholder-vote/", "https://s.kabutan.jp/edinet_submitters/E33309"],
+      "verified_at": "2026-07-07"
+    },
+    {
+      "id": "dalton",
+      "display_name": "ダルトン・インベストメンツ",
+      "known_since_year": 2004,
+      "confidence": "medium",
+      "name_patterns": ["ダルトン・インベストメンツ", "ダルトンインベストメンツ", "DALTON INVESTMENTS"],
+      "source_note": "2004年9月、帝国臓器製薬(現あすか製薬HD)へのMBO再提案・5%超保有取得直後の活動が最古級の事例として複数の二次情報源で一致。2006年のサンテレホンTOB(新株予約権発行差止め訴訟で東京地裁勝訴)も広く報道。known_since_yearを2005年→2004年に修正、confidenceをlow→mediumに格上げ。EDINET上には少なくとも2法人コードが存在: E39237「ダルトン インベストメンツ インク」、E08827「ダルトン・インベストメンツ・エルエルシー」。重要な注意: 一部の変更報告書では表紙【氏名又は名称】欄に日本代理人弁護士名のみが記載されファンド名が出ないケースがあり、名前一致だけでは取りこぼす恐れがある。",
+      "source_url": ["https://fu.minkabu.jp/column/2328", "https://note.com/wolf_packer/n/n905fb86ed0d9"],
+      "verified_at": "2026-07-07"
+    },
+    {
+      "id": "navf",
+      "display_name": "Nippon Active Value Fund (NAVF)",
+      "known_since_year": 2020,
+      "confidence": "high",
+      "name_patterns": ["ニッポン・アクティブ・バリュー・ファンド", "NIPPON ACTIVE VALUE FUND", "NAVF"],
+      "source_note": "2019年10月22日に英国で法人設立、2020年2月21日にロンドン証券取引所Specialist Fund Segmentへ上場(£103m調達)。ダルトン共同創業者James B. Rosenwald IIIがRising Sun Management経由で組成。ダルトン本体とは別法人・別EDINETコード(E36104「NIPPON ACTIVE VALUE FUND PLC」)。",
+      "source_url": ["https://www.cityam.com/nippon-active-value-fund-set-for-200m-float-in-londons-first-ipo-of-2020/", "https://kabutan.jp/holder/lists/?edicode=E36104"],
+      "verified_at": "2026-07-07"
+    },
+    {
+      "id": "silchester",
+      "display_name": "シルチェスター・インターナショナル・インベスターズ",
+      "known_since_year": 2019,
+      "confidence": "low",
+      "name_patterns": ["シルチェスター", "SILCHESTER"],
+      "source_note": "日本株投資自体は1995年開始、EDINET大量保有報告(5%ルール)は2006年9月(京都銀行)が最古級だが、これは長期保有の大株主としての開示に過ぎない。『物言う株主』的な行動(書簡送付・株主提案)が顕在化したのは2019年(滋賀銀行への書簡)以降、2022年に地銀への一斉株主提案。後知恵防止の観点から『大株主として知られる年』(旧2005年設定)ではなく『アクティビスト的行動が公知化した年』(2019年)へ修正。ただし境界事例(定義次第で年が大きく変わる)のため引き続きconfidence=lowとし、運用側でこの定義の妥当性を再確認すること。EDINET提出者コードE24872「シルチェスター・インターナショナル・インベスターズ・エルエルピー」(LLP。LLCと誤記する二次情報源があるので注意)。",
+      "source_url": ["https://www.bloomberg.com/jp/news/articles/2024-03-13/SA9A0PT0G1KW00", "https://kabutan.jp/holder/lists/?edicode=E24872"],
+      "verified_at": "2026-07-07"
+    },
+    {
+      "id": "valueact",
+      "display_name": "バリューアクト・キャピタル",
+      "known_since_year": 2018,
+      "confidence": "high",
+      "name_patterns": ["バリューアクト", "VALUEACT"],
+      "source_note": "日経2018年6月1日付記事の見出し『物言う株主 米バリューアクト オリンパス株、5%保有』で確認。EDINET提出日は2018年5月31日(5.0%保有)。2019年1月の社外取締役就任はその後の展開に過ぎない。known_since_yearを2019年→2018年に修正。確認できた正式名: ValueAct Capital Management, L.P. / ValueAct Capital Master Fund, L.P.（案件により使い分け）。",
+      "source_url": ["https://www.nikkei.com/article/DGKKZO31230670R30C18A5DTA000/"],
+      "verified_at": "2026-07-07"
+    },
+    {
+      "id": "steel_partners",
+      "display_name": "スティール・パートナーズ",
+      "known_since_year": 2003,
+      "confidence": "medium",
+      "name_patterns": ["スティール・パートナーズ", "スティールパートナーズ", "STEEL PARTNERS", "Steel Partners Japan Strategic Fund (Offshore), L.P."],
+      "source_note": "2003年12月19日のソトー・ユシロ化学工業への同時TOBが複数独立ソースで確認できる契機（2002年8月説はいずれも2008年の回顧記事のみが根拠で同時代報道なし、後知恵防止のため不採用）。EDINET提出者名の追加候補として2007年ブルドックソース最高裁事件の当事者名『Steel Partners Japan Strategic Fund (Offshore), L.P.』を確認。",
+      "source_url": ["https://ja.wikipedia.org/wiki/スティール・パートナーズ"],
+      "verified_at": "2026-07-07"
+    },
+    {
+      "id": "tci",
+      "display_name": "ザ・チルドレンズ・インベストメント・ファンド (TCI)",
+      "known_since_year": 2007,
+      "confidence": "medium",
+      "name_patterns": ["チルドレンズ・インベストメント", "TCI FUND", "THE CHILDREN'S INVESTMENT"],
+      "source_note": "実際は3段階で進行: 2006年10月に純投資目的で初回提出(5.07%)→2007年3月に9.90%へ変更・保有目的を『重要提案行為等』へ変更し増配要求書簡を送付(=アクティビストとしての公知化の起点、known_since_yearとして採用)→2008年、外為法により増資計画が事実上阻止され最も広く報道(J-Power/電源開発)。年自体は変更なし、根拠の精度のみ向上。",
+      "source_url": ["https://facta.co.jp/article/200705057.html"],
+      "verified_at": "2026-07-07"
+    },
+    {
+      "id": "avi",
+      "display_name": "アセットバリューインベスターズ (AVI)",
+      "known_since_year": 2017,
+      "confidence": "medium",
+      "name_patterns": ["アセットバリューインベスターズ", "ASSET VALUE INVESTORS", "アセット・バリュー・インベスターズ・リミテッド"],
+      "source_note": "2015年を裏付ける報道は発見できず。確認できた最古の活動はTBSホールディングスへの株主提案キャンペーン(2017年1月株式取得、同10月WSJ初報道、2018年Nikkei/Reuters報道)。known_since_yearを2015年→2017年に修正、confidenceをlow→mediumに格上げ。ただし主力グローバルファンド『British Empire Trust』経由であり日本特化ファンドAJOT経由ではない点に留意。EDINET提出者コードE34595「アセット・バリュー・インベスターズ・リミテッド」（中黒あり表記、既存の中黒なし表記と併記）。",
+      "source_url": ["https://assetvalueinvestors.com/campaign/tokyo-broadcasting-system/", "https://kabutan.jp/holder/lists/?edicode=E34595"],
+      "verified_at": "2026-07-07"
+    },
+    {
+      "id": "taiyo_pacific",
+      "display_name": "太陽パートナーズ (Taiyo Pacific Partners)",
+      "known_since_year": 2003,
+      "confidence": "medium",
+      "name_patterns": ["TAIYO PACIFIC", "タイヨウ・パシフィック・パートナーズ・エルピー", "Taiyo Pacific Partners L.P."],
+      "source_note": "CalPERSが運用ファンド『Taiyo Fund』へ2億ドル出資したことが2003年4月/7月に報道され、これが日本アクティビストとして公知化した起点（運営会社自体の設立は2001年）。年次のconfidenceはlow→mediumに格上げ。重要な修正: 既存の漢字表記『太陽パートナーズ』は実在するEDINET提出書類・報道記事のどこにも確認できず削除。正しい実表記は片仮名『タイヨウ・パシフィック・パートナーズ・エルピー』(EDINETコードE37410)/英語『Taiyo Pacific Partners L.P.』。※この表記修正は二次情報源(csrwire等)ベースであり、EDINET原本での再確認を推奨。display_name/idは既存slug維持のため漢字のまま残すが、name_patternsからは漢字表記を削除済み。",
+      "source_url": ["https://csrwire.com/press_releases/21460"],
+      "verified_at": "2026-07-07"
+    },
+    {
+      "id": "elliott_management",
+      "display_name": "エリオット・マネジメント",
+      "known_since_year": 2018,
+      "confidence": "high",
+      "name_patterns": ["エリオット・マネジメント", "Elliott Management", "エリオット・インターナショナル・エルピー", "Elliott International L.P.", "エリオット・インベストメント・マネージメント・エルピー", "Elliott Investment Management L.P.", "エリオット・アソシエイツ"],
+      "source_note": "2018年7月13日、アルパイン株式会社への大量保有報告書提出(共同保有含め5.12%)。アルプス電気との経営統合を巡りオアシスと対立構図で広く報道。2020年2月にはソフトバンクグループ株を約3%取得し自社株買い等を要求。複数の関連法人名義(Elliott Associates/International/Investment Management)でEDINET提出。EDINETコードE35450。2016-2022年の追加調査で新規発見・追加(2026-07-07)。",
+      "source_url": ["https://www.nikkei.com/article/DGXMZO33054760X10C18A7DTA000/", "https://irbank.net/E35450"],
+      "verified_at": "2026-07-07"
+    },
+    {
+      "id": "farallon_capital",
+      "display_name": "ファラロン・キャピタル・マネジメント",
+      "known_since_year": 2017,
+      "confidence": "high",
+      "name_patterns": ["ファラロン・キャピタル・マネジメント", "Farallon Capital Management, L.L.C."],
+      "source_note": "東芝の2017年11月第三者割当増資を引受け筆頭株主級に浮上。2019年6月株主総会でアジア統括のRaymond Zage氏が取締役就任。EDINET提出者コードE27699。2016-2022年の追加調査で新規発見・追加(2026-07-07)。",
+      "source_url": ["https://cozy-days.hatenablog.com/entry/Farallon", "https://irbank.net/E27699"],
+      "verified_at": "2026-07-07"
+    },
+    {
+      "id": "king_street_capital",
+      "display_name": "キング・ストリート・キャピタル・マネージメント",
+      "known_since_year": 2017,
+      "confidence": "high",
+      "name_patterns": ["キング・ストリート・キャピタル・マネージメント", "King Street Capital Management, L.P."],
+      "source_note": "東芝の2017年第三者割当増資引受。2021年4月時点で東芝第4位株主。EDINETコードE33410。2016-2022年の追加調査で新規発見・追加(2026-07-07)。",
+      "source_url": ["https://media.monex.co.jp/articles/-/16614"],
+      "verified_at": "2026-07-07"
+    },
+    {
+      "id": "aslead_capital",
+      "display_name": "アスリード・キャピタル",
+      "known_since_year": 2020,
+      "confidence": "high",
+      "name_patterns": ["アスリード・キャピタル", "Aslead Capital Pte. Ltd."],
+      "source_note": "富士興産へ2020年8月大量保有報告書提出、2021年公開買付け実施。他にスペースバリューHD、キャリアデザインセンターも保有。2016-2022年の追加調査で新規発見・追加(2026-07-07)。",
+      "source_url": ["https://www.nikkei.com/nkd/disclosure/ednr/20200821S100JK8N/"],
+      "verified_at": "2026-07-07"
+    },
+    {
+      "id": "hibiki_path_advisors",
+      "display_name": "ひびき・パース・アドバイザーズ",
+      "known_since_year": 2016,
+      "confidence": "high",
+      "name_patterns": ["ひびき・パース・アドバイザーズ", "Hibiki Path Advisors Pte. Ltd."],
+      "source_note": "2015年11月設立、2016年3月よりシンガポールで運用開始。IGポート・日本高純度化学・玉井商船等へエンゲージメント。EDINET提出者コードE34566。2016-2022年の追加調査で新規発見・追加(2026-07-07)。",
+      "source_url": ["https://www.hibiki-path-advisors.com/en/introduction/"],
+      "verified_at": "2026-07-07"
+    },
+    {
+      "id": "lim_advisors",
+      "display_name": "リム・アドバイザーズ",
+      "known_since_year": 2019,
+      "confidence": "high",
+      "name_patterns": ["リム・アドバイザーズ・リミテッド", "LIM Advisors Limited", "LIM JAPAN EVENT MASTER FUND"],
+      "source_note": "JT子会社の鳥居薬品への株主提案が報道され国内で存在感（ファーム自体は1995年香港設立・2002年東京リサーチオフィス開設のold-guardで実際の活動歴はより長い点に留意、known_since_yearは日本で著名になった時期の目安）。EDINETコードE30407。2016-2022年の追加調査で新規発見・追加(2026-07-07)。",
+      "source_url": ["https://ib-consulting.jp/newspaper/4694/"],
+      "verified_at": "2026-07-07"
+    },
+    {
+      "id": "symphony_financial_partners",
+      "display_name": "シンフォニー・フィナンシャル・パートナーズ",
+      "known_since_year": 2000,
+      "confidence": "medium",
+      "name_patterns": ["シンフォニー・フィナンシャル・パートナーズ", "Symphony Financial Partners (Singapore) Pte. Ltd."],
+      "source_note": "David Baran氏が設立。要興業(6566)等を長期保有し継続的にエンゲージメントするが、対立型アクティビストというよりエンゲージメント色が強い。2016-2022年の特定契機記事は未確認のためconfidence medium。EDINETコードE30522。追加調査で新規発見・追加(2026-07-07)。",
+      "source_url": ["https://www.fromhc.com/interview2/2010/01/post-5.html"],
+      "verified_at": "2026-07-07"
+    },
+    {
+      "id": "indus_capital_partners",
+      "display_name": "インダス・キャピタル・パートナーズ",
+      "known_since_year": 2015,
+      "confidence": "medium",
+      "name_patterns": ["インダス・キャピタル・パートナーズ・エル・エル・シー", "Indus Capital Partners, LLC"],
+      "source_note": "他機関投資家とガバナンス改善に関する共同声明を発出。以後スルガ銀行・JTOWER・リガクHD等へ大量保有。対立型アクティビストというよりエンゲージメント色が強い。EDINETコードE10112。2016-2022年の追加調査で新規発見・追加(2026-07-07)。",
+      "source_url": ["https://www.induscap.com/"],
+      "verified_at": "2026-07-07"
+    }
+  ]
+}

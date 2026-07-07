@@ -1,0 +1,99 @@
+{
+  "_comment": "ペーパートレード観察リスト（tasks/stock_algo_kpi_loop.md 2026-07-07 In Progress 項目)。variant変更・登録・status変更は既存エントリの上書きではなく必ず changelog に日付付きで追記すること。実行ロジックは各 kpi_name の module/generator_func を Canonical Module として import 再利用する（scripts/daily_screen.py 側でパラメータのハードコード再実装はしない）。",
+  "watchlist": [
+    {
+      "kpi_name": "volshock_5x",
+      "status": "observation",
+      "registered_date": "2026-07-07",
+      "module": "scripts/kpi_volshock_signals.py",
+      "generator_func": "generate_volshock_signals",
+      "params": {
+        "vol_multiplier": 5.0,
+        "day_ret_min": 0.02,
+        "day_ret_max": 0.08
+      },
+      "defer_entry": true,
+      "max_defer_bdays": 3,
+      "regime_filter": null,
+      "role": "主対象。出来高ショック本命KPI（Va>=20日平均x5・陽線・前日比+2〜8%）",
+      "in_sample": {
+        "period": "2016-11〜2022-11",
+        "n": 292,
+        "lift": 2.34,
+        "ci95": [1.39, 3.43],
+        "ev_stop8": -0.0075,
+        "ev_none": 0.0057
+      },
+      "holdout_observation": {
+        "period": "2023-01〜2026-05",
+        "n": 289,
+        "lift": 2.00,
+        "ci95": [1.27, 2.83],
+        "ev_stop8": 0.0111,
+        "ev_none": 0.0162,
+        "note": "運用開始ライン(EV>=+1%)未達だが holdout でリフト持続・EVはプラス転換。事前登録上は合否対象外の参考観測（holdout事後選択は禁止）。前向き記録が唯一の正当な追加検証手段"
+      }
+    },
+    {
+      "kpi_name": "shortcover_x_bear",
+      "status": "observation",
+      "registered_date": "2026-07-07",
+      "module": "scripts/kpi_shortcover_signals.py",
+      "generator_func": "generate_shortcover_signals",
+      "params": {
+        "aggregate_threshold": 0.03,
+        "exit_threshold": 0.005
+      },
+      "defer_entry": false,
+      "max_defer_bdays": 0,
+      "regime_filter": "bear",
+      "role": "副対象。空売り残高減少転換(shortcover_turn)xbear地合いのみ抽出",
+      "in_sample": {
+        "period": "2016-11〜2022-11",
+        "n": 1639,
+        "lift": 2.12,
+        "ci95": [1.63, 2.93],
+        "ev_stop8": 0.0004,
+        "note": "運用開始ライン(EV>=+1%)未達で見送り確定済みだが方向観察として継続"
+      },
+      "holdout_observation": null
+    },
+    {
+      "kpi_name": "pead_gap8_vol3",
+      "status": "reference",
+      "registered_date": "2026-07-07",
+      "module": "scripts/kpi_pead_signals.py",
+      "generator_func": "generate_pead_signals",
+      "params": {
+        "gap_threshold": 0.08,
+        "vol_multiplier": 3.0,
+        "vol_window": 20
+      },
+      "defer_entry": true,
+      "max_defer_bdays": 3,
+      "regime_filter": null,
+      "role": "参照のみ。holdout棄却済み(2023-01〜2026-05でEV符号反転)。追跡観察として継続監視するが新候補の意思決定には使わない",
+      "in_sample": {
+        "period": "2016-11〜2022-11",
+        "n": 666,
+        "lift": 1.89,
+        "ci95": [1.37, 2.56],
+        "ev_stop8": 0.0145
+      },
+      "holdout_observation": {
+        "period": "2023-01〜2026-05",
+        "n": 592,
+        "lift": 1.38,
+        "ci95": [0.88, 1.91],
+        "ev_stop8": -0.0025,
+        "verdict": "REJECTED"
+      }
+    }
+  ],
+  "changelog": [
+    {
+      "date": "2026-07-07",
+      "change": "初期登録: volshock_5x(observation)/shortcover_x_bear(observation)/pead_gap8_vol3(reference)の3KPIでペーパートレード観察リストを開始。scripts/daily_screen.py + scripts/paper_eval.py 実装に伴う初回登録"
+    }
+  ]
+}

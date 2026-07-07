@@ -37,3 +37,8 @@
 {"run_id": "50b56683ff084e5383dabb2cb676e1dd", "ts": "2026-07-06T17:35:21.052563+09:00", "dataset": "seigenichiran", "status": "saved", "data_date": "20260706", "bytes": 23996, "file": "data/jsf/seigenichiran/seigenichiran_20260706.csv.gz", "error": null}
 {"run_id": "50b56683ff084e5383dabb2cb676e1dd", "ts": "2026-07-06T17:35:21.189982+09:00", "dataset": "shina", "status": "skipped_dup", "data_date": "20260703", "bytes": 98677, "file": null, "error": null}
 {"run_id": "50b56683ff084e5383dabb2cb676e1dd", "ts": "2026-07-06T17:35:21.369172+09:00", "dataset": "zandaka", "status": "skipped_dup", "data_date": "20260703", "bytes": 862114, "file": null, "error": null}
+{"run_id": "690e1b9495ee4df5bb89399962e9adb7", "ts": "2026-07-06T19:31:30.888304+09:00", "dataset": null, "status": "run_start", "data_date": null, "bytes": null, "file": null, "error": null}
+{"run_id": "690e1b9495ee4df5bb89399962e9adb7", "ts": "2026-07-06T19:31:30.890204+09:00", "dataset": "meigara", "status": "saved", "data_date": "20260707", "bytes": 191359, "file": "data/jsf/meigara/meigara_20260707.csv.gz", "error": null}
+{"run_id": "690e1b9495ee4df5bb89399962e9adb7", "ts": "2026-07-06T19:31:31.080392+09:00", "dataset": "seigenichiran", "status": "skipped_dup", "data_date": "20260706", "bytes": 23996, "file": null, "error": null}
+{"run_id": "690e1b9495ee4df5bb89399962e9adb7", "ts": "2026-07-06T19:31:31.167262+09:00", "dataset": "shina", "status": "skipped_dup", "data_date": "20260703", "bytes": 98677, "file": null, "error": null}
+{"run_id": "690e1b9495ee4df5bb89399962e9adb7", "ts": "2026-07-06T19:31:31.393210+09:00", "dataset": "zandaka", "status": "skipped_dup", "data_date": "20260703", "bytes": 862114, "file": null, "error": null}
