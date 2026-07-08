@@ -220,6 +220,36 @@
   `signals_features_champion.csv`(74行=ヘッダ+73件)生成確認）
 - [x] カタログ§7-Eを事前登録→実行後に✅結果追記の2段階更新（実行前に閾値凍結・事後の閾値調整なし）
 
+### Done (2026-07-09 追記) — 第17周完了（台帳52試行）・ULフェード大サンプル検証
+
+- [x] **カタログ§7-Fを事前登録→実行後に✅結果追記の2段階更新**（実行前に閾値・成否基準を凍結、
+  事後の閾値調整なし）。新規スクリプト `scripts/kpi_ul_fade_signals.py` で T1/T2 の2試行を実装:
+  T1 `ul_fade_standalone`（全営業日×前月末確定ユニバースでUL連続発生フェード仮説を独立・大サンプル
+  検証）、T2 `volshock_x_above200_ul_lt3`（第16周A2の閾値`ul_count_10bd<=2`をchampion限定n=73では
+  なく広母集団n=180で再確認）。Canonical再利用: `compute_ul_count_10bd`(第16周)を import 再利用、
+  `classify_vs_baseline`は`baseline_lift`/`baseline_ev_e1`をoptional引数化する後方互換リファクタで
+  自己実測基準線に差し替え可能に（第16周の既存呼び出しは無変更）。新規関数`kpi_event_study.
+  bootstrap_ev_ci`（月次ブロック・ブートストラップでEVの点推定+95%CIを算出。既存
+  `bootstrap_lift_ci`と同一の月ブロック抽出方式をEVに適用した正当な追加）。
+- [x] **結果**: T1・T2とも§6正式verdict=**判定保留**（lift_ci_low>1.5・ev_stop8>=3%・
+  月平均シグナル数>=5の3条件が両試行とも未達。n・分散月数・bull/bear跨ぎはOK）。
+  **T1**: 生117件→重複除去12件→採用105件・分散月数51。P(+20%)=11.4%・lift=2.90[1.36,5.31]。
+  **EV(損切りなし・コスト込)点推定=-8.13%・月次ブロック・ブートストラップ95%CI=[-14.10%,-1.41%]・
+  事前凍結基準(EV点推定<0 かつ CI上限<0)によりfade確認=成立**（白紙解剖の負け4/5件がUL3-5日連続
+  だった知見の大サンプル一般化を支持）。mae<=-20%タッチ率=61.9%（参考・判定不使用）。
+  **T2**: 母集団n=180・基準線(自己実測)lift=2.52/EV(E1)+0.94% → フィルタ後n=175・
+  lift=2.64[1.44,4.25]/EV(E1)+1.57%。除外5件の平均リターン=-24.49%（残す群+2.16%と比べ顕著に悪い）。
+  **探索的一次結論=additive**（第16周A2の除外3件依存を広母集団n=180で再確認）。
+  2試行同時登録のため累積試行数割引の対象。運用変更（`daily_screen.py`改修）はこの結果単独では
+  実施しない。
+- [x] 検証: py_compile OK（3ファイル）→ smoke test（scratch-redirect・6ヶ月分・T1/T2両方が
+  再現性確認済み）→ 本実行（`docker compose run --rm xstock python scripts/kpi_ul_fade_signals.py
+  --part both`・exit 0・所要時間 約40秒・trials.jsonl 50→52行=2行追加）。成果物実在確認:
+  `output/kpi/ul_fade_standalone/{report.md,returns.csv,signals_raw.csv}`・
+  `output/kpi/volshock_x_above200_ul_lt3/{report.md,signals_features.csv}`。手動照合2件
+  （code=39280 2017-01-05・code=81050 2017-07-06、いずれも生bars データからUL回数を独立再計算し
+  `compute_ul_count_10bd`の出力と完全一致を確認）。
+
 ### In Progress
 - [ ] **回収R3（委譲中）**: signal_extractorのAnthropic API切替（llm_classifier.pyを型に）+ 週次launchd（com.influx.research-weekly）+ Cookie生死実査
 - [ ] 完了後: 第8弾コミット

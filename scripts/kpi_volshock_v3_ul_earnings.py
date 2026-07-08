@@ -187,8 +187,18 @@ def earnings_proximity_label(remaining: Optional[float], reason: str) -> str:
 # --- 探索的一次結論（additive/degrading/neutral・§6完全合格とは別軸） -----------------
 
 
-def classify_vs_baseline(n: int, point_lift: Optional[float], ev_e1: Optional[float]) -> str:
-    """championベースライン（lift=4.16・EV(E1)=+2.84%）との比較で探索的一次結論を出す。
+def classify_vs_baseline(
+    n: int,
+    point_lift: Optional[float],
+    ev_e1: Optional[float],
+    baseline_lift: float = CHAMPION_BASELINE_LIFT,
+    baseline_ev_e1: float = CHAMPION_BASELINE_EV_E1,
+) -> str:
+    """比較基準線（既定=championのlift=4.16・EV(E1)=+2.84%）との比較で探索的一次結論を出す。
+
+    第17周（T2・カタログ§7-F）で「championではなく母集団自身の実測値」を基準線に差し替えて
+    再利用できるよう `baseline_lift`/`baseline_ev_e1` を引数化した（既定値はchampionの値の
+    ままのため、本ファイル内の既存呼び出し=第16周A1/A2/B1の判定結果は一切変わらない）。
 
     degrading判定を先に評価する（additiveのAND条件のいずれかが崩れれば自動的にdegrading側の
     OR条件も満たすため、両者が同時にTrueになることはない。point_lift/ev_e1がNoneの場合は
@@ -196,16 +206,16 @@ def classify_vs_baseline(n: int, point_lift: Optional[float], ev_e1: Optional[fl
     """
     degrading = (
         point_lift is None
-        or point_lift < CHAMPION_BASELINE_LIFT
+        or point_lift < baseline_lift
         or ev_e1 is None
-        or ev_e1 < CHAMPION_BASELINE_EV_E1 - EV_E1_TOLERANCE
+        or ev_e1 < baseline_ev_e1 - EV_E1_TOLERANCE
         or n < DEGRADING_MAX_N_EXCLUSIVE
     )
     if degrading:
         return "degrading"
     additive = (
-        point_lift >= CHAMPION_BASELINE_LIFT
-        and ev_e1 >= CHAMPION_BASELINE_EV_E1 - EV_E1_TOLERANCE
+        point_lift >= baseline_lift
+        and ev_e1 >= baseline_ev_e1 - EV_E1_TOLERANCE
         and n >= ADDITIVE_MIN_N
     )
     return "additive" if additive else "neutral"

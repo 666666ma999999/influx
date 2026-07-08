@@ -436,6 +436,69 @@ def bootstrap_lift_ci(
     }
 
 
+def _pooled_ev(month_list: list[str], grouped: dict[str, pd.DataFrame], ev_column: str, cost: float) -> Optional[float]:
+    """複数月（重複可＝ブートストラップ再標本用）のシグナルをプールしたEV
+    （mean(ev_column) - cost）を返す。bootstrap_lift_ci の `_pooled_p20_and_base` と同型
+    （ベースレート加重は不要なため、こちらは単純にシグナルをプールした平均）。
+    """
+    vals: list[float] = []
+    for m in month_list:
+        g = grouped.get(m)
+        if g is None or len(g) == 0:
+            continue
+        vals.extend(g[ev_column].tolist())
+    if not vals:
+        return None
+    return sum(vals) / len(vals) - cost
+
+
+def bootstrap_ev_ci(
+    in_universe_df: pd.DataFrame,
+    ev_column: str = "ret",
+    cost: float = measure_base_rate.ROUND_TRIP_COST,
+    n_boot: int = N_BOOTSTRAP,
+    seed: int = BOOTSTRAP_SEED,
+) -> dict:
+    """月次ブロック・ブートストラップでEV（mean(ev_column) - cost）の点推定と95%CIを算出する。
+
+    `bootstrap_lift_ci` と同一の月ブロック抽出方式（月を単位とした復元抽出で横断・系列相関を
+    保持する。§6手順5準拠）をEV算出に適用したもの。リフトと異なりベースレートへの依存が
+    ないため、ベースレート欠測月の除外は不要（in_universe_df に含まれる全月を対象にする）。
+
+    ブロック単位は**シグナル月**（`month`列 = signal_dateの月）であり、エントリー月・
+    手仕舞い月ではない。月末シグナルの損益は翌月相場に乗るが、ブロックの目的は
+    「同月に発生したシグナル群の相関を壊さないこと」なのでシグナル月で一貫させる。
+    返り値のEVは「シグナル数加重の1トレードあたり平均リターン」であって月次リターンの
+    平均ではない（月次EVのCIと誤読しないこと）。
+    """
+    all_months = sorted(in_universe_df["month"].unique())
+    grouped = {m: g for m, g in in_universe_df.groupby("month")}
+
+    if not all_months:
+        return {"point_ev": None, "ci_low": None, "ci_high": None, "n_boot_valid": 0}
+
+    point_ev = _pooled_ev(all_months, grouped, ev_column, cost)
+
+    rng = np.random.default_rng(seed)
+    boot_evs = []
+    for _ in range(n_boot):
+        sample_months = rng.choice(all_months, size=len(all_months), replace=True).tolist()
+        ev_b = _pooled_ev(sample_months, grouped, ev_column, cost)
+        if ev_b is not None:
+            boot_evs.append(ev_b)
+
+    if not boot_evs:
+        return {"point_ev": point_ev, "ci_low": None, "ci_high": None, "n_boot_valid": 0}
+
+    ci_low, ci_high = np.percentile(boot_evs, [2.5, 97.5])
+    return {
+        "point_ev": point_ev,
+        "ci_low": float(ci_low),
+        "ci_high": float(ci_high),
+        "n_boot_valid": len(boot_evs),
+    }
+
+
 # --- 集計・合格判定 ------------------------------------------------------------
 
 
