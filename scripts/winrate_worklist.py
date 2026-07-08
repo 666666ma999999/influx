@@ -29,6 +29,28 @@ from extensions.tier1_collection.grok_discoverer.research_store import ResearchS
 RESEARCH_DIR = "output/research"
 DEFAULT_TWEETS_GLOB = os.path.join(RESEARCH_DIR, "tweets_*.json")
 DEFAULT_OUTPUT_PATH = os.path.join(RESEARCH_DIR, "extraction_worklist.json")
+FROZEN_LIST_PATH = "data/influencer_list_frozen_2026-07-05.json"
+
+
+def load_contrarian_usernames(path: str = FROZEN_LIST_PATH) -> set:
+    """凍結リスト（is_contrarian の正本）から逆指標アカウントの username 集合を返す。
+
+    ツイート収集結果(tweets_*.json)にはこのフラグが乗らないため、
+    worklist 生成時に必ず凍結リスト側から補完する（2026-07-08 バグ修正:
+    従来は tweet.get("is_contrarian") を読んでおり常に False になっていた）。
+    """
+    try:
+        with open(path, encoding="utf-8") as f:
+            frozen = json.load(f)
+    except OSError:
+        return set()
+    names = set()
+    for group in frozen.get("collection_groups", {}).values():
+        accounts = group.get("accounts", group) if isinstance(group, dict) else group
+        for acct in accounts:
+            if isinstance(acct, dict) and acct.get("is_contrarian"):
+                names.add(str(acct.get("username", "")).lower())
+    return names
 
 # 4桁の銘柄コードらしき数字列（前後が数字でない=日付/電話番号等との衝突をある程度回避）
 STOCK_CODE_RE = re.compile(r'(?<!\d)\d{4}(?!\d)')
@@ -77,6 +99,7 @@ def build_worklist(tweets_glob: str, research_dir: str) -> dict:
     """未抽出ツイートのワークリストを構築する。"""
     extractor = TickerExtractor()
     extracted_urls = load_extracted_tweet_urls(research_dir)
+    contrarian_usernames = load_contrarian_usernames()
 
     tweet_files = sorted(glob.glob(tweets_glob))
     total_scanned = 0
@@ -114,7 +137,8 @@ def build_worklist(tweets_glob: str, research_dir: str) -> dict:
                 "username": tweet.get("username", ""),
                 "posted_at": tweet.get("posted_at", ""),
                 "text": text,
-                "is_contrarian": bool(tweet.get("is_contrarian", False)),
+                "is_contrarian": bool(tweet.get("is_contrarian", False))
+                or str(tweet.get("username", "")).lower() in contrarian_usernames,
             })
 
     return {
