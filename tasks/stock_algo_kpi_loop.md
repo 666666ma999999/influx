@@ -194,6 +194,32 @@
 - [x] **R2 直近60営業日バックフィル**: `data/paper_trades/recent_signals_cache.json`新設。チャンピオン+volshock_x_above200の2KPIをTOP500フィルタ込みで日次インクリメンタル更新（ローリング60bd窓）。実データでteam-lead診断と同じ7件(champion)/16件(above200)を再現確認。ledgerには一切記録しない（表示専用）
 - [x] 検証: py_compile OK / master退避再現テスト(⚠️発火→自動取得→復元・JSON内容完全一致)/ --dry-run+本実行1回でledger副作用ゼロ(hash一致)確認
 
+### Done (2026-07-08 夜追記) — 第16周完了（台帳50試行）・白紙解剖発見①②の事前登録検証
+
+- [x] **新規スクリプト `scripts/kpi_volshock_v3_ul_earnings.py`**: チャンピオン構成
+  `volshock_x_above200_quiet`（n=73）に `ul_count_10bd`（直近10営業日ストップ高回数）と
+  `earnings_remaining_bd`（fins決算開示履歴の間隔中央値による次回決算推定・真の予定日API未取得の
+  proxy）を付与し、A1(ul==0)/A2(ul<=2)/B1(決算接近推定20bd以内) の3試行を事前登録検証（カタログ§7-E）。
+  Codex敵対的レビュー修正6点を反映済み（同日引け後開示のPIT安全な有効日処理=`kpi_pead_signals.
+  reaction_day`再利用／マージ列衝突防止=`usecols`+`validate="one_to_one"`+マージ後アサーション／
+  E1突合は`kpi_volshock_v2_followup.load_e1_lookup`/`attach_e1_ev`の実契約どおり呼び出し／§6正式
+  verdict(pending見込み)と探索的一次結論(additive/degrading/neutral)を`params.exploratory_conclusion`
+  へ分離記録／決算接近をnear/far/unknownの3値化(unknown=0件)／多重比較の注記を台帳params・
+  report.md・カタログ§7-E双方に明記）
+- [x] **結果**: 3試行とも§6正式verdict=pending（champion自体がn=73<MIN_N=100のため構造的に想定通り）。
+  探索的一次結論は **A1=degrading**(n=56・lift4.20[1.37,8.07]・EV(E1)+1.71%<許容下限1.84%) /
+  **A2=additive_fragile**(n=70・lift4.56[2.28,7.73]・EV(E1)+4.30%=本ラウンド最高。単調性NG=A2>A1逆転・EV改善は除外3件のE1平均-31.25%除去に依存のためCodexレビュー②で降格) /
+  **B1=degrading**(n=16<20で自動degrading・lift3.01[0.00,8.02]・EV(E1)+3.80%)。
+  **A2単調性チェックはNG（逆転）**: 弱フィルタのA2の方が強フィルタのA1よりリフトが高く
+  (4.56>4.20)、事前登録どおり追加のグリッドサーチ・再解釈はしない（偶然の産物の可能性を明記のみ）。
+  B1推定不能(unknown)=0件/73件。**3試行同時登録のため累積試行数割引の対象。この結果単独で
+  運用変更しない**（A2のEV(E1)は最高だが月平均0.96件でchampion自体とほぼ変わらず、実務的には
+  優先度タグ以上の意味を持たせない・`daily_screen.py`のハード変更はしない）
+- [x] 検証: py_compile OK / --dry-run（champion n=73再現・trials.jsonl行数不変=47のまま）→本実行
+  （exit 0・trials.jsonl 47→50行=3行追加・`output/kpi/volshock_v3_ul_earnings/report.md`と
+  `signals_features_champion.csv`(74行=ヘッダ+73件)生成確認）
+- [x] カタログ§7-Eを事前登録→実行後に✅結果追記の2段階更新（実行前に閾値凍結・事後の閾値調整なし）
+
 ### In Progress
 - [ ] **回収R3（委譲中）**: signal_extractorのAnthropic API切替（llm_classifier.pyを型に）+ 週次launchd（com.influx.research-weekly）+ Cookie生死実査
 - [ ] 完了後: 第8弾コミット

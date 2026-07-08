@@ -54,6 +54,10 @@ HORIZON_5BD = 5
 HORIZON_20BD = 20
 REACH_THRESHOLD = 0.20  # カタログ§2-G「+20%到達」の関心指標
 N_REFERENCE_MIN = 10  # n<10のアカウントは「参考」表示（spec §5 F4）
+LIST_TWEET_TICKER_THRESHOLD = 5  # F4: 同一tweet_urlの抽出ticker数がこれ以上なら「リスト型」投稿
+# CLI引数化しない（固定定数）。カタログ§6「評価プロトコル凍結・事前登録必須」の精神に倣い、
+# 閾値を実行のたびに変えられる状態にすると事後的な閾値探索（データスヌーピング）の温床になる。
+# 変更する場合は設計書と spec §F4 の該当箇所を明示的に改版してから行う。
 
 # シグナルのticker(例 "7203.T" "285A.T")のうち日本株4桁(英数字混在可)+.T形式のみ
 # J-Quants bars で評価できる（米国株/ETF/指数/暗号資産等はbars対象外）
@@ -240,6 +244,39 @@ def run_scoring(signals: list, all_bdays: list) -> tuple:
 # --- スコアボード生成 -----------------------------------------------------------
 
 
+def compute_tickers_per_tweet(signals: list) -> dict:
+    """tweet_url単位で抽出されたticker(=signal)件数を数える（リスト型判定の入力）。
+
+    signals.jsonl のみから計算する構造的指標（本文のtweet_url・件数のみに依存し、
+    価格・評価結果を一切参照しない）。ticker抽出結果自体は投稿時点で確定しているため
+    look-ahead は発生しない。
+
+    判定は「抽出済み signal 数」ベースであり「ツイート本文の銘柄数」そのものではない
+    （抽出漏れがあれば境界がブレうる。spec §F4 参照）。
+
+    引数は必ず --limit 適用前の全 signals を渡すこと。--limit で絞った後の signals を
+    渡すと、本来リスト型だったツイートの一部シグナルだけが集計対象に残り、
+    tickers_per_tweet が過小算出されて非リスト型に誤分類されるため。
+
+    tweet_url が空/欠落のシグナルは同一の空文字キーへ集約しない（1ツイート内の
+    複数シグナルという前提が崩れるため、グルーピング対象外として個別に扱う）。
+    """
+    counts: dict = {}
+    for sig in signals:
+        url = sig.get("tweet_url") or f"__no_url__:{id(sig)}"
+        counts[url] = counts.get(url, 0) + 1
+    return counts
+
+
+def is_list_tweet(tweet_url: str, tickers_per_tweet: dict) -> bool:
+    """1ツイートからの抽出ticker数がLIST_TWEET_TICKER_THRESHOLD以上の「リスト型」投稿か判定する（spec §F4）。
+
+    tweet_url が空文字の場合、compute_tickers_per_tweet 側で個別キーに退避済みのため
+    ここでの空文字ルックアップは常に0件(=リスト型でない)になる（グルーピング対象外）。
+    """
+    return tickers_per_tweet.get(tweet_url, 0) >= LIST_TWEET_TICKER_THRESHOLD
+
+
 def _is_prospective(posted_at: str) -> bool:
     return bool(posted_at) and posted_at[:10] >= FROZEN_DATE
 
@@ -252,16 +289,20 @@ def _fmt_ret(x) -> str:
     return f"{x:+.2f}%" if x is not None else "-"
 
 
-def group_by_username(signals: list, evaluations: list) -> dict:
-    """シグナルを評価結果と突合し、アカウント別・prospective/遡及別に振り分ける。"""
+def group_by_username(signals: list, evaluations: list, tickers_per_tweet: dict) -> dict:
+    """シグナルを評価結果と突合し、アカウント別・prospective/遡及別・リスト型/非リスト型別に振り分ける。"""
     eval_by_id = {e["signal_id"]: e for e in evaluations}
     by_username: dict = {}
     for sig in signals:
         username = sig.get("username", "unknown")
-        entry = by_username.setdefault(username, {"prospective": [], "retroactive": []})
+        entry = by_username.setdefault(username, {
+            "prospective": [], "retroactive": [],
+            "prospective_list": [], "retroactive_list": [],
+        })
         joined = dict(sig)
         joined["evaluation"] = eval_by_id.get(sig.get("signal_id"))
-        bucket = "prospective" if _is_prospective(sig.get("posted_at", "")) else "retroactive"
+        time_bucket = "prospective" if _is_prospective(sig.get("posted_at", "")) else "retroactive"
+        bucket = f"{time_bucket}_list" if is_list_tweet(sig.get("tweet_url", ""), tickers_per_tweet) else time_bucket
         entry[bucket].append(joined)
     return by_username
 
@@ -317,16 +358,27 @@ def _render_table(rows: list) -> list:
 
 
 def render_scoreboard_md(by_username: dict, generated_at: str) -> str:
-    prospective_rows = []
-    retro_rows = []
-    for username, buckets in by_username.items():
-        if buckets["prospective"]:
-            prospective_rows.append((username, _account_stats(buckets["prospective"])))
-        if buckets["retroactive"]:
-            retro_rows.append((username, _account_stats(buckets["retroactive"])))
+    def rows_for(bucket_key: str) -> list:
+        rows = []
+        for username, buckets in by_username.items():
+            if buckets[bucket_key]:
+                rows.append((username, _account_stats(buckets[bucket_key])))
+        rows.sort(key=lambda x: (-(x[1]["win_rate_20bd"] if x[1]["win_rate_20bd"] is not None else -1), -x[1]["n"]))
+        return rows
 
-    prospective_rows.sort(key=lambda x: (-(x[1]["win_rate_20bd"] if x[1]["win_rate_20bd"] is not None else -1), -x[1]["n"]))
-    retro_rows.sort(key=lambda x: (-(x[1]["win_rate_20bd"] if x[1]["win_rate_20bd"] is not None else -1), -x[1]["n"]))
+    prospective_rows = rows_for("prospective")
+    retro_rows = rows_for("retroactive")
+    prospective_list_rows = rows_for("prospective_list")
+    retro_list_rows = rows_for("retroactive_list")
+
+    n_main = sum(s["n"] for _, s in prospective_rows) + sum(s["n"] for _, s in retro_rows)
+    n_list = sum(s["n"] for _, s in prospective_list_rows) + sum(s["n"] for _, s in retro_list_rows)
+
+    list_tweet_urls = set()
+    for _, buckets in by_username.items():
+        for rec in buckets["prospective_list"] + buckets["retroactive_list"]:
+            list_tweet_urls.add(rec.get("tweet_url", ""))
+    n_list_tweets = len(list_tweet_urls)
 
     lines = [
         "# インフルエンサー週次スコアボード",
@@ -336,6 +388,11 @@ def render_scoreboard_md(by_username: dict, generated_at: str) -> str:
         f"PIT基準: {FROZEN_DATE}以降の投稿=prospective（前向き・本評価対象）。"
         "それ以前は参考枠（仮説出し専用。遡及収集バイアスの影響を受ける。カタログ§2-G準拠）。",
         f"n<{N_REFERENCE_MIN} のアカウントは「（参考）」表示（統計的信頼性が低いため）。",
+        f"1ツイートからの抽出ticker数が{LIST_TWEET_TICKER_THRESHOLD}件以上の投稿は「リスト型」（株探ランキング転載・"
+        "固定リスト等）と判定し、下記アカウント別的中率表から除外して別枠に表示する（spec §F4・サイレント除外なし）。"
+        f"リスト型として分離: {n_list_tweets}tweets / {n_list}signals（評価対象=非リスト型: {n_main}件）。",
+        "**注意**: 下記メイン表は非リスト型投稿のみで集計。リスト型多用アカウント（@kazzn_blog等）は"
+        "残存する非リスト型シグナルの件数が少なく、本人の通常運用全体の代表サンプルではない可能性がある。",
         "",
         "## Prospective（前向き・本評価対象）",
         "",
@@ -347,15 +404,29 @@ def render_scoreboard_md(by_username: dict, generated_at: str) -> str:
         "",
     ]
     lines += _render_table(retro_rows)
+    lines += [
+        "",
+        "## リスト型投稿（的中率評価対象外・セクター横断スクリーニング情報の参考表示）",
+        "",
+        "以下は1ツイートに複数銘柄が同時掲載される投稿（株探ランキング転載・固定ウォッチリスト等）の集計。"
+        "1ツイート内の複数ティッカーは独立した個別判断ではなく相関した一括情報のため、"
+        "アカウントの個別的中率スキルの指標として解釈しない。",
+        "",
+        "### Prospective",
+        "",
+    ]
+    lines += _render_table(prospective_list_rows)
+    lines += ["", "### 遡及", ""]
+    lines += _render_table(retro_list_rows)
 
     total_prospective = sum(s["n"] for _, s in prospective_rows)
     lines += ["", "## サマリ", ""]
-    lines.append(f"- prospectiveシグナル累計: {total_prospective}件（アカウント{len(prospective_rows)}件）")
+    lines.append(f"- prospectiveシグナル累計（非リスト型のみ）: {total_prospective}件（アカウント{len(prospective_rows)}件）")
     if prospective_rows:
         top_username, top_stats = max(
             prospective_rows, key=lambda x: (x[1]["win_rate_20bd"] if x[1]["win_rate_20bd"] is not None else -1)
         )
-        lines.append(f"- 勝率(20bd)首位: @{top_username}（{_fmt_pct(top_stats['win_rate_20bd'])}, n={top_stats['n_20bd']}）")
+        lines.append(f"- 勝率(20bd)首位（非リスト型）: @{top_username}（{_fmt_pct(top_stats['win_rate_20bd'])}, n={top_stats['n_20bd']}）")
     lines.append("")
     return "\n".join(lines)
 
@@ -374,9 +445,13 @@ def main() -> int:
     all_bdays = measure_base_rate.all_business_days(calendar_days)
 
     store = ResearchStore(base_dir=args.research_dir)
-    signals = store.load_signals()
+    signals_all = store.load_signals()
+    # リスト型判定(tickers_per_tweet)は必ず --limit 適用前の全件で確定させる。
+    # limit後に数えるとリスト型の一部シグナルだけが対象に残り、非リスト型に誤分類されるため。
+    tickers_per_tweet = compute_tickers_per_tweet(signals_all)
+    signals = signals_all[: args.limit] if args.limit else signals_all
     if args.limit:
-        signals = signals[: args.limit]
+        print(f"注: リスト型判定は全件基準（--limit適用前の{len(signals_all)}件）で行っています。")
 
     evaluations, diag = run_scoring(signals, all_bdays)
 
@@ -393,7 +468,11 @@ def main() -> int:
         print(f"  スキップ({reason}): {count}")
     print(f"評価結果: {eval_path}")
 
-    by_username = group_by_username(signals, evaluations)
+    n_list_signals = sum(1 for s in signals if is_list_tweet(s.get("tweet_url", ""), tickers_per_tweet))
+    print(f"リスト型投稿(tickers_per_tweet>={LIST_TWEET_TICKER_THRESHOLD})除外: {n_list_signals}件 / "
+          f"評価対象(非リスト型): {diag['total_signals'] - n_list_signals}件")
+
+    by_username = group_by_username(signals, evaluations, tickers_per_tweet)
     md = render_scoreboard_md(by_username, jq_fetch.now_jst().isoformat())
     os.makedirs(os.path.dirname(scoreboard_path) or ".", exist_ok=True)
     with open(scoreboard_path, "w", encoding="utf-8") as f:
