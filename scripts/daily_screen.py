@@ -83,6 +83,27 @@ NEAR_MISS_DEV200_FLOOR = -0.02  # dev200が-2%〜0%（200日線のわずか下�
 NEAR_MISS_QUIET_FLOOR = 1.0  # quiet_ratio 1.0〜1.2（未達）
 MAX_NEXT_CANDIDATES_ROWS = 10  # 次点候補セクション全体（カテゴリ1+2合計）の表示上限行数
 
+# 回収R1+R2（2026-07-08 team-lead指示・「レコメンドゼロ」根本診断への対応）:
+# 稼働可視化・チャンピオン基準は config/paper_watchlist.json の該当エントリを Canonical Module として
+# 参照する（avg_monthly_signals等の数値は本ファイルに複製しない）。ギャップ分布(中央値/最大)のみ、
+# in-sample期間の生データから独立に導出した記述統計であり config には存在しないため以下に定数化する。
+CHAMPION_KPI_NAME = "volshock_x_above200_quiet"  # チャンピオン構成（tasks/stock_algo_kpi_loop.md 第13周確定）
+RECENT_SIGNALS_KPI_NAMES = (CHAMPION_KPI_NAME, "volshock_x_above200")  # 60bdバックフィル対象（team-lead指定の2KPI）
+RECENT_SIGNALS_LOOKBACK_BDAYS = 60
+RECENT_SIGNALS_CACHE_PATH = PROJECT_ROOT / "data" / "paper_trades" / "recent_signals_cache.json"
+BDAYS_PER_MONTH_APPROX = 21  # 営業日/月の換算規約（measure_base_rate.UNIVERSE_WINDOWと同一の慣行値）
+
+# チャンピオン(CHAMPION_KPI_NAME)のin-sampleシグナル間隔の記述統計（2026-07-08実測・再現手順:
+# output/kpi/volshock_v2_amplifiers/signals_features_volshock_x_above200.csv の quiet_bucket=="quiet"
+# 行から distinct signal_date を昇順抽出→隣接日の営業日差分(n=69日付間隔・68ギャップ)。
+# median=13, max=85 と確定・team-lead診断の数値と一致確認済み）。
+CHAMPION_GAP_MEDIAN_BDAYS = 13
+CHAMPION_GAP_MAX_BDAYS = 85
+# ゼロ日数警戒閾値（tasks/stock_algo_kpi_loop.md 2026-07-08「実測分布ベース」で確定した値をそのまま採用）。
+GAP_WARN_LIGHT_BDAYS = 40  # 超過で軽度注意
+GAP_WARN_INVESTIGATE_BDAYS = 60  # 超過で要調査
+GAP_WARN_ANOMALY_BDAYS = 85  # 超過で異常（=歴史分布の最大ギャップと同値）
+
 
 # --- watchlist設定読み込み -----------------------------------------------------------
 
@@ -158,6 +179,39 @@ def refresh_topix_if_stale(target_bd: str) -> None:
     api_key = jq_fetch.get_api_key()
     run_id = uuid.uuid4().hex
     jq_fetch.fetch_topix(api_key, run_id)
+
+
+def refresh_master_if_stale(target_bd: str, calendar_days: list[tuple[str, str]]) -> None:
+    """data/jquants/master/（月次ユニバース構築の材料・月末営業日ごとに1ファイル）を最新化する。
+
+    === CRITICAL時限爆弾（2026-07-08「レコメンドゼロ」根本診断で発見） ===
+    master は jq_fetch.py --only master を明示的に呼ばない限り自動更新されない。本スクリプトは
+    bars/fins/shortsale（refresh_recent_data）とtopix（refresh_topix_if_stale）は日次で鮮度確保
+    するが、master にはこの手当てが無かった。UniverseCache.universe_for_month() は必要な月末営業日
+    のmasterが無いと measure_base_rate.build_universe() のSystemExitを握りつぶし「ユニバース外」
+    扱い（=新規シグナル0件と区別不能）にする設計のため、月が変わって新しい月末営業日のmasterが
+    未取得のまま放置されると、シグナル判定ロジック自体は健全でも全シグナルが静かに消える
+    （2026-08-03以降、2026-07-31分masterが無ければ発火する想定だった障害）。
+
+    target_bd（走査末尾の営業日）までに必要な月末営業日を
+    jq_fetch.month_end_business_days_in_range で列挙し、未取得ファイルがあれば
+    jq_fetch.py --only master を呼んで補充する（jq_fetch.fetch_snapshot_for_date は既存ファイルを
+    無条件スキップするため、範囲を全履歴始点からtarget_bdまでにしても実際にAPIを叩くのは不足分のみ
+    ・冪等かつ軽量。jq_fetch.py本体・build_universe()は一切変更しない）。
+    """
+    expected = jq_fetch.month_end_business_days_in_range(calendar_days, jq_fetch.DEFAULT_START, target_bd)
+    missing = [d for d in expected if not (jq_fetch.DATA_ROOT / "master" / f"{d}.json.gz").exists()]
+    if not missing:
+        return
+    print(
+        f"[refresh] master: 不足{len(missing)}件（{missing[0]}〜{missing[-1]}）を検知。取得します",
+        file=sys.stderr,
+    )
+    subprocess.run(
+        [sys.executable, str(Path(__file__).parent / "jq_fetch.py"),
+         "--only", "master", "--start", jq_fetch.DEFAULT_START, "--end", target_bd],
+        check=True,
+    )
 
 
 # --- 走査対象レンジの決定（キャッチアップ込み） --------------------------------------------
@@ -281,6 +335,7 @@ class UniverseCache:
         self._cache: dict[str, Optional[set]] = {}
         self._stats_cache: dict[str, dict] = {}
         self._full_rank_cache: dict[str, Optional[dict[str, int]]] = {}
+        self._failure_reasons: dict[str, str] = {}  # month -> 理由（R1「⚠️見える化」・0件と区別可能にする）
 
     def _t_date_for_month(self, month: str) -> Optional[str]:
         month_ends = measure_base_rate.month_ends_in_range(self._calendar_days, "2016-08", month)
@@ -293,6 +348,7 @@ class UniverseCache:
         t_date = self._t_date_for_month(month)
         if t_date is None:
             self._cache[month] = None
+            self._failure_reasons[month] = "対象月の前月末営業日が特定できません（データ開始日に近すぎる可能性）"
             return None
         try:
             selected, stats = measure_base_rate.build_universe(
@@ -301,6 +357,7 @@ class UniverseCache:
         except SystemExit as e:
             print(f"WARN: {month}のユニバース構築に失敗（{e}）。この月のシグナルはユニバース判定不能扱い", file=sys.stderr)
             self._cache[month] = None
+            self._failure_reasons[month] = f"t_date={t_date}のユニバース構築失敗: {e}"
             return None
         codes = {code for code, _ in selected}
         self._cache[month] = codes
@@ -313,6 +370,12 @@ class UniverseCache:
         if universe is None:
             return False
         return code in universe
+
+    def failed_months(self) -> dict[str, str]:
+        """これまでに universe_for_month() がユニバース構築に失敗した月とその理由を返す
+        （R1「⚠️見える化」用・表示専用。判定結果自体（in_universeがFalseを返す挙動）には影響しない）。
+        """
+        return dict(self._failure_reasons)
 
     def rank_for(self, code: str, signal_date: str) -> Optional[int]:
         """全銘柄中の月間売買代金順位（1始まり）。次点候補「ユニバース外の完全通過者」表示専用
@@ -547,6 +610,163 @@ def format_next_candidates_section(out_of_universe: list[dict], near_miss: list[
     return lines
 
 
+# --- 運用可視化（R1ユニバース失敗警告 + R2稼働コンテキスト/60bdバックフィル） -----------------------
+# 2026-07-08 team-lead指示「回収R1+R2」: (1)ユニバース構築失敗を0件シグナルと区別可能にする
+# (2)稼働日数・チャンピオン歴史的期待値・シグナル間隔ギャップの常時可視化、で構成する。
+# いずれも表示専用でありシグナル判定ロジック・ledger記録内容には一切影響しない。
+
+
+def format_universe_failure_section(failures: dict[str, str]) -> list[str]:
+    """UniverseCache.failed_months()の内容をpaper_today.md冒頭に出す警告セクションを整形する。
+
+    failuresが空なら空リストを返す（=通常時はセクション自体を出さない）。非空の場合のみ
+    「シグナル判定が無効」だったことを明示し、通常の「新規シグナルなし」と区別できるようにする
+    （R1 §CRITICAL時限爆弾の是正・refresh_master_if_stale()導入後も、未知の原因でユニバース構築が
+    失敗した場合の保険として引き続き機能する）。
+    """
+    if not failures:
+        return []
+    lines = [
+        "## ⚠️ ユニバース構築失敗（シグナル判定は無効）",
+        "",
+        "以下の月はユニバース（TOP500選抜）構築に失敗しました。該当月の候補は判定不能のため"
+        "「ユニバース外」として扱われ、通常の「新規シグナルなし」とは区別が必要です"
+        "（0件表示だけでは本当に市場で何も起きなかったのか、判定自体が壊れていたのか分かりません）。",
+        "",
+    ]
+    for month in sorted(failures):
+        lines.append(f"- **{month}**: {failures[month]}")
+    lines.append("")
+    return lines
+
+
+def format_operational_context_lines(
+    first_screened_date: str, end_bd: str, bday_index: dict[str, int],
+    champion_avg_monthly_signals: float, records: list[dict], recent_signals: list[dict],
+) -> list[str]:
+    """稼働日数・チャンピオンの歴史的期待発生数・直近シグナルからの経過を常時表示する見出し行を作る
+    （R2「レコメンドゼロ」が探索停止によるものか運用未熟によるものか常時判別できるようにする）。
+
+    経過日数は ledger（本番記録）と recent_signals（60bdバックフィル・R2 §2）の両方から
+    CHAMPION_KPI_NAME のsignal_dateを集め最新のものを採用する（ledgerは稼働開始日以降しか
+    持たないため、バックフィルが「その前から実は何件出ていたか」を補う設計・team-lead方針）。
+    """
+    n_days = bday_index[end_bd] - bday_index[first_screened_date] + 1
+    expected_champion = n_days / BDAYS_PER_MONTH_APPROX * champion_avg_monthly_signals
+
+    candidates = [r["signal_date"] for r in records if r["kpi_name"] == CHAMPION_KPI_NAME]
+    candidates += [r["signal_date"] for r in recent_signals if r["kpi_name"] == CHAMPION_KPI_NAME]
+    if candidates:
+        last_date = max(candidates)
+        gap = bday_index[end_bd] - bday_index[last_date]
+        gap_str = f"{gap}営業日"
+        if gap > GAP_WARN_ANOMALY_BDAYS:
+            warn = "異常"
+        elif gap > GAP_WARN_INVESTIGATE_BDAYS:
+            warn = "要調査"
+        elif gap > GAP_WARN_LIGHT_BDAYS:
+            warn = "軽度注意"
+        else:
+            warn = "正常範囲"
+    else:
+        gap_str = f"不明（直近{RECENT_SIGNALS_LOOKBACK_BDAYS}営業日のバックフィル内に該当なし・ledgerにも記録なし）"
+        warn = "要調査"
+
+    return [
+        "## 稼働状況",
+        "",
+        f"稼働 {n_days}営業日目 / この期間のチャンピオン（{CHAMPION_KPI_NAME}）歴史的期待発生数 "
+        f"≈{expected_champion:.1f}件（月{champion_avg_monthly_signals:.1f}件ベース） / "
+        f"直近シグナルからの経過 = {gap_str}"
+        f"（歴史分布: 中央値{CHAMPION_GAP_MEDIAN_BDAYS}営業日・最大{CHAMPION_GAP_MAX_BDAYS}営業日） "
+        f"/ 警戒レベル: {warn}",
+        "",
+    ]
+
+
+def load_recent_signals_cache() -> dict:
+    if not RECENT_SIGNALS_CACHE_PATH.exists():
+        return {"computed_through": None, "hits": []}
+    return json.loads(RECENT_SIGNALS_CACHE_PATH.read_text(encoding="utf-8"))
+
+
+def save_recent_signals_cache(cache: dict) -> None:
+    RECENT_SIGNALS_CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
+    tmp = RECENT_SIGNALS_CACHE_PATH.with_name(RECENT_SIGNALS_CACHE_PATH.name + ".tmp")
+    tmp.write_text(json.dumps(cache, ensure_ascii=False, indent=2), encoding="utf-8")
+    tmp.replace(RECENT_SIGNALS_CACHE_PATH)
+
+
+def update_recent_signals_cache(
+    end_bd: str, watchlist_by_name: dict[str, dict], bday_index: dict[str, int], all_bdays: list[str],
+    regime_by_day: dict[str, str], universe_cache: UniverseCache,
+) -> list[dict]:
+    """直近RECENT_SIGNALS_LOOKBACK_BDAYS営業日のチャンピオン+比較対照KPIヒットをキャッシュする
+    （R2 §2「バックフィル参考・ledger非記録」）。
+
+    generate_kpi_signals()・UniverseCache.in_universe()をそのまま再利用し判定ロジックは一切
+    再実装しない（Canonical Module原則）。初回はフルスキャン、以降はcomputed_through翌営業日〜
+    end_bdだけを追加スキャンし、ローリング窓（60営業日）外に出た古いヒットを切り捨てて日次
+    インクリメンタルに更新する（毎日60日分を再計算する重さを避ける設計・team-lead推奨方針）。
+    """
+    end_idx = bday_index[end_bd]
+    window_start = all_bdays[max(0, end_idx - RECENT_SIGNALS_LOOKBACK_BDAYS + 1)]
+
+    cache = load_recent_signals_cache()
+    computed_through = cache.get("computed_through")
+    hits: list[dict] = cache.get("hits", [])
+
+    if computed_through is None:
+        scan_start: Optional[str] = window_start
+    elif computed_through >= end_bd:
+        scan_start = None  # 既に最新まで計算済み（再走査不要・ローリング窓のトリムのみ行う）
+    else:
+        idx = bday_index.get(computed_through)
+        scan_start = all_bdays[idx + 1] if idx is not None else window_start
+
+    if scan_start is not None:
+        for kpi_name in RECENT_SIGNALS_KPI_NAMES:
+            entry = watchlist_by_name.get(kpi_name)
+            if entry is None:
+                continue
+            df = generate_kpi_signals(entry, scan_start, end_bd, regime_by_day, bday_index, all_bdays)
+            for row in df.itertuples(index=False):
+                if not universe_cache.in_universe(row.code, row.signal_date):
+                    continue
+                hits.append({"kpi_name": kpi_name, "code": row.code, "signal_date": row.signal_date})
+
+    hits = [h for h in hits if h["signal_date"] >= window_start]
+    seen: set[tuple[str, str, str]] = set()
+    deduped: list[dict] = []
+    for h in hits:
+        key = (h["kpi_name"], h["code"], h["signal_date"])
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(h)
+
+    save_recent_signals_cache({"computed_through": end_bd, "hits": deduped})
+    return deduped
+
+
+def format_recent_signals_section(recent_signals: list[dict]) -> list[str]:
+    lines = [
+        f"## 直近{RECENT_SIGNALS_LOOKBACK_BDAYS}営業日のシグナル履歴（バックフィル参考・ledger非記録）",
+        "",
+        f"対象KPI: {', '.join(RECENT_SIGNALS_KPI_NAMES)}（チャンピオン+比較対照。TOP500ユニバース内のみ）",
+        "",
+    ]
+    if not recent_signals:
+        lines += ["（該当なし）", ""]
+        return lines
+    lines.append("| KPI | 銘柄コード | signal_date |")
+    lines.append("|---|---|---|")
+    for r in sorted(recent_signals, key=lambda r: (r["signal_date"], r["kpi_name"], r["code"])):
+        lines.append(f"| {r['kpi_name']} | {r['code']} | {r['signal_date']} |")
+    lines.append("")
+    return lines
+
+
 # --- ledgerへの新規シグナル追記 --------------------------------------------------------------
 
 
@@ -609,11 +829,14 @@ def append_new_signals(
 def write_today_report(
     new_signal_records: list[dict], records: list[dict], scoreboard: dict[str, dict],
     scan_start: Optional[str], scan_end: Optional[str], out_of_universe_counts: dict[str, int],
-    next_candidates_lines: list[str],
+    next_candidates_lines: list[str], universe_failure_lines: list[str],
+    operational_context_lines: list[str], recent_signals_lines: list[str],
 ) -> None:
     lines = [
         "# ペーパートレード 当日スクリーニングレポート（scripts/daily_screen.py 自動生成）",
         "",
+        *universe_failure_lines,
+        *operational_context_lines,
         f"実行時刻: {jq_fetch.now_jst().isoformat()}",
         f"走査区間: {scan_start or '-'} 〜 {scan_end or '-'}（前営業日終値までのデータで判定・想定エントリーはT+1寄付）",
         "",
@@ -634,6 +857,7 @@ def write_today_report(
             + " / ".join(f"{k}={v}" for k, v in sorted(out_of_universe_counts.items()))
         )
 
+    lines += ["", *recent_signals_lines]
     lines += ["", *next_candidates_lines]
 
     lines += ["", "## 保有中ポジション（pending_entry / open）", ""]
@@ -691,18 +915,24 @@ def main() -> int:
         start_bd = end_bd
         print(f"[dry-run] 今あるキャッシュの最新営業日 {end_bd} のみで判定します（データ取得は行いません）")
     else:
-        start_bd, end_bd = compute_scan_range(load_state(), all_bdays)
+        state = load_state()
+        start_bd, end_bd = compute_scan_range(state, all_bdays)
         if start_bd is None:
             print("走査すべき新規営業日がありません（既に最新まで処理済み）")
             return 0
         refresh_recent_data(start_bd, end_bd, all_bdays)
         refresh_topix_if_stale(end_bd)
+        refresh_master_if_stale(end_bd, calendar_days)
         available_end = latest_fully_available_bday([d for d in all_bdays if start_bd <= d <= end_bd])
         if available_end is None:
             print(f"WARN: {start_bd}〜{end_bd} のデータがまだ公表されていません。次回実行で再試行します", file=sys.stderr)
             return 0
         end_bd = available_end
         print(f"走査区間: {start_bd} 〜 {end_bd}")
+        # 稼働開始日（R2「稼働N営業日目」計測の起点）。新設フィールドのため既存state.jsonとの
+        # 後方互換フォールバックを3段で持つ: 明示保存済み > 既存last_screened_date(=既に稼働実績あり
+        # の証跡) > 今回のstart_bd(=真の初回実行)。
+        first_screened_date = state.get("first_screened_date") or state.get("last_screened_date") or start_bd
 
     topix_close = measure_base_rate.load_topix_series()
     regime_by_day = measure_base_rate.build_regime_series(topix_close)
@@ -751,8 +981,12 @@ def main() -> int:
         new_signal_records.extend(records[before : before + added])
 
     next_candidates_lines = format_next_candidates_section(next_candidates_out_of_universe, next_candidates_near_miss)
+    universe_failures = universe_cache.failed_months()
+    universe_failure_lines = format_universe_failure_section(universe_failures)
 
     if args.dry_run:
+        if universe_failure_lines:
+            print("\n".join(universe_failure_lines))
         print("\n".join(next_candidates_lines))
         print("[dry-run] ledger書込み・レポート生成は行いません")
         return 0
@@ -767,10 +1001,29 @@ def main() -> int:
 
     scoreboard = paper_eval.compute_scoreboard(records)
     paper_eval.write_scoreboard_md(scoreboard, paper_eval.SCOREBOARD_PATH)
-    write_today_report(new_signal_records, records, scoreboard, start_bd, end_bd, out_of_universe_counts, next_candidates_lines)
+
+    watchlist_by_name = {e["kpi_name"]: e for e in watchlist}
+    recent_signals = update_recent_signals_cache(
+        end_bd, watchlist_by_name, bday_index, all_bdays, regime_by_day, universe_cache,
+    )
+    recent_signals_lines = format_recent_signals_section(recent_signals)
+    champion_avg_monthly_signals = watchlist_by_name[CHAMPION_KPI_NAME]["in_sample"]["avg_monthly_signals"]
+    operational_context_lines = format_operational_context_lines(
+        first_screened_date, end_bd, bday_index, champion_avg_monthly_signals, records, recent_signals,
+    )
+
+    write_today_report(
+        new_signal_records, records, scoreboard, start_bd, end_bd, out_of_universe_counts,
+        next_candidates_lines, universe_failure_lines, operational_context_lines, recent_signals_lines,
+    )
     print(f"レポート出力: {TODAY_REPORT_PATH}")
 
-    save_state({"last_screened_date": end_bd, "last_run_at": jq_fetch.now_jst().isoformat(), "last_run_id": run_id})
+    save_state({
+        "last_screened_date": end_bd,
+        "last_run_at": jq_fetch.now_jst().isoformat(),
+        "last_run_id": run_id,
+        "first_screened_date": first_screened_date,
+    })
     return 0
 
 

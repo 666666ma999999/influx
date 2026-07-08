@@ -455,7 +455,7 @@ def phase_evaluate(tweet_files=None, dry_run=False, limit=None):
     print(f"シグナル抽出: {len(signals)}件")
 
     if dry_run:
-        est_cost_per_signal = 0.0015  # Grok Haiku 相当の粗い見積もり (USD)
+        est_cost_per_signal = 0.0015  # Claude Haiku 4.5 相当の粗い見積もり (USD)
         total_tweets_estimate = len(tweet_files) * 100  # 実行時の想定ツイート件数
         estimated_total = total_tweets_estimate * est_cost_per_signal
         print(f"\n[DRY-RUN] API 接続性: OK（シグナル抽出が 1 件で動作）")

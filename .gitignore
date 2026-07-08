@@ -73,3 +73,6 @@ data/edinet/
 # ペーパートレード日次レポート（daily_screen/paper_evalが毎日再生成）
 output/paper_today.md
 output/paper_scoreboard.md
+
+# ペーパートレード表示用ローリングキャッシュ（barsから再生成可能）
+data/paper_trades/recent_signals_cache.json

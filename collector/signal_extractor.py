@@ -1,7 +1,9 @@
 """LLMベースの売買シグナル抽出モジュール。
 
 ツイートからティッカー・売買方向・確信度を抽出する。
-xAI Grok API (OpenAI互換REST) を使用（urllibベース）。
+Anthropic Messages API (urllibベース) を使用。実装パターンは
+collector/llm_classifier.py を Canonical Module として踏襲する
+（2026-07-08: xAI Grok API から切替。XAI経路は廃止）。
 """
 
 import json
@@ -17,14 +19,14 @@ from collector.logger import get_logger
 logger = get_logger(__name__)
 
 DEFAULT_SIGNAL_CONFIG = {
-    "model": "grok-3-mini-fast",
+    "model": "claude-haiku-4-5-20251001",
     "batch_size": 15,
     "max_tokens": 4096,
     "max_retries": 3,
     "retry_backoff_base": 2.0,
 }
 
-XAI_API_URL = "https://api.x.ai/v1/chat/completions"
+ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages"
 
 SYSTEM_PROMPT = """あなたは日本語の株式投資ツイートから売買シグナルを抽出する専門家です。
 
@@ -73,15 +75,15 @@ JSON配列で以下の形式:
 
 
 class SignalExtractor:
-    """xAI Grok APIを使用した売買シグナル抽出器。
+    """Anthropic Claude APIを使用した売買シグナル抽出器。
 
-    urllib.requestによるHTTP直接呼び出しでxAI REST API (OpenAI互換) を利用する。
+    urllib.requestによるHTTP直接呼び出しでAnthropic Messages APIを利用する
+    （collector/llm_classifier.py と同一の呼び出しパターン）。
     """
 
     @staticmethod
     def _sanitize_log(text: str) -> str:
         """ログ出力からAPIキーなどの機密情報をマスク。"""
-        text = re.sub(r'xai-[A-Za-z0-9_\-]+', 'xai-***REDACTED***', text)
         text = re.sub(r'sk-ant-[a-zA-Z0-9\-_]+', 'sk-ant-***REDACTED***', text)
         text = re.sub(
             r'(?i)(api[_-]?key|token|secret|bearer)["\s:=]+["\']?([a-zA-Z0-9\-_]{20,})',
@@ -98,14 +100,14 @@ class SignalExtractor:
         """初期化。
 
         Args:
-            api_key: xAI APIキー（Noneの場合は環境変数XAI_API_KEYから取得）
+            api_key: Anthropic APIキー（Noneの場合は環境変数ANTHROPIC_API_KEYから取得）
             model: 使用するモデル名
             batch_size: 一度に処理するツイート数
         """
-        self.api_key = api_key or os.environ.get("XAI_API_KEY")
+        self.api_key = api_key or os.environ.get("ANTHROPIC_API_KEY")
         if not self.api_key:
             raise ValueError(
-                "APIキーが設定されていません。環境変数XAI_API_KEYを設定するか、"
+                "APIキーが設定されていません。環境変数ANTHROPIC_API_KEYを設定するか、"
                 "コンストラクタでapi_keyを指定してください。"
             )
 
@@ -117,7 +119,7 @@ class SignalExtractor:
         self.retry_backoff_base = config["retry_backoff_base"]
 
     def _call_api(self, messages: List[Dict[str, str]]) -> Dict[str, Any]:
-        """xAI REST APIを呼び出し（OpenAI互換フォーマット）。
+        """Anthropic Messages APIを呼び出し。
 
         Args:
             messages: メッセージリスト
@@ -130,25 +132,22 @@ class SignalExtractor:
         """
         for attempt in range(self.max_retries):
             try:
-                # OpenAI互換: system はmessagesの先頭に含める
-                full_messages = [{"role": "system", "content": SYSTEM_PROMPT}] + messages
-
                 request_body = {
                     "model": self.model,
                     "max_tokens": self.max_tokens,
-                    "messages": full_messages,
+                    "system": SYSTEM_PROMPT,
+                    "messages": messages,
                 }
 
                 data = json.dumps(request_body).encode("utf-8")
 
                 req = urllib.request.Request(
-                    XAI_API_URL,
+                    ANTHROPIC_API_URL,
                     data=data,
                     headers={
                         "Content-Type": "application/json",
-                        "Authorization": f"Bearer {self.api_key}",
-                        "User-Agent": "influx-signal-extractor/1.0",
-                        "Accept": "application/json",
+                        "X-API-Key": self.api_key,
+                        "anthropic-version": "2023-06-01",
                     },
                 )
 
@@ -259,15 +258,20 @@ class SignalExtractor:
         try:
             response = self._call_api(messages)
 
-            # OpenAI互換レスポンス: choices[0].message.content
-            choices = response.get("choices", [])
-            if not choices:
-                print("警告: APIレスポンスにchoicesが含まれていません")
+            # Anthropicレスポンス: content[] からtype=textブロックを探す
+            content_blocks = response.get("content", [])
+            if not content_blocks:
+                print("警告: APIレスポンスにcontentが含まれていません")
                 return []
 
-            response_text = choices[0].get("message", {}).get("content", "")
+            response_text = ""
+            for block in content_blocks:
+                if block.get("type") == "text":
+                    response_text = block.get("text", "")
+                    break
 
             if not response_text:
+                print("警告: APIレスポンスにテキストが含まれていません")
                 return []
 
             response_text = response_text.strip()
