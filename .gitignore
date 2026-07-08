@@ -76,3 +76,7 @@ output/paper_scoreboard.md
 
 # ペーパートレード表示用ローリングキャッシュ（barsから再生成可能）
 data/paper_trades/recent_signals_cache.json
+
+# インフルエンサー前向き台帳（ツイート削除で再生成不可の正本のみ追跡例外）
+!output/research/signals.jsonl
+!output/research/index.json
