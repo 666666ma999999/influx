@@ -251,6 +251,63 @@
   `compute_ul_count_10bd`の出力と完全一致を確認）。
 - [x] 運用反映: daily_screenにUL10表示タグ追加(発火条件不変)
 
+### Done (2026-07-09 追記2) — 第18周完了（台帳56試行）・イベント系4試行バッチ（T4は事前登録前に取り下げ）
+
+- [x] **カタログ§7-Gを事前登録→実行後に✅結果追記の2段階更新**。当初はT1〜T5の5試行として
+  計画したが、実装着手前の事前調査でT4がteam-lead裁定（2026-07-09）により**取り下げ・不実施**
+  となり、T1/T2/T3/T5の4試行構成で実施した。新規スクリプト `scripts/kpi_event_batch_signals.py`
+  （`--trial t1..t5`。t4は取り下げ済みのため`SystemExit`で明示的にガードし、`--trial all`は
+  t1/t2/t3/t5の4試行のみ実行する）で実装。Canonical再利用: `kpi_uprev_signals.build_fop_history`/
+  `generate_uprev_signals`に`field`/`doc_type`/`reit_doc_type`のoptional引数を追加する後方互換
+  拡張（T1・T5で再利用）、`kpi_high52_signals.generate_high52_signals`に`breakout_basis`/
+  `high_window`のoptional引数を追加する後方互換拡張（T3で再利用）。新規ロジックはT2の
+  `generate_sue_beat_signals`とT5の`generate_uprev_repeater_signals`のみ。
+- [x] **事前調査で判明した実データ制約（実行前に凍結）**: (1) J-Quants finsスキーマには
+  `FOP1Q`/`FOP3Q`が存在せず、T2 `sue_beat`は**CurPerType∈{2Q, FY}のみ**で実施
+  （team-lead承認済み）。(2) 配当予想の増額検出フィールドは`FDivFY`（通期・98.4%ポピュレート）
+  と実データ確認済み。(3) T3/T4は既存KPI（`high52_breakout`・`range_breakout`）と重複が判明し、
+  T4は`range_breakout`（第15周・verdict=fail・lift=0.12）と同一パラメータ帯だったため
+  team-lead裁定で取り下げ、T3は`high52_breakout`（n=2278・lift=1.52 CI[1.09,2.12]・EV-0.33%）
+  を近傍事実として割り引いて解釈する前提で承認・実施。
+- [x] **結果**: T1 `dividend_uprev` n=187・lift=0.36・EV-0.87% CI[-2.72%,+0.88%]・
+  §6verdict=**fail**・探索的一次結論=**rejected**。T2 `sue_beat`（生8688件・>3000のため解釈注意）
+  n=819・lift=1.19・EV+1.47% CI[+0.16%,+2.77%]・§6verdict=pending・探索的一次結論=
+  **inconclusive**。T3 `high52_break_vol`（生26950件・>3000のため解釈注意）n=1791・lift=1.55・
+  EV-0.84% CI[-2.26%,+0.52%]・§6verdict=pending・探索的一次結論=**rejected**（近傍事実
+  `high52_breakout`と整合＝新規知見ではなく既知KPI系統の再確認）。T5 `uprev_repeater` n=81・
+  lift=1.97・EV+0.60% CI[-2.26%,+3.81%]・§6verdict=pending・探索的一次結論=**inconclusive**
+  （比較基準の単純版`uprev_fop10`[n=450・lift=1.72・EV+0.88%]と比べEV・nともに下回り、常連
+  フィルタの上乗せ効果はデータに支持されない）。4試行同時登録のため累積試行数割引の対象。
+  T1/T3はrejectedのため運用組み込みなし。T2/T5はinconclusiveのため追加検証は次周の新規事前登録
+  試行として扱う（本ラウンド内での閾値事後調整はなし）。
+- [x] 検証: py_compile OK（3ファイル: kpi_event_batch_signals.py新規/kpi_uprev_signals.py拡張/
+  kpi_high52_signals.py拡張）→ Docker本実行（T1/T2/T3/T5を1コンテナずつ順次実行・全exit 0・
+  ログは`/tmp/round18_t{1,2,3,5}.log`に直接リダイレクト）→ 成果物実在確認:
+  `output/kpi/{dividend_uprev,sue_beat,high52_break_vol,uprev_repeater}/{report.md,returns.csv,
+  signals_raw.csv}`・trials.jsonl 52→56行=4行追加（T4は追記なし）。手動照合2件
+  （T1: code=27330・2016-11-02開示、生finsデータの`FDivFY`が30.0→35.0への増額を独立確認して
+  完全一致。T3: code=15720・2017-07-12、生barsデータから独立算出した過去251営業日AdjH最大値
+  11840.0・当日AdjC 11900.0・20日平均出来高5472005.0がいずれも出力と完全一致）。
+
+### Done (2026-07-10 追記3) — 第18周のCodexレビュー⑥修正: 会計年度キー欠落 → T1/T2/T5再実行・数値確定
+
+- [x] **Codexレビュー⑥（NO-GO判定）の指摘**: 「直前予想」比較が対象会計年度(CurFYEn)をキーに
+  含めず、別年度の予想値と比較して増配/ビート/上方修正を誤検知（実データ突合でCONFIRMED）。
+  `fiscal_year_key`をopt-inパラメータとして追加（**既定値は現行動作のまま**＝第3周
+  `uprev_fop10`等のcommitted過去試行の再現性を保護）し、第18周のT1/T2/T5のみ適用して再実行。
+- [x] **修正後の確定値（上の追記2の数値は初回値・§7-Gに新旧併記済み）**:
+  T1 n=147・lift0.43・EV(なし)-1.42%[-3.31,+0.37] → **rejected不変**（年度誤検知713件除外後も）。
+  T2 n=818・lift1.16・EV+1.46%[+0.17,+2.84] → **inconclusive不変・EVのCI下限プラスは頑健**
+  （年度不一致4619件除外）。T5 n=52・lift2.21・EV-1.11%[-5.06,+3.42] →
+  **inconclusiveからrejectedへ降格**（汚染29件除外でEV点推定がマイナス転落。初回の正のEVは
+  誤検知由来の可能性が高い）。台帳は旧3行を差し替え56行維持（旧行はコミット前のため出版前訂正）。
+- [x] **既知の注意（遡及修正しない）**: 第3周〜第6周の`uprev_fop10`系のcommitted試行にも同じ
+  年度キー問題が潜在する（当時の判定はlift1.72・EV+0.88%・pendingで運用未採用のため実害なし）。
+  再検証する場合は`fiscal_year_key=True`の**新規事前登録試行**として扱い、過去の台帳行は
+  変更しない。
+- [x] 経緯メモ: 再実行はビルダーが夜間にT1のみで停止 → 翌朝team-leadが直接T2/T5を完走させ
+  台帳差し替え・§7-G/task更新を実施（成果物実在・数値三者突合で完了判定）。
+
 ### In Progress
 - [ ] **回収R3（委譲中）**: signal_extractorのAnthropic API切替（llm_classifier.pyを型に）+ 週次launchd（com.influx.research-weekly）+ Cookie生死実査
 - [ ] 完了後: 第8弾コミット

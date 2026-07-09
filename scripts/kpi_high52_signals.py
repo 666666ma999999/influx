@@ -72,6 +72,8 @@ def generate_high52_signals(
     start_bd: str,
     end_bd: str,
     vol_multiplier: float = VOL_MULTIPLIER_DEFAULT,
+    breakout_basis: str = "high",
+    high_window: int = HIGH_WINDOW,
 ) -> tuple[pd.DataFrame, dict]:
     """[start_bd, end_bd](YYYYMMDD営業日)内の全銘柄・全営業日から52週高値ブレイク×出来高シグナルを生成する。
 
@@ -79,10 +81,18 @@ def generate_high52_signals(
     (各銘柄のAdjH/Va履歴をdeque(maxlen=...)で保持し、252/20営業日分のbarsファイルを
     毎日読み直すことを避ける=計算量O(全日数×全銘柄)に抑える)。
 
+    `breakout_basis`/`high_window`は第18周（カタログ§7-G T1参照）で追加した引数
+    （既定値"high"/HIGH_WINDOWは既存呼び出し元と完全後方互換）。
+    `breakout_basis="close"`はブレイク判定をAdjH(D)ではなくAdjC(D)（終値）で行う変種
+    （T3 `high52_break_vol`用。高値履歴の参照系列(high_hist=AdjH)自体は変更しない）。
+
     Returns:
         (signals_df, diag)。signals_df の列: signal_date, code, adjh, high_max252, va, va_avg20。
         diag はフィルタ段階別の件数内訳。
     """
+    if breakout_basis not in ("high", "close"):
+        raise SystemExit(f"FATAL: breakout_basis は 'high'/'close' のみ対応です（指定値: {breakout_basis}）")
+
     calendar_days = measure_base_rate.load_calendar_days()
     all_bdays = measure_base_rate.all_business_days(calendar_days)
     bday_index = {d: i for i, d in enumerate(all_bdays)}
@@ -90,10 +100,10 @@ def generate_high52_signals(
     idx_start = bday_index[start_bd]
     idx_end = bday_index[end_bd]
     idx_earliest_bars = bday_index[_earliest_bars_date()]
-    warmup_idx = max(idx_earliest_bars, idx_start - WARMUP_BDAYS_MARGIN)
+    warmup_idx = max(idx_earliest_bars, idx_start - max(WARMUP_BDAYS_MARGIN, high_window + 8))
     scan_days = all_bdays[warmup_idx : idx_end + 1]
 
-    high_hist: dict[str, deque] = defaultdict(lambda: deque(maxlen=HIGH_WINDOW))
+    high_hist: dict[str, deque] = defaultdict(lambda: deque(maxlen=high_window))
     vol_hist: dict[str, deque] = defaultdict(lambda: deque(maxlen=VOL_WINDOW))
 
     diag = {
@@ -115,18 +125,20 @@ def generate_high52_signals(
 
         for code, rec in bars_d.items():
             adjh_d = rec.get("AdjH")
+            adjc_d = rec.get("AdjC")
             va_d = rec.get("Va")
+            breakout_price = adjc_d if breakout_basis == "close" else adjh_d
 
             if in_event_window:
                 diag["code_day_observations"] += 1
                 h_hist = high_hist.get(code)
                 v_hist = vol_hist.get(code)
                 if (
-                    h_hist is not None and len(h_hist) == HIGH_WINDOW
+                    h_hist is not None and len(h_hist) == high_window
                     and v_hist is not None and len(v_hist) == VOL_WINDOW
                 ):
                     high_max252 = max(h_hist)
-                    if adjh_d is not None and adjh_d > high_max252:
+                    if breakout_price is not None and breakout_price > high_max252:
                         diag["new_high_252"] += 1
                         va_avg = sum(v_hist) / len(v_hist)
                         if va_d and va_avg > 0 and va_d >= va_avg * vol_multiplier:
@@ -136,6 +148,7 @@ def generate_high52_signals(
                                     "signal_date": d,
                                     "code": code,
                                     "adjh": adjh_d,
+                                    "adjc": adjc_d,
                                     "high_max252": high_max252,
                                     "va": va_d,
                                     "va_avg20": va_avg,
@@ -172,6 +185,14 @@ def main() -> int:
         help=f"検索終了月 YYYY-MM(既定 {kpi_pead_signals.IN_SAMPLE_END})",
     )
     parser.add_argument("--vol-multiplier", type=float, default=VOL_MULTIPLIER_DEFAULT)
+    parser.add_argument(
+        "--breakout-basis", choices=["high", "close"], default="high",
+        help="ブレイク判定に使う当日価格系列（既定'high'=AdjH。第18周T3'close'=AdjCで終値ベース判定）",
+    )
+    parser.add_argument(
+        "--high-window", type=int, default=HIGH_WINDOW,
+        help=f"過去高値ウィンドウの有効観測回数（既定{HIGH_WINDOW}）",
+    )
     parser.add_argument("--kpi-name", default=KPI_NAME)
     parser.add_argument("--output-dir", default="output/kpi", help="ハーネス出力先ルート(kpi-name配下に生成)")
     parser.add_argument("--base-rate-dir", default=str(kpi_event_study.DEFAULT_BASE_RATE_DIR))
@@ -204,7 +225,10 @@ def main() -> int:
     if start_bd is None or end_bd is None:
         raise SystemExit("FATAL: 指定期間に営業日が見つかりません")
 
-    signals_df, diag = generate_high52_signals(start_bd, end_bd, args.vol_multiplier)
+    signals_df, diag = generate_high52_signals(
+        start_bd, end_bd, args.vol_multiplier,
+        breakout_basis=args.breakout_basis, high_window=args.high_window,
+    )
 
     output_root = Path(args.output_dir)
     kpi_dir = output_root / args.kpi_name
@@ -213,11 +237,13 @@ def main() -> int:
     signals_df.to_csv(signals_path, index=False)
 
     print(
-        f"シグナル生成完了: {len(signals_df)}件(vol_multiplier={args.vol_multiplier}x, high_window={HIGH_WINDOW})"
+        f"シグナル生成完了: {len(signals_df)}件(vol_multiplier={args.vol_multiplier}x, "
+        f"breakout_basis={args.breakout_basis}, high_window={args.high_window})"
     )
     print(
         f"営業日走査={diag['business_days_scanned']}日 / 銘柄日観測={diag['code_day_observations']} "
-        f"(履歴不足(252/20日未満)={diag['insufficient_history']}, 新高値252ブレイク={diag['new_high_252']}, "
+        f"(履歴不足({args.high_window}/20日未満)={diag['insufficient_history']}, "
+        f"新高値{args.high_window}ブレイク={diag['new_high_252']}, "
         f"出来高2倍未満で除外={diag['volume_below_threshold']}, シグナル成立={diag['signals_high52']})"
     )
     print(f"出力: {signals_path}")
@@ -230,7 +256,8 @@ def main() -> int:
 
     defer_entry = not args.no_defer_entry
     params = {
-        "high_window": HIGH_WINDOW,
+        "high_window": args.high_window,
+        "breakout_basis": args.breakout_basis,
         "vol_window": VOL_WINDOW,
         "vol_multiplier": args.vol_multiplier,
         "defer_entry": defer_entry,

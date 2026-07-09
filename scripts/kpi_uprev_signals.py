@@ -80,20 +80,36 @@ def _days_between(date_a: str, date_b: str) -> int:
 
 
 def build_fop_history(
-    hist_start_bd: str, hist_end_bd: str, all_bdays: list[str]
-) -> tuple[dict[str, list[tuple[str, int, float]]], dict]:
-    """[hist_start_bd, hist_end_bd] 内の全fins開示からCode別のFOP数値履歴を構築する。
+    hist_start_bd: str,
+    hist_end_bd: str,
+    all_bdays: list[str],
+    field: str = "FOP",
+    fiscal_year_key: bool = False,
+) -> tuple[dict[str, list[tuple]], dict]:
+    """[hist_start_bd, hist_end_bd] 内の全fins開示からCode別の`field`数値履歴を構築する。
 
-    種別（DocType）は問わない（決算短信・業績予想修正のいずれもFOPを持ちうる。企業は
-    四半期決算のたびに「現時点の通期予想」としてFOPを再掲するため、これらも「前回FOP」の
-    正当な参照元になる）。返り値の各リストは (DiscDate, DiscTime分, FOP値) を
-    (日付, 時刻) 昇順でソート済み。
+    種別（DocType）は問わない（決算短信・業績予想修正のいずれも`field`を持ちうる。企業は
+    四半期決算のたびに「現時点の予想」を再掲するため、これらも「前回値」の正当な参照元になる）。
+    返り値の各リストは (DiscDate, DiscTime分, 値[, CurFYEn]) を (日付, 時刻) 昇順でソート済み。
+
+    `field`は第18周（カタログ§7-G T1/T2）で汎用化した引数（既定"FOP"は既存呼び出し元
+    =uprev_fop10と完全後方互換）。"FDivFY"（配当予想）・"FOP2Q"（中間期予想）でも同じ
+    走査ロジックをそのまま再利用する（新規実装なし）。
+
+    `fiscal_year_key`（Codexレビュー⑥指摘・2026-07-09追加。既定False=既存呼び出し元と完全
+    後方互換）: Trueの場合、各タプルに対象会計年度末日`CurFYEn`を4番目の要素として追加する。
+    第18周T1/T2/T5は別会計年度の予想値を「直前予想」として誤比較していた（例: FDivFYが
+    14→70のような年度跨ぎを増額と誤検知）ため、呼び出し側で同一CurFYEnの開示のみを
+    「直前予想」候補として絞り込めるようにする。
 
     Returns:
-        (history, stats)。historyはcode -> [(disc_date, disc_time_minutes, fop_value), ...]。
+        (history, stats)。historyはcode -> [(disc_date, disc_time_minutes, value[, cur_fy_en]), ...]。
     """
-    history: dict[str, list[tuple[str, int, float]]] = defaultdict(list)
-    stats = {"scanned_days": 0, "total_records": 0, "fop_numeric_records": 0}
+    history: dict[str, list[tuple]] = defaultdict(list)
+    stats = {
+        "scanned_days": 0, "total_records": 0, "fop_numeric_records": 0,
+        "missing_cur_fy_en": 0,  # fiscal_year_key=True時のみ意味を持つ（CurFYEn欠損レコード数）
+    }
     scan_days = [d for d in all_bdays if hist_start_bd <= d <= hist_end_bd]
     stats["scanned_days"] = len(scan_days)
     for d in scan_days:
@@ -103,7 +119,7 @@ def build_fop_history(
             code = rec.get("Code")
             if not code:
                 continue
-            fop_val = _parse_numeric(rec.get("FOP"))
+            fop_val = _parse_numeric(rec.get(field))
             if fop_val is None:
                 continue
             stats["fop_numeric_records"] += 1
@@ -112,7 +128,14 @@ def build_fop_history(
             # 「時刻不明の候補」を誤って「後発」扱いにしない（=誤って将来データ扱いで
             # 却下しない）ための安全側の選択。DiscTime欠損はこのデータセットでは実質0件
             # （kpi_pead_signals.pyの実行ログで確認済み）。
-            history[code].append((d, disc_time_minutes if disc_time_minutes is not None else 0, fop_val))
+            disc_time_minutes = disc_time_minutes if disc_time_minutes is not None else 0
+            if fiscal_year_key:
+                cur_fy_en = rec.get("CurFYEn") or ""
+                if not cur_fy_en:
+                    stats["missing_cur_fy_en"] += 1
+                history[code].append((d, disc_time_minutes, fop_val, cur_fy_en))
+            else:
+                history[code].append((d, disc_time_minutes, fop_val))
     for code in history:
         history[code].sort(key=lambda t: (t[0], t[1]))
     return history, stats
@@ -126,24 +149,40 @@ def generate_uprev_signals(
     end_bd: str,
     threshold: float = UPREV_THRESHOLD_DEFAULT,
     lookback_days: int = LOOKBACK_DAYS_DEFAULT,
+    doc_type: str = "EarnForecastRevision",
+    reit_doc_type: str = "REITEarnForecastRevision",
+    field: str = "FOP",
+    fiscal_year_key: bool = False,
 ) -> tuple[pd.DataFrame, dict]:
-    """[start_bd, end_bd]（YYYYMMDD営業日）内のEarnForecastRevision開示から
-    上方修正シグナルを生成する。
+    """[start_bd, end_bd]（YYYYMMDD営業日）内の`doc_type`開示から上方修正シグナルを生成する。
+
+    `doc_type`/`reit_doc_type`/`field`は第18周（カタログ§7-G T1）で汎用化した引数
+    （既定値は既存呼び出し元=uprev_fop10と完全後方互換）。T1（配当予想の増額）は
+    `doc_type="DividendForecastRevision", reit_doc_type="REITDividendForecastRevision",
+    field="FDivFY"`で呼び出す。
+
+    `fiscal_year_key`（Codexレビュー⑥指摘・2026-07-09追加。既定False=既存呼び出し元
+    =uprev_fop10と完全後方互換・過去の確定試行を遡及修正しない）: Trueの場合、「直前予想」の
+    探索を同一Code**かつ同一対象会計年度(CurFYEn)**の直近開示に限定する。会計年度が一致する
+    prior が存在しない場合はシグナル不成立(unknown扱い)とし、`diag["prior_fy_mismatch_excluded"]`
+    に計上する（別年度の値を「修正前」として誤比較しない）。
 
     Returns:
         (signals_df, diag)。signals_df の列: signal_date, code, disclosed_date, disc_time,
-        reaction_rule, doc_type, fop_before, fop_before_date, fop_new, uprev_pct。
-        diag にはフィルタ段階別の件数内訳を含む（全revision→FOP数値ペア成立→+10%以上→
-        （ユニバース内判定はharness側で行うため未収録）の設計判断用）。
+        reaction_rule, doc_type, fop_before, fop_before_date, fop_new, uprev_pct
+        （列名は既存のFOP由来のまま=後方互換。fieldが"FDivFY"等でも値の意味が変わるだけで
+        列構造は共通）。diag にはフィルタ段階別の件数内訳を含む。
     """
     calendar_days = measure_base_rate.load_calendar_days()
     all_bdays = measure_base_rate.all_business_days(calendar_days)
     bday_index = {d: i for i, d in enumerate(all_bdays)}
 
-    # 過去FOP探索のため、履歴走査はfins実データ先頭日（またはstart_bdの方が後ならstart_bd）
+    # 過去値探索のため、履歴走査はfins実データ先頭日（またはstart_bdの方が後ならstart_bd）
     # からend_bdまでを対象にする（=query開始より前の期間も遡り候補として含める）。
     hist_start_bd = FINS_HISTORY_START_BD if FINS_HISTORY_START_BD <= start_bd else start_bd
-    history, hist_stats = build_fop_history(hist_start_bd, end_bd, all_bdays)
+    history, hist_stats = build_fop_history(
+        hist_start_bd, end_bd, all_bdays, field=field, fiscal_year_key=fiscal_year_key
+    )
 
     event_days = [d for d in all_bdays if start_bd <= d <= end_bd]
 
@@ -157,8 +196,10 @@ def generate_uprev_signals(
         "revision_events": 0,  # DocType=="EarnForecastRevision"の件数
         "fop_new_missing_or_nonnumeric": 0,
         "no_prior_fop_found": 0,
+        "current_cur_fy_en_missing": 0,  # fiscal_year_key=True時のみ: 当該イベント自体のCurFYEn欠損
+        "prior_fy_mismatch_excluded": 0,  # fiscal_year_key=True時のみ: 同一年度priorなしで不成立
         "prior_fop_beyond_lookback": 0,
-        "fop_pair_established": 0,  # 修正前後のFOPペアが成立した件数（遡り上限内）
+        "fop_pair_established": 0,  # 修正前後のFOPペアが成立した件数（遡り上限内・同一年度確認済み）
         "deficit_to_profit_excluded": 0,  # FOP前<=0（赤字予想からの黒字化等）で今回除外
         "signals_uprev10": 0,  # 閾値以上のシグナル成立件数
     }
@@ -170,17 +211,17 @@ def generate_uprev_signals(
         for rec in records:
             diag["total_disclosure_records"] += 1
             code = rec.get("Code")
-            doc_type = rec.get("DocType", "") or ""
+            rec_doc_type = rec.get("DocType", "") or ""
             if not code:
                 continue
-            if doc_type == "REITEarnForecastRevision":
+            if rec_doc_type == reit_doc_type:
                 diag["reit_earn_forecast_revision_excluded"] += 1
                 continue
-            if doc_type != "EarnForecastRevision":
+            if rec_doc_type != doc_type:
                 continue
             diag["revision_events"] += 1
 
-            fop_new = _parse_numeric(rec.get("FOP"))
+            fop_new = _parse_numeric(rec.get(field))
             if fop_new is None:
                 diag["fop_new_missing_or_nonnumeric"] += 1
                 continue
@@ -195,7 +236,17 @@ def generate_uprev_signals(
             if not prior_records:
                 diag["no_prior_fop_found"] += 1
                 continue
-            prev_date, prev_time, fop_before = max(prior_records, key=lambda t: (t[0], t[1]))
+            if fiscal_year_key:
+                cur_fy_en = rec.get("CurFYEn") or ""
+                if not cur_fy_en:
+                    diag["current_cur_fy_en_missing"] += 1
+                    continue
+                same_fy_prior = [t for t in prior_records if len(t) > 3 and t[3] == cur_fy_en]
+                if not same_fy_prior:
+                    diag["prior_fy_mismatch_excluded"] += 1
+                    continue
+                prior_records = same_fy_prior
+            prev_date, prev_time, fop_before = max(prior_records, key=lambda t: (t[0], t[1]))[:3]
             # look-ahead防止の明示的ガード（§検証2）: 採用した「前回」は必ずcur_keyより過去でなければならない。
             assert (prev_date, prev_time) < cur_key, (
                 f"FATAL: look-ahead検出 code={code} event={cur_key} "
@@ -228,7 +279,7 @@ def generate_uprev_signals(
                     "disclosed_date": d,
                     "disc_time": disc_time_raw,
                     "reaction_rule": rule,
-                    "doc_type": doc_type,
+                    "doc_type": rec_doc_type,
                     "fop_before": fop_before,
                     "fop_before_date": prev_date,
                     "fop_new": fop_new,
