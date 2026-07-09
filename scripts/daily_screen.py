@@ -66,6 +66,45 @@ WATCHLIST_PATH = PROJECT_ROOT / "config" / "paper_watchlist.json"
 STATE_PATH = PROJECT_ROOT / "data" / "paper_trades" / "state.json"
 TODAY_REPORT_PATH = PROJECT_ROOT / "output" / "paper_today.md"
 
+# Vault ミラー（ユーザーは vault 側しかドキュメントを読まないため、レポート本体を毎回転写する。
+# 2026-07-09 ユーザー指示。正本は TODAY_REPORT_PATH（repo）・vault 側は読み取り専用ミラー）
+VAULT_MIRROR_PATH = Path.home() / "Documents" / "Obsidian Vault" / "02_Ai" / "influx" / "influx_paper_today.md"
+VAULT_MIRROR_FRONTMATTER = """---
+project: influx
+type: report
+folder: "02_Ai/influx/"
+categories:
+  - "[[influx_ope]]"
+last_updated: {today}
+tags:
+  - project/influx
+  - type/report
+---
+> [!note] 🤖 自動生成ミラー（毎朝07:30・手編集禁止）
+> 正本: `Desktop/biz/influx/output/paper_today.md`（scripts/daily_screen.py が上書き）。
+> このノートへの追記・編集は次回実行で消えます。
+
+"""
+
+
+def sync_vault_mirror() -> None:
+    """repo の当日レポートを vault へ転写する（読み取り専用ミラー）。
+
+    launchd 実行時に ~/Documents が TCC で書込不可の可能性があるため、失敗しても
+    朝ジョブ本体（スクリーニング・ledger・state）を落とさず WARN のみ出す。
+    早期リターン日（走査済み・週末）でも直近レポートを再転写するため、main() の
+    全ての正常経路から呼ばれる。
+    """
+    try:
+        if not TODAY_REPORT_PATH.exists():
+            return
+        body = TODAY_REPORT_PATH.read_text(encoding="utf-8")
+        front = VAULT_MIRROR_FRONTMATTER.format(today=jq_fetch.now_jst().date().isoformat())
+        VAULT_MIRROR_PATH.write_text(front + body, encoding="utf-8")
+        print(f"vaultミラー更新: {VAULT_MIRROR_PATH}")
+    except BaseException as e:  # noqa: BLE001  (表示系の失敗で朝ジョブを落とさない)
+        print(f"WARN: vaultミラー書込に失敗（朝ジョブ本体には影響なし・TCC権限を確認）: {e}", file=sys.stderr)
+
 UNIVERSE_WINDOW = 21  # scripts/measure_base_rate.py 既定・v0系KPI検証と同一
 UNIVERSE_TOP_N = 500  # カタログ§0「月次売買代金TOP500」
 
@@ -989,6 +1028,7 @@ def main() -> int:
         start_bd, end_bd = compute_scan_range(state, all_bdays)
         if start_bd is None:
             print("走査すべき新規営業日がありません（既に最新まで処理済み）")
+            sync_vault_mirror()
             return 0
         refresh_recent_data(start_bd, end_bd, all_bdays)
         refresh_topix_if_stale(end_bd)
@@ -996,6 +1036,7 @@ def main() -> int:
         available_end = latest_fully_available_bday([d for d in all_bdays if start_bd <= d <= end_bd])
         if available_end is None:
             print(f"WARN: {start_bd}〜{end_bd} のデータがまだ公表されていません。次回実行で再試行します", file=sys.stderr)
+            sync_vault_mirror()
             return 0
         end_bd = available_end
         print(f"走査区間: {start_bd} 〜 {end_bd}")
@@ -1096,6 +1137,9 @@ def main() -> int:
         "last_run_id": run_id,
         "first_screened_date": first_screened_date,
     })
+    # vault転写はstate保存(=ジョブ完了境界)の後に置く: vault側I/O詰まりや強制終了で
+    # last_screened_dateが失われ翌日に二重走査になるのを防ぐ(Codexレビュー⑤反映)
+    sync_vault_mirror()
     return 0
 
 

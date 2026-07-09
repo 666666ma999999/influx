@@ -54,6 +54,27 @@ HORIZON_5BD = 5
 HORIZON_20BD = 20
 REACH_THRESHOLD = 0.20  # カタログ§2-G「+20%到達」の関心指標
 N_REFERENCE_MIN = 10  # n<10のアカウントは「参考」表示（spec §5 F4）
+# Vault ミラー（ユーザーは vault 側しかドキュメントを読まないため、スコアボード本体を転写する。
+# 2026-07-09 ユーザー指示。正本は output/research/weekly_scoreboard.md・vault 側は読み取り専用ミラー）
+VAULT_MIRROR_PATH = os.path.join(
+    os.path.expanduser("~"), "Documents", "Obsidian Vault", "02_Ai", "influx",
+    "influx_weekly_scoreboard.md")
+VAULT_MIRROR_FRONTMATTER = """---
+project: influx
+type: report
+folder: "02_Ai/influx/"
+categories:
+  - "[[influx_ope]]"
+last_updated: {today}
+tags:
+  - project/influx
+  - type/report
+---
+> [!note] 🤖 自動生成ミラー（週次「インフルエンサー週次回して」で更新・手編集禁止）
+> 正本: `Desktop/biz/influx/output/research/weekly_scoreboard.md`（scripts/winrate_score.py が上書き）。
+> このノートへの追記・編集は次回実行で消えます。
+
+"""
 LIST_TWEET_TICKER_THRESHOLD = 5  # F4: 同一tweet_urlの抽出ticker数がこれ以上なら「リスト型」投稿
 # CLI引数化しない（固定定数）。カタログ§6「評価プロトコル凍結・事前登録必須」の精神に倣い、
 # 閾値を実行のたびに変えられる状態にすると事後的な閾値探索（データスヌーピング）の温床になる。
@@ -478,6 +499,13 @@ def main() -> int:
     with open(scoreboard_path, "w", encoding="utf-8") as f:
         f.write(md)
     print(f"スコアボード生成: {scoreboard_path}")
+    try:
+        front = VAULT_MIRROR_FRONTMATTER.format(today=jq_fetch.now_jst().date().isoformat())
+        with open(VAULT_MIRROR_PATH, "w", encoding="utf-8") as f:
+            f.write(front + md)
+        print(f"vaultミラー更新: {VAULT_MIRROR_PATH}")
+    except BaseException as e:  # noqa: BLE001  (表示系の失敗で採点本体の結果を損なわない)
+        print(f"WARN: vaultミラー書込に失敗（採点結果には影響なし）: {e}", file=sys.stderr)
 
     return 0
 
