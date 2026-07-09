@@ -249,6 +249,7 @@
   `output/kpi/volshock_x_above200_ul_lt3/{report.md,signals_features.csv}`。手動照合2件
   （code=39280 2017-01-05・code=81050 2017-07-06、いずれも生bars データからUL回数を独立再計算し
   `compute_ul_count_10bd`の出力と完全一致を確認）。
+- [x] 運用反映: daily_screenにUL10表示タグ追加(発火条件不変)
 
 ### In Progress
 - [ ] **回収R3（委譲中）**: signal_extractorのAnthropic API切替（llm_classifier.pyを型に）+ 週次launchd（com.influx.research-weekly）+ Cookie生死実査

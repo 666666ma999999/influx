@@ -59,7 +59,9 @@ SOURCE_RETURNS = Path("output/kpi/volshock_x_above200/returns.csv")
 SOURCE_FEATURES = Path("output/kpi/volshock_v2_amplifiers/signals_features_volshock_x_above200.csv")
 EXIT_STUDY_POSITIONS = Path("output/kpi/exit_study/positions_volshock_x_above200.csv")
 
-UL_WINDOW_BDAYS = 10  # D-9..D（Dを含む10営業日）
+UL_WINDOW_BDAYS = 10  # D-9..D（Dを含む10営業日）。定義を変える場合は daily_screen.py の
+# UL10_WINDOW_BDAYS / compute_ul_count_10bd（本番朝ジョブ側の意図的な独立実装・研究依存の
+# 分離のため）も同時に更新すること（Codexレビュー④の乖離ガード）。
 UL_COUNT_A2_MAX = 2  # A2: <3回 <=> <=2回
 
 # 決算短信本体（四半期・本決算）のみ。EarnForecastRevision等の臨時開示は含めない

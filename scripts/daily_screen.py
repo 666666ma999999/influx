@@ -104,6 +104,64 @@ GAP_WARN_LIGHT_BDAYS = 40  # 超過で軽度注意
 GAP_WARN_INVESTIGATE_BDAYS = 60  # 超過で要調査
 GAP_WARN_ANOMALY_BDAYS = 85  # 超過で異常（=歴史分布の最大ギャップと同値）
 
+# UL10表示タグ（第17周所見の運用反映・2026-07-09 team-lead指示）:
+# catalog §7-F・output/kpi/ul_fade_standalone/report.md で確定した「直近10営業日にストップ高
+# (bars UL=='1') 3回以上に達した銘柄の20bd期待値=-8.13%（CI上限-1.41%）」を、チャンピオン
+# (CHAMPION_KPI_NAME)該当銘柄・次点候補の表示行にのみ注意喚起として併記する（表示専用・
+# シグナル発火条件・スクリーニングロジックは一切変更しない）。
+# 定義は kpi_volshock_v3_ul_earnings.compute_ul_count_10bd と同一（シグナル日Dを含む直近
+# UL10_WINDOW_BDAYS営業日[D-9,D]のUL=='1'日数）だが、同モジュールは kpi_event_study 等の
+# 検証専用依存を持つ一回性の分析スクリプトのため、毎朝の本番スクリーニングからimportして
+# 結合させない（研究/本番分離・docs/research-workflow.md）。代わりに本ファイルが既に
+# compute_quiet_ratio等と同じ経路で使っている measure_base_rate.load_bars_day（bars読込の
+# Canonical Module・functools.lru_cache済み）を直接再利用して同一ロジックをここに定義する。
+UL10_WINDOW_BDAYS = 10  # D-9..D（kpi_volshock_v3_ul_earnings.UL_WINDOW_BDAYSと同値）
+UL10_FADE_WARN_MIN = 3  # 第17周確定: 3回以上でEV-8.13%（catalog §7-F）
+UL10_FADE_WARN_TEXT = "⚠️祭り終盤(in-sample EV-8.13%)"
+
+
+def compute_ul_count_10bd(code: str, signal_bd: str, bday_index: dict[str, int], all_bdays: list[str]) -> Optional[int]:
+    """シグナル日Dを含む直近UL10_WINDOW_BDAYS営業日[D-9,D]のストップ高(UL=='1')回数を数える。
+
+    ウォームアップ不足（データ開始日付近）はNone（呼び出し側はUL10=?で明示・サイレント省略しない）。
+    """
+    idx = bday_index[signal_bd]
+    if idx - (UL10_WINDOW_BDAYS - 1) < 0:
+        return None
+    window_days = all_bdays[idx - (UL10_WINDOW_BDAYS - 1) : idx + 1]
+    count = 0
+    for d in window_days:
+        rec = measure_base_rate.load_bars_day(d).get(code)
+        if rec is not None and rec.get("UL") == "1":
+            count += 1
+    return count
+
+
+UL10_FOOTNOTE = (
+    "UL10=直近10営業日（signal_dateを含む）のストップ高日数。⚠️の根拠はTOP500全体の"
+    "in-sample実測（第17周 catalog §7-F・UL10>=3群の20bd EV-8.13%）であり、参考情報。"
+    "UL10=?はbars欠損等で計算不能（安全の意味ではない）。"
+)
+
+
+def format_ul10_tag(code: str, signal_date: str, bday_index: dict[str, int], all_bdays: list[str]) -> str:
+    """UL10表示タグ文字列を返す（bars欠損・ウォームアップ不足でNoneならUL10=?）。
+
+    表示専用タグの失敗が朝ジョブ全体（シグナル判定・ledger・state更新）を落とさないよう、
+    ここで例外を完全に隔離する（bday_index未登録日・barsキャッシュ欠損・破損JSONは
+    measure_base_rate側でKeyError/SystemExit等になりうる）。
+    """
+    try:
+        count = compute_ul_count_10bd(code, signal_date, bday_index, all_bdays)
+    except BaseException:  # noqa: BLE001  (SystemExit含む・表示専用のため全て?へ縮退)
+        return "UL10=?"
+    if count is None:
+        return "UL10=?"
+    tag = f"UL10={count}回"
+    if count >= UL10_FADE_WARN_MIN:
+        tag += f" {UL10_FADE_WARN_TEXT}"
+    return tag
+
 
 # --- watchlist設定読み込み -----------------------------------------------------------
 
@@ -562,6 +620,7 @@ def find_volshock_near_misses(
                 "code": row.code,
                 "signal_date": row.signal_date,
                 "reason": reason,
+                "ul10": format_ul10_tag(row.code, row.signal_date, bday_index, all_bdays),
             }
         )
     return results
@@ -582,11 +641,11 @@ def format_next_candidates_section(out_of_universe: list[dict], near_miss: list[
     remaining = MAX_NEXT_CANDIDATES_ROWS
     if out_of_universe:
         shown = sorted(out_of_universe, key=lambda r: (r["signal_date"], r["kpi_name"], r["code"]))[:remaining]
-        lines.append("| KPI | 銘柄コード | signal_date | 月間売買代金ランク |")
-        lines.append("|---|---|---|---|")
+        lines.append("| KPI | 銘柄コード | signal_date | 月間売買代金ランク | UL10 |")
+        lines.append("|---|---|---|---|---|")
         for r in shown:
             rank_str = str(r["rank"]) if r["rank"] is not None else "-"
-            lines.append(f"| {r['kpi_name']} | {r['code']} | {r['signal_date']} | {rank_str} |")
+            lines.append(f"| {r['kpi_name']} | {r['code']} | {r['signal_date']} | {rank_str} | {r['ul10']} |")
         if len(out_of_universe) > len(shown):
             lines.append(f"（他 {len(out_of_universe) - len(shown)} 件省略）")
         remaining -= len(shown)
@@ -600,13 +659,15 @@ def format_next_candidates_section(out_of_universe: list[dict], near_miss: list[
         lines.append(f"（{len(near_miss)}件該当・上記カテゴリで表示上限に達したため省略）")
     else:
         shown2 = sorted(near_miss, key=lambda r: (r["signal_date"], r["kpi_name"], r["code"]))[:remaining]
-        lines.append("| KPI | 銘柄コード | signal_date | 惜しい条件 |")
-        lines.append("|---|---|---|---|")
+        lines.append("| KPI | 銘柄コード | signal_date | 惜しい条件 | UL10 |")
+        lines.append("|---|---|---|---|---|")
         for r in shown2:
-            lines.append(f"| {r['kpi_name']} | {r['code']} | {r['signal_date']} | {r['reason']} |")
+            lines.append(f"| {r['kpi_name']} | {r['code']} | {r['signal_date']} | {r['reason']} | {r['ul10']} |")
         if len(near_miss) > len(shown2):
             lines.append(f"（他 {len(near_miss) - len(shown2)} 件省略）")
 
+    lines.append("")
+    lines.append(UL10_FOOTNOTE)
     return lines
 
 
@@ -831,6 +892,7 @@ def write_today_report(
     scan_start: Optional[str], scan_end: Optional[str], out_of_universe_counts: dict[str, int],
     next_candidates_lines: list[str], universe_failure_lines: list[str],
     operational_context_lines: list[str], recent_signals_lines: list[str],
+    bday_index: dict[str, int], all_bdays: list[str],
 ) -> None:
     lines = [
         "# ペーパートレード 当日スクリーニングレポート（scripts/daily_screen.py 自動生成）",
@@ -844,10 +906,18 @@ def write_today_report(
         "",
     ]
     if new_signal_records:
-        lines.append("| KPI | 銘柄コード | signal_date | 想定エントリー日 |")
-        lines.append("|---|---|---|---|")
+        # UL10列: 全KPI行で表示する。根拠の第17周T1(ul_fade_standalone)はチャンピオン限定
+        # ではなくTOP500全体の実測（catalog §7-F）のため、証拠の適用範囲と表示範囲を一致
+        # させる（"-"を安全と誤読させない・Codexレビュー④反映）。
+        lines.append("| KPI | 銘柄コード | signal_date | 想定エントリー日 | UL10 |")
+        lines.append("|---|---|---|---|---|")
         for r in new_signal_records:
-            lines.append(f"| {r['kpi_name']} | {r['code']} | {r['signal_date']} | {r['planned_entry_date']} |")
+            ul10_str = format_ul10_tag(r["code"], r["signal_date"], bday_index, all_bdays)
+            lines.append(
+                f"| {r['kpi_name']} | {r['code']} | {r['signal_date']} | {r['planned_entry_date']} | {ul10_str} |"
+            )
+        lines.append("")
+        lines.append(UL10_FOOTNOTE)
     else:
         lines.append("（本走査区間で新規シグナルなし）")
     if out_of_universe_counts:
@@ -963,6 +1033,7 @@ def main() -> int:
                             "code": row.code,
                             "signal_date": row.signal_date,
                             "rank": universe_cache.rank_for(row.code, row.signal_date),
+                            "ul10": format_ul10_tag(row.code, row.signal_date, bday_index, all_bdays),
                         }
                     )
             signals_df = signals_df[in_univ_mask].reset_index(drop=True)
@@ -1015,6 +1086,7 @@ def main() -> int:
     write_today_report(
         new_signal_records, records, scoreboard, start_bd, end_bd, out_of_universe_counts,
         next_candidates_lines, universe_failure_lines, operational_context_lines, recent_signals_lines,
+        bday_index, all_bdays,
     )
     print(f"レポート出力: {TODAY_REPORT_PATH}")
 
