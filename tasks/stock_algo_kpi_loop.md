@@ -321,6 +321,47 @@
 - [x] SUE系の広い正ドリフト（+1.5〜1.9%/回・CI下限プラス）は「+10%級・高頻度ゴール」向けの知見
   として保持（現行+20%ゴールでは主戦力にならない）
 
+### Done (2026-07-10 追記5) — 第20周完了（台帳61試行）・需給系バッチ（margin_pampan/karauri_fuel）
+
+- [x] catalog §7-I 事前登録（I1/I2・既検証4本[shortcover_turn/margin_urinaga_trend/
+  shortcover_x_bear/shortup_lowrise]との重複なし確認・margin実データのフィールド名/公表日欠如を
+  実読確認）→ 実行 → ✅結果追記。新規 `scripts/kpi_margin_supply_signals.py`
+  （`kpi_margin_signals.load_margin_snapshots()`のみ再利用・消化日数/売残伸び率/AdjVo20日平均
+  は新規実装）
+- [x] 結果: I1 `margin_pampan`（買残消化日数>=10日の簡易1条件版）n=266・lift1.70[0.74,2.81]・
+  EV(なし)-1.20%[-2.92%,+0.77%]・pending・探索的一次結論rejected（点推定は負けフィルタ仮説と
+  方向一致だがCI上限がゼロを跨ぎ第17周T1水準の確認には至らず）。I2 `karauri_fuel`（信用売残
+  4回前比+50%以上×水準>=20日平均出来高2日分）n=289・lift0.82[0.30,1.58]・EV(なし)-0.11%
+  [-1.77%,+1.31%]・**fail**・rejected（踏み上げ燃料仮説は不支持・lift<1で濃縮効果なし）。
+  両試行とも月平均n(3.64/3.96)が§3最低基準(月5件)未達
+- [x] **性能最適化メモ**: 生成側で状態遷移の間引きを行わない設計（team-lead指示どおり生シグナル
+  数と採用nの差を報告するため）により生シグナルがI1=186,738件・I2=17,730件まで膨張し、素朴な
+  ハーネス実行は1時間超経過しても未完走（一度中断）。`kpi_event_study._universe_membership`
+  （実判定と同一のCanonical関数）による統計結果不変の事前フィルタ（月次確定ユニバース非該当行
+  の除外）を追加し、投入数をI1=937件・I2=603件まで圧縮して数十秒で完走するよう修正
+  （`filter_never_in_universe`関数・n/lift/EVには影響しないことをロジックで保証）
+- [x] 検証: py_compile OK / 手動照合2件（I1 code=13090 signal_date=20170126のLongVol・
+  avg20_adjvo・absorb_daysを生margin/bars JSONから独立再計算し完全一致、I2 code=13010
+  signal_date=20180809のgrowth・avg20_adjvo・level_ratioも同様に完全一致）/ 台帳59→61行
+  （margin_pampan/karauri_fuel）/ 成果物実在確認（`output/kpi/{margin_pampan,karauri_fuel}/
+  {signals_raw.csv,returns.csv,report.md}`）
+- [x] I3（逆日歩・貸借倍率・日証金回転日数）は日証金アーカイブが5日分のみで検証不能につき
+  登録のみ・実行なし（前向き蓄積候補として記録）
+
+### Done (2026-07-10 追記5) — 第20周のCodexレビュー⑧修正: margin単位不整合 → I1/I2再実行・数値確定
+
+- [x] **Codexレビュー⑧（NO-GO）指摘**: LongVol/ShrtVol（未調整実株数）÷AdjVo（分割・ロット調整済み
+  出来高）の単位不整合（初回I1採用266件中233件がVo≠AdjVo銘柄・最大10倍歪み）。margin残を基準日の
+  `AdjVo/Vo`倍率で調整済み株数に変換する方式へ修正（遡り最大5営業日・診断カウンタ3種追加）
+- [x] **修正後確定値**: I1 n=36（初回266・大半が調整銘柄の誤検知）・lift3.31・EV-3.54%[-8.70,+1.99]
+  → rejected（負け方向は鮮明だがn不足でfade確認未達）。I2 n=239・lift0.56・EV-0.44% → rejected
+  （踏み上げ仮説は明確に不支持）。§7-I表は新旧併記で差し替え済み
+- [x] **経緯メモ（教訓）**: ビルダーが停止指示前の指示を遅延処理し、team-leadの直接再実行と台帳編集が
+  競合（一時的に62行・重複fuel行）。停止指示後にビルダーが自己清掃し61行に収束、三者突合で最終状態を
+  確認。**多層委譲時は台帳書き込み権を単一者に固定すべき**（次周から: 台帳書き込みはスクリプト実行者
+  のみ・文書更新はteam-lead専任）
+- [x] 初回の手動照合2件は単位バグ込み値のため無効化と§7-Iに明記
+
 ### In Progress
 - [ ] **回収R3（委譲中）**: signal_extractorのAnthropic API切替（llm_classifier.pyを型に）+ 週次launchd（com.influx.research-weekly）+ Cookie生死実査
 - [ ] 完了後: 第8弾コミット
