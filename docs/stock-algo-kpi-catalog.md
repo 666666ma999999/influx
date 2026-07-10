@@ -886,3 +886,16 @@ AdjVo20日平均の算出ロジックのみを新規実装。信号生成器自�
 > 成果物: `output/kpi/{margin_pampan,karauri_fuel}/{signals_raw.csv,returns.csv,report.md}`
 > （修正版で上書き）。台帳: `data/kpi_trials/trials.jsonl` 59→61行（初回2行はコミット前の
 > 出版前訂正として差し替え済み）。
+>
+> **独立クロスチェック追記**: 上記数値を別実行で独立再現（生margin/bars JSONから`_tmp_`
+> 検証スクリプトでゼロから再計算・script出力とは無関係な経路）。(a) I1採用シグナル
+> code=13520 signal_date=20170302 basis_date=20170224（**Codexレビュー⑧が挙げた実例そのもの**）:
+> 同日bars Vo/AdjVoからadj_ratio=0.1（10倍乖離）を独立確認、raw LongVol=471000.0×0.1=
+> long_vol_adj=47100.0、独立集計したavg20_adjvo=4300.0からabsorb_days=10.953488372093023を
+> 完全一致で再現。(b) I2採用シグナルcode=13770 signal_date=20220526: short_vol_adj=697300.0・
+> 4スナップショット前(20220415)のprior_short_vol_adj=147400.0・growth=3.7306648575305292・
+> avg20_adjvo=248935.0・level_ratio=2.8011328258380703を完全一致で再現。
+> **[LOW]修正確認**: report.mdの「生シグナル数」ラベル（Canonical`write_report_md`共有関数の
+> 汎用ラベルだが本スクリプトではユニバース事前フィルタ後の値を指し誤解を招く）を出力ファイル側で
+> 後処理置換し「ハーネス投入数(ユニバース事前フィルタ後)」＋真の生シグナル数併記に変更済み
+> （共有関数自体は変更せず・他KPIレポートへの影響なし）。両report.md実ファイルで確認済み。
