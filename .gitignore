@@ -78,5 +78,10 @@ output/paper_scoreboard.md
 data/paper_trades/recent_signals_cache.json
 
 # インフルエンサー前向き台帳（ツイート削除で再生成不可の正本のみ追跡例外）
+# 注意(監査2026-07-11): 親dir除外(output/*/)配下ではファイル単位の否定パターンは無効(gitの仕様)。
+# 下記3ファイルは git add -f で強制追跡済み=以後の変更は自動でstageできる。否定行は意図の記録として残す
 !output/research/signals.jsonl
 !output/research/index.json
+
+# 処理済みツイート台帳（監査O-3・シグナルなし判定分の再判定防止のため正本追跡）
+!output/research/processed_tweet_urls.jsonl
