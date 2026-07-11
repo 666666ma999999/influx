@@ -30,6 +30,7 @@ RESEARCH_DIR = "output/research"
 DEFAULT_TWEETS_GLOB = os.path.join(RESEARCH_DIR, "tweets_*.json")
 DEFAULT_OUTPUT_PATH = os.path.join(RESEARCH_DIR, "extraction_worklist.json")
 FROZEN_LIST_PATH = "data/influencer_list_frozen_2026-07-05.json"
+PROCESSED_LEDGER_FILENAME = "processed_tweet_urls.jsonl"
 
 
 def load_contrarian_usernames(path: str = FROZEN_LIST_PATH) -> set:
@@ -95,15 +96,46 @@ def load_extracted_tweet_urls(research_dir: str) -> set:
     return {s.get("tweet_url") for s in store.load_signals() if s.get("tweet_url")}
 
 
+def load_processed_tweet_urls(research_dir: str) -> set:
+    """処理済みツイート台帳（監査O-3）から tweet_url 集合を返す。
+
+    signals.jsonl は金融シグナルが実際に抽出できたツイートのみを記録するため、
+    「抽出サブエージェントに一度提示したが金融シグナルなしと判定された」ツイートは
+    従来 signals.jsonl 側の除外だけでは worklist から除外されず毎週再出現していた
+    （実測: batch1の273/279件=98%が再出現）。本台帳（[{tweet_url, processed_at, batch}]）は
+    そのシグナルなし判定込みの処理済みURLを記録し、worklist生成時に除外するために使う。
+    台帳が存在しない場合は空集合を返す（後方互換・ファイル未生成でも従来通り動作する）。
+    """
+    path = os.path.join(research_dir, PROCESSED_LEDGER_FILENAME)
+    urls = set()
+    if not os.path.exists(path):
+        return urls
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                rec = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            url = rec.get("tweet_url")
+            if url:
+                urls.add(url)
+    return urls
+
+
 def build_worklist(tweets_glob: str, research_dir: str) -> dict:
     """未抽出ツイートのワークリストを構築する。"""
     extractor = TickerExtractor()
     extracted_urls = load_extracted_tweet_urls(research_dir)
+    processed_urls = load_processed_tweet_urls(research_dir)
     contrarian_usernames = load_contrarian_usernames()
 
     tweet_files = sorted(glob.glob(tweets_glob))
     total_scanned = 0
     already_extracted = 0
+    already_processed = 0
     prefiltered_out = 0
     no_url = 0
     worklist = []
@@ -126,6 +158,9 @@ def build_worklist(tweets_glob: str, research_dir: str) -> dict:
             if tweet_url in extracted_urls:
                 already_extracted += 1
                 continue
+            if tweet_url in processed_urls:
+                already_processed += 1
+                continue
 
             text = tweet.get("text", "")
             if not should_include(text, extractor):
@@ -147,6 +182,7 @@ def build_worklist(tweets_glob: str, research_dir: str) -> dict:
         "total_tweets_scanned": total_scanned,
         "no_url": no_url,
         "already_extracted": already_extracted,
+        "already_processed": already_processed,
         "prefiltered_out": prefiltered_out,
         "worklist_count": len(worklist),
         "file_errors": file_errors,
@@ -173,6 +209,7 @@ def main() -> int:
     if result["no_url"]:
         print(f"URL欠落（スキップ）: {result['no_url']}")
     print(f"抽出済み(signals.jsonlに存在): {result['already_extracted']}")
+    print(f"処理済み(processed_tweet_urls.jsonlに存在・シグナルなし判定含む): {result['already_processed']}")
     print(f"プリフィルタ除外: {result['prefiltered_out']}")
     print(f"未抽出ワークリスト件数: {result['worklist_count']} → {args.output}")
     if result["file_errors"]:

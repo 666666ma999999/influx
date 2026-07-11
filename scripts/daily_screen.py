@@ -43,7 +43,9 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import datetime
 import json
+import re
 import subprocess
 import sys
 import uuid
@@ -87,6 +89,22 @@ tags:
 """
 
 
+REPORT_TIMESTAMP_RE = re.compile(r"実行時刻: (\d{4}-\d{2}-\d{2})")
+
+
+def _extract_report_date(body: str) -> str:
+    """レポート本文の「実行時刻: ISO8601」行から日付部分を取り出す（監査V-7）。
+
+    早期リターン日（走査済み・データ未公表）は新しいレポートが生成されず本文の実行時刻が
+    前回実行のまま据え置かれるため、ミラー転写時に毎回 now_jst() の「今日」をfrontmatterへ
+    スタンプすると、本文（前回実行日）とミラーのlast_updated（今日）が1日ずれる不整合が
+    生じていた。本文の実際の実行時刻から日付を取り出して使うことでこれを解消する。
+    パース失敗時は表示専用のためジョブを落とさず now_jst() の日付にフォールバックする。
+    """
+    m = REPORT_TIMESTAMP_RE.search(body)
+    return m.group(1) if m else jq_fetch.now_jst().date().isoformat()
+
+
 def sync_vault_mirror() -> None:
     """repo の当日レポートを vault へ転写する（読み取り専用ミラー）。
 
@@ -99,7 +117,7 @@ def sync_vault_mirror() -> None:
         if not TODAY_REPORT_PATH.exists():
             return
         body = TODAY_REPORT_PATH.read_text(encoding="utf-8")
-        front = VAULT_MIRROR_FRONTMATTER.format(today=jq_fetch.now_jst().date().isoformat())
+        front = VAULT_MIRROR_FRONTMATTER.format(today=_extract_report_date(body))
         VAULT_MIRROR_PATH.write_text(front + body, encoding="utf-8")
         print(f"vaultミラー更新: {VAULT_MIRROR_PATH}")
     except BaseException as e:  # noqa: BLE001  (表示系の失敗で朝ジョブを落とさない)
@@ -200,6 +218,71 @@ def format_ul10_tag(code: str, signal_date: str, bday_index: dict[str, int], all
     if count >= UL10_FADE_WARN_MIN:
         tag += f" {UL10_FADE_WARN_TEXT}"
     return tag
+
+
+# --- 稼働監視（Cookie鮮度・margin鮮度・jsfアーカイブ欠損。監査O-5/O-6/O-7・表示専用） --------------
+# 3項目とも判定ロジック（シグナル発火条件）には一切関与しない。取得・チェック失敗時も
+# 朝ジョブ本体（スクリーニング・ledger・state更新）を落とさずWARN表示に縮退する。
+
+X_PROFILES_DIR = PROJECT_ROOT / "x_profiles"
+COOKIE_AGE_WARN_DAYS = 14  # 監査O-5: 実測80日のアカウントを「21日」と誤表示していた事例の再発防止
+MARGIN_STALE_WARN_DAYS = 90  # 監査O-6
+JSF_GAP_CHECK_SCRIPT = Path(__file__).parent / "check_jsf_gaps.py"  # 監査O-7
+
+
+def format_cookie_age_lines() -> list[str]:
+    """x_profiles/*/cookies.json の鮮度をmtimeから表示する（監査O-5・表示専用）。"""
+    if not X_PROFILES_DIR.exists():
+        return []
+    lines = []
+    now_ts = jq_fetch.now_jst().timestamp()
+    for account_dir in sorted(p for p in X_PROFILES_DIR.iterdir() if p.is_dir()):
+        cookie_path = account_dir / "cookies.json"
+        if not cookie_path.exists():
+            continue
+        try:
+            age_days = int((now_ts - cookie_path.stat().st_mtime) // 86400)
+        except OSError as e:
+            lines.append(f"- Cookie鮮度(@{account_dir.name}): 確認失敗（{e}）")
+            continue
+        tag = f"⚠️{age_days}日経過（{COOKIE_AGE_WARN_DAYS}日超・再取得検討）" if age_days > COOKIE_AGE_WARN_DAYS else f"{age_days}日経過"
+        lines.append(f"- Cookie鮮度(@{account_dir.name}): {tag}")
+    return lines
+
+
+def format_margin_freshness_lines(margin_dir: Path) -> list[str]:
+    """data/jquants/margin/ 最新ファイルの日付鮮度を表示する（監査O-6・表示専用・本番判定には未使用）。"""
+    if not margin_dir.exists():
+        return ["- margin鮮度: data/jquants/margin/ が存在しません"]
+    files = sorted(margin_dir.glob("*.json.gz"))
+    if not files:
+        return ["- margin鮮度: データなし（data/jquants/margin/未取得）"]
+    latest_date_str = files[-1].name.split(".")[0]
+    try:
+        latest_date = datetime.datetime.strptime(latest_date_str, "%Y%m%d").date()
+    except ValueError:
+        return [f"- margin鮮度: 確認失敗（ファイル名から日付を解釈できません: {files[-1].name}）"]
+    age_days = (jq_fetch.now_jst().date() - latest_date).days
+    tag = f"⚠️最新={latest_date_str}（{age_days}日前・{MARGIN_STALE_WARN_DAYS}日超）" if age_days > MARGIN_STALE_WARN_DAYS else f"最新={latest_date_str}（{age_days}日前）"
+    return [f"- margin鮮度: {tag}"]
+
+
+def format_jsf_gap_check_lines() -> list[str]:
+    """scripts/check_jsf_gaps.py を呼び出し、結果1行を稼働状況に表示する（監査O-7・表示専用）。
+
+    サブプロセス自体の失敗（スクリプト例外・タイムアウト等）も朝ジョブ本体を落とさず
+    WARN表示に縮退する（check=Trueにしない）。
+    """
+    try:
+        result = subprocess.run(
+            [sys.executable, str(JSF_GAP_CHECK_SCRIPT)],
+            capture_output=True, text=True, timeout=30,
+        )
+        stdout_lines = [ln for ln in result.stdout.strip().splitlines() if ln]
+        summary = stdout_lines[-1] if stdout_lines else "(出力なし)"
+        return [f"- jsf日次アーカイブ欠損検知: {summary}"]
+    except Exception as e:  # noqa: BLE001  (監視系の失敗で朝ジョブ本体を落とさない)
+        return [f"- jsf日次アーカイブ欠損検知: 確認失敗（{e}）"]
 
 
 # --- watchlist設定読み込み -----------------------------------------------------------
@@ -1123,6 +1206,12 @@ def main() -> int:
     operational_context_lines = format_operational_context_lines(
         first_screened_date, end_bd, bday_index, champion_avg_monthly_signals, records, recent_signals,
     )
+    # 監査O-5/O-6/O-7: Cookie鮮度・margin鮮度・jsfアーカイブ欠損検知を同じ稼働状況セクションに追記
+    # （3項目とも表示専用・シグナル判定ロジックには一切影響しない）
+    operational_context_lines += format_cookie_age_lines()
+    operational_context_lines += format_margin_freshness_lines(jq_fetch.DATA_ROOT / "margin")
+    operational_context_lines += format_jsf_gap_check_lines()
+    operational_context_lines.append("")
 
     write_today_report(
         new_signal_records, records, scoreboard, start_bd, end_bd, out_of_universe_counts,

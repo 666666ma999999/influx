@@ -54,7 +54,7 @@
 
 ### F3 勝率採点（AI 不要）
 - 既存 `ResearchStore`/評価ロジックを再利用し、**価格ソースを yfinance から J-Quants ローカルキャッシュ（bars）に差し替え**（手元 10 年分・API 不要・上場廃止対応済み）
-- 各シグナル: signal_date 翌営業日寄付エントリー → 5bd/20bd 終値で is_win 判定（既存 evaluations.jsonl 形式互換）+ +20% 到達フラグ（カタログ §2-G の関心指標）
+- 各シグナル: signal_date 翌営業日寄付エントリー → 5bd/20bd 終値で is_win 判定（既存 evaluations.jsonl とスキーマ互換）+ +20% 到達フラグ（カタログ §2-G の関心指標）。**実装（`scripts/winrate_score.py`）の出力先は `output/research/evaluations_bars.jsonl`（旧 evaluations.jsonl とは別ファイル）で、signals.jsonl から毎回全件再計算し実行のたびに上書きする（追記ではない。pending だったホライズンを埋め直すための導出データのため・2026-07-11 監査O-2修正）**
 - SHORT シグナルと is_contrarian は方向反転を一貫適用
 
 ### F4 ランキング出力
@@ -95,16 +95,32 @@
 4. 既存 634 件の遡及データが「参考枠」に正しく分離表示される
 5. 週次ランブック（§8）どおりに第三者（別セッションの Claude）が再実行できる
 
-## 8. 週次ランブック（P1 納品物・実行はユーザーの一言でよい）
+## 8. 週次ランブック（P1 納品物・実行はユーザーの一言でよい・2026-07-11 監査O-1/O-2で実装スクリプト名に合わせ全面書き直し）
+
+**前提（本ランブックの対象外・別途稼働中）**: ツイート収集自体（F1）は
+`scripts/research_influencers.py --phase collect`（Playwright + Cookie。凍結37アカウント・
+8日窓）が既存資産として別途実行される。本ランブックは収集済みの `output/research/tweets_*.json`
+を入力として、抽出〜採点〜ランキング化までの5段を実行する。
 
 ```
 ユーザー:「インフルエンサー週次回して」
 → Claude が実行:
-  1. docker compose -f docker-compose.vnc.yml up -d && phase collect（37 アカウント・約 5-10 分）
-  2. 未抽出ツイートを Sonnet サブエージェントで抽出（プロンプト v2 固定）
-  3. スキーマ検証 → signals.jsonl 追記（重複は signal_id で排除）
-  4. J-Quants bars で採点 → evaluations.jsonl 追記
-  5. weekly_scoreboard.md 更新 → ユーザーへ 1 行サマリ報告
+  1. `python3 scripts/winrate_worklist.py`
+     → signals.jsonl 未抽出分を output/research/extraction_worklist.json に整形出力
+  2. worklist 件数を確認し、多い場合はサブエージェントに渡す単位を分割する
+     （バッチ分割目安: 1回で全件、または多い場合は分割して複数回。
+     docs/prompts/influencer_signal_extraction_v2.md 冒頭の運用注記どおり。
+     固定の件数閾値は設けていない — 1回のセッション内サブエージェント呼び出しで
+     処理しきれる分量かどうかで判断する）
+  3. セッション内 Sonnet サブエージェントが `docs/prompts/influencer_signal_extraction_v2.md`
+     （プロンプト v2 固定）に従い、各バッチの worklist をシグナルJSON配列として抽出・ファイル出力
+  4. `python3 scripts/winrate_ingest.py --input <抽出結果JSONのパス>`
+     → スキーマ検証 → signals.jsonl へ重複排除 append（signal_id で排除）
+  5. `python3 scripts/winrate_score.py`
+     → J-Quants bars で採点 → output/research/evaluations_bars.jsonl を
+       signals.jsonl から全件再計算し**上書き**（追記ではない）
+     → output/research/weekly_scoreboard.md 更新（vault ミラーへも転写）
+     → ユーザーへ 1 行サマリ報告
   6. （抜き取り監査）tickers_per_tweet が 4〜6 件の境界付近シグナルを数件、原文ツイートと目視突合し
      リスト型/非リスト型の判定が意味的にも妥当か確認する（F4 リスト型分離の誤判定検知）
 ```

@@ -17,6 +17,7 @@ Usage（他KPIスクリプトから run_event_study() を直接呼ぶのが主�
 from __future__ import annotations
 
 import argparse
+import fcntl
 import json
 import re
 import sys
@@ -49,6 +50,7 @@ MAX_ENTRY_DEFER_BDAYS = 3  # S高/売買停止等でT+1に約定不能な場合�
 DEFAULT_BASE_RATE_DIR = Path("output/base_rate")
 DEFAULT_OUTPUT_DIR = Path("output/kpi")
 DEFAULT_TRIALS_PATH = Path("data/kpi_trials/trials.jsonl")
+CATALOG_PATH = Path("docs/stock-algo-kpi-catalog.md")  # 監査P-3: 事前登録ゲートの照合先
 
 VERDICT_LABELS_JA = {
     "in_sample_pass_candidate": "合格候補（in-sample。holdout 2023以降は未実施のため最終合格ではない）",
@@ -374,8 +376,9 @@ def bootstrap_lift_ci(
     base_rate_by_month: dict[str, float],
     n_boot: int = N_BOOTSTRAP,
     seed: int = BOOTSTRAP_SEED,
+    ci_level: float = 0.95,
 ) -> dict:
-    """月次ブロック・ブートストラップでリフト倍率の点推定と95%CIを算出する（§6手順5準拠）。
+    """月次ブロック・ブートストラップでリフト倍率の点推定とCIを算出する（§6手順5準拠）。
 
     月次コホートは横断相関・系列相関を持つため、独立試行を仮定した二項CIは使わず、
     月を単位として復元抽出する（月内の相関構造を保持したまま再標本化する）。
@@ -385,7 +388,13 @@ def bootstrap_lift_ci(
     完全に除外する。NaNは加算で伝播するため、1ヶ月でも混入すると point_lift 全体がNaNに
     汚染される（除外は本関数のみに閉じる。全体のP(+20%)・EV等の集計(measure_base_rate.summarize)
     は in_universe_df 全件を対象に別途行われており、この除外の影響を受けない）。
+
+    Args:
+        ci_level: CIの信頼水準（既定0.95=95%CI、従来の[2.5, 97.5]percentileと完全同一）。
+            多重比較のBonferroni調整等で個別のCI幅を変える場合にのみ指定する
+            （2026-07-11 監査C-2・後方互換: 省略時の挙動は不変）。
     """
+    alpha_pct = (1 - ci_level) / 2 * 100
     all_months = sorted(in_universe_df["month"].unique())
     grouped = {m: g for m, g in in_universe_df.groupby("month")}
 
@@ -425,7 +434,7 @@ def bootstrap_lift_ci(
             "excluded_signal_count": excluded_signal_count,
         }
 
-    ci_low, ci_high = np.percentile(boot_lifts, [2.5, 97.5])
+    ci_low, ci_high = np.percentile(boot_lifts, [alpha_pct, 100 - alpha_pct])
     return {
         "point_lift": point_lift,
         "ci_low": float(ci_low),
@@ -458,8 +467,9 @@ def bootstrap_ev_ci(
     cost: float = measure_base_rate.ROUND_TRIP_COST,
     n_boot: int = N_BOOTSTRAP,
     seed: int = BOOTSTRAP_SEED,
+    ci_level: float = 0.95,
 ) -> dict:
-    """月次ブロック・ブートストラップでEV（mean(ev_column) - cost）の点推定と95%CIを算出する。
+    """月次ブロック・ブートストラップでEV（mean(ev_column) - cost）の点推定とCIを算出する。
 
     `bootstrap_lift_ci` と同一の月ブロック抽出方式（月を単位とした復元抽出で横断・系列相関を
     保持する。§6手順5準拠）をEV算出に適用したもの。リフトと異なりベースレートへの依存が
@@ -470,7 +480,13 @@ def bootstrap_ev_ci(
     「同月に発生したシグナル群の相関を壊さないこと」なのでシグナル月で一貫させる。
     返り値のEVは「シグナル数加重の1トレードあたり平均リターン」であって月次リターンの
     平均ではない（月次EVのCIと誤読しないこと）。
+
+    Args:
+        ci_level: CIの信頼水準（既定0.95=95%CI、従来の[2.5, 97.5]percentileと完全同一）。
+            多重比較のBonferroni調整等で個別のCI幅を変える場合にのみ指定する
+            （2026-07-11 監査C-2・後方互換: 省略時の挙動は不変）。
     """
+    alpha_pct = (1 - ci_level) / 2 * 100
     all_months = sorted(in_universe_df["month"].unique())
     grouped = {m: g for m, g in in_universe_df.groupby("month")}
 
@@ -490,7 +506,7 @@ def bootstrap_ev_ci(
     if not boot_evs:
         return {"point_ev": point_ev, "ci_low": None, "ci_high": None, "n_boot_valid": 0}
 
-    ci_low, ci_high = np.percentile(boot_evs, [2.5, 97.5])
+    ci_low, ci_high = np.percentile(boot_evs, [alpha_pct, 100 - alpha_pct])
     return {
         "point_ev": point_ev,
         "ci_low": float(ci_low),
@@ -749,11 +765,52 @@ def write_report_md(
     path.write_text("\n".join(lines), encoding="utf-8")
 
 
+def warn_if_not_preregistered(kpi_name: str, catalog_path: Path = CATALOG_PATH) -> None:
+    """事前登録ゲート（監査P-3）: kpi_name が docs/stock-algo-kpi-catalog.md に出現するか検査し、
+    出現しなければ強い警告を stderr へ出す（誤検知許容の警告型・実行は止めない）。
+
+    §6評価プロトコル凍結は「事前登録→実行」の順序を要求するが、これまで機械的な強制がなく
+    順序違反が2回発生した（監査P-3）。カタログ本文への単純な文字列一致検査のみで、見出し体系・
+    表記ゆれ（バッククォート有無等）までは判定しない簡易実装のため、誤検知（登録済みなのに
+    警告が出る）はあり得る前提で「実行は継続」する設計にしている。
+    """
+    if not kpi_name:
+        return
+    try:
+        text = catalog_path.read_text(encoding="utf-8")
+    except OSError as e:
+        print(f"WARN: 事前登録ゲート確認不能（カタログ読込失敗: {e}）。判定をスキップします", file=sys.stderr)
+        return
+    if kpi_name not in text:
+        print(
+            f"⚠️ WARN: kpi_name='{kpi_name}' が docs/stock-algo-kpi-catalog.md 内に見当たりません。"
+            "事前登録（§6評価プロトコル）の順序を確認してください（誤検知の可能性はありますが実行は継続します）",
+            file=sys.stderr,
+        )
+
+
 def append_trial(record: dict, trials_path: Path) -> None:
-    """試行台帳に1行追記する（tracked正本・上書き禁止のためappendのみ）。"""
+    """試行台帳に1行追記する（tracked正本・上書き禁止のためappendのみ）。
+
+    書き込み直前に事前登録ゲート（監査P-3・warn_if_not_preregistered）を確認する。
+    複数プロセスからの同時追記でも行が混ざらないよう、書き込み中は fcntl.flock で
+    排他ロックする（監査T-5・単一マシン内のプロセス間排他のみ。ネットワーク越しの排他は想定しない）。
+
+    「append-only」の例外（2026-07-11 監査T-4・実運用との乖離を明文化）: **git commit済みの行は
+    不変**（コミット後の遡及書き換えは禁止・過去試行の再検証は新規試行として追加する）。
+    一方で**未コミットの行**は、Codexレビュー等の実装バグ指摘を受けて同一トライアルを修正再実行した
+    場合に、コミット前の「出版前訂正」として置き換えられうる（例: 第18/20周の年度キー・単位不整合
+    修正時に初回実行分の行を差し替え。差し替えの経緯は対応するKPIの`report.md`または
+    §7各節の修正履歴に記録する運用とし、trials.jsonl自体には必ずしも差し替え注記行を残さない）。
+    """
+    warn_if_not_preregistered(record.get("kpi_name", ""))
     trials_path.parent.mkdir(parents=True, exist_ok=True)
     with open(trials_path, "a", encoding="utf-8") as f:
-        f.write(json.dumps(record, ensure_ascii=False) + "\n")
+        fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+        try:
+            f.write(json.dumps(record, ensure_ascii=False) + "\n")
+        finally:
+            fcntl.flock(f.fileno(), fcntl.LOCK_UN)
 
 
 # --- メイン処理（他スクリプトから直接呼ばれる主経路） -----------------------------

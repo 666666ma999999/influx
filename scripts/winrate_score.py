@@ -443,7 +443,13 @@ def render_scoreboard_md(by_username: dict, generated_at: str) -> str:
     total_prospective = sum(s["n"] for _, s in prospective_rows)
     lines += ["", "## サマリ", ""]
     lines.append(f"- prospectiveシグナル累計（非リスト型のみ）: {total_prospective}件（アカウント{len(prospective_rows)}件）")
-    if prospective_rows:
+    if not prospective_rows:
+        pass
+    elif all(s["n_20bd"] == 0 for _, s in prospective_rows):
+        # 監査V-8: 全アカウントがn(20bd)=0（ホライズン未到来）の段階では「首位」表示自体が
+        # 無意味（評価件数ゼロの銘柄を勝率0%扱いで比較しているだけ）なため専用文言に切替える。
+        lines.append("- 勝率(20bd)首位: まだ判定可能なアカウントなし（全シグナル評価待ち）")
+    else:
         top_username, top_stats = max(
             prospective_rows, key=lambda x: (x[1]["win_rate_20bd"] if x[1]["win_rate_20bd"] is not None else -1)
         )
@@ -494,13 +500,17 @@ def main() -> int:
           f"評価対象(非リスト型): {diag['total_signals'] - n_list_signals}件")
 
     by_username = group_by_username(signals, evaluations, tickers_per_tweet)
-    md = render_scoreboard_md(by_username, jq_fetch.now_jst().isoformat())
+    # 監査V-7: 本文の生成時刻とミラーfrontmatterのlast_updatedを同一のnow_jst()呼び出しから
+    # 導出する（別々にnow_jst()を呼ぶと、実行が日付境界をまたいだ場合に本文とミラーの
+    # 日付が1日ずれうる。daily_screen.pyのsync_vault_mirror()と同種の不整合の芽を摘む）。
+    generated_at = jq_fetch.now_jst().isoformat()
+    md = render_scoreboard_md(by_username, generated_at)
     os.makedirs(os.path.dirname(scoreboard_path) or ".", exist_ok=True)
     with open(scoreboard_path, "w", encoding="utf-8") as f:
         f.write(md)
     print(f"スコアボード生成: {scoreboard_path}")
     try:
-        front = VAULT_MIRROR_FRONTMATTER.format(today=jq_fetch.now_jst().date().isoformat())
+        front = VAULT_MIRROR_FRONTMATTER.format(today=generated_at[:10])
         with open(VAULT_MIRROR_PATH, "w", encoding="utf-8") as f:
             f.write(front + md)
         print(f"vaultミラー更新: {VAULT_MIRROR_PATH}")
