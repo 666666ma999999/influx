@@ -35,6 +35,8 @@ worklist生成（bookmarks_keyword_worklist.py）とingest（bookmarks_keyword_i
     1行に評価マーカーが2個以上出現した場合はそのidだけを不採用にするのではなく行全体を
     unknown_valuesへ計上する（評価セルへのマーカー偽造・多重埋め込み対策）。
 - sha256_of_file(path) / sha256_of_urls(url_keys)
+- VALID_MARKS -> {"✅", "🔁", "🔍", "❌"}（評価マークの許可集合。note_eval_parse内部の
+    _VALID_MARKSの公開エイリアス。他モジュールの評価値検証でも同じ集合を参照する）
 
 ## 台帳イベントスキーマ（B3 ingestが従うべき契約。replay()はこの形を前提に読む）
 
@@ -44,8 +46,13 @@ worklist生成（bookmarks_keyword_worklist.py）とingest（bookmarks_keyword_i
 - fetch_run: {"type": "fetch_run", "status": "SUCCESS"|"DEGRADED"|"FAILED"|"SKIPPED_MANUAL", ...}
     replayはstatus=="SUCCESS"の最新tsをlast_fetch_success_atとして返す。
 - evaluation_batch: {"type": "evaluation_batch", "note_revision": "<sha256>",
-    "evaluations": [{"id_type": "qid"|"pid", "id": "...", "mark": "✅"|"🔁"|"🔍"|"❌"}, ...]}
-    (id_type, id, mark, note_revision) の4つ組で重複排除される（冪等）。
+    "evaluations": [{"id_type": "qid"|"pid", "id": "...", "mark": "✅"|"🔁"|"🔍"|"❌",
+    "note": str（任意・省略可。固定語彙チップ or 空。ノート由来は常に空）}, ...],
+    "source": "web_export"（任意。Downloads経由のWeb評価エクスポート取り込み時のみ。
+    ノート由来のイベントには付与しない）, "file": str（任意。source=web_export時の元ファイル名）}
+    (id_type, id, mark, note_revision) の4つ組で重複排除される（冪等）。noteは
+    replay()のall_evaluations/pending_evaluationsへそのまま素通しされるが、重複排除鍵には
+    含めない（note_revisionが既に発生源=ファイル/ノート単位の一意性を担保するため）。
 - generation: {"type": "generation", "generation": int, "revision": int,
     "generation_reason": "baseline"|"delta"|"manual_regen"|...,
     "run_id": str|null, "prompt_version": str, "schema_version": str,
@@ -406,6 +413,7 @@ def replay(events: list) -> dict:
                     "id_type": item.get("id_type"),
                     "id": item.get("id"),
                     "mark": item.get("mark"),
+                    "note": item.get("note", ""),
                     "note_revision": note_revision,
                 })
 
@@ -456,6 +464,7 @@ def replay(events: list) -> dict:
 
 _MARKER_RE = re.compile(r"<!--\s*(qid|pid):([a-z0-9-]+)\s*-->")
 _VALID_MARKS = {"✅", "🔁", "🔍", "❌"}
+VALID_MARKS = _VALID_MARKS  # 他モジュール（worklist.pyのWeb export検証等）からの公開参照用エイリアス
 
 
 def note_eval_parse(note_text: str, known_ids=None) -> tuple:

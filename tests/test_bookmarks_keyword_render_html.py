@@ -39,6 +39,18 @@ def _cluster(cluster_id, name, why, queries, evidence_urls):
     }
 
 
+def _proposal(pid, name_ja, why, queries, evidence_urls):
+    return {
+        "proposal_id": pid,
+        "name_ja": name_ja,
+        "why": why,
+        "keywords_ja": ["テスト"],
+        "keywords_en": [],
+        "queries": queries,
+        "evidence_urls": evidence_urls,
+    }
+
+
 def _make_latest(active_clusters, **overrides):
     latest = {
         "generation": 1,
@@ -186,6 +198,125 @@ class TestHtmlGeneration(RenderHtmlTestCase):
 
         self.assertNotIn('href="javascript:alert(1)"', text)
         self.assertIn("javascript:alert(1)", text, "リンク化はしないがテキストとしては表示されるべき")
+
+
+class TestEvalUi(RenderHtmlTestCase):
+    def test_eval_button_count_matches_four_per_query(self):
+        clusters = [
+            _cluster(
+                "c-1", "クラスタA", "理由A",
+                [
+                    _query("q-1", "query 1", "簡易1", "意図1"),
+                    _query("q-2", "query 2", "簡易2", "意図2"),
+                ],
+                [],
+            ),
+            _cluster("c-2", "クラスタB", "理由B", [_query("q-3", "query 3", "簡易3", "意図3")], []),
+        ]
+        self._write_latest(_make_latest(clusters))
+        self._run()
+        text = self.out_path.read_text(encoding="utf-8")
+
+        total_queries = 3
+        eval_button_count = len(re.findall(r'class="eval-btn"', text))
+        self.assertEqual(eval_button_count, total_queries * 4)
+
+    def test_query_row_has_qid_data_attribute(self):
+        clusters = [
+            _cluster("c-1", "クラスタA", "理由A", [_query("q-abc123", "qA", "sA", "iA")], []),
+        ]
+        self._write_latest(_make_latest(clusters))
+        self._run()
+        text = self.out_path.read_text(encoding="utf-8")
+
+        self.assertIn('data-id-type="qid"', text)
+        self.assertIn('data-id="q-abc123"', text)
+
+    def test_prev_eval_from_eval_history_displayed(self):
+        query = _query("q-1", "qA", "sA", "iA")
+        query["eval_history"] = [{"mark": "✅", "at": "2026-07-01T00:00:00+00:00"}]
+        clusters = [_cluster("c-1", "クラスタA", "理由A", [query], [])]
+        self._write_latest(_make_latest(clusters))
+        self._run()
+        text = self.out_path.read_text(encoding="utf-8")
+
+        self.assertIn("前回評価", text)
+        self.assertIn("2026-07-01", text)
+
+    def test_header_has_badge_and_save_button(self):
+        clusters = [_cluster("c-1", "クラスタA", "理由A", [_query("q-1", "qA", "sA", "iA")], [])]
+        self._write_latest(_make_latest(clusters))
+        self._run()
+        text = self.out_path.read_text(encoding="utf-8")
+
+        self.assertIn('id="xkw-badge"', text)
+        self.assertIn('id="xkw-save-btn"', text)
+        self.assertIn("未保存の評価", text)
+        self.assertIn("評価を保存", text)
+
+    def test_export_schema_string_present_in_js(self):
+        clusters = [_cluster("c-1", "クラスタA", "理由A", [_query("q-1", "qA", "sA", "iA")], [])]
+        self._write_latest(_make_latest(clusters))
+        self._run()
+        text = self.out_path.read_text(encoding="utf-8")
+
+        self.assertIn("x-keywords-evals/1", text)
+
+    def test_generation_and_revision_embedded_for_js_namespace(self):
+        clusters = [_cluster("c-1", "クラスタA", "理由A", [_query("q-1", "qA", "sA", "iA")], [])]
+        self._write_latest(_make_latest(clusters, generation=3, revision=1))
+        self._run()
+        text = self.out_path.read_text(encoding="utf-8")
+
+        self.assertIn("var XKW_GEN=3;", text)
+        self.assertIn("var XKW_REV=1;", text)
+
+    def test_footer_mentions_save_flow(self):
+        clusters = [_cluster("c-1", "クラスタA", "理由A", [_query("q-1", "qA", "sA", "iA")], [])]
+        self._write_latest(_make_latest(clusters))
+        self._run()
+        text = self.out_path.read_text(encoding="utf-8")
+
+        self.assertIn("保存", text)
+        self.assertIn("週次で自動反映", text)
+
+
+class TestProposalsUi(RenderHtmlTestCase):
+    def test_proposal_adopt_button_rendered_with_pid(self):
+        clusters = [_cluster("c-1", "クラスタA", "理由A", [_query("q-1", "qA", "sA", "iA")], [])]
+        proposals = [
+            _proposal("p-1", "提案X", "理由X", [{"q": "query x", "q_simple": "sx", "intent": "ix"}], ["https://x.com/a/status/1"] * 3),
+        ]
+        self._write_latest(_make_latest(clusters, proposals=proposals))
+        self._run()
+        text = self.out_path.read_text(encoding="utf-8")
+
+        self.assertIn('data-id-type="pid"', text)
+        self.assertIn('data-id="p-1"', text)
+        self.assertIn("adopt-btn", text)
+        self.assertIn("提案X", text)
+
+    def test_no_proposals_section_when_empty(self):
+        clusters = [_cluster("c-1", "クラスタA", "理由A", [_query("q-1", "qA", "sA", "iA")], [])]
+        self._write_latest(_make_latest(clusters, proposals=[]))
+        self._run()
+        text = self.out_path.read_text(encoding="utf-8")
+
+        self.assertNotIn('class="adopt-btn"', text)
+        self.assertNotIn('<div class="proposals-section">', text)
+
+    def test_proposal_name_is_escaped(self):
+        clusters = [_cluster("c-1", "クラスタA", "理由A", [_query("q-1", "qA", "sA", "iA")], [])]
+        malicious_name = "<script>alert(2)</script>"
+        proposals = [
+            _proposal("p-1", malicious_name, "理由X", [{"q": "query x", "q_simple": "sx", "intent": "ix"}], ["https://x.com/a/status/1"] * 3),
+        ]
+        self._write_latest(_make_latest(clusters, proposals=proposals))
+        self._run()
+        text = self.out_path.read_text(encoding="utf-8")
+
+        self.assertNotIn("<script>alert(2)</script>", text)
+        self.assertIn("&lt;script&gt;alert(2)&lt;/script&gt;", text)
 
 
 class TestMissingLatest(RenderHtmlTestCase):

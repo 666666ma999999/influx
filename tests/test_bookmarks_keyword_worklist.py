@@ -451,6 +451,9 @@ class TestDeltaAndTrigger(unittest.TestCase):
         self.ledger_path = os.path.join(self._tmpdir.name, "ledger.jsonl")
         self.note_path = os.path.join(self._tmpdir.name, "note.md")  # 存在しない前提
         self.out_path = os.path.join(self._tmpdir.name, "worklist.json")
+        # 実機の~/Downloadsを誤って走査しないよう、存在しないtempdir配下を明示する
+        # （harvest_web_exportsはdownloads_dirが存在しなければ即座に空結果を返す）。
+        self.downloads_dir_path = os.path.join(self._tmpdir.name, "downloads_unused")
 
     def _args(self, force=False, reason=None, fetch_status="SUCCESS", record_fetch_run=False,
               observed_url_count=0):
@@ -458,6 +461,7 @@ class TestDeltaAndTrigger(unittest.TestCase):
             force=force, reason=reason, fetch_status=fetch_status,
             raw=self.raw_path, ledger=self.ledger_path, note=self.note_path, out=self.out_path,
             record_fetch_run=record_fetch_run, observed_url_count=observed_url_count,
+            downloads_dir=self.downloads_dir_path,
         )
 
     def _seed_accepted_generation(self, baseline_records):
@@ -620,6 +624,318 @@ class TestDeltaAndTrigger(unittest.TestCase):
                 sys.argv = sys_argv_backup
 
 
+class TestWebExportHarvest(unittest.TestCase):
+    """harvest_web_exports（~/Downloads自動回収）のfixtureテスト。Downloadsは常にtempdirで偽装する。"""
+
+    def setUp(self):
+        self._tmpdir = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmpdir.cleanup)
+        self.ledger_path = os.path.join(self._tmpdir.name, "output", "bookmarks", "keywords_ledger.jsonl")
+        os.makedirs(os.path.dirname(self.ledger_path), exist_ok=True)
+        self.downloads_dir = os.path.join(self._tmpdir.name, "downloads")
+        os.makedirs(self.downloads_dir, exist_ok=True)
+        self.processed_dir = Path(self.ledger_path).parent / "evals_processed"
+        self.rejected_dir = Path(self.ledger_path).parent / "evals_rejected"
+
+    def _seed_generation(self, qids=(), pids=()):
+        queries = [
+            {"query_id": qid, "q": f"query-{qid}", "q_simple": f"simple-{qid}", "intent": "", "eval_history": []}
+            for qid in qids
+        ]
+        proposals = [
+            {"proposal_id": pid, "name_ja": f"提案-{pid}", "why": "", "keywords_ja": ["テスト"],
+             "keywords_en": [], "queries": [], "evidence_urls": []}
+            for pid in pids
+        ]
+        common.append_event(self.ledger_path, {
+            "type": "generation", "generation": 1, "revision": 0,
+            "generation_reason": "baseline",
+            "snapshot_urls": [],
+            "active_clusters": [{
+                "cluster_id": "c-1", "name": "テストクラスタ", "why": "",
+                "keywords": [], "queries": queries, "evidence_urls": [],
+            }] if queries else [],
+            "dormant_clusters": [],
+            "proposals": proposals,
+        })
+
+    def _write_export(self, filename, evals, exported_at="2026-07-12T00:00:00+00:00",
+                       schema="x-keywords-evals/1", extra_top_level=None):
+        payload = {
+            "schema": schema,
+            "exported_at": exported_at,
+            "source": {"generation": 1, "revision": 0},
+            "evals": evals,
+        }
+        if extra_top_level:
+            payload.update(extra_top_level)
+        path = Path(self.downloads_dir) / filename
+        path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+        return path
+
+    def _harvest(self):
+        events = common.read_ledger(self.ledger_path)
+        replay_state = common.replay(events)
+        return worklist.harvest_web_exports(
+            self.downloads_dir, self.ledger_path, events, replay_state, "run-1"
+        )
+
+    def test_normal_export_creates_evaluation_batch_and_moves_to_processed(self):
+        self._seed_generation(qids=["q-1"])
+        self._write_export("x-keywords-evals-1-100.json", [
+            {"id": "q-1", "id_type": "qid", "mark": "✅", "note": ""},
+        ])
+
+        result = self._harvest()
+
+        self.assertEqual(result, {"processed": 1, "rejected": 0, "appended_events": 1})
+        self.assertFalse((Path(self.downloads_dir) / "x-keywords-evals-1-100.json").exists())
+        self.assertTrue((self.processed_dir / "x-keywords-evals-1-100.json").exists())
+
+        events = common.read_ledger(self.ledger_path)
+        batches = [e for e in events if e["type"] == "evaluation_batch"]
+        self.assertEqual(len(batches), 1)
+        self.assertEqual(batches[0]["source"], "web_export")
+        self.assertEqual(batches[0]["file"], "x-keywords-evals-1-100.json")
+        self.assertEqual(
+            batches[0]["evaluations"],
+            [{"id_type": "qid", "id": "q-1", "mark": "✅", "note": ""}],
+        )
+
+    def test_unknown_qid_entry_skipped_but_file_still_processed(self):
+        self._seed_generation(qids=["q-known"])
+        self._write_export("x-keywords-evals-1-101.json", [
+            {"id": "q-known", "id_type": "qid", "mark": "✅", "note": ""},
+            {"id": "q-unknown", "id_type": "qid", "mark": "❌", "note": ""},
+        ])
+
+        result = self._harvest()
+
+        self.assertEqual(result, {"processed": 1, "rejected": 0, "appended_events": 1})
+        events = common.read_ledger(self.ledger_path)
+        batches = [e for e in events if e["type"] == "evaluation_batch"]
+        self.assertEqual(len(batches[0]["evaluations"]), 1)
+        self.assertEqual(batches[0]["evaluations"][0]["id"], "q-known")
+
+    def test_invalid_mark_entry_skipped_but_file_still_processed(self):
+        self._seed_generation(qids=["q-1", "q-2"])
+        self._write_export("x-keywords-evals-1-102.json", [
+            {"id": "q-1", "id_type": "qid", "mark": "👍", "note": ""},
+            {"id": "q-2", "id_type": "qid", "mark": "✅", "note": ""},
+        ])
+
+        result = self._harvest()
+
+        self.assertEqual(result, {"processed": 1, "rejected": 0, "appended_events": 1})
+        events = common.read_ledger(self.ledger_path)
+        batches = [e for e in events if e["type"] == "evaluation_batch"]
+        self.assertEqual(len(batches[0]["evaluations"]), 1)
+        self.assertEqual(batches[0]["evaluations"][0]["id"], "q-2")
+
+    def test_invalid_note_for_mark_entry_skipped(self):
+        """✅/❌にはチップ語彙が無いため、note非空は不正エントリとして無視される。"""
+        self._seed_generation(qids=["q-1"])
+        self._write_export("x-keywords-evals-1-103.json", [
+            {"id": "q-1", "id_type": "qid", "mark": "✅", "note": "min_favesを上げる"},
+        ])
+
+        result = self._harvest()
+
+        self.assertEqual(result, {"processed": 1, "rejected": 0, "appended_events": 0})
+        events = common.read_ledger(self.ledger_path)
+        self.assertEqual([e for e in events if e["type"] == "evaluation_batch"], [])
+
+    def test_valid_chip_note_for_mark_kept(self):
+        self._seed_generation(qids=["q-1"])
+        self._write_export("x-keywords-evals-1-104.json", [
+            {"id": "q-1", "id_type": "qid", "mark": "🔁", "note": "min_favesを上げる"},
+        ])
+
+        result = self._harvest()
+
+        self.assertEqual(result["appended_events"], 1)
+        events = common.read_ledger(self.ledger_path)
+        batches = [e for e in events if e["type"] == "evaluation_batch"]
+        self.assertEqual(batches[0]["evaluations"][0]["note"], "min_favesを上げる")
+
+    def test_oversized_file_rejected(self):
+        self._seed_generation(qids=["q-1"])
+        big_evals = [{"id": "q-1", "id_type": "qid", "mark": "✅", "note": ""}]
+        path = self._write_export(
+            "x-keywords-evals-1-105.json", big_evals,
+            extra_top_level={"_pad": "x" * 200_000},
+        )
+        self.assertGreater(path.stat().st_size, worklist.WEB_EXPORT_MAX_BYTES)
+
+        result = self._harvest()
+
+        self.assertEqual(result, {"processed": 0, "rejected": 1, "appended_events": 0})
+        self.assertFalse(path.exists())
+        self.assertTrue((self.rejected_dir / "x-keywords-evals-1-105.json").exists())
+        events = common.read_ledger(self.ledger_path)
+        self.assertEqual([e for e in events if e["type"] == "evaluation_batch"], [])
+
+    def test_schema_mismatch_rejected(self):
+        self._seed_generation(qids=["q-1"])
+        self._write_export(
+            "x-keywords-evals-1-106.json",
+            [{"id": "q-1", "id_type": "qid", "mark": "✅", "note": ""}],
+            schema="wrong-schema/1",
+        )
+
+        result = self._harvest()
+
+        self.assertEqual(result, {"processed": 0, "rejected": 1, "appended_events": 0})
+        self.assertTrue((self.rejected_dir / "x-keywords-evals-1-106.json").exists())
+
+    def test_missing_exported_at_rejected(self):
+        self._seed_generation(qids=["q-1"])
+        self._write_export(
+            "x-keywords-evals-1-107.json",
+            [{"id": "q-1", "id_type": "qid", "mark": "✅", "note": ""}],
+            exported_at=None,
+        )
+
+        result = self._harvest()
+
+        self.assertEqual(result, {"processed": 0, "rejected": 1, "appended_events": 0})
+
+    def test_same_id_across_two_files_last_wins(self):
+        self._seed_generation(qids=["q-1"])
+        self._write_export("x-keywords-evals-1-200.json", [
+            {"id": "q-1", "id_type": "qid", "mark": "✅", "note": ""},
+        ], exported_at="2026-07-12T00:00:00+00:00")
+        self._write_export("x-keywords-evals-1-201.json", [
+            {"id": "q-1", "id_type": "qid", "mark": "❌", "note": ""},
+        ], exported_at="2026-07-12T01:00:00+00:00")
+
+        result = self._harvest()
+
+        self.assertEqual(result, {"processed": 2, "rejected": 0, "appended_events": 1})
+        events = common.read_ledger(self.ledger_path)
+        batches = [e for e in events if e["type"] == "evaluation_batch"]
+        self.assertEqual(len(batches), 1, "後勝ちの1件のみがevaluation_batchとして追記されること")
+        self.assertEqual(batches[0]["file"], "x-keywords-evals-1-201.json")
+        self.assertEqual(batches[0]["evaluations"][0]["mark"], "❌")
+        # 両ファイルともevals_processed/へ移動済み（先勝ちの内容がなくても回収自体は成功扱い）。
+        self.assertTrue((self.processed_dir / "x-keywords-evals-1-200.json").exists())
+        self.assertTrue((self.processed_dir / "x-keywords-evals-1-201.json").exists())
+
+    def test_idempotent_second_run_is_noop(self):
+        self._seed_generation(qids=["q-1"])
+        self._write_export("x-keywords-evals-1-300.json", [
+            {"id": "q-1", "id_type": "qid", "mark": "✅", "note": ""},
+        ])
+        first = self._harvest()
+        self.assertEqual(first["appended_events"], 1)
+
+        second = self._harvest()
+
+        self.assertEqual(second, {"processed": 0, "rejected": 0, "appended_events": 0})
+        events = common.read_ledger(self.ledger_path)
+        batches = [e for e in events if e["type"] == "evaluation_batch"]
+        self.assertEqual(len(batches), 1, "ファイルが既にmove済みのため2回目は台帳に何も追加しない(冪等)")
+
+    def test_symlink_file_rejected(self):
+        self._seed_generation(qids=["q-1"])
+        outside_dir = Path(self._tmpdir.name) / "outside"
+        outside_dir.mkdir()
+        real_target = outside_dir / "real-evals.json"
+        real_target.write_text(json.dumps({
+            "schema": "x-keywords-evals/1", "exported_at": "2026-07-12T00:00:00+00:00",
+            "source": {"generation": 1, "revision": 0},
+            "evals": [{"id": "q-1", "id_type": "qid", "mark": "✅", "note": ""}],
+        }), encoding="utf-8")
+        symlink_path = Path(self.downloads_dir) / "x-keywords-evals-1-400.json"
+        symlink_path.symlink_to(real_target)
+
+        result = self._harvest()
+
+        self.assertEqual(result, {"processed": 0, "rejected": 1, "appended_events": 0})
+        self.assertTrue(real_target.exists(), "symlinkの実体（Downloads外）は無傷であること")
+        events = common.read_ledger(self.ledger_path)
+        self.assertEqual([e for e in events if e["type"] == "evaluation_batch"], [])
+
+    def test_pid_adopt_evaluation_harvested(self):
+        self._seed_generation(pids=["p-1"])
+        self._write_export("x-keywords-evals-1-500.json", [
+            {"id": "p-1", "id_type": "pid", "mark": "✅", "note": ""},
+        ])
+
+        result = self._harvest()
+
+        self.assertEqual(result["appended_events"], 1)
+        events = common.read_ledger(self.ledger_path)
+        batches = [e for e in events if e["type"] == "evaluation_batch"]
+        self.assertEqual(batches[0]["evaluations"][0], {"id_type": "pid", "id": "p-1", "mark": "✅", "note": ""})
+
+    def test_nonexistent_downloads_dir_is_noop(self):
+        events = common.read_ledger(self.ledger_path)
+        replay_state = common.replay(events)
+        result = worklist.harvest_web_exports(
+            os.path.join(self._tmpdir.name, "does-not-exist"), self.ledger_path, events, replay_state, "run-1"
+        )
+        self.assertEqual(result, {"processed": 0, "rejected": 0, "appended_events": 0})
+
+
+class TestBuildWorklistDownloadsWiring(unittest.TestCase):
+    """build_worklist経由での--downloads-dir配線smoke test。"""
+
+    def setUp(self):
+        self._tmpdir = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmpdir.cleanup)
+        self.raw_path = os.path.join(self._tmpdir.name, "bookmarks.jsonl")
+        self.ledger_path = os.path.join(self._tmpdir.name, "output", "bookmarks", "keywords_ledger.jsonl")
+        os.makedirs(os.path.dirname(self.ledger_path), exist_ok=True)
+        self.note_path = os.path.join(self._tmpdir.name, "note.md")
+        self.out_path = os.path.join(self._tmpdir.name, "worklist.json")
+        self.downloads_dir = os.path.join(self._tmpdir.name, "downloads")
+        os.makedirs(self.downloads_dir, exist_ok=True)
+
+    def _args(self, **overrides):
+        base = dict(
+            force=False, reason=None, fetch_status="SUCCESS",
+            raw=self.raw_path, ledger=self.ledger_path, note=self.note_path, out=self.out_path,
+            record_fetch_run=False, observed_url_count=0, downloads_dir=self.downloads_dir,
+        )
+        base.update(overrides)
+        return argparse.Namespace(**base)
+
+    def test_web_export_harvest_reflected_in_worklist_payload(self):
+        _write_jsonl(self.raw_path, [_rec("https://x.com/a/status/1", "hello world")])
+        common.append_event(self.ledger_path, {
+            "type": "generation", "generation": 1, "revision": 0,
+            "generation_reason": "baseline",
+            "snapshot_urls": ["status:1"],
+            "active_clusters": [{
+                "cluster_id": "c-1", "name": "クラスタ", "why": "",
+                "keywords": [], "queries": [
+                    {"query_id": "q-1", "q": "qA", "q_simple": "sA", "intent": "", "eval_history": []}
+                ],
+                "evidence_urls": [],
+            }],
+            "dormant_clusters": [],
+        })
+        export_path = Path(self.downloads_dir) / "x-keywords-evals-1-999.json"
+        export_path.write_text(json.dumps({
+            "schema": "x-keywords-evals/1",
+            "exported_at": "2026-07-12T00:00:00+00:00",
+            "source": {"generation": 1, "revision": 0},
+            "evals": [{"id": "q-1", "id_type": "qid", "mark": "✅", "note": ""}],
+        }), encoding="utf-8")
+
+        payload, exit_code = worklist.build_worklist(self._args())
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(payload["web_export_harvest"], {"processed": 1, "rejected": 0, "appended_events": 1})
+        self.assertFalse(export_path.exists())
+        # pending_evaluationsにnoteフィールドが素通しされていること。
+        pending = payload["pending_evaluations"]
+        self.assertEqual(len(pending), 1)
+        self.assertEqual(pending[0]["id"], "q-1")
+        self.assertEqual(pending[0].get("note"), "")
+
+
 class TestRealDataSmoke(unittest.TestCase):
     """実データ output/bookmarks.jsonl でのworklist生成smoke test（読むだけ）。"""
 
@@ -638,6 +954,8 @@ class TestRealDataSmoke(unittest.TestCase):
                 ledger=os.path.join(tmpdir, "ledger.jsonl"),
                 note=os.path.join(tmpdir, "nonexistent_note.md"),
                 out=os.path.join(tmpdir, "worklist.json"),
+                # 実機の~/Downloadsを誤って走査しないよう、存在しないtempdir配下を明示する。
+                downloads_dir=os.path.join(tmpdir, "downloads_unused"),
             )
             payload, exit_code = worklist.build_worklist(args)
 

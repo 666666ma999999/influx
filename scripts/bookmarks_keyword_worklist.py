@@ -74,10 +74,13 @@ bookmarks_keyword_common.py（共通庫）を用いて、raw取得済みブッ�
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 import os
 import re
+import shutil
+import subprocess
 import sys
 import tempfile
 import uuid
@@ -94,6 +97,7 @@ DEFAULT_NOTE = str(
     Path.home() / "Documents" / "Obsidian Vault" / "02_Ai" / "influx" / "influx_x_search_keywords.md"
 )
 DEFAULT_OUT = "output/bookmarks/keyword_worklist.json"
+DEFAULT_DOWNLOADS_DIR = str(Path.home() / "Downloads")
 
 ACTIVE_CLUSTER_LIMIT = 12
 STATS_CANDIDATES_TOP_N = 60
@@ -101,6 +105,22 @@ DELTA_SAMPLE_LIMIT = 40
 DELTA_TRIGGER_THRESHOLD = 10
 ELAPSED_TRIGGER_DAYS = 28
 LOG_WEIGHT_CAP = 3.0
+
+# --- Web評価エクスポート回収（~/Downloads自動回収）の定数 -----------------------
+WEB_EXPORT_GLOB = "x-keywords-evals-*.json"
+WEB_EXPORT_SCHEMA = "x-keywords-evals/1"
+WEB_EXPORT_MAX_BYTES = 100_000
+WEB_EXPORT_MAX_EVALS = 200
+WEB_EXPORT_PROCESSED_DIRNAME = "evals_processed"
+WEB_EXPORT_REJECTED_DIRNAME = "evals_rejected"
+# markごとに許可されるnoteチップ語彙（空文字=チップ未選択も常に許可）。
+# render_html.py の _EVAL_CHIPS と対応させること。
+WEB_EXPORT_NOTE_VOCAB = {
+    "✅": {""},
+    "🔁": {"", "min_favesを上げる", "絞り込み語を足す"},
+    "🔍": {"", "min_favesを下げる", "語を減らす"},
+    "❌": {""},
+}
 
 _ASCII_TERM_RE = re.compile(r"[a-z0-9_#]{3,}")
 _KATAKANA_RUN_RE = re.compile(r"[゠-ヿ]{3,}")
@@ -139,6 +159,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--ledger", default=DEFAULT_LEDGER, help="台帳(keywords_ledger.jsonl)のパス")
     parser.add_argument("--note", default=DEFAULT_NOTE, help="Vaultノートのパス")
     parser.add_argument("--out", default=DEFAULT_OUT, help="worklist.json出力先")
+    parser.add_argument(
+        "--downloads-dir", default=DEFAULT_DOWNLOADS_DIR,
+        help="Web評価エクスポート(x-keywords-evals-*.json)を回収するディレクトリ（既定: ~/Downloads）",
+    )
     args = parser.parse_args()
 
     if args.force and not args.reason:
@@ -387,6 +411,226 @@ def harvest_evaluations(note_path, ledger_path, replay_state, run_id):
     return note_hash, None
 
 
+# --- Web評価エクスポート回収（~/Downloads自動回収） ----------------------------
+
+def _notify_mac(message: str) -> None:
+    """Mac通知（失敗しても処理は続行するfail-soft。obs-x-keywordsのnotify()と同じosascript方式）。"""
+    safe_message = message.replace('"', "'")
+    try:
+        subprocess.run(
+            ["osascript", "-e", f'display notification "{safe_message}" with title "x-keywords"'],
+            check=False, capture_output=True, timeout=5,
+        )
+    except (OSError, subprocess.SubprocessError):
+        pass
+
+
+def _is_safe_export_file(path: Path, downloads_root: Path) -> bool:
+    """symlink自体、およびsymlink経由でdownloads_root外を指すファイルを拒否する。
+    ファイルの実体がdownloads_root直下（再帰なし）に存在することを要求する。"""
+    if path.is_symlink():
+        return False
+    try:
+        real = path.resolve(strict=True)
+        real_root = downloads_root.resolve(strict=True)
+    except OSError:
+        return False
+    return real.parent == real_root and real.is_file()
+
+
+def _parse_export_exported_at(value):
+    if not isinstance(value, str):
+        return None
+    try:
+        v = value.replace("Z", "+00:00")
+        dt = datetime.fromisoformat(v)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt
+    except (ValueError, TypeError):
+        return None
+
+
+def _validate_export_entry(entry, known_ids):
+    """evals[]内の1エントリを検証する。妥当なら{id_type,id,mark,note}を返し、
+    不正（未知id/不正mark/不正note/型不正）ならNone（呼び出し側でエントリ単体を無視する）。"""
+    if not isinstance(entry, dict):
+        return None
+    id_type = entry.get("id_type")
+    id_value = entry.get("id")
+    mark = entry.get("mark")
+    note = entry.get("note", "") or ""
+    if id_type not in ("qid", "pid"):
+        return None
+    if not isinstance(id_value, str) or not id_value:
+        return None
+    if mark not in common.VALID_MARKS:
+        return None
+    if note not in WEB_EXPORT_NOTE_VOCAB.get(mark, {""}):
+        return None
+    if known_ids is not None and (id_type, id_value) not in known_ids:
+        return None
+    return {"id_type": id_type, "id": id_value, "mark": mark, "note": note}
+
+
+def load_web_export_file(path: Path, known_ids):
+    """1ファイルを検証する。戻り値はdict。
+
+    ok=Falseはファイルレベルの破損（不正JSON・schema不一致・サイズ超過・evals型不正・
+    件数超過・exported_at欠落）で、呼び出し側がファイル全体をevals_rejected/へ隔離すべき
+    ことを示す。ok=Trueの場合、evals[]内の個別に不正なエントリ（未知id/不正mark/不正note）
+    は"entries"から除外されるだけで（"skipped"にカウント）、ファイル自体はそのまま
+    evals_processed/へ回収される（fail-softの粒度をファイル単位とエントリ単位で分ける仕様）。
+    """
+    try:
+        size = path.stat().st_size
+    except OSError as exc:
+        return {"ok": False, "reason": f"stat_failed: {exc}"}
+    if size > WEB_EXPORT_MAX_BYTES:
+        return {"ok": False, "reason": f"file_too_large({size}bytes)"}
+
+    try:
+        raw = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as exc:
+        return {"ok": False, "reason": f"read_failed: {exc}"}
+
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        return {"ok": False, "reason": f"invalid_json: {exc}"}
+
+    if not isinstance(data, dict) or data.get("schema") != WEB_EXPORT_SCHEMA:
+        return {"ok": False, "reason": "schema_mismatch"}
+
+    exported_at = _parse_export_exported_at(data.get("exported_at"))
+    if exported_at is None:
+        return {"ok": False, "reason": "exported_at_missing_or_invalid"}
+
+    evals = data.get("evals")
+    if not isinstance(evals, list):
+        return {"ok": False, "reason": "evals_not_list"}
+    if len(evals) > WEB_EXPORT_MAX_EVALS:
+        return {"ok": False, "reason": f"too_many_evals({len(evals)})"}
+
+    sha256 = hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+    entries = []
+    skipped = 0
+    for entry in evals:
+        validated = _validate_export_entry(entry, known_ids)
+        if validated is None:
+            skipped += 1
+            continue
+        entries.append(validated)
+
+    return {"ok": True, "exported_at": exported_at, "sha256": sha256, "entries": entries, "skipped": skipped}
+
+
+def _move_export_file(src: Path, dst_dir: Path) -> None:
+    dst_dir.mkdir(parents=True, exist_ok=True)
+    shutil.move(str(src), str(dst_dir / src.name))
+
+
+def harvest_web_exports(downloads_dir, ledger_path, events, replay_state, run_id):
+    """~/Downloads直下（再帰なし）のx-keywords-evals-*.jsonを回収し、台帳へ
+    evaluation_batch（source=web_export）イベントを追記する。
+
+    処理: 候補ファイルをexported_at昇順に確定させ、同一(id_type,id)は後勝ちでマージする
+    （エクスポートはlocalStorageの累積フルダンプのため、最新ファイルが優先される）。
+    マージ後に採用されたエントリは「勝った側のファイル」単位でグルーピングし、
+    ファイルごとに1つのevaluation_batchイベント（note_revision=file sha256）を追記する
+    （冪等: 既にconsumed/pending済みの(id_type,id,mark,file_sha256)は再追記しない）。
+    file-level不正のファイルはevals_rejected/へ隔離（ログ+Mac通知）、正常ファイルは
+    寄与の有無に関わらずevals_processed/へmoveする（次回harvestで再読込されないため、
+    ファイルの再出現＝再処理が自然にno-opになる＝冪等性の主機構）。
+
+    戻り値: {"processed": int, "rejected": int, "appended_events": int}
+    """
+    result = {"processed": 0, "rejected": 0, "appended_events": 0}
+    downloads_root = Path(downloads_dir)
+    if not downloads_root.is_dir():
+        return result
+
+    ledger_dir = Path(ledger_path).parent
+    processed_dir = ledger_dir / WEB_EXPORT_PROCESSED_DIRNAME
+    rejected_dir = ledger_dir / WEB_EXPORT_REJECTED_DIRNAME
+    known_ids = _collect_known_eval_ids(events)
+
+    valid_files = []
+    for path in sorted(downloads_root.glob(WEB_EXPORT_GLOB)):
+        if not _is_safe_export_file(path, downloads_root):
+            _move_export_file(path, rejected_dir)
+            result["rejected"] += 1
+            print(f"[harvest_web_exports] REJECT {path.name}: unsafe_path_or_symlink", file=sys.stderr)
+            _notify_mac(f"評価エクスポート拒否: {path.name} (不正パス)")
+            continue
+
+        validation = load_web_export_file(path, known_ids)
+        if not validation["ok"]:
+            _move_export_file(path, rejected_dir)
+            result["rejected"] += 1
+            print(f"[harvest_web_exports] REJECT {path.name}: {validation['reason']}", file=sys.stderr)
+            _notify_mac(f"評価エクスポート拒否: {path.name} ({validation['reason']})")
+            continue
+
+        if validation["skipped"]:
+            print(
+                f"[harvest_web_exports] {path.name}: 未知id/不正mark/不正noteのエントリ"
+                f"{validation['skipped']}件を無視",
+                file=sys.stderr,
+            )
+        valid_files.append({
+            "path": path, "exported_at": validation["exported_at"],
+            "sha256": validation["sha256"], "entries": validation["entries"],
+        })
+
+    if not valid_files:
+        return result
+
+    valid_files.sort(key=lambda f: f["exported_at"])
+
+    # 同一(id_type, id)はexported_at昇順で後勝ち。勝者のfile indexを記録する。
+    final_by_id = {}
+    for idx, f in enumerate(valid_files):
+        for entry in f["entries"]:
+            final_by_id[(entry["id_type"], entry["id"])] = (idx, entry)
+
+    by_file_idx: dict = {}
+    for idx, entry in final_by_id.values():
+        by_file_idx.setdefault(idx, []).append(entry)
+
+    already = set(replay_state["consumed_evaluation_keys"])
+    already.update(
+        (e["id_type"], e["id"], e["mark"], e["note_revision"])
+        for e in replay_state["pending_evaluations"]
+    )
+
+    for idx, f in enumerate(valid_files):
+        new_items = []
+        for entry in by_file_idx.get(idx, []):
+            key = (entry["id_type"], entry["id"], entry["mark"], f["sha256"])
+            if key in already:
+                continue
+            already.add(key)
+            new_items.append(entry)
+
+        if new_items:
+            common.append_event(ledger_path, {
+                "type": "evaluation_batch",
+                "note_revision": f["sha256"],
+                "evaluations": new_items,
+                "run_id": run_id,
+                "source": "web_export",
+                "file": f["path"].name,
+            })
+            result["appended_events"] += 1
+
+        _move_export_file(f["path"], processed_dir)
+        result["processed"] += 1
+
+    return result
+
+
 def build_previous_generation_summary(replay_state):
     """worklist.previous_generationを構築する。generation/revisionは、ingestが
     このworklistを消費する時点で台帳末尾の受理世代と一致しているかを検証する
@@ -496,6 +740,12 @@ def build_worklist(args) -> tuple:
             events = common.read_ledger(args.ledger)
             replay_state = common.replay(events)
 
+        downloads_dir = getattr(args, "downloads_dir", DEFAULT_DOWNLOADS_DIR)
+        web_export_harvest = harvest_web_exports(downloads_dir, args.ledger, events, replay_state, run_id)
+        if web_export_harvest["appended_events"]:
+            events = common.read_ledger(args.ledger)
+            replay_state = common.replay(events)
+
     delta_records, eligible_nonempty = compute_delta(records, replay_state["baseline_urls"])
     current_url_keys = {common.canonical_url_key(r["url"]) for r in records if r.get("url")}
 
@@ -544,6 +794,7 @@ def build_worklist(args) -> tuple:
         "stats_candidates": stats_candidates,
         "note_hash": note_hash,
         "baseline_url_count": len(replay_state["baseline_urls"]),
+        "web_export_harvest": web_export_harvest,
     }
     return payload, 0
 
@@ -558,11 +809,15 @@ def main() -> int:
         return exit_code
 
     trigger = payload["trigger"]
+    web_harvest = payload.get("web_export_harvest", {})
     print(
         f"DONE: fetch_status={payload['fetch_status']} "
         f"url_count={payload['current_snapshot']['url_count']} "
         f"delta={payload['delta']['count']}(eligible={payload['delta']['eligible_nonempty_count']}) "
-        f"trigger.fired={trigger['fired']}({trigger['reason']}) -> {args.out}"
+        f"trigger.fired={trigger['fired']}({trigger['reason']}) "
+        f"web_export(processed={web_harvest.get('processed', 0)} "
+        f"rejected={web_harvest.get('rejected', 0)} events={web_harvest.get('appended_events', 0)}) "
+        f"-> {args.out}"
     )
     return 0
 

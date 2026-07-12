@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
-"""Xブックマーク→キーワード抽出パイプライン: 閲覧・コピー専用Webページレンダラー。
+"""Xブックマーク→キーワード抽出パイプライン: 評価入力もこのページで完結するWebビューア。
 
-keywords_latest.json（現在世代のactive_clusters）と台帳（keywords_ledger.jsonl・
+keywords_latest.json（現在世代のactive_clusters/proposals）と台帳（keywords_ledger.jsonl・
 世代履歴と最終fetch_run(SUCCESS)時刻の再確認用）を読み、外部依存ゼロの自己完結
-HTML（CSS/JSインライン）を決定的に生成する。評価入力はOpen Vaultノート側の役割
-のため、このページにはボタンを置かない（閲覧・検索・コピー・X直リンクのみ）。
+HTML（CSS/JSインライン）を決定的に生成する。評価（✅🔁🔍❌ + 提案の✅採用）は
+ページ内のボタンでlocalStorageへ蓄積し、「評価を保存」ボタンでJSON（schema:
+x-keywords-evals/1）を~/Downloadsへダウンロードする。週次worklist（--downloads-dir）
+がそのJSONを回収して台帳のevaluation_batchイベントへ反映する（設計正本:
+~/.claude/docs/x-keywords-plan.md §B・§F）。Obsidianノートの評価列は引き続き有効
+（併用可）。
 
 デザインはoutput/bookmarks_viewer.html（ダークX風テーマ・sticky header・検索
 ボックス）を踏襲する。
@@ -79,22 +83,97 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .footer{max-width:760px;margin:0 auto;padding:20px 12px 40px;font-size:12px;color:var(--text2);text-align:center;border-top:1px solid var(--border)}
 .footer a{color:var(--accent);text-decoration:none}
 .footer a:hover{text-decoration:underline}
+.eval-header-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.badge{font-size:12px;color:var(--text2);background:var(--card);border:1px solid var(--border);border-radius:12px;padding:4px 10px}
+.badge.xkw-badge-saved{color:var(--ok);border-color:var(--ok)}
+.save-btn{background:var(--ok);color:#fff;border:none;border-radius:14px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
+.save-btn:hover{opacity:.9}
+.prev-eval{font-size:11px;color:var(--text2);margin-top:4px}
+.eval-row{display:flex;gap:6px;margin-top:8px}
+.eval-btn{background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:10px;padding:4px 10px;font-size:14px;cursor:pointer;line-height:1}
+.eval-btn.active{background:var(--accent);border-color:var(--accent)}
+.chip-row{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
+.chip-btn{background:transparent;color:var(--text2);border:1px solid var(--border);border-radius:10px;padding:3px 8px;font-size:11px;cursor:pointer}
+.chip-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.proposals-section{margin-top:24px}
+.proposals-section h2{font-size:16px;margin-bottom:12px}
+.proposal-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin-bottom:12px}
+.proposal-card h3{font-size:14px;margin-bottom:4px}
+.proposal-queries{list-style:none;padding-left:0;margin:8px 0;font-size:12px}
+.proposal-queries li{margin-bottom:4px}
+.adopt-btn{margin-top:8px;background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:14px;padding:6px 12px;font-size:12px;cursor:pointer}
+.adopt-btn.active{background:var(--ok);border-color:var(--ok);color:#fff}
 """
 
 JS = """
 document.addEventListener('click', function(e){
-  var btn = e.target.closest('.copy-btn');
-  if(!btn) return;
-  var text = btn.getAttribute('data-copy') || '';
-  navigator.clipboard.writeText(text).then(function(){
-    var original = btn.textContent;
-    btn.textContent = '\\u2714\\u30b3\\u30d4\\u30fc\\u6e08\\u307f';
-    btn.classList.add('copied');
-    setTimeout(function(){
-      btn.textContent = original;
-      btn.classList.remove('copied');
-    }, 1500);
-  });
+  var copyBtn = e.target.closest('.copy-btn');
+  if (copyBtn) {
+    var text = copyBtn.getAttribute('data-copy') || '';
+    navigator.clipboard.writeText(text).then(function(){
+      var original = copyBtn.textContent;
+      copyBtn.textContent = '\\u2714\\u30b3\\u30d4\\u30fc\\u6e08\\u307f';
+      copyBtn.classList.add('copied');
+      setTimeout(function(){
+        copyBtn.textContent = original;
+        copyBtn.classList.remove('copied');
+      }, 1500);
+    });
+    return;
+  }
+
+  var evalBtn = e.target.closest('.eval-btn');
+  if (evalBtn) {
+    var row = evalBtn.closest('.id-row');
+    var idType = row.getAttribute('data-id-type');
+    var id = row.getAttribute('data-id');
+    var mark = evalBtn.getAttribute('data-mark');
+    var current = xkwReadState(idType, id);
+    if (current && current.mark === mark) {
+      xkwWriteState(idType, id, null);
+    } else {
+      xkwWriteState(idType, id, {mark: mark, note: ''});
+    }
+    xkwRestoreRowState(row);
+    xkwUpdateBadge();
+    return;
+  }
+
+  var chipBtn = e.target.closest('.chip-btn');
+  if (chipBtn) {
+    var chipRowEl = chipBtn.closest('.id-row');
+    var chipIdType = chipRowEl.getAttribute('data-id-type');
+    var chipId = chipRowEl.getAttribute('data-id');
+    var chipCurrent = xkwReadState(chipIdType, chipId);
+    if (!chipCurrent || !chipCurrent.mark) return;
+    var note = chipBtn.getAttribute('data-note');
+    var newNote = (chipCurrent.note === note) ? '' : note;
+    xkwWriteState(chipIdType, chipId, {mark: chipCurrent.mark, note: newNote});
+    xkwRestoreRowState(chipRowEl);
+    xkwUpdateBadge();
+    return;
+  }
+
+  var adoptBtn = e.target.closest('.adopt-btn');
+  if (adoptBtn) {
+    var pRow = adoptBtn.closest('.id-row');
+    var pIdType = pRow.getAttribute('data-id-type');
+    var pId = pRow.getAttribute('data-id');
+    var pCurrent = xkwReadState(pIdType, pId);
+    if (pCurrent && pCurrent.mark === '\\u2705') {
+      xkwWriteState(pIdType, pId, null);
+    } else {
+      xkwWriteState(pIdType, pId, {mark: '\\u2705', note: ''});
+    }
+    xkwRestoreRowState(pRow);
+    xkwUpdateBadge();
+    return;
+  }
+
+  if (e.target.closest('#xkw-save-btn')) {
+    xkwSaveEvals();
+    return;
+  }
 });
 
 var searchBox = document.getElementById('search');
@@ -108,6 +187,127 @@ if (searchBox) {
     });
   });
 }
+
+// --- 評価UI: localStorageへの蓄積 + JSON書き出し ---------------------------
+var XKW_KEY_PREFIX = 'xkw-eval:gen' + XKW_GEN + '-rev' + XKW_REV + ':';
+var XKW_CHIP_FOR_MARK = {'\\ud83d\\udd01': true, '\\ud83d\\udd0d': true};
+
+function xkwStorageKey(idType, id) {
+  return XKW_KEY_PREFIX + idType + ':' + id;
+}
+
+function xkwReadState(idType, id) {
+  try {
+    var raw = localStorage.getItem(xkwStorageKey(idType, id));
+    return raw ? JSON.parse(raw) : null;
+  } catch (err) {
+    return null;
+  }
+}
+
+function xkwWriteState(idType, id, state) {
+  try {
+    var key = xkwStorageKey(idType, id);
+    if (!state || !state.mark) {
+      localStorage.removeItem(key);
+    } else {
+      localStorage.setItem(key, JSON.stringify(state));
+    }
+  } catch (err) { /* localStorage不可時は無音で無視 */ }
+}
+
+function xkwEachStoredEntry(fn) {
+  try {
+    for (var i = 0; i < localStorage.length; i++) {
+      var k = localStorage.key(i);
+      if (!k || k.indexOf(XKW_KEY_PREFIX) !== 0) continue;
+      var rest = k.slice(XKW_KEY_PREFIX.length);
+      var sep = rest.indexOf(':');
+      if (sep === -1) continue;
+      var idType = rest.slice(0, sep);
+      var id = rest.slice(sep + 1);
+      var state = null;
+      try { state = JSON.parse(localStorage.getItem(k)); } catch (err) { state = null; }
+      if (!state || !state.mark) continue;
+      fn(idType, id, state);
+    }
+  } catch (err) { /* localStorage列挙不可時は0件扱い */ }
+}
+
+function xkwCountPending() {
+  var n = 0;
+  xkwEachStoredEntry(function(){ n++; });
+  return n;
+}
+
+function xkwUpdateBadge() {
+  var badge = document.getElementById('xkw-badge');
+  if (!badge) return;
+  badge.textContent = '\\u672a\\u4fdd\\u5b58\\u306e\\u8a55\\u4fa1 ' + xkwCountPending() + ' \\u4ef6';
+  badge.classList.remove('xkw-badge-saved');
+}
+
+function xkwUpdateChipVisibility(row, mark, note) {
+  var chipRow = row.querySelector('.chip-row');
+  if (!chipRow) return;
+  if (XKW_CHIP_FOR_MARK[mark]) {
+    chipRow.style.display = '';
+    chipRow.querySelectorAll('.chip-btn').forEach(function(cb){
+      var isForMark = cb.getAttribute('data-for-mark') === mark;
+      cb.style.display = isForMark ? '' : 'none';
+      cb.classList.toggle('active', isForMark && note && cb.getAttribute('data-note') === note);
+    });
+  } else {
+    chipRow.style.display = 'none';
+  }
+}
+
+function xkwRestoreRowState(row) {
+  var idType = row.getAttribute('data-id-type');
+  var id = row.getAttribute('data-id');
+  var state = xkwReadState(idType, id);
+  var mark = state ? state.mark : null;
+  var note = state ? (state.note || '') : '';
+  row.querySelectorAll('.eval-btn').forEach(function(btn){
+    btn.classList.toggle('active', btn.getAttribute('data-mark') === mark);
+  });
+  var adoptBtn = row.querySelector('.adopt-btn');
+  if (adoptBtn) {
+    adoptBtn.classList.toggle('active', mark === '\\u2705');
+  }
+  xkwUpdateChipVisibility(row, mark, note);
+}
+
+function xkwSaveEvals() {
+  var evals = [];
+  xkwEachStoredEntry(function(idType, id, state){
+    evals.push({id: id, id_type: idType, mark: state.mark, note: state.note || ''});
+  });
+  var payload = {
+    schema: 'x-keywords-evals/1',
+    exported_at: new Date().toISOString(),
+    source: {generation: XKW_GEN, revision: XKW_REV},
+    evals: evals
+  };
+  var blob = new Blob([JSON.stringify(payload, null, 2)], {type: 'application/json'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'x-keywords-evals-' + XKW_GEN + '-' + Math.floor(Date.now() / 1000) + '.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+
+  var badge = document.getElementById('xkw-badge');
+  if (badge) {
+    badge.textContent = '\\u66f8\\u304d\\u51fa\\u3057\\u6e08\\u307f';
+    badge.classList.add('xkw-badge-saved');
+  }
+}
+
+document.querySelectorAll('.id-row').forEach(xkwRestoreRowState);
+xkwUpdateBadge();
 """
 
 
@@ -177,13 +377,50 @@ def x_search_url(query: str) -> str:
     return f"https://x.com/search?q={quote(query, safe='')}&f=live"
 
 
+_EVAL_MARKS = ("✅", "🔁", "🔍", "❌")
+# 🔁/🔍選択時のみ表示する理由チップ（固定語彙・自由入力なし）。
+_EVAL_CHIPS = (
+    ("🔁", "min_favesを上げる"),
+    ("🔁", "絞り込み語を足す"),
+    ("🔍", "min_favesを下げる"),
+    ("🔍", "語を減らす"),
+)
+
+
+def render_eval_buttons() -> str:
+    """評価ボタン4つ + 🔁/🔍用の理由チップ行（初期は非表示・JSがdata-idの状態に応じて出し分ける）。"""
+    btns = "".join(
+        f'<button type="button" class="eval-btn" data-mark="{esc(m)}">{esc(m)}</button>'
+        for m in _EVAL_MARKS
+    )
+    chips = "".join(
+        f'<button type="button" class="chip-btn" data-for-mark="{esc(m)}" data-note="{esc(n)}">{esc(n)}</button>'
+        for m, n in _EVAL_CHIPS
+    )
+    return f"""
+      <div class="eval-row">{btns}</div>
+      <div class="chip-row" style="display:none">{chips}</div>"""
+
+
+def render_prev_eval(eval_history: list) -> str:
+    """台帳に記録済みの前回評価（eval_history最新）を表示する。"""
+    if not eval_history:
+        return ""
+    last = eval_history[-1]
+    mark = last.get("mark", "")
+    at = (last.get("at") or "")[:10]
+    at_suffix = f"（{esc(at)}）" if at else ""
+    return f'<div class="prev-eval">前回評価: {esc(mark)}{at_suffix}</div>'
+
+
 def render_query_row(query: dict) -> str:
     q = query.get("q", "")
     q_simple = query.get("q_simple", "")
     intent = query.get("intent", "")
+    qid = query.get("query_id", "")
     search_url = x_search_url(q)
     return f"""
-    <div class="query-row">
+    <div class="query-row id-row" data-id-type="qid" data-id="{esc(qid)}">
       <div class="query-main">
         <code class="query-text">{esc(q)}</code>
         <button type="button" class="copy-btn" data-copy="{esc(q)}">コピー</button>
@@ -195,6 +432,8 @@ def render_query_row(query: dict) -> str:
         <button type="button" class="copy-btn copy-btn-sm" data-copy="{esc(q_simple)}">コピー</button>
       </div>
       <div class="query-intent">{esc(intent)}</div>
+      {render_prev_eval(query.get("eval_history") or [])}
+      {render_eval_buttons()}
     </div>"""
 
 
@@ -250,15 +489,50 @@ def render_cluster_card(cluster: dict) -> str:
   </div>"""
 
 
+def render_proposal_card(proposal: dict) -> str:
+    """提案（pid）1件のカード。評価ボタンではなく「✅採用」単独トグルのみ持つ
+    （設計正本の提案承認セマンティクスは✅/❌の2値だが、Webページでは採用チェックのみ
+    露出する。却下は現状Obsidianノート側の役割のまま）。"""
+    pid = proposal.get("proposal_id", "")
+    name = proposal.get("name_ja", "")
+    why = proposal.get("why", "")
+    queries = proposal.get("queries", [])
+    evidence_urls = proposal.get("evidence_urls", [])
+    query_items = "".join(
+        f'<li><code class="query-text">{esc(q.get("q", ""))}</code></li>' for q in queries
+    )
+    return f"""
+  <div class="proposal-card id-row" data-id-type="pid" data-id="{esc(pid)}">
+    <h3>{esc(name)}</h3>
+    <div class="cluster-why">{esc(why)}</div>
+    <ul class="proposal-queries">{query_items}</ul>
+    <div class="evidence-count">根拠: {len(evidence_urls)}件</div>
+    <button type="button" class="adopt-btn">✅ 採用</button>
+  </div>"""
+
+
+def render_proposals_section(proposals: list) -> str:
+    if not proposals:
+        return ""
+    cards = "".join(render_proposal_card(p) for p in proposals)
+    return f"""
+  <div class="proposals-section">
+    <h2>提案（✅採用で次回世代に反映）</h2>
+    {cards}
+  </div>"""
+
+
 def render_page(latest: dict, meta: dict) -> str:
     active_clusters = latest.get("active_clusters", [])
+    proposals = latest.get("proposals", [])
     total_queries = sum(len(c.get("queries", [])) for c in active_clusters)
     cards_html = "".join(render_cluster_card(c) for c in active_clusters)
     if not active_clusters:
         cards_html = '<div class="empty-msg">アクティブなクラスタがありません。</div>'
+    proposals_html = render_proposals_section(proposals)
 
     gen = meta.get("generation")
-    rev = meta.get("revision")
+    rev = meta.get("revision") or 0
     reason = meta.get("reason") or ""
     generated_at = fmt_dt(meta.get("generated_at"))
     last_fetch = fmt_dt(meta.get("last_fetch_success_at"))
@@ -276,13 +550,18 @@ def render_page(latest: dict, meta: dict) -> str:
   <div class="header-inner">
     <h1>X検索キーワード集 <span>{len(active_clusters)}クラスタ / {total_queries}クエリ</span></h1>
     <div class="meta">世代 gen{esc(gen)} rev{esc(rev)}（{esc(reason)}）｜生成: {esc(generated_at)}｜最終fetch成功: {esc(last_fetch)}</div>
+    <div class="eval-header-row">
+      <span id="xkw-badge" class="badge">未保存の評価 0 件</span>
+      <button type="button" id="xkw-save-btn" class="save-btn">評価を保存</button>
+    </div>
     <input type="text" class="search" id="search" placeholder="クラスタ名・クエリ・キーワードで絞り込み">
   </div>
 </div>
-<div class="main">{cards_html}</div>
+<div class="main">{cards_html}{proposals_html}</div>
 <div class="footer">
-  <p>✅ 評価は Obsidian ノートで行います: <a href="{esc(OBSIDIAN_NOTE_URI)}">ノートを開く</a></p>
+  <p>このページのボタンで評価 → 保存 → 週次で自動反映（Obsidian の評価列も併用可）</p>
 </div>
+<script>var XKW_GEN={json.dumps(gen)};var XKW_REV={json.dumps(rev)};</script>
 <script>{JS}</script>
 </body>
 </html>
