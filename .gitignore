@@ -85,3 +85,9 @@ data/paper_trades/recent_signals_cache.json
 
 # 処理済みツイート台帳（監査O-3・シグナルなし判定分の再判定防止のため正本追跡）
 !output/research/processed_tweet_urls.jsonl
+
+# x-keywordsパイプライン台帳（設計正本 ~/.claude/docs/x-keywords-plan.md §D・
+# append-onlyの唯一の正本。latest.json/ノート/worklist.jsonは台帳replayから再生成可能だが
+# 台帳自体は再生成不能）。output/*/配下のためこの否定行は意図の記録のみ(上記2026-07-11監査の
+# 注意と同じ理由でgit仕様上は無効)・実際の追跡はgit add -fで行う。
+!output/bookmarks/keywords_ledger.jsonl

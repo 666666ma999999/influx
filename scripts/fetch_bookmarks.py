@@ -12,13 +12,24 @@
   python scripts/fetch_bookmarks.py --out output/bookmarks.jsonl --max-empty-batches 5 --max-runtime-min 30
   python scripts/fetch_bookmarks.py --out output/bookmarks.jsonl --checkpoint output/checkpoint.json
   docker exec xstock-vnc python scripts/fetch_bookmarks.py --out /app/output/bookmarks.jsonl
+
+履歴: 2026-07-11 --appendモードのデータ消失バグを修正。本文補完(backfill)後の
+出力ファイル再書き込みが今回取得分のみで全体を上書きしていた不具合に対し、
+起動時に既存レコード全件を読み込み、終了時は「既存∪今回取得」を一時ファイル
+経由で原子的に置換する方式（件数不減少ガード付き）に変更。
+履歴: 2026-07-12 --status-json PATH を追加。実行終了時にsaved/dom_count/
+graphql_count/stopped_reasonをJSONで書き出す。exit 0でもdom_count==0
+（selector死・ログイン壁等でtweetが1個も観測できない）ケースを呼び出し側が
+SUCCESSと誤分類しないよう検知できるようにするため。
 """
 
 import argparse
 import json
 import logging
+import os
 import random
 import sys
+import tempfile
 import time
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
@@ -101,6 +112,99 @@ def save_checkpoint(checkpoint_path: Optional[str], seen_urls: set, total_count:
             json.dump(data, f, ensure_ascii=False, indent=2)
     except Exception as exc:
         logger.warning("チェックポイント保存失敗: %s", exc)
+
+
+# ── 追記マージ & 原子的書き出し ──────────────────────────────
+
+class BookmarkCountRegressionError(RuntimeError):
+    """マージ後の件数が既存件数を下回った場合に送出する（データ消失ガード）。"""
+
+
+def _write_status_json(
+    path: str,
+    dom_bookmarks: Dict[str, "Bookmark"],
+    graphql_bookmarks: Dict[str, "Bookmark"],
+    all_bookmarks: List["Bookmark"],
+    stopped_reason: str,
+) -> None:
+    """実行結果サマリをJSONで書き出す（呼び出し側がexit 0でも0件取得を検知できるように）。
+
+    stopped_reason: "max_runtime" | "max_empty" | "end" | "error"
+    observed_url_count: 今回の実行中にDOM+GraphQLの両ソースで観測したユニークURL数
+        （既存ファイルに既にあった既知URLも含む。新規保存分のみのsavedとは別軸で、
+        「部分取得（既知URLの再表示だけで巡回が浅い）」をwrapper側が検知するための指標）。
+    """
+    observed_url_count = len(set(dom_bookmarks) | set(graphql_bookmarks))
+    payload = {
+        "saved": len(all_bookmarks),
+        "dom_count": len(dom_bookmarks),
+        "graphql_count": len(graphql_bookmarks),
+        "observed_url_count": observed_url_count,
+        "stopped_reason": stopped_reason,
+    }
+    try:
+        p = Path(path)
+        p.parent.mkdir(parents=True, exist_ok=True)
+        with open(p, "w", encoding="utf-8") as f:
+            json.dump(payload, f, ensure_ascii=False)
+    except Exception as exc:
+        logger.warning("status-json書き出し失敗: %s", exc)
+
+
+def merge_bookmark_records(existing: List[dict], fetched: List[dict]) -> List[dict]:
+    """既存レコードと今回取得レコードをURLをキーにマージする。
+
+    既存の並び順を維持したまま、同一URLは今回取得レコードで上書きする
+    （テキスト補完/backfillの結果を反映するため）。既存にしかないURLは必ず保持する。
+    URLを持たないレコードは（本スクリプトでは書き出し対象にならないため）無視する。
+    """
+    merged: Dict[str, dict] = {}
+    order: List[str] = []
+    for rec in existing:
+        url = rec.get("url")
+        if not url:
+            continue
+        if url not in merged:
+            order.append(url)
+        merged[url] = rec
+    for rec in fetched:
+        url = rec.get("url")
+        if not url:
+            continue
+        if url not in merged:
+            order.append(url)
+        merged[url] = rec
+    return [merged[url] for url in order]
+
+
+def atomic_write_jsonl(path: str, records: List[dict], min_count: int = 0) -> None:
+    """recordsをJSONLとして同一ディレクトリの一時ファイルに書き出し、
+    flush+fsync後にos.replaceで原子的に置換する。
+
+    件数不減少ガード: len(records) < min_count の場合は元ファイルに一切触れず
+    BookmarkCountRegressionError を送出する。
+    """
+    if len(records) < min_count:
+        raise BookmarkCountRegressionError(
+            f"件数不減少ガード発動: 書き込み予定件数({len(records)})が既存件数({min_count})を"
+            f"下回るため、出力ファイルへの書き込みを中止しました: {path}"
+        )
+    p = Path(path)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp_path = tempfile.mkstemp(dir=str(p.parent), prefix=f".{p.name}.", suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            for rec in records:
+                f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp_path, str(p))
+    except BaseException:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+        raise
 
 
 # ── DOM スクレイピング（メイン取得方法）──────────────────────
@@ -372,6 +476,7 @@ def fetch_bookmarks(
     headless: bool = False,
     checkpoint_path: Optional[str] = None,
     out_path: Optional[str] = None,
+    status_json_path: Optional[str] = None,
     append: bool = False,
     persistent: bool = False,
 ) -> List[Bookmark]:
@@ -388,17 +493,19 @@ def fetch_bookmarks(
 
     # 逐次保存用ファイルハンドル準備
     out_file = None
+    existing_records: List[dict] = []  # 追記モード時、終了時のマージ書き出しで使う既存全件
     if out_path:
         p = Path(out_path)
         p.parent.mkdir(parents=True, exist_ok=True)
         if append and p.exists():
-            # 追記モード: 既存ファイルからseen_urlsも復元
+            # 追記モード: 既存ファイルからレコード全件とseen_urlsを復元
             try:
                 with open(p, "r", encoding="utf-8") as f:
                     for line in f:
                         line = line.strip()
                         if line:
                             d = json.loads(line)
+                            existing_records.append(d)
                             if d.get("url"):
                                 seen_urls.add(d["url"])
                 logger.info("既存ファイルから%d件のURLを重複スキップ対象に追加", len(seen_urls))
@@ -465,6 +572,7 @@ def fetch_bookmarks(
     pw = None
     browser = None
     context = None
+    stopped_reason = "error"  # try内で正常な停止理由に更新されなければ「異常終了」扱い
     try:
         pw = sync_playwright().start()
 
@@ -518,6 +626,7 @@ def fetch_bookmarks(
             logger.info("ブックマーク表示確認")
         except Exception:
             logger.warning("ブックマークが表示されません（0件の可能性）")
+            stopped_reason = "end"
             return all_bookmarks
 
         # 初回DOM取得
@@ -537,9 +646,11 @@ def fetch_bookmarks(
         while True:
             if max_scrolls is not None and scroll_count >= max_scrolls:
                 logger.info("最大スクロール数(%d)に到達", max_scrolls)
+                stopped_reason = "end"
                 break
 
             if _is_runtime_exceeded():
+                stopped_reason = "max_runtime"
                 break
 
             # スクロール前のツイートカード数を記録
@@ -569,6 +680,7 @@ def fetch_bookmarks(
                 stale_count += 1
                 if stale_count >= max_empty_batches:
                     logger.info("新しいブックマークなし（%d回連続）。取得完了。", max_empty_batches)
+                    stopped_reason = "max_empty"
                     break
             else:
                 stale_count = 0
@@ -593,8 +705,21 @@ def fetch_bookmarks(
         # テキスト空ブックマークを個別ページから補完取得
         filled = _backfill_empty_text(page, all_bookmarks)
 
-        # 補完があった場合、出力ファイルを再書き込み
-        if filled and out_path:
+        # 出力ファイルの最終書き出し
+        if append and out_path:
+            # 追記モード: 既存全件 ∪ 今回取得分を原子的に書き出す（データ消失防止・件数不減少ガード）
+            if out_file:
+                out_file.close()
+                out_file = None
+            fetched_records = [asdict(bm) for bm in all_bookmarks]
+            merged_records = merge_bookmark_records(existing_records, fetched_records)
+            atomic_write_jsonl(out_path, merged_records, min_count=len(existing_records))
+            logger.info(
+                "出力ファイルを原子的に更新（既存%d件 + 今回取得%d件 → 合計%d件、テキスト補完%d件反映）",
+                len(existing_records), len(fetched_records), len(merged_records), filled,
+            )
+        elif filled and out_path:
+            # 上書きモード（--appendなし）: 従来どおり今回取得分のみを書き直す
             try:
                 if out_file:
                     out_file.close()
@@ -612,7 +737,13 @@ def fetch_bookmarks(
 
         return all_bookmarks
 
+    except Exception:
+        stopped_reason = "error"
+        raise
+
     finally:
+        if status_json_path:
+            _write_status_json(status_json_path, dom_bookmarks, graphql_bookmarks, all_bookmarks, stopped_reason)
         if out_file:
             try:
                 out_file.close()
@@ -642,6 +773,10 @@ def main():
     parser.add_argument("--max-empty-batches", type=int, default=5, help="N回連続で新規0件なら停止（デフォルト: 5）")
     parser.add_argument("--max-runtime-min", type=int, default=30, help="最大実行時間（分、デフォルト: 30）")
     parser.add_argument("--checkpoint", default=None, help="チェックポイントJSONパス")
+    parser.add_argument(
+        "--status-json", default=None,
+        help="実行結果サマリ(saved/dom_count/graphql_count/stopped_reason)の出力先JSONパス",
+    )
     parser.add_argument("--append", action="store_true", help="既存ファイルに追記")
     parser.add_argument("--headless", action="store_true", help="ヘッドレスモード")
     parser.add_argument("--persistent", action="store_true", help="persistent contextモード（ブラウザプロファイルのログイン状態を直接利用）")
@@ -657,6 +792,7 @@ def main():
             headless=args.headless,
             checkpoint_path=args.checkpoint,
             out_path=args.out,
+            status_json_path=args.status_json,
             append=args.append,
             persistent=args.persistent,
         )
