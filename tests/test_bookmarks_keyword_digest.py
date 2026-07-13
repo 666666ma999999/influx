@@ -532,6 +532,46 @@ class ApplyUnknownIdTest(ApplyTestBase):
         self.assertEqual(event["dropped_counts"].get("likes_below_floor"), 1)
 
 
+class ApplySpamFilterTest(ApplyTestBase):
+    """C6: キャンペーン/懸賞スパム投稿の除外(spam_filter)。ポケカクラスタ混入事例
+    （"Ultra Super Hot Campaign Alert"等）の再発防止。"""
+
+    def test_spam_keyword_dropped(self):
+        good = [
+            _item(_sid(self.now - timedelta(days=1, seconds=i)), author=f"u{i}", likes=200)
+            for i in range(8)
+        ]
+        spam = _item(
+            _sid(self.now - timedelta(days=1, seconds=999)), author="spammer", likes=999,
+            content="Ultra Super Hot Campaign Alert!! フォロー&RTで抽選で当選者にプレゼント企画実施中！",
+        )
+        self._seed_pair(good + [spam])
+
+        rc = apply_mod.run_apply(self._args(min_publish=8, per_cluster=20, total=20), self.now)
+        self.assertEqual(rc, 0)
+        event = self._digest_events()[0]
+        self.assertEqual(len(event["items"]), 8)
+        authors = {it["author"] for it in event["items"]}
+        self.assertNotIn("spammer", authors)
+        self.assertEqual(event["dropped_counts"].get("spam_filter"), 1)
+
+    def test_normal_content_passes(self):
+        good = [
+            _item(
+                _sid(self.now - timedelta(days=1, seconds=i)), author=f"u{i}", likes=200,
+                content="Claude Codeのサブエージェント活用で作業がとても捗った",
+            )
+            for i in range(8)
+        ]
+        self._seed_pair(good)
+
+        rc = apply_mod.run_apply(self._args(min_publish=8, per_cluster=20, total=20), self.now)
+        self.assertEqual(rc, 0)
+        event = self._digest_events()[0]
+        self.assertEqual(len(event["items"]), 8)
+        self.assertEqual(event["dropped_counts"].get("spam_filter", 0), 0)
+
+
 class ApplyExclusionTest(ApplyTestBase):
     def test_already_bookmarked_excluded(self):
         existing_id = _sid(self.now - timedelta(days=1, seconds=999))

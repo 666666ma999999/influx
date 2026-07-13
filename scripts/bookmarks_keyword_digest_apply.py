@@ -26,7 +26,8 @@ render失敗はWARNログのみでexit 0を維持=台帳は正・表示は次回
    実在（無ければunknown_cluster）+ seed_query_idが該当クラスタのクエリに実在
    （指定時のみ・無ければunknown_seed）+ URL形式(https+x.com/twitter.com完全一致+
    /<handle>/status/<digits>)+ URL/ID整合 + Snowflake ID→時刻が収集窓+スラック内 +
-   likes型 + content型/長さ(<=2000字) + likes下限（min-likes索引が引けない場合は
+   likes型 + content型/長さ(<=2000字) + スパム/懸賞キャンペーン系キーワード除外
+   （SPAM_KEYWORDS・reason=spam_filter）+ likes下限（min-likes索引が引けない場合は
    MIN_LIKES_INDEX_FALLBACK=80を一律下限として適用）。既ブックマーク・既掲載URLも除外
 5. 選定: クラスタ内likes降順 <= --per-cluster、全体likes降順 <= --total（LLMなし）
 6. 選定件数 < --min-publish なら台帳に書かずDIGEST_DEGRADED・exit 0
@@ -82,6 +83,20 @@ RAW_ITEM_CAP = 200
 X_EPOCH_MS = 1288834974657  # Snowflake ID の基準エポック(ms)
 REQUIRED_ITEM_KEYS = {"url", "id", "author", "content", "likes", "cluster_id"}
 
+# キャンペーン/懸賞スパム除外キーワード（content正規化テキストの部分一致で判定。
+# 誤検知/検知漏れが増えた場合はこのリストを編集する）。
+SPAM_KEYWORDS = [
+    "キャンペーン",
+    "懸賞",
+    "プレゼント企画",
+    "フォロー&RT",
+    "フォロー＆RT",
+    "リポストで",
+    "抽選で",
+    "当選",
+    "配布します",
+]
+
 _STATUS_FILENAME_RE = re.compile(r"^digest_status-(.+)\.json$")
 _STATUS_PATH_RE = re.compile(r"^/([A-Za-z0-9_]{1,15})/status/(\d+)$")
 _STATUS_HOSTS = {"x.com", "twitter.com"}
@@ -109,6 +124,15 @@ def snowflake_to_ms(id_str: str) -> int | None:
     if not id_str or not id_str.isdigit():
         return None
     return (int(id_str) >> 22) + X_EPOCH_MS
+
+
+def is_spam_content(content: str) -> bool:
+    """contentの正規化テキスト（common.normalize_text）にSPAM_KEYWORDSのいずれかを
+    部分一致で含むか。common.keyword_matches(mode="normalized_substring")を再利用する。"""
+    normalized = common.normalize_text(content)
+    if not normalized:
+        return False
+    return any(common.keyword_matches(kw, "normalized_substring", normalized) for kw in SPAM_KEYWORDS)
 
 
 def validate_url_and_id(url, item_id) -> bool:
@@ -185,6 +209,9 @@ def validate_item(item: dict, min_likes_index: dict, cluster_query_index: dict,
     content = item.get("content")
     if not isinstance(content, str) or not (0 < len(content) <= CONTENT_MAX):
         return False, "content_invalid"
+
+    if is_spam_content(content):
+        return False, "spam_filter"
 
     # min-likes索引が引けないケース(cluster/seedは既知だがそのクエリにmin_favesが
     # 無い等)には一律MIN_LIKES_INDEX_FALLBACKを下限として適用する(索引不在での
