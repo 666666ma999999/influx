@@ -624,6 +624,108 @@ class TestDeltaAndTrigger(unittest.TestCase):
                 sys.argv = sys_argv_backup
 
 
+class TestDigestHits(unittest.TestCase):
+    """compute_digest_hits / continuity_stats[].digest_hits のfixtureテスト（C2）。"""
+
+    def setUp(self):
+        self._tmpdir = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmpdir.cleanup)
+        self.raw_path = os.path.join(self._tmpdir.name, "bookmarks.jsonl")
+        self.ledger_path = os.path.join(self._tmpdir.name, "ledger.jsonl")
+        self.note_path = os.path.join(self._tmpdir.name, "note.md")
+        self.out_path = os.path.join(self._tmpdir.name, "worklist.json")
+        self.downloads_dir_path = os.path.join(self._tmpdir.name, "downloads_unused")
+
+    def _args(self, **overrides):
+        base = dict(
+            force=False, reason=None, fetch_status="SUCCESS",
+            raw=self.raw_path, ledger=self.ledger_path, note=self.note_path, out=self.out_path,
+            record_fetch_run=False, observed_url_count=0, downloads_dir=self.downloads_dir_path,
+        )
+        base.update(overrides)
+        return argparse.Namespace(**base)
+
+    def test_compute_digest_hits_pure_function(self):
+        delta_records = [
+            _rec("https://x.com/a/status/1", "hello"),
+            _rec("https://x.com/b/status/2", "world"),
+        ]
+        digest_items = {
+            "status:1": {"cluster_id": "c-1", "seed_query_id": "q-1", "published_at": "2026-07-01T00:00:00+00:00"},
+        }
+        hits = worklist.compute_digest_hits(delta_records, digest_items)
+        self.assertEqual(hits["c-1"]["count"], 1)
+        self.assertEqual(hits["c-1"]["matched_urls"], ["https://x.com/a/status/1"])
+        self.assertEqual(hits["c-1"]["by_seed_query_id"], {"q-1": 1})
+        self.assertNotIn("c-2", hits)
+
+    def test_digest_hit_reflected_in_continuity_stats(self):
+        baseline = [_rec("https://x.com/a/status/1", "base")]
+        _write_jsonl(self.raw_path, baseline)
+
+        # baseline世代: digest_hitsのマージ先となるactiveクラスタc-1を用意する。
+        common.append_event(self.ledger_path, {
+            "type": "generation", "generation": 1, "revision": 0,
+            "generation_reason": "baseline",
+            "snapshot_urls": [common.canonical_url_key(r["url"]) for r in baseline],
+            "active_clusters": [{
+                "cluster_id": "c-1", "name": "テスト", "why": "",
+                "keywords": [], "queries": [
+                    {"query_id": "q-1", "q": "", "q_simple": "", "intent": "", "eval_history": []}
+                ],
+                "evidence_urls": [],
+            }],
+            "dormant_clusters": [],
+        })
+
+        # digestイベント: cluster c-1 / query q-1 でstatus:999を掲載済みとする。
+        digest_url = "https://x.com/foo/status/999"
+        common.append_event(self.ledger_path, {
+            "type": "digest", "run_id": "r1",
+            "source": {"generation": 1, "revision": 0, "urls_sha256": "x"},
+            "items": [{"url": digest_url, "cluster_id": "c-1", "seed_query_id": "q-1",
+                       "excerpt": "掲載記事", "author": "foo", "likes": 50, "posted_at": "2026-07-01"}],
+            "dropped_counts": {}, "errors": [],
+        })
+
+        # 新規ブックマークdelta: 掲載済みURLと同一URLのブックマーク + 無関係な新規ブックマーク。
+        new_records = baseline + [
+            _rec(digest_url, "この記事良かった"),
+            _rec("https://x.com/other/status/2", "無関係な新規ブックマーク"),
+        ]
+        _write_jsonl(self.raw_path, new_records)
+
+        payload, exit_code = worklist.build_worklist(self._args())
+        self.assertEqual(exit_code, 0)
+
+        stats_by_cluster = {s["cluster_id"]: s for s in payload["continuity_stats"]}
+        self.assertIn("c-1", stats_by_cluster)
+        digest_hits = stats_by_cluster["c-1"]["digest_hits"]
+        self.assertEqual(digest_hits["count"], 1)
+        self.assertEqual(digest_hits["matched_urls"], [digest_url])
+        self.assertEqual(digest_hits["by_seed_query_id"], {"q-1": 1})
+
+    def test_no_digest_hits_yields_empty_structure(self):
+        _write_jsonl(self.raw_path, [_rec("https://x.com/a/status/1", "hello")])
+        common.append_event(self.ledger_path, {
+            "type": "generation", "generation": 1, "revision": 0,
+            "generation_reason": "baseline",
+            "snapshot_urls": [],
+            "active_clusters": [{
+                "cluster_id": "c-1", "name": "テスト", "why": "",
+                "keywords": [], "queries": [], "evidence_urls": [],
+            }],
+            "dormant_clusters": [],
+        })
+        payload, exit_code = worklist.build_worklist(self._args())
+        self.assertEqual(exit_code, 0)
+        stats_by_cluster = {s["cluster_id"]: s for s in payload["continuity_stats"]}
+        self.assertEqual(
+            stats_by_cluster["c-1"]["digest_hits"],
+            {"count": 0, "matched_urls": [], "by_seed_query_id": {}},
+        )
+
+
 class TestWebExportHarvest(unittest.TestCase):
     """harvest_web_exports（~/Downloads自動回収）のfixtureテスト。Downloadsは常にtempdirで偽装する。"""
 

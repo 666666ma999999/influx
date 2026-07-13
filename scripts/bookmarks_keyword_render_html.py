@@ -103,6 +103,12 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .proposal-queries li{margin-bottom:4px}
 .adopt-btn{margin-top:8px;background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:14px;padding:6px 12px;font-size:12px;cursor:pointer}
 .adopt-btn.active{background:var(--ok);border-color:var(--ok);color:#fff}
+.digest-section{margin-bottom:20px}
+.digest-section h2{font-size:16px;margin-bottom:4px}
+.digest-intro{font-size:12px;color:var(--text2);margin-bottom:12px}
+.digest-item{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 16px;margin-bottom:10px}
+.digest-excerpt{font-size:13px;margin-bottom:6px}
+.digest-meta{font-size:12px;color:var(--text2);display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 """
 
 JS = """
@@ -522,7 +528,54 @@ def render_proposals_section(proposals: list) -> str:
   </div>"""
 
 
-def render_page(latest: dict, meta: dict) -> str:
+def load_latest_digest(ledger_path) -> dict | None:
+    """台帳replayから最新のdigestイベント（latest_digest）を返す。無ければNone。"""
+    try:
+        events = common.read_ledger(ledger_path)
+    except common.LedgerCorruption:
+        events = []
+    if not events:
+        return None
+    return common.replay(events).get("latest_digest")
+
+
+def render_digest_item(item: dict, cluster_names: dict) -> str:
+    excerpt = esc(item.get("excerpt", ""))
+    author = esc(item.get("author", ""))
+    likes = esc(item.get("likes", 0))
+    url = item.get("url", "")
+    cluster_id = item.get("cluster_id")
+    cluster_name = cluster_names.get(cluster_id) or cluster_id or ""
+    if _is_safe_evidence_href(url):
+        link = f'<a class="x-link" href="{esc(url)}" target="_blank" rel="noopener">Xで見る &#8599;</a>'
+    else:
+        link = esc(url)
+    return f"""
+    <div class="digest-item">
+      <div class="digest-excerpt">{excerpt}</div>
+      <div class="digest-meta"><span>@{author}</span><span>&#10084;&#65039;{likes}</span><span>{esc(cluster_name)}</span>{link}</div>
+    </div>"""
+
+
+def render_digest_section(latest_digest: dict | None, active_clusters: list) -> str:
+    """latest_digestが無い、またはitemsが空ならセクション自体を出さない。"""
+    if not latest_digest:
+        return ""
+    items = latest_digest.get("items", [])
+    if not items:
+        return ""
+    cluster_names = {c.get("cluster_id"): c.get("name", "") for c in active_clusters}
+    published_at = fmt_dt(latest_digest.get("ts"))
+    item_rows = "".join(render_digest_item(item, cluster_names) for item in items)
+    return f"""
+  <div class="digest-section">
+    <h2>&#128235; 今週の候補記事（{esc(published_at)} 掲載）</h2>
+    <div class="digest-intro">気になったらそのままブックマーク &#8594; 次回から的中として学習されます</div>
+    {item_rows}
+  </div>"""
+
+
+def render_page(latest: dict, meta: dict, latest_digest: dict | None = None) -> str:
     active_clusters = latest.get("active_clusters", [])
     proposals = latest.get("proposals", [])
     total_queries = sum(len(c.get("queries", [])) for c in active_clusters)
@@ -530,6 +583,7 @@ def render_page(latest: dict, meta: dict) -> str:
     if not active_clusters:
         cards_html = '<div class="empty-msg">アクティブなクラスタがありません。</div>'
     proposals_html = render_proposals_section(proposals)
+    digest_html = render_digest_section(latest_digest, active_clusters)
 
     gen = meta.get("generation")
     rev = meta.get("revision") or 0
@@ -557,7 +611,7 @@ def render_page(latest: dict, meta: dict) -> str:
     <input type="text" class="search" id="search" placeholder="クラスタ名・クエリ・キーワードで絞り込み">
   </div>
 </div>
-<div class="main">{cards_html}{proposals_html}</div>
+<div class="main">{digest_html}{cards_html}{proposals_html}</div>
 <div class="footer">
   <p>このページのボタンで評価 → 保存 → 週次で自動反映（Obsidian の評価列も併用可）</p>
 </div>
@@ -610,16 +664,22 @@ def atomic_write_text(path, text: str) -> None:
         raise
 
 
-def main() -> int:
-    args = parse_args()
-    latest = load_latest(args.latest)
+def render_to_file(latest_path=DEFAULT_LATEST, ledger_path=DEFAULT_LEDGER, out_path=DEFAULT_OUT) -> int:
+    """latest.json/台帳からHTMLを再生成する（CLI以外＝digest_apply.py等からのimport呼び出し用）。"""
+    latest = load_latest(latest_path)
     if latest is None:
-        atomic_write_text(args.out, render_missing_page())
+        atomic_write_text(out_path, render_missing_page())
         return 0
 
-    meta = resolve_meta(latest, args.ledger)
-    atomic_write_text(args.out, render_page(latest, meta))
+    meta = resolve_meta(latest, ledger_path)
+    latest_digest = load_latest_digest(ledger_path)
+    atomic_write_text(out_path, render_page(latest, meta, latest_digest))
     return 0
+
+
+def main() -> int:
+    args = parse_args()
+    return render_to_file(args.latest, args.ledger, args.out)
 
 
 if __name__ == "__main__":

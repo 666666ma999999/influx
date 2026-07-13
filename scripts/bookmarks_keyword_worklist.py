@@ -51,7 +51,13 @@ bookmarks_keyword_common.py（共通庫）を用いて、raw取得済みブッ�
       },
       "continuity_stats": [{"cluster_id":, "matched_delta_count":,
                              "matched_urls": [...],  # 最大5件
-                             "by_keyword": {kw: count}}, ...],
+                             "by_keyword": {kw: count},
+                             "digest_hits": {"count": int, "matched_urls": [...],  # 最大5件
+                                             "by_seed_query_id": {qid: count}}
+                             # digest_hitsの定義: 「digest掲載後に初観測された同一URLとの
+                             # 相関」（真の検索的中率ではない・自動reinforce/retireの
+                             # 単独根拠には使わない。観測相関の記録のみ）
+                            }, ...],
       "previous_generation": {"generation": int|null, "revision": int|null,
                               "active": [...], "dormant": [...], "queries": [...]},
       # generation/revisionはingest側のP0-3鮮度検証（台帳末尾世代との一致確認）用の参照値
@@ -282,6 +288,39 @@ def compute_continuity_stats(delta_nonempty_records, clusters):
             "by_keyword": by_keyword,
         })
     return stats
+
+
+def _empty_digest_hits() -> dict:
+    return {"count": 0, "matched_urls": [], "by_seed_query_id": {}}
+
+
+def compute_digest_hits(delta_records, digest_items) -> dict:
+    """delta（新規ブックマーク・canonical URL）と過去digest掲載URL(digest_items)の
+    積集合をcluster_id別に集計する。
+
+    定義: 「digest掲載後に初観測された同一URLとの相関」（真の検索的中率ではない・
+    自動reinforce/retireの単独根拠には使わない・観測相関の記録のみ）。
+
+    戻り値: {cluster_id: {"count": int, "matched_urls": [...最大5件],
+                          "by_seed_query_id": {qid: count}}}
+    """
+    result: dict = {}
+    for rec in delta_records:
+        url = rec.get("url")
+        if not url:
+            continue
+        hit = digest_items.get(common.canonical_url_key(url))
+        if not hit:
+            continue
+        cluster_id = hit.get("cluster_id")
+        entry = result.setdefault(cluster_id, _empty_digest_hits())
+        entry["count"] += 1
+        if len(entry["matched_urls"]) < 5:
+            entry["matched_urls"].append(url)
+        seed_query_id = hit.get("seed_query_id")
+        if seed_query_id:
+            entry["by_seed_query_id"][seed_query_id] = entry["by_seed_query_id"].get(seed_query_id, 0) + 1
+    return result
 
 
 def _is_stoplisted(term: str) -> bool:
@@ -764,6 +803,9 @@ def build_worklist(args) -> tuple:
 
     clusters = replay_state["active_clusters"] + replay_state["dormant_clusters"]
     continuity_stats = compute_continuity_stats(eligible_nonempty, clusters)
+    digest_hits_by_cluster = compute_digest_hits(delta_records, replay_state["digest_items"])
+    for stat in continuity_stats:
+        stat["digest_hits"] = digest_hits_by_cluster.get(stat["cluster_id"], _empty_digest_hits())
     stats_candidates = compute_stats_candidates(records)
 
     payload = {

@@ -35,6 +35,8 @@ worklist生成（bookmarks_keyword_worklist.py）とingest（bookmarks_keyword_i
     1行に評価マーカーが2個以上出現した場合はそのidだけを不採用にするのではなく行全体を
     unknown_valuesへ計上する（評価セルへのマーカー偽造・多重埋め込み対策）。
 - sha256_of_file(path) / sha256_of_urls(url_keys)
+- extract_min_faves(q) -> int | None
+    クエリ文字列qから"min_faves:<数値>"を抽出。無ければNone。digest collect/apply共有。
 - VALID_MARKS -> {"✅", "🔁", "🔍", "❌"}（評価マークの許可集合。note_eval_parse内部の
     _VALID_MARKSの公開エイリアス。他モジュールの評価値検証でも同じ集合を参照する）
 
@@ -87,6 +89,16 @@ worklist生成（bookmarks_keyword_worklist.py）とingest（bookmarks_keyword_i
     replay()は現状パススルー。B3(ingest)は各generationイベントの"proposals"配列を
     横断するcollect_all_proposals/collect_proposal_decisions（ingest.py側の実装）で
     直接状態を再構築し、pid承認のactive昇格・却下記録に用いる（replay()の対象外）。
+- digest: {"type": "digest", "run_id": str, "source": {"generation": int|null,
+    "revision": int|null, "urls_sha256": str|null}, "items": [{"url": str
+    (canonical形式の実URL・例: https://x.com/<author>/status/<id>), "cluster_id": str,
+    "seed_query_id": str|null, "excerpt": str, "author": str, "likes": int,
+    "posted_at": str}, ...], "dropped_counts": dict, "errors": list}
+    （C1(digest_apply)が候補記事ダイジェストの確定時に追記。bookmarks_keyword_digest_apply.py
+    が生成する）。replay()はitemsの各urlをcanonical_url_key()で正規化してdigest_urls(set)へ
+    蓄積し、digest_items(url_key -> {cluster_id, seed_query_id, published_at})へ最新値で
+    上書きする。published_atはそのdigestイベント自身のts（=掲載時刻）であり、ツイート自体の
+    投稿日時（item側のposted_at）とは別概念。latest_digestは最後に出現したdigestイベント全体。
 """
 from __future__ import annotations
 
@@ -380,9 +392,10 @@ def read_ledger(ledger_path) -> list:
 def replay(events: list) -> dict:
     """台帳イベント列から現在の状態を再構築する。モジュールdocstring「台帳イベント
     スキーマ」参照。generation/rejection/proposal_decisionの詳細な状態反映は
-    B3(ingest)実装時に拡張する前提で、B2時点では以下を再構築する:
+    B3(ingest)実装時に拡張する前提で、以下を再構築する:
     last_generation / active_clusters / dormant_clusters / baseline_urls /
-    last_fetch_success_at / consumed_evaluation_keys / pending_evaluations。
+    last_fetch_success_at / consumed_evaluation_keys / pending_evaluations /
+    digest_urls / digest_items / latest_digest（digest_*はC1(digest_apply)拡張分）。
     """
     last_generation = None
     active_clusters: list = []
@@ -391,6 +404,9 @@ def replay(events: list) -> dict:
     baseline_urls: set = set()
     consumed_evaluation_keys: set = set()
     last_fetch_success_at = None
+    digest_urls: set = set()
+    digest_items: dict = {}
+    latest_digest = None
 
     all_evaluations: list = []
     seen_eval_keys: set = set()
@@ -439,6 +455,20 @@ def replay(events: list) -> dict:
             for key in ev.get("consumed_evaluation_keys", []):
                 consumed_evaluation_keys.add(tuple(key))
 
+        elif etype == "digest":
+            latest_digest = ev
+            for item in ev.get("items", []):
+                url = item.get("url")
+                if not url:
+                    continue
+                key = canonical_url_key(url)
+                digest_urls.add(key)
+                digest_items[key] = {
+                    "cluster_id": item.get("cluster_id"),
+                    "seed_query_id": item.get("seed_query_id"),
+                    "published_at": ev.get("ts"),
+                }
+
         # rejection / proposal_decision: replay()は現状パススルー。B3(ingest)が
         # generationイベントの"proposals"配列を直接横断して状態を再構築する（モジュール
         # docstring「台帳イベントスキーマ」参照）。
@@ -457,6 +487,9 @@ def replay(events: list) -> dict:
         "consumed_evaluation_keys": consumed_evaluation_keys,
         "pending_evaluations": pending_evaluations,
         "last_fetch_success_at": last_fetch_success_at,
+        "digest_urls": digest_urls,
+        "digest_items": digest_items,
+        "latest_digest": latest_digest,
     }
 
 
@@ -541,3 +574,20 @@ def sha256_of_urls(url_keys) -> str:
         h.update(key.encode("utf-8"))
         h.update(b"\n")
     return h.hexdigest()
+
+
+# --- digest収集の共有pure関数（collect/apply双方から参照。pydantic非依存） -------------
+
+_MIN_FAVES_RE = re.compile(r"\bmin_faves:(\d+)")
+
+
+def extract_min_faves(q: str) -> int | None:
+    """クエリ文字列qからmin_faves:の数値を抽出する。無ければNone。
+
+    bookmarks_keyword_digest_collect.py（クラスタのmin_likes中央値算出）と
+    bookmarks_keyword_digest_apply.py（min-likes索引構築）の双方が参照する。
+    """
+    if not q:
+        return None
+    m = _MIN_FAVES_RE.search(q)
+    return int(m.group(1)) if m else None

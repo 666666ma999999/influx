@@ -319,6 +319,95 @@ class TestProposalsUi(RenderHtmlTestCase):
         self.assertIn("&lt;script&gt;alert(2)&lt;/script&gt;", text)
 
 
+def _digest_event(run_id, items, generation=1, revision=0):
+    return {
+        "type": "digest", "run_id": run_id,
+        "source": {"generation": generation, "revision": revision, "urls_sha256": "x"},
+        "items": items, "dropped_counts": {}, "errors": [],
+    }
+
+
+class TestDigestSection(RenderHtmlTestCase):
+    """C2: render_html.py の「今週の候補記事」セクションのfixtureテスト。"""
+
+    def _append_digest_event(self, items, run_id="r1"):
+        import bookmarks_keyword_common as common
+        common.append_event(self.ledger_path, _digest_event(run_id, items))
+
+    def test_digest_section_shown_when_latest_digest_exists(self):
+        clusters = [
+            _cluster("c-1", "クラスタA", "理由A", [_query("q-1", "qA", "sA", "iA")], []),
+        ]
+        self._write_latest(_make_latest(clusters))
+        self._append_digest_event([
+            {"url": "https://x.com/foo/status/12345", "cluster_id": "c-1", "seed_query_id": "q-1",
+             "excerpt": "気になる記事の抜粋です", "author": "foo", "likes": 42, "posted_at": "2026-07-10"},
+        ])
+
+        self._run()
+        text = self.out_path.read_text(encoding="utf-8")
+
+        self.assertIn("今週の候補記事", text)
+        self.assertIn("気になる記事の抜粋です", text)
+        self.assertIn("@foo", text)
+        self.assertIn("42", text)
+        self.assertIn('href="https://x.com/foo/status/12345"', text)
+        self.assertIn("クラスタA", text)  # cluster_id -> name解決
+        self.assertIn("次回から的中として学習されます", text)
+
+    def test_digest_section_hidden_when_no_digest_events(self):
+        clusters = [_cluster("c-1", "クラスタA", "理由A", [_query("q-1", "qA", "sA", "iA")], [])]
+        self._write_latest(_make_latest(clusters))
+        # digestイベントを一切追記しない。
+
+        self._run()
+        text = self.out_path.read_text(encoding="utf-8")
+
+        self.assertNotIn("今週の候補記事", text)
+        self.assertNotIn('<div class="digest-section">', text)
+
+    def test_digest_cluster_name_falls_back_to_id_when_unresolved(self):
+        clusters = [_cluster("c-1", "クラスタA", "理由A", [_query("q-1", "qA", "sA", "iA")], [])]
+        self._write_latest(_make_latest(clusters))
+        self._append_digest_event([
+            {"url": "https://x.com/bar/status/999", "cluster_id": "c-unknown", "seed_query_id": None,
+             "excerpt": "存在しないクラスタからの掲載", "author": "bar", "likes": 5, "posted_at": "2026-07-10"},
+        ])
+
+        self._run()
+        text = self.out_path.read_text(encoding="utf-8")
+
+        self.assertIn("今週の候補記事", text)
+        self.assertIn("c-unknown", text)
+
+    def test_digest_excerpt_is_html_escaped(self):
+        clusters = [_cluster("c-1", "クラスタA", "理由A", [_query("q-1", "qA", "sA", "iA")], [])]
+        self._write_latest(_make_latest(clusters))
+        self._append_digest_event([
+            {"url": "https://x.com/foo/status/1", "cluster_id": "c-1", "seed_query_id": "q-1",
+             "excerpt": "<script>alert(1)</script>", "author": "foo", "likes": 1, "posted_at": "2026-07-10"},
+        ])
+
+        self._run()
+        text = self.out_path.read_text(encoding="utf-8")
+
+        self.assertNotIn("<script>alert(1)</script>", text)
+        self.assertIn("&lt;script&gt;alert(1)&lt;/script&gt;", text)
+
+    def test_digest_dangerous_scheme_not_linked(self):
+        clusters = [_cluster("c-1", "クラスタA", "理由A", [_query("q-1", "qA", "sA", "iA")], [])]
+        self._write_latest(_make_latest(clusters))
+        self._append_digest_event([
+            {"url": "javascript:alert(1)", "cluster_id": "c-1", "seed_query_id": "q-1",
+             "excerpt": "危険なURL", "author": "foo", "likes": 1, "posted_at": "2026-07-10"},
+        ])
+
+        self._run()
+        text = self.out_path.read_text(encoding="utf-8")
+
+        self.assertNotIn('href="javascript:alert(1)"', text)
+
+
 class TestMissingLatest(RenderHtmlTestCase):
     def test_missing_latest_renders_placeholder_and_exits_zero(self):
         # latest.json をあえて書かない（存在しないケース）
