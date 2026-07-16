@@ -163,6 +163,362 @@
         "ev_stop8": -0.0025,
         "verdict": "REJECTED"
       }
+    },
+    {
+      "kpi_name": "sue_x_above200",
+      "status": "observation",
+      "registered_date": "2026-07-11",
+      "module": "scripts/kpi_event_batch_signals.py",
+      "generator_func": "generate_sue_beat_signals",
+      "params": {
+        "threshold": 0.10,
+        "filter_dev200": "above"
+      },
+      "defer_entry": true,
+      "max_defer_bdays": 3,
+      "regime_filter": null,
+      "role": "枠F主候補（§7-J 2026-07-11事前登録）。primary exit=nostop凍結。§7-H H1確定値",
+      "exit_variants": ["nostop", "stop8", "e1_ma200break"],
+      "in_sample": {
+        "period": "2016-11〜2022-11",
+        "n": 516,
+        "lift": 1.20,
+        "ci95": [0.72, 1.86],
+        "ev_none": 0.0188
+      },
+      "caution": "§7-H 3試行中の最良を主候補化=選択バイアス残存。Bonferroni調整後(61試行)はEV CI下限<0。正式判定は§7-J凍結ルール（n≥100 or 12完全暦月の遅い方・H1 vs 素のpaired判定表）"
+    },
+    {
+      "kpi_name": "sue_beat",
+      "status": "observation",
+      "registered_date": "2026-07-11",
+      "module": "scripts/kpi_event_batch_signals.py",
+      "generator_func": "generate_sue_beat_signals",
+      "params": {
+        "threshold": 0.10
+      },
+      "defer_entry": true,
+      "max_defer_bdays": 3,
+      "regime_filter": null,
+      "role": "枠F比較対照（素）。§7-G T2確定値",
+      "exit_variants": ["nostop", "stop8", "e1_ma200break"],
+      "in_sample": {
+        "period": "2016-11〜2022-11",
+        "n": 818,
+        "lift": 1.16,
+        "ev_none": 0.0146
+      }
+    },
+    {
+      "kpi_name": "sell_reg_trigger_rebound",
+      "status": "observation",
+      "registered_date": "2026-07-13",
+      "module": "scripts/kpi_round23_signals.py",
+      "generator_func": "generate_sell_reg_trigger_signals",
+      "params": {
+        "drop_trigger": 0.9
+      },
+      "defer_entry": false,
+      "max_defer_bdays": 0,
+      "regime_filter": null,
+      "role": "第28周並列観察・§7-Q事前登録（lift CI下限降順で採用上限5本の第1位）。§7-L T2確定値。EV(なし)は正だがリバーサル家族。primary exit=nostop（stop8/e1_ma200breakは同格secondary記録・優劣ラベルなし）。defer_entry=false（§7-L凍結・T+1約定不能はentry_missing）",
+      "exit_variants": ["nostop", "stop8", "e1_ma200break"],
+      "in_sample": {
+        "period": "2016-11〜2022-11",
+        "n": 2943,
+        "lift": 2.76,
+        "ci95": [2.136, 3.782],
+        "ev_none": 0.0026,
+        "avg_monthly_signals": 40.3,
+        "note": "§7-L T2（AdjL(D)<=AdjC(D-1)×0.90）。lift CI下限2.136で第28周採用5本の最上位。前向き観察で最終判定（§7-Q固定ファミリーS=5・α=0.005[陣別alpha-spending・§7-T改定=第1陣0.025/5]順次判定）"
+      }
+    },
+    {
+      "kpi_name": "sh_dip_reentry",
+      "status": "hoos_rejected",
+      "registered_date": "2026-07-13",
+      "module": "scripts/kpi_sh_dip_reentry_signals.py",
+      "generator_func": "find_dip_reentry_signals",
+      "params": {
+        "s_high_tolerance": 5.0,
+        "dip_min_bdays": 3,
+        "dip_max_bdays": 10,
+        "pullback_min": -0.15,
+        "pullback_max": -0.05,
+        "va_min_ratio": 0.3
+      },
+      "defer_entry": true,
+      "max_defer_bdays": 3,
+      "regime_filter": null,
+      "role": "第28周並列観察・§7-Q事前登録。§2-E/第15周確定値。EV負系統（純観察・濃縮の前向き再現確認が主目的）。primary exit=nostop（stop8/e1_ma200breakは同格secondary記録・優劣ラベルなし）。sh_dipは年6件級の枠S型頻度基準を昇格判定に適用",
+      "exit_variants": ["nostop", "stop8", "e1_ma200break"],
+      "in_sample": {
+        "period": "2016-11〜2022-11",
+        "n": 246,
+        "lift": 3.08,
+        "ci95": [1.871, 4.894],
+        "ev_none": -0.0096,
+        "avg_monthly_signals": 3.2,
+        "note": "§2-E ストップ高：初押し再上昇（第15周T4）。lift CI下限1.871で第28周採用5本の第2位。EV(なし)-0.96%・最善exit=stop10で-0.30%だがlift順位規則のみで選定（EVによる事後選択回避）＝純観察。前向き観察で最終判定（§7-Q固定ファミリーS=5・α=0.005[陣別alpha-spending・§7-T改定=第1陣0.025/5]順次判定）"
+      }
+    },
+    {
+      "kpi_name": "turnover_rank_surge",
+      "status": "observation",
+      "registered_date": "2026-07-13",
+      "module": "scripts/kpi_round23_signals.py",
+      "generator_func": "generate_turnover_rank_surge_signals",
+      "params": {
+        "rank_lookback_bdays": 20,
+        "rank_surge_from": 301,
+        "rank_surge_to": 100,
+        "prodcat_stock": "011"
+      },
+      "defer_entry": true,
+      "max_defer_bdays": 3,
+      "regime_filter": null,
+      "role": "第28周並列観察・§7-Q事前登録。§7-L T1確定値。EV負系統（純観察・濃縮の前向き再現確認が主目的）。primary exit=nostop（stop8/e1_ma200breakは同格secondary記録・優劣ラベルなし）",
+      "exit_variants": ["nostop", "stop8", "e1_ma200break"],
+      "in_sample": {
+        "period": "2016-11〜2022-11",
+        "n": 1237,
+        "lift": 2.64,
+        "ci95": [1.820, 3.828],
+        "ev_none": -0.0080,
+        "avg_monthly_signals": 17.0,
+        "note": "§7-L T1（rank(D-20)>=301 かつ rank(D)<=100 かつ 当日陽線・母集団=PIT月末masterのProdCat=011∩Va>0）。lift CI下限1.820で第28周採用5本の第3位。EV(なし)-0.80%だがlift順位規則のみで選定＝純観察。前向き観察で最終判定（§7-Q固定ファミリーS=5・α=0.005[陣別alpha-spending・§7-T改定=第1陣0.025/5]順次判定）"
+      }
+    },
+    {
+      "kpi_name": "margin_expand_yoy",
+      "status": "observation",
+      "registered_date": "2026-07-13",
+      "module": "scripts/kpi_round26_signals.py",
+      "generator_func": "generate_margin_expand_signals",
+      "params": {
+        "opm_delta_min_pt": 2.0,
+        "max_span_diff_days": 7,
+        "max_yoy_end_gap_days": 8
+      },
+      "defer_entry": true,
+      "max_defer_bdays": 3,
+      "regime_filter": null,
+      "role": "第28周並列観察・§7-Q事前登録。§7-O確定値。EV(なし)正。primary exit=nostop（stop8/e1_ma200breakは同格secondary記録・優劣ラベルなし）。as-of構築（単Q YoYマージン拡大）を日次窓で呼びプロセス内キャッシュで重複走査回避",
+      "exit_variants": ["nostop", "stop8", "e1_ma200break"],
+      "in_sample": {
+        "period": "2016-11〜2022-11",
+        "n": 2091,
+        "lift": 1.78,
+        "ci95": [1.301, 2.325],
+        "ev_none": 0.0042,
+        "avg_monthly_signals": 28.6,
+        "note": "§7-O T1（OPM_q−OPM_qYoY>=+2.0pt かつ S_q>S_qYoY・as-of構築・反応日Gエントリー）。lift CI下限1.301で第28周採用5本の第4位。fins系走査終端ガード(pead_effective_end)を適用。前向き観察で最終判定（§7-Q固定ファミリーS=5・α=0.005[陣別alpha-spending・§7-T改定=第1陣0.025/5]順次判定）"
+      }
+    },
+    {
+      "kpi_name": "raw_strev_entry",
+      "status": "observation",
+      "registered_date": "2026-07-13",
+      "module": "scripts/kpi_round25_signals.py",
+      "generator_func": "generate_cross_signals",
+      "params": {
+        "score_formula": "-r[t-1]",
+        "reg_window": 36,
+        "decile_frac": 0.1
+      },
+      "defer_entry": true,
+      "max_defer_bdays": 3,
+      "regime_filter": null,
+      "role": "第28周並列観察・§7-Q事前登録。§7-N T4確定値。EV(なし)正。primary exit=nostop（stop8/e1_ma200breakは同格secondary記録・優劣ラベルなし）。月末発火（前営業日が取引所カレンダー上の月末営業日の朝のみ生成器を呼ぶ）。当月順位=前月末確定TOP500・前月クロス状態=前月自身の順位から再構築（§7-N規約）",
+      "exit_variants": ["nostop", "stop8", "e1_ma200break"],
+      "in_sample": {
+        "period": "2016-11〜2022-11",
+        "n": 1417,
+        "lift": 1.38,
+        "ci95": [1.016, 1.700],
+        "ev_none": 0.0086,
+        "avg_monthly_signals": 19.4,
+        "note": "§7-N T4（TOPIX 1ファクター残差の素の-r[t-1]スコア上位decile新規入り・月次）。lift CI下限1.016で第28周採用5本の第5位（リバーサル家族の代表・strev_20dは除外）。前向き観察で最終判定（§7-Q固定ファミリーS=5・α=0.005[陣別alpha-spending・§7-T改定=第1陣0.025/5]順次判定）"
+      }
+    },
+    {
+      "kpi_name": "gap_hold_close_strong",
+      "status": "observation",
+      "registered_date": "2026-07-13",
+      "module": "scripts/kpi_round29_signals.py",
+      "generator_func": "generate_gap_hold_close_strong_signals",
+      "params": {
+        "gap_ratio": 1.03,
+        "close_location_min": 0.8,
+        "vol_multiplier": 2.0,
+        "va_history_window": 20
+      },
+      "defer_entry": true,
+      "max_defer_bdays": 3,
+      "regime_filter": null,
+      "role": "第31周観察第2陣・§7-T事前登録（§7-R T3・§7-Q機械選定規則の再適用で採用=適格残3で非拘束）。α=0.004167[陣別alpha-spending・第2陣予算0.0125/3系統]。EV(なし)負系統は純観察（lift順位規則のみで選定＝EVによる事後選択回避）。家族=買い持続（単日・gap-up起点）。primary exit=nostop（stop8/e1_ma200breakは同格secondary記録・優劣ラベルなし）",
+      "exit_variants": ["nostop", "stop8", "e1_ma200break"],
+      "in_sample": {
+        "period": "2016-11〜2022-11",
+        "n": 1172,
+        "lift": 2.57,
+        "ci95": [1.898, 3.47],
+        "ev_none": -0.0032,
+        "avg_monthly_signals": 16.1,
+        "note": "§7-R T3（AdjO≥前日AdjC×1.03 ∩ AdjC≥AdjO ∩ close位置≥0.8 ∩ 窓埋めなし ∩ Va≥20日平均×2）。lift CI下限1.898で§7-T機械選定の採用3本の第1位。EV(なし)-0.32%[CI -2.13%,+1.38%]・一次結論rejected（+20%ゴール不発）だがlift CI下限が§7-Q規則水準を超えるため純観察で前向き再現確認。avg_monthly_signalsはn/73ヶ月の導出値"
+      }
+    },
+    {
+      "kpi_name": "engulf_reversal_day",
+      "status": "observation",
+      "registered_date": "2026-07-13",
+      "module": "scripts/kpi_round30_signals.py",
+      "generator_func": "generate_engulf_reversal_signals",
+      "params": {
+        "gap_down_ratio": 0.99,
+        "range_location_min": 0.7,
+        "vol_multiplier": 1.5,
+        "va_history_window": 20
+      },
+      "defer_entry": true,
+      "max_defer_bdays": 3,
+      "regime_filter": null,
+      "role": "第31周観察第2陣・§7-T事前登録（§7-S T3・§7-Q機械選定規則の再適用で採用=適格残3で非拘束）。α=0.004167[陣別alpha-spending・第2陣予算0.0125/3系統]。EV(なし)微プラス（+0.13%）。家族=攻守転換（単日・gap-down起点・gap_holdとJaccard0.0000で完全排他）。primary exit=nostop（stop8/e1_ma200breakは同格secondary記録・優劣ラベルなし）",
+      "exit_variants": ["nostop", "stop8", "e1_ma200break"],
+      "in_sample": {
+        "period": "2016-11〜2022-11",
+        "n": 2021,
+        "lift": 1.48,
+        "ci95": [1.162, 1.88],
+        "ev_none": 0.0013,
+        "avg_monthly_signals": 27.7,
+        "note": "§7-S T3（AdjO<前日AdjC×0.99 ∩ AdjC>前日AdjC ∩ AdjC>AdjO ∩ close位置≥0.7 ∩ Va≥20日平均×1.5・第29周T3と同一品質ガード）。lift CI下限1.162で§7-T機械選定の採用3本の第2位。EV(なし)+0.13%[CI -1.26%,+1.28%]・一次結論inconclusive。avg_monthly_signalsはn/73ヶ月の導出値"
+      }
+    },
+    {
+      "kpi_name": "three_up_ignition",
+      "status": "observation",
+      "registered_date": "2026-07-13",
+      "module": "scripts/kpi_round30_signals.py",
+      "generator_func": "generate_three_up_ignition_signals",
+      "params": {
+        "consecutive_days": 3,
+        "vol_multiplier": 1.5,
+        "firstness_lookback": 5,
+        "va_history_window": 20
+      },
+      "defer_entry": true,
+      "max_defer_bdays": 3,
+      "regime_filter": null,
+      "role": "第31周観察第2陣・§7-T事前登録（§7-S T1・§7-Q機械選定規則の再適用で採用=適格残3で非拘束）。α=0.004167[陣別alpha-spending・第2陣予算0.0125/3系統]。EV(なし)負系統は純観察（lift順位規則のみで選定＝EVによる事後選択回避）。家族=複数日連続構造（volshock[単日出来高倍率]・high52[水準ブレイク]と定義軸が異なる・Jaccard≤0.066）。primary exit=nostop（stop8/e1_ma200breakは同格secondary記録・優劣ラベルなし）",
+      "exit_variants": ["nostop", "stop8", "e1_ma200break"],
+      "in_sample": {
+        "period": "2016-11〜2022-11",
+        "n": 3176,
+        "lift": 1.48,
+        "ci95": [1.136, 2.02],
+        "ev_none": -0.0045,
+        "avg_monthly_signals": 43.5,
+        "note": "§7-S T1（D-2〜Dの3連陽線∩高値/終値切り上げ∩3日合計Va≥20日平均×3×1.5・初回性=終点D-5〜D-1で完全T1未成立）。lift CI下限1.136で§7-T機械選定の採用3本の第3位。EV(なし)-0.45%[CI -1.75%,+0.76%]・一次結論rejected。EV負のためlift順位規則のみで選定＝純観察。avg_monthly_signalsはn/73ヶ月の導出値"
+      }
+    },
+    {
+      "kpi_name": "sales_beat",
+      "status": "observation",
+      "registered_date": "2026-07-14",
+      "module": "scripts/kpi_round33_signals.py",
+      "generator_func": "generate_sales_beat_signals",
+      "params": {
+        "threshold": 0.05
+      },
+      "defer_entry": true,
+      "max_defer_bdays": 3,
+      "regime_filter": null,
+      "role": "第34周観察第3陣（1系統）・§7-W事前登録。§7-V T3確定値。α=0.00625[陣別alpha-spending・第3陣予算0.05/2^3÷系統数1]。§7-W admission rule改定（Codex㊼裁定B）で第3陣は§0枠S/枠F運用開始ライン全条件の機械適用を陣入り条件とし、第32〜33周未配線6試行のうち陣入りはsales_beatのみ（lift CI下限1.27>1.2 ∩ EV(stop8)+1.98%≥+1% ∩ 年46件≥6・枠S充足）。primary exit=nostop（stop8/e1_ma200breakは同格secondary記録・優劣ラベルなし）。fins系走査終端ガード(pead_effective_end)を適用しSUE同型のプロセス内キャッシュで重複走査回避。promising=前向き検証資格であり統計的確定ではない（85試行の累積Bonferroni下では有意性は消える・最終信任は前向きのみ）",
+      "exit_variants": ["nostop", "stop8", "e1_ma200break"],
+      "in_sample": {
+        "period": "2016-11〜2022-11",
+        "n": 282,
+        "lift": 2.06,
+        "ci95": [1.27, 3.29],
+        "ev_none": 0.0235,
+        "ev_stop8": 0.0198,
+        "avg_monthly_signals": 3.86,
+        "note": "§7-V T3（売上高が直前会社予想を+5%以上上回った開示・kpi_event_batch_signals.generate_sue_beat_signalsと完全同型のas-of機構。2Q開示=Sales対FSales2Q / FY開示=Sales対FSales・直前予想≤0除外・遡り365暦日上限・15:00/15:30境界）。探索的一次結論ラベル導入（第18周）以来初のpromising＝§0枠S運用開始ライン充足（lift CI下限1.27>1.2・EV(stop8)+1.98%≥+1%・年約46件≥6件）。SUE(sue_beat)とのJaccard0.159で重複小・SUE非重複群(n=124・lift2.94・EV+3.37%[CIは0を含む])は別軸の可能性を示唆。avg_monthly_signalsはn/73ヶ月の導出値（≒46件/年）"
+      },
+      "caution": "promising=前向き検証資格であり統計的確定ではない。85試行の累積Bonferroni下では有意性は消える。正式判定は§7-W凍結ルール（n≥100 or 12完全暦月の遅い方・各系統1回・前向きEV片側p≤α=0.00625 ∩ lift>1 ∩ 年6件以上）。中間判定(n≥30 or 3ヶ月)は早期棄却のみ"
+    },
+    {
+      "kpi_name": "guidance_fy_strong",
+      "status": "observation",
+      "registered_date": "2026-07-14",
+      "module": "scripts/kpi_round35_signals.py",
+      "generator_func": "generate_guidance_fy_strong_signals",
+      "params": {},
+      "defer_entry": true,
+      "max_defer_bdays": 3,
+      "regime_filter": null,
+      "role": "第36周観察第4陣（2系統）・§7-Y事前登録。§7-X T1確定値。α=0.0015625[陣別alpha-spending・第4陣予算0.05/2^4=0.003125÷系統数2]。第35周3試行への機械適用で§0枠S/枠F両運用開始ライン充足（lift CI下限2.04>1.2 ∩ EV(なし)CI下限+0.33%>0 ∩ EV(stop8)+2.68%≥+1% ∩ 月約9.4件≥枠F型月5件）＝88試行中2例目のpromising。beat系(sue_beat/sales_beat)とのJaccard≤0.075で独立軸。primary exit=nostop（stop8/e1_ma200breakは同格secondary記録・優劣ラベルなし）。fins系走査終端ガード(pead_effective_end)を適用しSUE/sales_beat同型のプロセス内キャッシュで重複走査回避。promising/入場判定=前向き検証資格であり統計的確定ではない（88試行の累積Bonferroni下では有意性は消える・最終信任は前向きのみ）",
+      "exit_variants": ["nostop", "stop8", "e1_ma200break"],
+      "in_sample": {
+        "period": "2016-11〜2022-11",
+        "n": 683,
+        "lift": 2.98,
+        "ci95": [2.04, 4.07],
+        "ev_none": 0.0295,
+        "ev_stop8": 0.0268,
+        "avg_monthly_signals": 9.36,
+        "note": "§7-X T1（FY開示でNxFSales/Sales−1≥+10% ∩ 両者>0 ∩ 変則決算ガード[CurFY/NxtFY期間長365±8日 ∩ 1≤NxtFYSt−CurFYEn≤8暦日]・レコード自身のフィールドのみ・as-of不要・同日複数(Code,CurFYEn)は最新1件・シグナル日=反応日G）。第35周でpromising（88試行中2例目・§0枠S/枠F両運用開始ライン充足: lift CI下限2.04>1.2・EV(なし)CI下限+0.33%>0・EV(stop8)+2.68%≥+1%・月約9.4件≥枠F型月5件）。beat系とのJaccard≤0.075で独立軸。avg_monthly_signalsはn/73ヶ月の導出値（≒112件/年）"
+      },
+      "caution": "promising=前向き検証資格であり統計的確定ではない。88試行の累積Bonferroni下では有意性は消える。正式判定は§7-Y凍結ルール（n≥100 or 12完全暦月の遅い方・各系統1回・前向きEV片側p≤α=0.0015625 ∩ lift>1 ∩ 頻度は月約9.4件見込みのため枠F型月5件を適用）。中間判定(n≥30 or 3ヶ月)は早期棄却のみ"
+    },
+    {
+      "kpi_name": "cfo_margin_improve",
+      "status": "observation",
+      "registered_date": "2026-07-14",
+      "module": "scripts/kpi_round35_signals.py",
+      "generator_func": "generate_cfo_pairs+filter_cfo_margin_improve",
+      "params": {},
+      "defer_entry": true,
+      "max_defer_bdays": 3,
+      "regime_filter": null,
+      "role": "第36周観察第4陣（2系統）・§7-Y事前登録。§7-X T2確定値。α=0.0015625[陣別alpha-spending・第4陣予算0.05/2^4=0.003125÷系統数2]。第35周3試行への機械適用で§0枠S運用開始ラインをフル精度で充足（lift CI下限1.2141>1.2の境界近傍 ∩ EV(stop8)+1.42%≥+1% ∩ 月約10.3件）＝機械適用ゆえ採用=入場判定であり効果確定ではない（Codex㊿確認・境界近傍を注記）。margin_expand_yoy（実績マージン改善・lift1.79/EV+0.42%）のCF版にあたる近傍性を宣言。primary exit=nostop（stop8/e1_ma200breakは同格secondary記録・優劣ラベルなし）。fins as-of yoy照合（§7-O様式・開示日365日上限不適用）＋プロセス内キャッシュ（閾値非依存CFOペア母集団）で重複走査回避。promising/入場判定=前向き検証資格であり統計的確定ではない（88試行の累積Bonferroni下では有意性は消える・最終信任は前向きのみ）",
+      "exit_variants": ["nostop", "stop8", "e1_ma200break"],
+      "in_sample": {
+        "period": "2016-11〜2022-11",
+        "n": 750,
+        "lift": 1.88,
+        "ci95": [1.21, 2.67],
+        "ev_none": 0.0144,
+        "ev_stop8": 0.0142,
+        "avg_monthly_signals": 10.27,
+        "note": "§7-X T2（2Q/FY開示でレコード自身のCFO/Sales[累計]が前年同期比+3pt以上改善 ∩ 増収 ∩ 当期・前年ともSales>0 ∩ CFO有効。前年同期照合は§7-O様式[同一period_type・CurFYEn年-1・CurPerEn当年365±8日前・累計期間長差≤7日・Scope×Standard一致・開示日365日上限は不適用]）。第35周で枠S運用開始ラインをフル精度で充足（lift CI下限1.2141>1.2の境界近傍・EV(stop8)+1.42%≥+1%・月約10.3件）＝機械適用ゆえ採用=入場判定であり効果確定ではない。EV(なし)+1.44%[CI下限−0.75%は0を含む]。avg_monthly_signalsはn/73ヶ月の導出値（≒123件/年）"
+      },
+      "caution": "枠S境界近傍充足＝入場判定であり統計的確定ではない。88試行の累積Bonferroni下では有意性は消える（EV(なし)CI下限も0を含む）。正式判定は§7-Y凍結ルール（n≥100 or 12完全暦月の遅い方・各系統1回・前向きEV片側p≤α=0.0015625 ∩ lift>1 ∩ 頻度は月約10.3件見込みのため枠F型月5件を適用）。中間判定(n≥30 or 3ヶ月)は早期棄却のみ"
+    },
+    {
+      "kpi_name": "earnings_spillover",
+      "status": "observation",
+      "registered_date": "2026-07-15",
+      "module": "scripts/kpi_round38_signals.py",
+      "generator_func": "generate_earnings_spillover_signals",
+      "params": {},
+      "defer_entry": true,
+      "max_defer_bdays": 3,
+      "regime_filter": null,
+      "role": "第39周観察第5陣（1系統）・§7-AB事前登録。§7-AA T2確定値。α=0.0015625[陣別alpha-spending・第5陣予算0.05/2^5=0.0015625÷系統数1]。第38周2試行への機械適用で earnings_spillover=§0枠F運用開始ライン充足（月平均33.4件≥5 ∩ EV(なし)CI下限+0.159%>0 ∩ lift1.312>1.0。枠SはliftCI下限1.002<1.2でNG）→陣入り1系統（機械適用ゆえ採用=入場判定であり効果確定ではない・Codex57確認）。同周T1 split_execution はEV(なし)−3.50%でNG・陣入りせず（回避知見として終結）。生成器= kpi_round38_signals.generate_earnings_spillover_signals を Canonical import（leader=sales_beat[§7-V凍結値]の同業種他銘柄イベント化・未発表判定3条件・当日変動-1%〜+2%・複数leaderでも候補×Dは1回・Codex56境界ガード[開示走査1営業日前倒し+signal_date∈[start_bd,end_bd]明示限定]内蔵）。primary exit=nostop（stop8/e1_ma200breakは同格secondary記録・優劣ラベルなし）。leader走査+開示段階履歴(FINS_HISTORY_START_BD全走査)の重い構築はSUE/sales_beat同型のプロセス内キャッシュで重複走査回避。本系統は当日のsales_beat開示をleaderとして同日多数の候補が発火しうる（in-sample月33.4件）が、watchlist記録は既存の同日重複排除規則（候補×Dは1回）のみで機械的に行い件数調整・裁量選別はしない。sector_sympathy(第29周)とのJaccard0.00198で伝播情報の質の違い（ファンダ実績 vs 出来高ショック）を実証・industry_spillover_family={sector_sympathy_volshock, earnings_spillover}で固定。入場判定=前向き検証資格であり統計的確定ではない（92試行の累積Bonferroni下では有意性は消える・最終信任は前向きのみ）",
+      "exit_variants": ["nostop", "stop8", "e1_ma200break"],
+      "in_sample": {
+        "period": "2016-11〜2022-11",
+        "n": 2460,
+        "lift": 1.312,
+        "ci95": [1.002, 1.854],
+        "ev_none": 0.01555,
+        "ev_stop8": 0.01055,
+        "avg_monthly_signals": 33.4,
+        "note": "§7-AA T2（営業日Dに同一S33業種[D時点master・普通株ProdCat011・leader除外]の他銘柄がsales_beat条件[§7-V凍結値]を満たす開示を行った[反応日=D]とき、同業種で当該会計期を未発表の銘柄。未発表判定3条件[(i)候補as-of最新開示のCurFYEn==leaderのCurFYEn / (ii)leader2Qなら候補最新開示段階1Q以前・FYなら3Q以前 / (iii)同一(Code,CurFYEn,period_type)開示がreaction_day基準でD以前に不存在] ∩ AdjC(D)/AdjC(D-1)−1∈[-1%,+2%]。候補×Dは1回・シグナル確定=D終値・エントリー=D+1寄付）。第38周で枠F運用開始ライン充足（月平均33.4件≥5・EV(なし)CI下限+0.159%>0・lift1.312>1.0）＝機械適用ゆえ採用=入場判定であり効果確定ではない。枠SはliftCI下限1.002<1.2で非充足。Codex56 MAJOR是正（反応日境界ガード欠如→開示走査1営業日前倒し+signal_date明示限定でT2再実行・副次効果でstart側取りこぼし+6本回収しn2440→2460）。sector_sympathyとのJaccard0.00198で独立軸。avg_monthly_signalsはn/73.7ヶ月相当の導出値（月33.4件）"
+      },
+      "caution": "枠F運用開始ライン充足＝入場判定であり統計的確定ではない。92試行の累積Bonferroni下では有意性は消える（lift CI下限1.002は1近傍・枠S非充足）。正式判定は§7-AB凍結ルール（前向きn≥100 or 12完全暦月の遅い方・各系統1回・前向きEV片側p≤α=0.0015625 ∩ lift>1 ∩ 頻度は月約33.4件見込みのため枠F型月5件を適用）。中間判定(n≥30 or 3ヶ月の早い方)は早期棄却のみ"
     }
   ],
   "changelog": [
@@ -181,6 +537,30 @@
     {
       "date": "2026-07-07",
       "change": "追加登録: volshock_x_above200_quiet(observation)。第13周A(scripts/kpi_volshock_v2_amplifiers.py・カタログ§7-B v2-2)でvolshock_x_above200(n=180) x quiet_ratio>=1.2(出来高「静→動」)の分割セルが最有望と判明(in-sample n=73 lift=4.16[1.91,7.10] EV(なし)+3.48% EV(E1)+2.84%)。scripts/daily_screen.pyのvolshock判定経路にquiet_min判定(kpi_volshock_v2_amplifiers.compute_quiet_ratio再利用)を配線し5KPI体制に拡張。n=73・月約1件は§6検出力基準未達のため事前登録合否はpending・35試行後の分割セルによるwinner's curse警戒を明記し前向き観察で最終判定する。volshock_x_above200は比較対照として引き続き併存"
+    },
+    {
+      "date": "2026-07-11",
+      "change": "追加登録: sue_x_above200(observation・枠F主候補)/sue_beat(observation・枠F比較対照)。カタログ§7-J（2026-07-11事前登録・Codexレビュー⑨反映後凍結）に基づき、scripts/daily_screen.pyのKPIディスパッチにSUE系分岐を新設（kpi_event_batch_signals.generate_sue_beat_signals + sue_x_above200限定でkpi_sue_champion_signals.compute_dev200によるdev200>0ポストフィルタをCanonical再利用）。scripts/kpi_pead_signals.pyのreaction_dayに東証現物の引け時刻延長（2024-11-05以降15:30）対応の日付依存境界を導入（PEAD/SUE共有関数・in-sample期間は全開示が2024年以前のため歴史結果は構造的に不変・2017年分の生シグナル件数935/935・1512/1512で回帰確認済み）。60bdバックフィル(RECENT_SIGNALS_KPI_NAMES)にもSUE系2KPIを追加し4KPI体制に拡張。primary exitはnostop（20営業日後終値手仕舞い）に事前固定・stop8/e1_ma200breakは同格のsecondary記録（§7-J凍結・優劣ラベル付けなし）"
+    },
+    {
+      "date": "2026-07-13",
+      "change": "追加登録（第28周並列観察・§7-Q事前登録・Codexレビュー㉖㉗㉘GO）: sell_reg_trigger_rebound / sh_dip_reentry / turnover_rank_surge / margin_expand_yoy / raw_strev_entry の5系統(全observation)。台帳73行から選定規則(適格46→除外コード→家族重複排除→lift CI下限降順・上限5本)で機械抽出した固定ファミリーS=5。scripts/daily_screen.pyのgenerate_kpi_signalsに5系統のCanonical import分岐を新設（kpi_round23_signals.generate_sell_reg_trigger_signals/generate_turnover_rank_surge_signals・kpi_sh_dip_reentry_signals.detect_stophigh_events+find_dip_reentry_signals・kpi_round26_signals.generate_margin_expand_signals[fins as-of・プロセス内キャッシュ・pead_effective_end終端ガード]・kpi_round25_signals.compute_position_deciles+generate_cross_signals[月末発火・当月/前月ユニバースをbuild_universeでas-of構築]）。ロジック再実装なし・生成器スクリプトは無変更。EV負系統(sh_dip/turnover_rank_surge)もlift順位規則のみで選定し純観察として配線。primary exit=nostop・stop8/e1_ma200breakは同格secondary（優劣ラベルなし）。台帳・カタログへの書き込みなし・本実行(ledger書込み)は明朝launchdに委譲"
+    },
+    {
+      "date": "2026-07-13",
+      "change": "追加登録（第31周観察枠第2陣・§7-T事前登録・Codexレビュー㊲㊳㊴GO）: gap_hold_close_strong（§7-R T3）/ engulf_reversal_day（§7-S T3）/ three_up_ignition（§7-S T1）の3系統(全observation)。§7-Q機械選定規則を第29〜30周6本に再適用し採用（適格残3で非拘束・除外=ll_release_rebound[AVOIDANCE_SIGNAL]/sector_sympathy_volshock[FAMILY_DUPLICATE]/rs_line_high[不適格]）。scripts/daily_screen.pyのgenerate_kpi_signalsに3系統のCanonical import分岐を新設（kpi_round29_signals.generate_gap_hold_close_strong_signals・kpi_round30_signals.generate_engulf_reversal_signals/generate_three_up_ignition_signals）。いずれもbars四本値のみの単日/複数日判定でwarmup・品質ガードを生成器内で完結・fins終端ガード不要。ロジック再実装なし・生成器スクリプトは無変更。EV負系統(gap_hold/three_up)もlift順位規則のみで選定し純観察として配線。primary exit=nostop・stop8/e1_ma200breakは同格secondary（優劣ラベルなし）。昇格αは陣別alpha-spending改定（Codex㊲㊳CRITICAL）で第2陣3系統=0.0125/3≈0.004167/系統・第1陣5系統は0.025/5=0.005/系統に統一（§7-Qの旧α=0.01/0.005表記を更新・判定ゼロ件で安全）。未評価警告閾値200→300に改定（見込み合計約195件/月）。台帳・カタログへの書き込みなし・本実行(ledger書込み)は明朝launchdに委譲"
+    },
+    {
+      "date": "2026-07-14",
+      "change": "追加登録（第34周観察枠第3陣・§7-W事前登録）: sales_beat（§7-V T3・observation・1系統）。第33周で探索的一次結論ラベル導入（第18周）以来初のpromising（§0枠S運用開始ライン充足: lift CI下限1.27>1.2 ∩ EV(stop8)+1.98%≥+1% ∩ 年約46件≥6件）と判明したため観察第3陣として配線。§7-W admission rule改定（Codex㊼裁定B）で第3陣からは§7-Q適格に加え枠S/枠F運用開始ライン全条件の機械適用を陣入り条件とし、第32〜33周未配線6試行のうち陣入りはsales_beatのみ（mkt_upgrade=枠S頻度NG・updown/preearnings/mrgn/scalecat=EVまたはlift条件NG）。scripts/daily_screen.pyのgenerate_kpi_signalsにsales_beat分岐を新設（kpi_round33_signals.generate_sales_beat_signalsをCanonical import・ロジック再実装なし・生成器スクリプトは無変更）。SUE/PEAD/margin_expandと同型のfins系走査終端ガード（scan_start=反応日オフセット前倒し・scan_end=pead_effective_end）とプロセス内キャッシュ（_generate_sales_beat_signals_cached・同一入力に同一DataFrameを返すのみで統計不変）を適用。primary exit=nostop・stop8/e1_ma200breakは同格secondary（優劣ラベルなし）。昇格αは陣別alpha-spending（Codex㊲㊳凍結）で第3陣予算0.05/2^3÷系統数1=α=0.00625。promising=前向き検証資格であり統計的確定ではない（85試行の累積Bonferroni下では有意性は消える）。台帳・カタログへの書き込みなし・本実行(ledger書込み)は明朝launchdに委譲"
+    },
+    {
+      "date": "2026-07-14",
+      "change": "追加登録（第36周観察枠第4陣・§7-Y事前登録）: guidance_fy_strong（§7-X T1）/ cfo_margin_improve（§7-X T2）の2系統(全observation)。第35周でT1=promising（88試行中2例目・§0枠S/枠F両運用開始ライン充足: lift CI下限2.04>1.2 ∩ EV(なし)CI下限+0.33%>0 ∩ EV(stop8)+2.68%≥+1% ∩ 月約9.4件）、T2=枠S運用開始ラインをフル精度で充足（lift CI下限1.2141>1.2の境界近傍 ∩ EV(stop8)+1.42%≥+1% ∩ 月約10.3件・機械適用ゆえ採用=入場判定であり効果確定ではない・Codex㊿確認）と判明したため観察第4陣として配線。T3 cfo_turnaround はlift CI下限1.17<1.2でNG・陣入りせず（陣入り2系統）。scripts/daily_screen.pyのgenerate_kpi_signalsに2系統のCanonical import分岐を新設（kpi_round35_signals.generate_guidance_fy_strong_signals / generate_cfo_pairs+filter_cfo_margin_improve・ロジック再実装なし・生成器スクリプトは無変更）。PEAD/SUE/margin_expand/sales_beatと同型のfins系走査終端ガード（scan_start=反応日オフセット前倒し・scan_end=pead_effective_end）とプロセス内キャッシュ（_generate_guidance_fy_strong_signals_cached / _generate_cfo_pairs_cached[hist_start_bd=FINS_HISTORY_START_BD・閾値非依存CFOペア母集団・同一入力に同一DataFrameを返すのみで統計不変]）を適用。primary exit=nostop・stop8/e1_ma200breakは同格secondary（優劣ラベルなし）。昇格αは陣別alpha-spending（Codex㊲㊳凍結）で第4陣予算0.05/2^4=0.003125÷系統数2=α=0.0015625/系統。promising/入場判定=前向き検証資格であり統計的確定ではない（88試行の累積Bonferroni下では有意性は消える）。台帳・カタログへの書き込みなし・本実行(ledger書込み)は明朝launchdに委譲"
+    },
+    {
+      "date": "2026-07-15",
+      "change": "追加登録（第39周観察枠第5陣・§7-AB事前登録・Codex57機械適用GO）: earnings_spillover（§7-AA T2・observation・1系統）。第38周で枠F運用開始ライン充足（月平均33.4件≥5 ∩ EV(なし)CI下限+0.159%>0 ∩ lift1.312>1.0。枠SはliftCI下限1.002<1.2でNG）と判明したため観察第5陣として配線。同周T1 split_executionはEV(なし)−3.50%でNG・陣入りせず（回避知見として終結）＝陣入り1系統。scripts/daily_screen.pyのgenerate_kpi_signalsにearnings_spillover分岐を新設（kpi_round38_signals.generate_earnings_spillover_signalsをCanonical import・ロジック再実装なし・生成器スクリプトは無変更）。生成器はleader=sales_beatの同業種他銘柄イベント化で、Codex56境界ガード（開示走査1営業日前倒し+signal_date∈[start_bd,end_bd]明示限定）を内蔵し内部で自前のleader走査warm-upを完結させるため、PEAD/SUE/sales_beat分岐のscan_start前倒し・pead_effective_end終端ガードは呼び出し側で不要（候補発火が触れるbarsは反応日D=signal_date≤end_bdとD-1のみでend_bd超を参照しない）。SUE/sales_beat同型のプロセス内キャッシュ（_generate_earnings_spillover_signals_cached・(start_bd,end_bd)キー・同一入力に同一DataFrameを返すのみで統計不変）でleader走査+開示段階履歴の重複構築を1回に抑制。primary exit=nostop・stop8/e1_ma200breakは同格secondary（優劣ラベルなし）。昇格αは陣別alpha-spending（Codex㊲㊳凍結）で第5陣予算0.05/2^5=0.0015625÷系統数1=α=0.0015625。同日多数発火（当日sales_beat開示をleaderとして月33.4件見込み）への対応は既存の同日重複排除規則（候補×Dは1回）のみで機械記録し件数調整・裁量選別はしない。入場判定=前向き検証資格であり統計的確定ではない（92試行の累積Bonferroni下では有意性は消える）。台帳・カタログへの書き込みなし・本実行(ledger書込み)は明朝launchdに委譲"
     }
   ]
 }

@@ -50,14 +50,28 @@ import subprocess
 import sys
 import uuid
 from pathlib import Path
+from collections import defaultdict
 from typing import Optional
 
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).parent))
 import jq_fetch  # noqa: E402  (Canonical Module: DATA_ROOT / read_json_gz / now_jst / get_api_key / fetch_topix を再利用)
+import kpi_event_batch_signals  # noqa: E402  (Canonical Module: generate_sue_beat_signals を再利用・§7-J)
 import kpi_pead_signals  # noqa: E402  (Canonical Module: generate_pead_signals を再利用)
+import kpi_round23_signals  # noqa: E402  (Canonical Module: sell_reg/turnover_rank 生成関数を再利用・§7-L/§7-Q)
+import kpi_round25_signals  # noqa: E402  (Canonical Module: raw_strev decile/cross 生成を再利用・§7-N/§7-Q)
+import kpi_round26_signals  # noqa: E402  (Canonical Module: margin_expand_yoy 生成を再利用・§7-O/§7-Q)
+import kpi_round29_signals  # noqa: E402  (Canonical Module: gap_hold_close_strong 生成を再利用・§7-R/§7-T)
+import kpi_round30_signals  # noqa: E402  (Canonical Module: three_up_ignition/engulf_reversal_day 生成を再利用・§7-S/§7-T)
+import kpi_round33_signals  # noqa: E402  (Canonical Module: sales_beat 生成を再利用・§7-V/§7-W)
+import kpi_round35_signals  # noqa: E402  (Canonical Module: guidance_fy_strong/cfo_margin_improve 生成を再利用・§7-X/§7-Y)
+import kpi_round38_signals  # noqa: E402  (Canonical Module: earnings_spillover 生成を再利用・§7-AA/§7-AB)
+import kpi_run_evidence  # noqa: E402  (Canonical Module: append_run_log/KPI依存関係表を再利用・§6付記II A節証跡基盤)
+import kpi_sh_dip_reentry_signals  # noqa: E402  (Canonical Module: S高初押し再上昇の検出を再利用・§2-E/§7-Q)
 import kpi_shortcover_signals  # noqa: E402  (Canonical Module: generate_shortcover_signals を再利用)
+import kpi_sue_champion_signals  # noqa: E402  (Canonical Module: compute_dev200 を再利用・§7-H/§7-J)
+import kpi_uprev_signals  # noqa: E402  (Canonical Module: FINS_HISTORY_START_BD を再利用・§7-O margin as-of 履歴起点)
 import kpi_volshock_signals  # noqa: E402  (Canonical Module: generate_volshock_signals を再利用)
 import kpi_volshock_v2_amplifiers  # noqa: E402  (Canonical Module: compute_quiet_ratio を再利用・第13周A)
 import measure_base_rate  # noqa: E402  (Canonical Module: カレンダー・regime・universe構築を再利用)
@@ -128,7 +142,263 @@ UNIVERSE_TOP_N = 500  # カタログ§0「月次売買代金TOP500」
 
 PEAD_LOOKBACK_BDAYS = 2  # 反応日Gが対象日に来る開示は前営業日にも起こりうるための走査開始オフセット
 
+# §7-Q（Codex㉖MINOR・運用ガード）: 未評価ポジション(pending_entry/open)が積み上がると前向き
+# 検証の解釈が難しくなるため、閾値超で paper_today.md に⚠️1行を出す（表示専用・判定には無関与）。
+# 第31周（§7-T改定）: 観察枠第2陣3系統の配線で見込み合計約195件/月へ増えるため 200→300 に改定
+# （200は第1陣時点の値）。
+UNEVALUATED_POSITION_WARN_THRESHOLD = 300
+
 VOLSHOCK_FAMILY_KPI_NAMES = ("volshock_5x", "volshock_x_above200", "volshock_x_above200_quiet")
+
+# §7-J（2026-07-11事前登録）: SUE系2KPI。kpi_pead_signals.reaction_dayを共有するため
+# 走査開始/終端のオフセットはPEAD分岐と同一（PEAD_LOOKBACK_BDAYS・pead_effective_end）を再利用する。
+SUE_FAMILY_KPI_NAMES = ("sue_beat", "sue_x_above200")
+
+# Codexレビュー指摘(2026-07-11 MAJOR)対応: kpi_event_batch_signals.generate_sue_beat_signals()は
+# 狭い日次範囲で呼んでも予想履歴構築のため2016年〜end_bdのfinsを毎回全走査する重い関数のため、
+# 通常走査(sue_beat/sue_x_above200)とバックフィル(recent_signals_cache)で同一(scan_start,scan_end,
+# threshold)の呼び出しが1日次実行あたり最大4回重複しうる。プロセス内メモ化で同一キーの呼び出しを
+# 1回に抑える（kpi_event_batch_signals.py自体は変更しない・呼び出し側での純粋な性能最適化。
+# 同一入力に対しては常に同一DataFrame参照を返すのみで統計結果は不変）。
+_SUE_BEAT_SIGNALS_CACHE: dict[tuple[str, str, float], tuple[pd.DataFrame, dict]] = {}
+
+
+def _generate_sue_beat_signals_cached(scan_start: str, scan_end: str, threshold: float) -> tuple[pd.DataFrame, dict]:
+    """kpi_event_batch_signals.generate_sue_beat_signals()の結果を(scan_start,scan_end,threshold)
+    キーでプロセス内メモ化して返す（同一プロセス内・キー一致時は再走査しない）。
+    """
+    key = (scan_start, scan_end, threshold)
+    if key not in _SUE_BEAT_SIGNALS_CACHE:
+        _SUE_BEAT_SIGNALS_CACHE[key] = kpi_event_batch_signals.generate_sue_beat_signals(
+            scan_start, scan_end, threshold=threshold,
+        )
+    return _SUE_BEAT_SIGNALS_CACHE[key]
+
+# §7-Q（2026-07-13事前登録・第28周並列観察）: 台帳から機械抽出した固定ファミリーS=5系統を配線する。
+# いずれも生成器スクリプト（kpi_round23/25/26・kpi_sh_dip_reentry）の公開関数をそのまま import
+# 再利用し判定ロジックは再実装しない（Canonical Module原則）。EV負系統(sh_dip/turnover_rank_surge)も
+# lift順位規則のみで選定＝純観察。冪等追記(append_new_signals)・ユニバース判定・T+1寄付フローは
+# 既存3系統と同一経路を通す。
+SELL_REG_KPI_NAME = "sell_reg_trigger_rebound"      # §7-L T2（defer_entry=False）
+TURNOVER_RANK_KPI_NAME = "turnover_rank_surge"      # §7-L T1（defer_entry=True）
+SH_DIP_KPI_NAME = "sh_dip_reentry"                  # §2-E/第15周（defer_entry=True）
+MARGIN_EXPAND_KPI_NAME = "margin_expand_yoy"        # §7-O（fins as-of・defer_entry=True）
+RAW_STREV_KPI_NAME = "raw_strev_entry"              # §7-N T4（月末発火・defer_entry=True）
+
+# §7-T（2026-07-13事前登録・第31周観察枠第2陣）: §7-Q機械選定規則を第29〜30周6本に再適用して
+# 採用した3系統を配線する。いずれも bars四本値のみの単日/複数日判定で fins走査終端ガード不要・
+# 生成器内部でwarmupを完結（§7-L系のsell_reg/turnoverと同型）。EV負系統(gap_hold/three_up)も
+# lift順位規則のみで選定＝純観察。既存3系統と同一の append_new_signals/ユニバース/T+1寄付経路を通す。
+GAP_HOLD_KPI_NAME = "gap_hold_close_strong"         # §7-R T3（kpi_round29・defer_entry=True）
+ENGULF_KPI_NAME = "engulf_reversal_day"             # §7-S T3（kpi_round30・defer_entry=True）
+THREE_UP_KPI_NAME = "three_up_ignition"             # §7-S T1（kpi_round30・defer_entry=True）
+
+# §7-W（2026-07-14事前登録・第34周観察枠第3陣）: 第33周でpromising判定（枠S運用開始ライン充足）と
+# なった sales_beat（§7-V T3）を1系統だけ配線する。fins as-of（Sales対直前予想ビート）で反応日Gは
+# kpi_pead_signals.reaction_day を共有するため走査ガードは PEAD/SUE/margin_expand と同型。EV正系統。
+SALES_BEAT_KPI_NAME = "sales_beat"                  # §7-V T3（kpi_round33・fins as-of・defer_entry=True）
+
+# §7-Y（2026-07-14事前登録・第36周観察枠第4陣）: 第35周でpromising/枠S充足となった2系統を配線する。
+# T1 guidance_fy_strong（§7-X T1・FY開示の来期売上ガイダンス+10%超・レコード自身のフィールドのみ）と
+# T2 cfo_margin_improve（§7-X T2・営業CFマージンの前年同期比+3pt改善×増収・§7-O様式のas-of yoy照合）。
+# どちらも反応日Gは kpi_pead_signals.reaction_day を共有するため走査ガードはPEAD/SUE/margin_expand同型。
+GUIDANCE_FY_STRONG_KPI_NAME = "guidance_fy_strong"  # §7-X T1（kpi_round35・record-self・defer_entry=True）
+CFO_MARGIN_IMPROVE_KPI_NAME = "cfo_margin_improve"  # §7-X T2（kpi_round35・fins as-of yoy・defer_entry=True）
+
+# §7-AB（2026-07-14事前登録・第39周観察枠第5陣）: 第38周T2で枠F運用開始ライン充足となった1系統を配線する。
+# earnings_spillover（§7-AA T2・同業種先行決算の読み替え買い）。leader=sales_beat の他銘柄イベント化で、
+# 生成器 kpi_round38_signals.generate_earnings_spillover_signals は反応日境界ガード（Codex56修正・開示走査
+# 1営業日前倒し + start_bd≤signal_date≤end_bd 明示限定）を内蔵し、内部で自前のleader走査warm-upと
+# signal_date限定を完結させる。よって走査ガードのpead_effective_end前倒しは呼び出し側で不要
+# （候補発火が触れるbarsは反応日D=signal_date≤end_bdとD-1のみでend_bd超は参照しない・生成器docstring参照）。
+EARNINGS_SPILLOVER_KPI_NAME = "earnings_spillover"  # §7-AA T2（kpi_round38・sales_beat他銘柄イベント化・defer_entry=True）
+
+# margin_expand_yoy の fins as-of 履歴は毎回 FINS_HISTORY_START_BD(2016)〜end_bd を全走査する重い
+# 構築のため、(scan_start, scan_end) キーでプロセス内メモ化する（SUE系と同型の性能最適化。
+# kpi_round26_signals.py 自体は変更せず、同一入力に同一DataFrameを返すのみで統計結果は不変）。
+_MARGIN_EXPAND_SIGNALS_CACHE: dict[tuple[str, str], pd.DataFrame] = {}
+
+
+def _generate_margin_expand_signals_cached(scan_start: str, scan_end: str) -> pd.DataFrame:
+    """kpi_round26_signals.generate_margin_expand_signals() の signals_df を
+    (scan_start, scan_end) キーでプロセス内メモ化して返す（fins履歴の再構築を1回に抑える）。
+    """
+    key = (scan_start, scan_end)
+    if key not in _MARGIN_EXPAND_SIGNALS_CACHE:
+        df, _diag, _store, _discdate_index = kpi_round26_signals.generate_margin_expand_signals(
+            scan_start, scan_end, kpi_uprev_signals.FINS_HISTORY_START_BD,
+        )
+        _MARGIN_EXPAND_SIGNALS_CACHE[key] = df
+    return _MARGIN_EXPAND_SIGNALS_CACHE[key]
+
+
+# sales_beat（§7-V T3）も kpi_uprev_signals.build_fop_history でfins予想履歴を毎回全走査する重い
+# 構築のため、(scan_start, scan_end, threshold) キーでプロセス内メモ化する（SUE/margin_expandと
+# 同型の性能最適化。kpi_round33_signals.py 自体は変更せず、同一入力に同一DataFrameを返すのみで
+# 統計結果は不変）。generate_sales_beat_signals は (signals_df, diag, discdate_index) の3要素を返すが
+# 日次スクリーンで使うのは signals_df のみ。
+_SALES_BEAT_SIGNALS_CACHE: dict[tuple[str, str, float], pd.DataFrame] = {}
+
+
+def _generate_sales_beat_signals_cached(scan_start: str, scan_end: str, threshold: float) -> pd.DataFrame:
+    """kpi_round33_signals.generate_sales_beat_signals() の signals_df を
+    (scan_start, scan_end, threshold) キーでプロセス内メモ化して返す（fins履歴の再構築を1回に抑える）。
+    """
+    key = (scan_start, scan_end, threshold)
+    if key not in _SALES_BEAT_SIGNALS_CACHE:
+        df, _diag, _discdate_index = kpi_round33_signals.generate_sales_beat_signals(
+            scan_start, scan_end, threshold=threshold,
+        )
+        _SALES_BEAT_SIGNALS_CACHE[key] = df
+    return _SALES_BEAT_SIGNALS_CACHE[key]
+
+
+# guidance_fy_strong（§7-X T1）はfins走査（load_fins_day）を event_days 全域で回すため、
+# (scan_start, scan_end) キーでプロセス内メモ化する（sales_beat/margin_expandと同型の性能最適化。
+# kpi_round35_signals.py 自体は変更せず、同一入力に同一DataFrameを返すのみで統計結果は不変）。
+# generate_guidance_fy_strong_signals は (signals_df, diag) を返すが日次で使うのは signals_df のみ。
+_GUIDANCE_FY_STRONG_SIGNALS_CACHE: dict[tuple[str, str], pd.DataFrame] = {}
+
+
+def _generate_guidance_fy_strong_signals_cached(
+    scan_start: str, scan_end: str, all_bdays: list[str], bday_index: dict[str, int],
+) -> pd.DataFrame:
+    """kpi_round35_signals.generate_guidance_fy_strong_signals() の signals_df を
+    (scan_start, scan_end) キーでプロセス内メモ化して返す（fins走査の重複を1回に抑える）。
+    """
+    key = (scan_start, scan_end)
+    if key not in _GUIDANCE_FY_STRONG_SIGNALS_CACHE:
+        df, _diag = kpi_round35_signals.generate_guidance_fy_strong_signals(
+            scan_start, scan_end, all_bdays, bday_index,
+        )
+        _GUIDANCE_FY_STRONG_SIGNALS_CACHE[key] = df
+    return _GUIDANCE_FY_STRONG_SIGNALS_CACHE[key]
+
+
+# cfo_margin_improve（§7-X T2）は前年同期as-of照合のため build_cfo_history を FINS_HISTORY_START_BD
+# まで全走査する重い構築（margin_expand/sales_beatと同型）。閾値非依存のCFOペア母集団を
+# (scan_start, scan_end) キーでプロセス内メモ化し、filter_cfo_margin_improve を都度適用する
+# （kpi_round35_signals.py 自体は変更せず、同一入力に同一DataFrameを返すのみで統計結果は不変）。
+_CFO_PAIRS_CACHE: dict[tuple[str, str], pd.DataFrame] = {}
+
+
+def _generate_cfo_pairs_cached(
+    scan_start: str, scan_end: str, all_bdays: list[str], bday_index: dict[str, int],
+) -> pd.DataFrame:
+    """kpi_round35_signals.generate_cfo_pairs() の pairs_df を (scan_start, scan_end) キーで
+    プロセス内メモ化して返す（前年同期履歴の再構築を1回に抑える）。hist_start_bd は main() と
+    同一規約（FINS_HISTORY_START_BD が scan_start 以前ならそれを、そうでなければ scan_start）。
+    """
+    key = (scan_start, scan_end)
+    if key not in _CFO_PAIRS_CACHE:
+        hist_start_bd = (
+            kpi_uprev_signals.FINS_HISTORY_START_BD
+            if kpi_uprev_signals.FINS_HISTORY_START_BD <= scan_start
+            else scan_start
+        )
+        df, _diag, _store, _discdate_index = kpi_round35_signals.generate_cfo_pairs(
+            scan_start, scan_end, hist_start_bd, all_bdays, bday_index,
+        )
+        _CFO_PAIRS_CACHE[key] = df
+    return _CFO_PAIRS_CACHE[key]
+
+
+# earnings_spillover（§7-AA T2）はleader（sales_beat）走査 + 候補の開示段階履歴（FINS_HISTORY_START_BD〜
+# end_bd 全走査）の二重の重い構築を伴うため、(start_bd, end_bd) キーでプロセス内メモ化する
+# （sales_beat/guidance/cfoと同型の性能最適化。kpi_round38_signals.py 自体は変更せず、同一入力に同一
+# DataFrameを返すのみで統計結果は不変）。generate_earnings_spillover_signals は (signals_df, diag,
+# leader_df) を返すが日次で使うのは signals_df のみ（signal_dateは生成器内で[start_bd,end_bd]限定済み）。
+_EARNINGS_SPILLOVER_SIGNALS_CACHE: dict[tuple[str, str], pd.DataFrame] = {}
+
+
+def _generate_earnings_spillover_signals_cached(
+    start_bd: str, end_bd: str, all_bdays: list[str], bday_index: dict[str, int],
+) -> pd.DataFrame:
+    """kpi_round38_signals.generate_earnings_spillover_signals() の signals_df を
+    (start_bd, end_bd) キーでプロセス内メモ化して返す（leader走査+開示段階履歴の重複構築を1回に抑える）。
+    生成器はCodex56境界ガードを内蔵し signal_date∈[start_bd,end_bd] に限定済みで返す。
+    """
+    key = (start_bd, end_bd)
+    if key not in _EARNINGS_SPILLOVER_SIGNALS_CACHE:
+        df, _diag, _leader_df = kpi_round38_signals.generate_earnings_spillover_signals(
+            start_bd, end_bd, all_bdays, bday_index,
+        )
+        _EARNINGS_SPILLOVER_SIGNALS_CACHE[key] = df
+    return _EARNINGS_SPILLOVER_SIGNALS_CACHE[key]
+
+
+def _signal_cols(df: pd.DataFrame) -> pd.DataFrame:
+    """生成器の返す DataFrame から [signal_date, code] 列だけを取り出す（空DataFrameは列が無いので握る）。
+
+    生成器は該当0件時に列を持たない空 DataFrame（pd.DataFrame([]) 相当）を返しうるため、
+    KeyError を避けて空のまま返す（既存 pead/sue 分岐と同じ縮退規約）。
+    """
+    return df[["signal_date", "code"]] if "signal_date" in df.columns else df
+
+
+def generate_raw_strev_signals(
+    start_bd: str, end_bd: str, bday_index: dict[str, int], all_bdays: list[str],
+) -> pd.DataFrame:
+    """raw_strev_entry（§7-N T4）を月末発火で生成する。
+
+    §7-Q凍結: 「前営業日(=end_bd)が取引所カレンダー上の月末営業日」の朝のみ生成器を呼ぶ。
+    当月順位=前月末確定TOP500・前月クロス状態=前月自身の順位から再構築（§7-N規約）。
+    月次OLS残差スコアの上位decile新規入り判定は kpi_round25_signals.compute_position_deciles /
+    generate_cross_signals をそのまま import 再利用する（ロジック再実装なし）。順位母集団のユニバースは
+    daily_screen が本番で使うのと同一の measure_base_rate.build_universe（Canonical）で as-of 構築し、
+    §7-N の precomputed base_rate（≤2026-05で停止）へは依存しない＝live月でも stale で無音化しない。
+    """
+    end_idx = bday_index[end_bd]
+    # end_bd がその暦月の最終営業日でなければ発火しない（翌営業日が同月ならまだ月末ではない）。
+    if end_idx + 1 < len(all_bdays) and all_bdays[end_idx + 1][:6] == end_bd[:6]:
+        return pd.DataFrame(columns=["signal_date", "code"])
+
+    # パネル起点(PANEL_START_MONTH)〜当月末までの各暦月最終営業日を all_bdays から導出する
+    # （= jq_fetch.month_end_business_days_in_range と同一の「暦月ごとの最終営業日」・追加I/O不要）。
+    panel_start_key = kpi_round25_signals.PANEL_START_MONTH.replace("-", "")
+    month_ends: list[str] = []
+    for i, d in enumerate(all_bdays):
+        if d[:6] < panel_start_key:
+            continue
+        if d > end_bd:
+            break
+        if i + 1 >= len(all_bdays) or all_bdays[i + 1][:6] != d[:6]:
+            month_ends.append(d)
+    if not month_ends or month_ends[-1] != end_bd:
+        return pd.DataFrame(columns=["signal_date", "code"])  # 月末整合の保険（通常起こらない）
+
+    months, month_ends, ret_matrix, codes, topix_ret = kpi_round25_signals.build_monthly_return_panel(month_ends)
+    p_end = len(months) - 1
+
+    # compute_position_deciles(p) は _latest_universe_month(months[p]) で「厳密に前の直近確定月」の
+    # ユニバースを引く。当月(p_end)判定は前月(M-1)ユニバース・前月(p_end-1)判定は前々月(M-2)
+    # ユニバースを要するため、この2ヶ月分を build_universe で as-of 構築して注入する
+    # （universes_by_month[X] は X の月末営業日 month_ends で構築＝§7-N/_universe_membership と同一規約）。
+    universes_by_month: dict[str, set] = {}
+    for p in (p_end - 1, p_end - 2):
+        if p < 0:
+            continue
+        try:
+            selected, _stats = measure_base_rate.build_universe(
+                month_ends[p], bday_index, all_bdays, UNIVERSE_WINDOW, UNIVERSE_TOP_N,
+            )
+        except SystemExit:
+            continue  # 履歴不足でユニバース構築不能な月はスキップ（該当月の判定は eligible空へ縮退）
+        universes_by_month[months[p]] = {code for code, _tv in selected}
+    universe_months_sorted = sorted(universes_by_month)
+
+    decile_cache: dict[int, Optional[dict]] = {}
+    for p in (p_end - 1, p_end):
+        if p < 0:
+            continue
+        decile_cache[p] = kpi_round25_signals.compute_position_deciles(
+            p, months, ret_matrix, topix_ret, codes, universes_by_month, universe_months_sorted,
+        )
+
+    df, _diag = kpi_round25_signals.generate_cross_signals(
+        "t4", p_end, p_end, months, month_ends, decile_cache,
+    )
+    return _signal_cols(df)
 
 # 次点候補（team-lead 2026-07-07指示・「新規シグナルなしの日が続き市場で何が起きているか見えない」
 # への対応）: 判定基準（config/paper_watchlist.jsonのparams）そのものは一切変更せず、
@@ -145,7 +415,8 @@ MAX_NEXT_CANDIDATES_ROWS = 10  # 次点候補セクション全体（カテゴ�
 # 参照する（avg_monthly_signals等の数値は本ファイルに複製しない）。ギャップ分布(中央値/最大)のみ、
 # in-sample期間の生データから独立に導出した記述統計であり config には存在しないため以下に定数化する。
 CHAMPION_KPI_NAME = "volshock_x_above200_quiet"  # チャンピオン構成（tasks/stock_algo_kpi_loop.md 第13周確定）
-RECENT_SIGNALS_KPI_NAMES = (CHAMPION_KPI_NAME, "volshock_x_above200")  # 60bdバックフィル対象（team-lead指定の2KPI）
+# 60bdバックフィル対象。§7-J（2026-07-11事前登録）でSUE系2KPI（枠F候補）を追加し4KPI体制に拡張。
+RECENT_SIGNALS_KPI_NAMES = (CHAMPION_KPI_NAME, "volshock_x_above200", "sue_beat", "sue_x_above200")
 RECENT_SIGNALS_LOOKBACK_BDAYS = 60
 RECENT_SIGNALS_CACHE_PATH = PROJECT_ROOT / "data" / "paper_trades" / "recent_signals_cache.json"
 BDAYS_PER_MONTH_APPROX = 21  # 営業日/月の換算規約（measure_base_rate.UNIVERSE_WINDOWと同一の慣行値）
@@ -325,9 +596,14 @@ def clear_empty_cache_files(kind: str, dates: list[str]) -> int:
 
 
 def refresh_recent_data(start_bd: str, end_bd: str, all_bdays: list[str]) -> None:
-    """[start_bd, end_bd] 区間の bars/fins/shortsale を jq_fetch.py 経由で最新化する（冪等）。"""
+    """[start_bd, end_bd] 区間の bars/fins/shortsale/margin を jq_fetch.py 経由で最新化する（冪等）。
+
+    margin は 2026-07-13 追加（運用監視が178日停滞を検知・取得ジョブが存在しなかったため日次
+    リフレッシュに編入。週次公表データのため大半の日は no-op・公表前の空キャッシュ固着は
+    clear_empty_cache_files の既定適用で自己回復する）。
+    """
     target_days = [d for d in all_bdays if start_bd <= d <= end_bd]
-    for kind in ("bars", "fins", "shortsale"):
+    for kind in ("bars", "fins", "shortsale", "margin"):
         removed = clear_empty_cache_files(kind, target_days)
         if removed:
             print(f"[refresh] {kind}: 空キャッシュ{removed}件を削除し再取得対象にしました", file=sys.stderr)
@@ -604,7 +880,13 @@ def generate_kpi_signals(
             filter_ma200=params.get("filter_ma200"),
         )
         if df.empty:
-            return df[["signal_date", "code"]]
+            # 生成器が0件時に「列なし空DataFrame」を返す日があり、無条件の列アクセスは KeyError で
+            # 朝ジョブ全体を落とす（§7-T 60営業日リプレイが 20260603 で実証・2026-07-13修正）。
+            return (
+                df[["signal_date", "code"]]
+                if {"signal_date", "code"}.issubset(df.columns)
+                else pd.DataFrame(columns=["signal_date", "code"])
+            )
         quiet_min = params.get("quiet_min")
         if quiet_min is not None:
             # 第13周A v2-2: quiet_ratio（kpi_volshock_v2_amplifiers.compute_quiet_ratio）
@@ -646,6 +928,168 @@ def generate_kpi_signals(
         )
         if df.empty:
             return df[["signal_date", "code"]] if "signal_date" in df.columns else df
+        filtered = df[(df["signal_date"] >= start_bd) & (df["signal_date"] <= end_bd)]
+        return filtered[["signal_date", "code"]].reset_index(drop=True)
+
+    if kpi_name in SUE_FAMILY_KPI_NAMES:
+        # §7-J: SUEもkpi_pead_signals.reaction_dayを共有するため、走査開始/終端のガードは
+        # PEAD分岐と同一ロジックを踏襲する（scan_start: 反応日オフセット分の前倒し・
+        # scan_end: pead_effective_end()の「反応日T+1のbarsが存在する範囲」ガード）。
+        idx_start = bday_index[start_bd]
+        scan_start_idx = max(0, idx_start - PEAD_LOOKBACK_BDAYS)
+        scan_start = all_bdays[scan_start_idx]
+        scan_end = pead_effective_end(end_bd, bday_index, all_bdays)
+        df, _diag = _generate_sue_beat_signals_cached(scan_start, scan_end, params["threshold"])
+        if df.empty:
+            return df[["signal_date", "code"]] if "signal_date" in df.columns else df
+        filtered = df[(df["signal_date"] >= start_bd) & (df["signal_date"] <= end_bd)]
+        if params.get("filter_dev200") == "above":
+            # sue_x_above200限定のポストフィルタ（§7-H/§7-J: kpi_sue_champion_signals.compute_dev200
+            # Canonical再利用）。kpi_nameをハードコード分岐せず、paramsにfilter_dev200="above"が
+            # あるSUE系エントリ全てに適用する汎用実装（volshock系quiet_minと同型）。
+            filtered = filtered[filtered.apply(
+                lambda row: (
+                    (dev200 := kpi_sue_champion_signals.compute_dev200(
+                        row["code"], row["signal_date"], bday_index, all_bdays,
+                    )) is not None and dev200 > 0
+                ),
+                axis=1,
+            )]
+        return filtered[["signal_date", "code"]].reset_index(drop=True)
+
+    if kpi_name == SELL_REG_KPI_NAME:
+        # §7-L T2: bars の AdjL(D) <= AdjC(D-1)×0.90 の単日判定（fins不使用・走査終端ガード不要）。
+        df, _diag = kpi_round23_signals.generate_sell_reg_trigger_signals(
+            start_bd, end_bd, all_bdays, bday_index,
+        )
+        return _signal_cols(df)
+
+    if kpi_name == TURNOVER_RANK_KPI_NAME:
+        # §7-L T1: 売買代金ランク急上昇（rank(D-20)>=301 かつ rank(D)<=100 かつ当日陽線）。
+        df, _diag = kpi_round23_signals.generate_turnover_rank_surge_signals(
+            start_bd, end_bd, all_bdays, bday_index,
+        )
+        return _signal_cols(df)
+
+    if kpi_name == SH_DIP_KPI_NAME:
+        # §2-E/第15周: S高イベントを検出し3〜10営業日後の初押し再上昇を1件採用する2段構成。
+        # [start_bd, end_bd] に着地する押し目を拾うには、その最大DIP_MAX_BDAYS前に発生したS高まで
+        # 遡ってイベント検出する必要があるため、S高検出の開始をDIP_MAX_BDAYS営業日前倒しする
+        # （find_dip_reentry_signals 側が出力signal_dateを[start_bd, end_bd]へ絞り込む）。
+        idx_start = bday_index[start_bd]
+        ev_scan_start = all_bdays[max(0, idx_start - kpi_sh_dip_reentry_signals.DIP_MAX_BDAYS)]
+        events, _sdiag = kpi_sh_dip_reentry_signals.detect_stophigh_events(
+            ev_scan_start, end_bd, all_bdays, bday_index,
+        )
+        # find_dip_reentry_signals はS高の3〜10営業日後を無条件に load_bars_day する。データ最前線
+        # 付近（end_bd 直近のS高）では s+offset が未取得の未来営業日を指し FATAL 停止するため、
+        # all_bdays を end_bd までに切り詰めて渡す（同関数内の `d_idx >= len(all_bdays)` ガードが
+        # end_bd 超で break し未来barsを読まない。end_bd 以前の index は不変なので full な bday_index
+        # と整合。end_bd に着地する押し目は昇順offsetで手前の営業日から順に走査され取りこぼさない）。
+        end_idx = bday_index[end_bd]
+        df, _rdiag = kpi_sh_dip_reentry_signals.find_dip_reentry_signals(
+            events, all_bdays[: end_idx + 1], bday_index, start_bd, end_bd,
+        )
+        return _signal_cols(df)
+
+    if kpi_name == MARGIN_EXPAND_KPI_NAME:
+        # §7-O: 単Q YoYマージン拡大（fins as-of構築）。反応日Gは kpi_pead_signals.reaction_day を
+        # 共有するため、走査開始/終端のガードはPEAD/SUE分岐と同一（scan_start=反応日オフセット分の
+        # 前倒し・scan_end=pead_effective_end の「反応日T+1のbarsが存在する範囲」ガード）を適用する。
+        idx_start = bday_index[start_bd]
+        scan_start_idx = max(0, idx_start - PEAD_LOOKBACK_BDAYS)
+        scan_start = all_bdays[scan_start_idx]
+        scan_end = pead_effective_end(end_bd, bday_index, all_bdays)
+        df = _generate_margin_expand_signals_cached(scan_start, scan_end)
+        if "signal_date" not in df.columns:
+            return df
+        filtered = df[(df["signal_date"] >= start_bd) & (df["signal_date"] <= end_bd)]
+        return filtered[["signal_date", "code"]].reset_index(drop=True)
+
+    if kpi_name == RAW_STREV_KPI_NAME:
+        # §7-N T4: 月末発火（end_bd が月末営業日の朝のみ生成）。生成器の月次OLS/decile/cross判定を
+        # そのまま再利用する（generate_raw_strev_signals 内で build_universe as-of 構築）。
+        return generate_raw_strev_signals(start_bd, end_bd, bday_index, all_bdays)
+
+    if kpi_name == GAP_HOLD_KPI_NAME:
+        # §7-R T3: ギャップ持続・引け強（gap≥+3% ∩ 引け≥寄付 ∩ close位置≥0.8 ∩ 窓埋めなし ∩
+        # Va≥20日平均×2）の単日判定。生成器がwarmup/品質ガードを内部で完結（fins終端ガード不要）。
+        df, _diag = kpi_round29_signals.generate_gap_hold_close_strong_signals(
+            start_bd, end_bd, all_bdays, bday_index,
+        )
+        return _signal_cols(df)
+
+    if kpi_name == ENGULF_KPI_NAME:
+        # §7-S T3: 寄安引高の切り返し日（AdjO<前日AdjC×0.99 ∩ AdjC>前日AdjC ∩ AdjC>AdjO ∩
+        # close位置≥0.7 ∩ Va≥20日平均×1.5）の単日判定。生成器がwarmup/品質ガードを内部で完結。
+        df, _diag = kpi_round30_signals.generate_engulf_reversal_signals(
+            start_bd, end_bd, all_bdays, bday_index,
+        )
+        return _signal_cols(df)
+
+    if kpi_name == THREE_UP_KPI_NAME:
+        # §7-S T1: 三連陽線・高値切り上げ点火（複数日連続構造・初回性ガードは生成器内で完結）。
+        df, _diag = kpi_round30_signals.generate_three_up_ignition_signals(
+            start_bd, end_bd, all_bdays, bday_index,
+        )
+        return _signal_cols(df)
+
+    if kpi_name == SALES_BEAT_KPI_NAME:
+        # §7-V T3: 売上ビート（Sales対直前会社予想+5%・fins as-of構築）。反応日Gは
+        # kpi_pead_signals.reaction_day を共有するため、走査開始/終端のガードはPEAD/SUE/margin_expand
+        # 分岐と同一（scan_start=反応日オフセット分の前倒し・scan_end=pead_effective_end の
+        # 「反応日T+1のbarsが存在する範囲」ガード）を適用する。
+        idx_start = bday_index[start_bd]
+        scan_start_idx = max(0, idx_start - PEAD_LOOKBACK_BDAYS)
+        scan_start = all_bdays[scan_start_idx]
+        scan_end = pead_effective_end(end_bd, bday_index, all_bdays)
+        df = _generate_sales_beat_signals_cached(scan_start, scan_end, params["threshold"])
+        if "signal_date" not in df.columns:
+            return df
+        filtered = df[(df["signal_date"] >= start_bd) & (df["signal_date"] <= end_bd)]
+        return filtered[["signal_date", "code"]].reset_index(drop=True)
+
+    if kpi_name == GUIDANCE_FY_STRONG_KPI_NAME:
+        # §7-X T1: FY開示の来期売上ガイダンス強気（NxFSales/Sales−1≥+10%・レコード自身のフィールドのみ）。
+        # 反応日Gは kpi_pead_signals.reaction_day を共有するため、走査開始/終端のガードは
+        # PEAD/SUE/margin_expand/sales_beat分岐と同一（scan_start=反応日オフセット分の前倒し・
+        # scan_end=pead_effective_end の「反応日T+1のbarsが存在する範囲」ガード）を適用する。
+        idx_start = bday_index[start_bd]
+        scan_start_idx = max(0, idx_start - PEAD_LOOKBACK_BDAYS)
+        scan_start = all_bdays[scan_start_idx]
+        scan_end = pead_effective_end(end_bd, bday_index, all_bdays)
+        df = _generate_guidance_fy_strong_signals_cached(scan_start, scan_end, all_bdays, bday_index)
+        if "signal_date" not in df.columns:
+            return df
+        filtered = df[(df["signal_date"] >= start_bd) & (df["signal_date"] <= end_bd)]
+        return filtered[["signal_date", "code"]].reset_index(drop=True)
+
+    if kpi_name == CFO_MARGIN_IMPROVE_KPI_NAME:
+        # §7-X T2: 営業CFマージンの前年同期比+3pt改善×増収（§7-O様式のas-of yoy照合・fins as-of構築）。
+        # 反応日Gは kpi_pead_signals.reaction_day を共有するため走査ガードはPEAD/SUE/margin_expand同型。
+        # CFOペア母集団（閾値非依存）をプロセス内キャッシュから取得し filter_cfo_margin_improve を適用する。
+        idx_start = bday_index[start_bd]
+        scan_start_idx = max(0, idx_start - PEAD_LOOKBACK_BDAYS)
+        scan_start = all_bdays[scan_start_idx]
+        scan_end = pead_effective_end(end_bd, bday_index, all_bdays)
+        pairs_df = _generate_cfo_pairs_cached(scan_start, scan_end, all_bdays, bday_index)
+        df = kpi_round35_signals.filter_cfo_margin_improve(pairs_df)
+        if "signal_date" not in df.columns:
+            return df
+        filtered = df[(df["signal_date"] >= start_bd) & (df["signal_date"] <= end_bd)]
+        return filtered[["signal_date", "code"]].reset_index(drop=True)
+
+    if kpi_name == EARNINGS_SPILLOVER_KPI_NAME:
+        # §7-AA T2: 同業種先行決算の読み替え買い（leader=sales_beat の他銘柄イベント化）。
+        # 生成器 generate_earnings_spillover_signals は Codex56境界ガード（開示走査1営業日前倒し +
+        # signal_date∈[start_bd,end_bd] 明示限定）を内蔵し、内部で自前のleader走査warm-upを完結させる。
+        # よって呼び出し側では start_bd/end_bd をそのまま渡す（PEAD/SUE分岐のscan_start前倒し・
+        # pead_effective_end終端ガードは不要＝候補発火が触れるbarsは反応日D=signal_date≤end_bdとD-1のみ）。
+        # 閾値非依存の重い構築（leader走査+開示段階履歴）はプロセス内キャッシュで重複走査を1回に抑える。
+        df = _generate_earnings_spillover_signals_cached(start_bd, end_bd, all_bdays, bday_index)
+        if "signal_date" not in df.columns:
+            return df
+        # 生成器が既に signal_date∈[start_bd,end_bd] へ限定済みだが、他分岐と同型の防御的再限定を残す。
         filtered = df[(df["signal_date"] >= start_bd) & (df["signal_date"] <= end_bd)]
         return filtered[["signal_date", "code"]].reset_index(drop=True)
 
@@ -934,9 +1378,11 @@ def update_recent_signals_cache(
 
 def format_recent_signals_section(recent_signals: list[dict]) -> list[str]:
     lines = [
-        f"## 直近{RECENT_SIGNALS_LOOKBACK_BDAYS}営業日のシグナル履歴（バックフィル参考・ledger非記録）",
+        f"## 直近{RECENT_SIGNALS_LOOKBACK_BDAYS}営業日のシグナル履歴 — "
+        "歴史バックフィル（参考・前向き実績ではない・ledger非記録）",
         "",
-        f"対象KPI: {', '.join(RECENT_SIGNALS_KPI_NAMES)}（チャンピオン+比較対照。TOP500ユニバース内のみ）",
+        f"対象KPI: {', '.join(RECENT_SIGNALS_KPI_NAMES)}（チャンピオン+比較対照+SUE系。TOP500ユニバース内のみ）。"
+        "このセクションの件数・銘柄は表示専用であり、合否判定・累計成績には一切使用されません。",
         "",
     ]
     if not recent_signals:
@@ -946,6 +1392,42 @@ def format_recent_signals_section(recent_signals: list[dict]) -> list[str]:
     lines.append("|---|---|---|")
     for r in sorted(recent_signals, key=lambda r: (r["signal_date"], r["kpi_name"], r["code"])):
         lines.append(f"| {r['kpi_name']} | {r['code']} | {r['signal_date']} |")
+    lines.append("")
+    return lines
+
+
+def format_confluence_section(records: list[dict], signal_date: Optional[str]) -> list[str]:
+    """当日 signal_date の ledger 行を distinct KPI で集計し、2系統以上が同時発火した銘柄を
+    系統名付きで表示する（§7-Z運用改善・表示専用）。
+
+    対象は ledger（records）のみ。バックフィル（recent_signals_cache）と次点候補（near-miss）は
+    ledger 非経由のため自然に除外される。判定・ledger・累計成績には一切影響しない。
+    """
+    lines = [
+        "## 本日の合流銘柄 — 2系統以上が同一日に発火（参考・表示専用・ledger/判定に無影響）",
+        "",
+    ]
+    if not signal_date:
+        lines += ["（当日signal_dateが未確定のため集計なし）", ""]
+        return lines
+    kpis_by_code: dict[str, set] = defaultdict(set)
+    for r in records:
+        if r.get("signal_date") == signal_date:
+            kpis_by_code[r["code"]].add(r["kpi_name"])
+    confluent = {code: kpis for code, kpis in kpis_by_code.items() if len(kpis) >= 2}
+    lines.append(
+        f"対象=signal_date {signal_date} のledger行をdistinct KPIで集計。"
+        "このセクションは表示専用であり、合否判定・ledger・昇格統計には一切使用されません。"
+    )
+    lines.append("")
+    if not confluent:
+        lines += ["（2系統以上が合流した銘柄なし）", ""]
+        return lines
+    lines.append("| 銘柄コード | 発火系統数 | 系統（KPI） |")
+    lines.append("|---|---|---|")
+    for code in sorted(confluent):
+        kpis = sorted(confluent[code])
+        lines.append(f"| {code} | {len(kpis)} | {', '.join(kpis)} |")
     lines.append("")
     return lines
 
@@ -1006,6 +1488,132 @@ def append_new_signals(
     return added
 
 
+# --- 証跡基盤（§6付記II A節・docs/stock-algo-kpi-catalog.md:432-448）------------------------------
+# scripts/kpi_run_evidence.py（Canonical Module）へ本番実行1回分のrun-summaryを渡し
+# data/monitoring/run_log.jsonl への追記+hash chain更新を委譲する。本節の関数は既存の
+# シグナル判定・ledger書込み・レポート生成ロジックには一切関与しない（証跡専用・追加のみ）。
+
+
+def build_kpi_evidence_entry(n_raw: int, universe_pass_df: pd.DataFrame, added: int) -> dict:
+    """1 KPI分のrun_log証跡エントリを組み立てる（A-1 kpi_results・証跡専用・判定に無関与）。
+
+    duplicate_skip_count は「universe_pass_count - ledger_insert_count」で導出するため、
+    append_new_signals内の稀なカレンダー終端スキップ（idx+1>=len(all_bdays)・実運用では
+    起こらない想定・daily_screen.py:1449-1450）も同じ差分に含まれる（重複スキップと厳密に
+    等価ではないが、team-lead仕様のフィールド名をそのまま踏襲する簡略化として明記する）。
+    """
+    universe_pass_count = len(universe_pass_df)
+    rows = (
+        list(zip(universe_pass_df["code"], universe_pass_df["signal_date"]))
+        if not universe_pass_df.empty else []
+    )
+    return {
+        "status": "success",
+        "raw_signal_count": n_raw,
+        "universe_pass_count": universe_pass_count,
+        "actionable_count": universe_pass_count,
+        "ledger_insert_count": added,
+        "duplicate_skip_count": universe_pass_count - added,
+        "result_set_hash": kpi_run_evidence.compute_result_set_hash(rows),
+    }
+
+
+def append_run_evidence(
+    run_id: str, run_started_at: str, target_signal_date: Optional[str], target_entry_date: Optional[str],
+    overall_status: str, kpi_evidence: dict, ledger_before: tuple, ledger_after: tuple,
+) -> None:
+    """run-summary（§6付記II A-1必須フィールド）を組み立て kpi_run_evidence.append_run_log() へ渡す。
+
+    本関数自体が失敗しても本番スクリーニング（シグナル判定・ledger書込み・レポート生成）を
+    落とさない（全体をtry/exceptで包み、失敗時は overall_status=evidence_error の最小行で
+    記録を試みる。それも失敗すればWARN表示のみに縮退する。§6付記II A節「証跡収集の失敗が
+    本番スクリーンを落とさない」要件）。
+
+    Args:
+        ledger_before: (hash, count) を read_ledger() 直後（＝当日の新規シグナル追記前）に
+            paper_eval.LEDGER_PATH から実測したもの。
+        ledger_after: (hash, count) を write_ledger_atomic() 直後に実測したもの。
+    """
+    run_finished_at = jq_fetch.now_jst().isoformat()
+    try:
+        watchlist_hash = kpi_run_evidence.compute_watchlist_hash(WATCHLIST_PATH)
+        code_tree_hash = kpi_run_evidence.compute_code_tree_hash(PROJECT_ROOT)
+        business_calendar_version = kpi_run_evidence.compute_business_calendar_version()
+
+        inputs: dict = {}
+        if target_signal_date is not None:
+            inputs["bars"] = kpi_run_evidence.describe_input_snapshot("bars", target_signal_date)
+            inputs["fins"] = kpi_run_evidence.describe_input_snapshot("fins", target_signal_date)
+            inputs["shortsale"] = kpi_run_evidence.describe_input_snapshot("shortsale", target_signal_date)
+            inputs["topix"] = kpi_run_evidence.describe_topix_snapshot(target_signal_date)
+            master_file_date = kpi_run_evidence.find_applicable_master_date(target_signal_date)
+            inputs["master"] = kpi_run_evidence.describe_input_snapshot(
+                "master", target_signal_date, file_date=master_file_date,
+            )
+            # KPI_DEPENDENCY_TABLE依存の入力名（shortcover_x_bearが依存するtopix含む）が
+            # 漏れなくinputsに記録されていることを機械的に保証する（修正3・Codexレビュー
+            # 指摘2026-07-16）。欠落があればAssertionErrorとなり、下のexceptでevidence_error
+            # フォールバック行として記録される（黙って欠落させない）。
+            kpi_run_evidence.assert_inputs_cover_dependency_table(inputs)
+        else:
+            inputs["_null_reason"] = "target_signal_date未確定のため入力スナップショット省略"
+
+        ledger_before_hash, ledger_before_count = ledger_before
+        ledger_after_hash, ledger_after_count = ledger_after
+
+        run_summary = {
+            "run_id": run_id,
+            "run_started_at": run_started_at,
+            "run_finished_at": run_finished_at,
+            "mode": "production",
+            "target_signal_date": target_signal_date,
+            "target_entry_date": target_entry_date,
+            "overall_status": overall_status,
+            "kpi_results": kpi_evidence,
+            "watchlist_hash": watchlist_hash,
+            "code_tree_hash": code_tree_hash,
+            "inputs": inputs,
+            "ledger": {
+                "before_count": ledger_before_count, "before_hash": ledger_before_hash,
+                "after_count": ledger_after_count, "after_hash": ledger_after_hash,
+            },
+            "business_calendar_version": business_calendar_version,
+            "original_run_id": None,  # リカバリ機構は未配線（通常運用では常にnull）
+            "sla_judgment": {
+                "status": None,
+                "reason": "本行生成時点ではscripts/kpi_clock_sla.py未実行のため未確定。"
+                          "run_idでdata/monitoring/sla_log.jsonlと事後突合すること",
+            },
+        }
+        kpi_run_evidence.append_run_log(run_summary)
+        print(f"run_log証跡追記: target_signal_date={target_signal_date} overall_status={overall_status}")
+    except Exception as e:  # noqa: BLE001  (証跡収集の失敗が本番スクリーンを落とさない・§6付記II A節)
+        print(f"WARN: run_log証跡の完全な組み立てに失敗（本番スクリーン結果には影響なし）: {e}", file=sys.stderr)
+        try:
+            kpi_run_evidence.append_run_log({
+                "run_id": run_id,
+                "run_started_at": run_started_at,
+                "run_finished_at": run_finished_at,
+                "mode": "production",
+                "target_signal_date": target_signal_date,
+                "target_entry_date": target_entry_date,
+                "overall_status": "evidence_error",
+                "kpi_results": {},
+                "watchlist_hash": None,
+                "code_tree_hash": None,
+                "inputs": {},
+                "ledger": {
+                    "before_count": None, "before_hash": None, "after_count": None, "after_hash": None,
+                },
+                "business_calendar_version": None,
+                "original_run_id": None,
+                "sla_judgment": {"status": None, "reason": f"evidence_error: {e}"},
+            })
+            print("run_log証跡: evidence_errorとして最小行を記録しました", file=sys.stderr)
+        except Exception as e2:  # noqa: BLE001  (フォールバック記録自体の失敗も本番スクリーンを落とさない)
+            print(f"WARN: run_log証跡のevidence_errorフォールバック記録にも失敗: {e2}", file=sys.stderr)
+
+
 # --- レポート生成 --------------------------------------------------------------------------
 
 
@@ -1016,9 +1624,16 @@ def write_today_report(
     operational_context_lines: list[str], recent_signals_lines: list[str],
     bday_index: dict[str, int], all_bdays: list[str],
 ) -> None:
+    n_unevaluated = sum(1 for r in records if r["status"] in ("pending_entry", "open"))
+    unevaluated_warn_lines = (
+        [f"> ⚠️ 未評価ポジション {n_unevaluated}件（pending_entry/open）が"
+         f"{UNEVALUATED_POSITION_WARN_THRESHOLD}件を超過（§7-Q運用ガード）。", ""]
+        if n_unevaluated > UNEVALUATED_POSITION_WARN_THRESHOLD else []
+    )
     lines = [
         "# ペーパートレード 当日スクリーニングレポート（scripts/daily_screen.py 自動生成）",
         "",
+        *unevaluated_warn_lines,
         *universe_failure_lines,
         *operational_context_lines,
         f"実行時刻: {jq_fetch.now_jst().isoformat()}",
@@ -1051,6 +1666,7 @@ def write_today_report(
 
     lines += ["", *recent_signals_lines]
     lines += ["", *next_candidates_lines]
+    lines += ["", *format_confluence_section(records, scan_end)]
 
     lines += ["", "## 保有中ポジション（pending_entry / open）", ""]
     active = [r for r in records if r["status"] in ("pending_entry", "open")]
@@ -1093,6 +1709,7 @@ def main() -> int:
         help="データ取得・ledger書込みを行わず、今あるキャッシュのみでシグナル件数を表示する",
     )
     args = parser.parse_args()
+    run_started_at = jq_fetch.now_jst().isoformat()  # §6付記II A-1 run_started_at（本番実行1回分の起点）
 
     watchlist = [e for e in load_watchlist() if e["status"] in ("observation", "reference")]
     calendar_days = measure_base_rate.load_calendar_days()
@@ -1119,6 +1736,16 @@ def main() -> int:
         available_end = latest_fully_available_bday([d for d in all_bdays if start_bd <= d <= end_bd])
         if available_end is None:
             print(f"WARN: {start_bd}〜{end_bd} のデータがまだ公表されていません。次回実行で再試行します", file=sys.stderr)
+            # §6付記II A節: target_signal_date(=start_bd)の試行自体は「その日の1行」として記録する
+            # （データ未公表＝当該日の完全性監査上は意味のある事実。ledger/シグナル判定は未実施のためnull）。
+            start_idx = bday_index[start_bd]
+            target_entry_date = all_bdays[start_idx + 1] if start_idx + 1 < len(all_bdays) else None
+            append_run_evidence(
+                run_id=uuid.uuid4().hex, run_started_at=run_started_at,
+                target_signal_date=start_bd, target_entry_date=target_entry_date,
+                overall_status="data_not_yet_published", kpi_evidence={},
+                ledger_before=(None, None), ledger_after=(None, None),
+            )
             sync_vault_mirror()
             return 0
         end_bd = available_end
@@ -1134,10 +1761,19 @@ def main() -> int:
 
     run_id = uuid.uuid4().hex
     records = paper_eval.read_ledger()
+    # §6付記II A-1 ledger実行前後の行数+hash（追記前の実測。paper_eval.LEDGER_PATHの
+    # on-disk状態はread_ledger()直後の時点でまだ本走査の影響を受けていない）。
+    # 証跡収集の失敗が本番スクリーンを落とさない（§6付記II 実装方針）
+    try:
+        ledger_before = kpi_run_evidence.compute_file_hash_and_linecount(paper_eval.LEDGER_PATH)
+    except OSError as exc:
+        print(f"⚠️ 証跡: ledger_before hash計測に失敗（本番処理は続行）: {exc}")
+        ledger_before = (None, None)
     new_signal_records: list[dict] = []
     out_of_universe_counts: dict[str, int] = {}
     next_candidates_out_of_universe: list[dict] = []  # 次点候補カテゴリ1（表示専用・ledger非経由）
     next_candidates_near_miss: list[dict] = []  # 次点候補カテゴリ2（表示専用・ledger非経由）
+    kpi_evidence: dict[str, dict] = {}  # §6付記II A-1 kpi_results（証跡専用・判定に無関与）
 
     for entry in watchlist:
         signals_df = generate_kpi_signals(entry, start_bd, end_bd, regime_by_day, bday_index, all_bdays)
@@ -1175,6 +1811,15 @@ def main() -> int:
         added = append_new_signals(records, entry, signals_df, bday_index, all_bdays, run_id)
         new_signal_records.extend(records[before : before + added])
 
+        try:
+            kpi_evidence[entry["kpi_name"]] = build_kpi_evidence_entry(n_raw, signals_df, added)
+        except Exception as e:  # noqa: BLE001  (証跡収集の失敗が本番スクリーンを落とさない・§6付記II A節)
+            kpi_evidence[entry["kpi_name"]] = {
+                "status": "collection_error", "raw_signal_count": None, "universe_pass_count": None,
+                "actionable_count": None, "ledger_insert_count": None, "duplicate_skip_count": None,
+                "result_set_hash": None, "collection_error_detail": str(e),
+            }
+
     next_candidates_lines = format_next_candidates_section(next_candidates_out_of_universe, next_candidates_near_miss)
     universe_failures = universe_cache.failed_months()
     universe_failure_lines = format_universe_failure_section(universe_failures)
@@ -1188,6 +1833,13 @@ def main() -> int:
 
     records, fill_diag, open_diag, parallel_diag = paper_eval.run_update(records)
     paper_eval.write_ledger_atomic(records)
+    # §6付記II A-1 ledger実行前後の行数+hash（追記後の実測）。
+    # 証跡収集の失敗が本番スクリーンを落とさない（§6付記II 実装方針）
+    try:
+        ledger_after = kpi_run_evidence.compute_file_hash_and_linecount(paper_eval.LEDGER_PATH)
+    except OSError as exc:
+        print(f"⚠️ 証跡: ledger_after hash計測に失敗（本番処理は続行）: {exc}")
+        ledger_after = (None, None)
     print(
         f"新規シグナル追加: {len(new_signal_records)}件 / entry確定: {fill_diag['filled']}件 / "
         f"ポジションクローズ: {open_diag['closed_stop_loss'] + open_diag['closed_time_exit'] + open_diag['closed_delisted']}件 / "
@@ -1229,6 +1881,16 @@ def main() -> int:
     # vault転写はstate保存(=ジョブ完了境界)の後に置く: vault側I/O詰まりや強制終了で
     # last_screened_dateが失われ翌日に二重走査になるのを防ぐ(Codexレビュー⑤反映)
     sync_vault_mirror()
+
+    # §6付記II A節: 本番実行1回分のrun-summaryを証跡基盤へ記録する（最後・ジョブ完了境界の後）。
+    end_idx = bday_index[end_bd]
+    target_entry_date = all_bdays[end_idx + 1] if end_idx + 1 < len(all_bdays) else None
+    append_run_evidence(
+        run_id=run_id, run_started_at=run_started_at,
+        target_signal_date=end_bd, target_entry_date=target_entry_date,
+        overall_status="success", kpi_evidence=kpi_evidence,
+        ledger_before=ledger_before, ledger_after=ledger_after,
+    )
     return 0
 
 

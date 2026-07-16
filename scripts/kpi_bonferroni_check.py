@@ -18,7 +18,10 @@ n_boot は **10000 固定**とする（既定の N_BOOTSTRAP=1000 では 99.918%
 - SUE: output/kpi/sue_beat/returns.csv の in_universe 行（n=818）
 
 Usage:
-    docker compose run --rm xstock python scripts/kpi_bonferroni_check.py [--n-trials 61] [--n-boot 10000]
+    docker compose run --rm xstock python scripts/kpi_bonferroni_check.py [--n-boot 10000]
+    # 累積試行数は既定で data/kpi_trials/trials.jsonl の非空行数から機械算出する（§6付記4項・
+    # Codexレビュー⑬M2対応）。--n-trials は過去数値の再現用の明示上書きに限定する
+    # （例: §6表の初出値を再現するには --n-trials 61）。--show-n で分母のみ表示して終了。
 """
 from __future__ import annotations
 
@@ -38,6 +41,7 @@ UL_FADE_RETURNS = Path("output/kpi/ul_fade_standalone/returns.csv")
 SUE_RETURNS = Path("output/kpi/sue_beat/returns.csv")
 BASE_RATE_DIR = Path("output/base_rate")
 UNIVERSE_WINDOW = 21
+TRIALS_PATH = Path("data/kpi_trials/trials.jsonl")
 
 
 def load_in_universe(path: Path) -> pd.DataFrame:
@@ -47,15 +51,36 @@ def load_in_universe(path: Path) -> pd.DataFrame:
     return df
 
 
+def effective_trial_count(trials_path: Path = TRIALS_PATH) -> int:
+    """累積Bonferroni分母の正本: trials.jsonl の非空行数（§6付記4項で凍結・保守側の単純カウント。
+
+    歴史的経緯の注記行[重複・縮退]も分母に含める＝保守側。screening_batches.jsonl の
+    screenセルは§6付記4項どおり算入しない（バッチメタ行と検証段の生存セル行が trials.jsonl
+    側に既に含まれる）。
+    """
+    if not trials_path.exists():
+        raise SystemExit(f"FATAL: 台帳が見つかりません: {trials_path}")
+    with open(trials_path, "r", encoding="utf-8") as f:
+        return sum(1 for line in f if line.strip())
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Bonferroni調整CIの再現計算（§6多重比較・監査C-2）")
-    parser.add_argument("--n-trials", type=int, default=61, help="累積試行数（既定61=2026-07-11時点）")
+    parser.add_argument("--n-trials", type=int, default=None,
+                        help="累積試行数の明示上書き（過去数値の再現用に限定。省略時は台帳から機械算出）")
     parser.add_argument("--n-boot", type=int, default=10000,
                         help="ブートストラップ本数（既定10000。docstring参照・1000では裾が解像できない）")
+    parser.add_argument("--show-n", action="store_true", help="台帳由来の累積試行数を表示して終了")
     args = parser.parse_args()
 
-    ci_level = 1 - 0.05 / args.n_trials
-    print(f"Bonferroni調整: alpha=0.05/{args.n_trials} → CI水準={ci_level:.5%} / n_boot={args.n_boot}")
+    n_trials = args.n_trials if args.n_trials is not None else effective_trial_count()
+    source = "手動上書き（再現用）" if args.n_trials is not None else f"台帳 {TRIALS_PATH} の非空行数"
+    if args.show_n:
+        print(f"累積試行数={n_trials}（出所: {source}）")
+        return 0
+
+    ci_level = 1 - 0.05 / n_trials
+    print(f"Bonferroni調整: alpha=0.05/{n_trials}（出所: {source}） → CI水準={ci_level:.5%} / n_boot={args.n_boot}")
 
     base_rate_by_month = kpi_event_study.load_base_rate_by_month(BASE_RATE_DIR, UNIVERSE_WINDOW)
 

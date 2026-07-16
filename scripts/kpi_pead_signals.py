@@ -48,7 +48,9 @@ KPI_NAME = "pead_initial_gap8_vol3"
 GAP_THRESHOLD_DEFAULT = 0.08
 VOL_MULTIPLIER_DEFAULT = 3.0
 VOL_WINDOW_DEFAULT = 20
-REACTION_CUTOFF_MINUTES = 15 * 60  # 15:00
+REACTION_CUTOFF_MINUTES = 15 * 60  # 15:00（〜2024-11-04・東証現物の旧引け時刻）
+REACTION_CUTOFF_MINUTES_EXTENDED = 15 * 60 + 30  # 15:30（2024-11-05以降・東証現物の引け時刻延長後）
+REACTION_CUTOFF_CHANGE_BD = "20241105"  # §7-J「反応日境界の制度対応」: 東証現物の取引時間延長日
 
 # 第2周: PEAD × 負けフィルタ1層の複合検証用（カタログ§2-A「MAX効果」・§2-A「25日移動平均線乖離率」）。
 # いずれもGを含まない/G-1までのデータのみで計算するPIT安全な指標（Gは+8%ギャップ発生日そのものなので
@@ -98,21 +100,26 @@ def reaction_day(
     bday_index: dict[str, int],
     all_bdays: list[str],
 ) -> tuple[Optional[str], str]:
-    """開示日から反応日Gを判定する（カタログ§2-E準拠）。
+    """開示日から反応日Gを判定する（カタログ§2-E準拠 + §7-J「反応日境界の制度対応」）。
 
-    15:00より前の開示 -> 開示日当日 / 15:00以降 or 時刻不明 -> 翌営業日。
-    時刻が不明（フィールド欠損・パース不能）な場合は安全側（翌営業日）に倒す。
+    引け時刻より前の開示 -> 開示日当日 / 引け時刻以降 or 時刻不明 -> 翌営業日。
+    引け時刻は開示日に応じた日付依存境界（開示日<2024-11-05 -> 15:00 / 開示日>=2024-11-05 -> 15:30・
+    東証現物の取引時間延長対応）。時刻が不明（フィールド欠損・パース不能）な場合は安全側（翌営業日）に倒す。
+    in-sample期間（〜2022-11）は全開示が2024-11-05より前のため、本変更後も歴史結果は構造的に不変。
 
     Returns:
         (G日付, 判定ルール名)。カレンダー範囲外に達した場合は (None, ルール名)。
     """
     idx = bday_index[disclosed_date]
-    if disc_time_minutes is not None and disc_time_minutes < REACTION_CUTOFF_MINUTES:
+    cutoff_minutes = (
+        REACTION_CUTOFF_MINUTES_EXTENDED if disclosed_date >= REACTION_CUTOFF_CHANGE_BD else REACTION_CUTOFF_MINUTES
+    )
+    if disc_time_minutes is not None and disc_time_minutes < cutoff_minutes:
         g_idx = idx
-        rule = "same_day_before_1500"
+        rule = "same_day_before_close"
     else:
         g_idx = idx + 1
-        rule = "next_day_after_1500_or_unknown"
+        rule = "next_day_after_close_or_unknown"
     if g_idx >= len(all_bdays):
         return None, rule
     return all_bdays[g_idx], rule

@@ -28,6 +28,9 @@ services:
       - ./core:/app/core:ro
       - ./extensions:/app/extensions:ro
       - ./configs:/app/configs:ro
+      # 2026-07-16 card cross-20260716-01: tier3_posting は phase4 で autopost リポへ物理分離。
+      # scripts/fetch_engagement.py の import (tier3_posting.impression_tracker) を成立させる読取専用マウント
+      - ../autopost/tier3_posting:/app/tier3_posting:ro
 
     shm_size: '2gb'
     security_opt:

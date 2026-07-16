@@ -23,6 +23,8 @@ services:
       - ./core:/app/core:ro
       - ./extensions:/app/extensions:ro
       - ./configs:/app/configs:ro
+      - ./config:/app/config:ro
+      - ./docs:/app/docs:ro
       - ./tests:/app/tests:ro
 
       # データ永続化

@@ -1,0 +1,589 @@
+{
+ "_comment": "第22周 候補ファクトリー v1 の凍結グリッド仕様（catalog §7-K 事前登録・2026-07-11・Codex敵対レビュー⑪の全指摘反映版）。実行後の追加・変更・削除は禁止。母集団選定は population_inventory の機械規則（全returns.csvを列挙し exclusion_reason_code を付与）で再現可能。",
+ "batch_id": "batch_v1",
+ "frozen_at": "2026-07-11",
+ "periods": {
+  "screen": {
+   "start_month": "201611",
+   "end_month": "201912"
+  },
+  "confirm": {
+   "start_month": "202001",
+   "end_month": "202211"
+  },
+  "note": "confirm半期は過去63試行が観察済みの期間を含むため『独立確認』ではなく historical validation（内部検証・前向き検証への優先順位付け）である（§6付記4項）"
+ },
+ "population_inventory": [
+  {
+   "kpi_name": "activist_5pct",
+   "returns_csv": "output/kpi/activist_5pct/returns.csv",
+   "rows_total": 49,
+   "n_screen_in_universe": 0,
+   "months_screen": 0,
+   "sha256_16": "b9e080ad3e4621ac",
+   "included": false,
+   "exclusion_reason_code": "BELOW_N_FLOOR"
+  },
+  {
+   "kpi_name": "dividend_uprev",
+   "returns_csv": "output/kpi/dividend_uprev/returns.csv",
+   "rows_total": 1373,
+   "n_screen_in_universe": 91,
+   "months_screen": 28,
+   "sha256_16": "3a51a8f91ae28900",
+   "included": true,
+   "exclusion_reason_code": null
+  },
+  {
+   "kpi_name": "high52_break_vol",
+   "returns_csv": "output/kpi/high52_break_vol/returns.csv",
+   "rows_total": 25927,
+   "n_screen_in_universe": 855,
+   "months_screen": 30,
+   "sha256_16": "570c8ec4138a422c",
+   "included": false,
+   "exclusion_reason_code": "NEAR_DUPLICATE_DEFINITION(high52_breakoutが先発・第18周T3注記)"
+  },
+  {
+   "kpi_name": "high52_breakout",
+   "returns_csv": "output/kpi/high52_breakout/returns.csv",
+   "rows_total": 37973,
+   "n_screen_in_universe": 1087,
+   "months_screen": 30,
+   "sha256_16": "c77533c5f4d23ee1",
+   "included": true,
+   "exclusion_reason_code": null
+  },
+  {
+   "kpi_name": "karauri_fuel",
+   "returns_csv": "output/kpi/karauri_fuel/returns.csv",
+   "rows_total": 239,
+   "n_screen_in_universe": 109,
+   "months_screen": 29,
+   "sha256_16": "ed3ee328fb7a5333",
+   "included": true,
+   "exclusion_reason_code": null
+  },
+  {
+   "kpi_name": "ma200_reclaim",
+   "returns_csv": "output/kpi/ma200_reclaim/returns.csv",
+   "rows_total": 13597,
+   "n_screen_in_universe": 413,
+   "months_screen": 30,
+   "sha256_16": "43195b459307bb5a",
+   "included": true,
+   "exclusion_reason_code": null
+  },
+  {
+   "kpi_name": "margin_pampan",
+   "returns_csv": "output/kpi/margin_pampan/returns.csv",
+   "rows_total": 36,
+   "n_screen_in_universe": 23,
+   "months_screen": 14,
+   "sha256_16": "e0d703e59b30b9c3",
+   "included": false,
+   "exclusion_reason_code": "BELOW_N_FLOOR"
+  },
+  {
+   "kpi_name": "margin_urinaga_trend",
+   "returns_csv": "output/kpi/margin_urinaga_trend/returns.csv",
+   "rows_total": 55639,
+   "n_screen_in_universe": 4363,
+   "months_screen": 38,
+   "sha256_16": "873a06788859d0e2",
+   "included": true,
+   "exclusion_reason_code": null
+  },
+  {
+   "kpi_name": "pead_gap8_vol3_defer3",
+   "returns_csv": "output/kpi/pead_gap8_vol3_defer3/returns.csv",
+   "rows_total": 5859,
+   "n_screen_in_universe": 313,
+   "months_screen": 34,
+   "sha256_16": "0f623b04413295b8",
+   "included": true,
+   "exclusion_reason_code": null
+  },
+  {
+   "kpi_name": "pead_gap8_vol3_defer3_HOLDOUT",
+   "returns_csv": "output/kpi/pead_gap8_vol3_defer3_HOLDOUT/returns.csv",
+   "rows_total": 3999,
+   "n_screen_in_universe": 0,
+   "months_screen": 0,
+   "sha256_16": "49be39ebe7e1d04b",
+   "included": false,
+   "exclusion_reason_code": "HOLDOUT_DATA"
+  },
+  {
+   "kpi_name": "pead_initial_gap8_vol3",
+   "returns_csv": "output/kpi/pead_initial_gap8_vol3/returns.csv",
+   "rows_total": 5858,
+   "n_screen_in_universe": 313,
+   "months_screen": 34,
+   "sha256_16": "686d595be7360328",
+   "included": false,
+   "exclusion_reason_code": "DEFER3_CANONICAL_EXISTS(§6繰延ルール準拠版=pead_gap8_vol3_defer3を正)"
+  },
+  {
+   "kpi_name": "pead_x_dev25_10",
+   "returns_csv": "output/kpi/pead_x_dev25_10/returns.csv",
+   "rows_total": 5385,
+   "n_screen_in_universe": 300,
+   "months_screen": 34,
+   "sha256_16": "68a2f3640ec75a14",
+   "included": false,
+   "exclusion_reason_code": "DERIVED_COMPOSITE"
+  },
+  {
+   "kpi_name": "pead_x_max20_10",
+   "returns_csv": "output/kpi/pead_x_max20_10/returns.csv",
+   "rows_total": 5470,
+   "n_screen_in_universe": 302,
+   "months_screen": 33,
+   "sha256_16": "80b16a313ffa669f",
+   "included": false,
+   "exclusion_reason_code": "DERIVED_COMPOSITE"
+  },
+  {
+   "kpi_name": "pead_x_max20_dev25_10",
+   "returns_csv": "output/kpi/pead_x_max20_dev25_10/returns.csv",
+   "rows_total": 5174,
+   "n_screen_in_universe": 291,
+   "months_screen": 33,
+   "sha256_16": "a4c14c701c5f3aba",
+   "included": false,
+   "exclusion_reason_code": "DERIVED_COMPOSITE"
+  },
+  {
+   "kpi_name": "pead_x_shinchoku",
+   "returns_csv": "output/kpi/pead_x_shinchoku/returns.csv",
+   "rows_total": 1089,
+   "n_screen_in_universe": 41,
+   "months_screen": 19,
+   "sha256_16": "a344cbd6818a0184",
+   "included": false,
+   "exclusion_reason_code": "DERIVED_COMPOSITE"
+  },
+  {
+   "kpi_name": "range_breakout",
+   "returns_csv": "output/kpi/range_breakout/returns.csv",
+   "rows_total": 5018,
+   "n_screen_in_universe": 204,
+   "months_screen": 33,
+   "sha256_16": "0c958c9a995ca4fa",
+   "included": true,
+   "exclusion_reason_code": null
+  },
+  {
+   "kpi_name": "sector_momentum_laggard",
+   "returns_csv": "output/kpi/sector_momentum_laggard/returns.csv",
+   "rows_total": 2810,
+   "n_screen_in_universe": 1477,
+   "months_screen": 38,
+   "sha256_16": "8f45666f249b31b5",
+   "included": true,
+   "exclusion_reason_code": null
+  },
+  {
+   "kpi_name": "sh_dip_reentry",
+   "returns_csv": "output/kpi/sh_dip_reentry/returns.csv",
+   "rows_total": 1867,
+   "n_screen_in_universe": 93,
+   "months_screen": 31,
+   "sha256_16": "6ae5b5d46aed9ed8",
+   "included": true,
+   "exclusion_reason_code": null
+  },
+  {
+   "kpi_name": "shinchoku_1q40",
+   "returns_csv": "output/kpi/shinchoku_1q40/returns.csv",
+   "rows_total": 2121,
+   "n_screen_in_universe": 52,
+   "months_screen": 17,
+   "sha256_16": "6a7eb3f93e9fa529",
+   "included": false,
+   "exclusion_reason_code": "SUBSET_OF_INCLUDED(shinchoku_allqの1Q部分集合)"
+  },
+  {
+   "kpi_name": "shinchoku_allq",
+   "returns_csv": "output/kpi/shinchoku_allq/returns.csv",
+   "rows_total": 10759,
+   "n_screen_in_universe": 499,
+   "months_screen": 35,
+   "sha256_16": "49951c61129302a5",
+   "included": true,
+   "exclusion_reason_code": null
+  },
+  {
+   "kpi_name": "shortcover_turn",
+   "returns_csv": "output/kpi/shortcover_turn/returns.csv",
+   "rows_total": 26767,
+   "n_screen_in_universe": 1765,
+   "months_screen": 38,
+   "sha256_16": "3c15ca449be06254",
+   "included": true,
+   "exclusion_reason_code": null
+  },
+  {
+   "kpi_name": "shortcover_x_bear",
+   "returns_csv": "output/kpi/shortcover_x_bear/returns.csv",
+   "rows_total": 10550,
+   "n_screen_in_universe": 788,
+   "months_screen": 19,
+   "sha256_16": "d1dc18583d40218a",
+   "included": false,
+   "exclusion_reason_code": "DERIVED_COMPOSITE(shortcover_turn×regimeセルと等価)"
+  },
+  {
+   "kpi_name": "shortup_lowrise",
+   "returns_csv": "output/kpi/shortup_lowrise/returns.csv",
+   "rows_total": 23261,
+   "n_screen_in_universe": 2775,
+   "months_screen": 38,
+   "sha256_16": "b81c4252eb693b96",
+   "included": true,
+   "exclusion_reason_code": null
+  },
+  {
+   "kpi_name": "strev_20d",
+   "returns_csv": "output/kpi/strev_20d/returns.csv",
+   "rows_total": 3299,
+   "n_screen_in_universe": 1732,
+   "months_screen": 38,
+   "sha256_16": "af446f314c3a58cb",
+   "included": true,
+   "exclusion_reason_code": null
+  },
+  {
+   "kpi_name": "sue_beat",
+   "returns_csv": "output/kpi/sue_beat/returns.csv",
+   "rows_total": 8228,
+   "n_screen_in_universe": 420,
+   "months_screen": 32,
+   "sha256_16": "0916e203900efb52",
+   "included": true,
+   "exclusion_reason_code": null
+  },
+  {
+   "kpi_name": "ul_fade_standalone",
+   "returns_csv": "output/kpi/ul_fade_standalone/returns.csv",
+   "rows_total": 105,
+   "n_screen_in_universe": 36,
+   "months_screen": 23,
+   "sha256_16": "4a89308a0c8fba59",
+   "included": false,
+   "exclusion_reason_code": "BELOW_N_FLOOR"
+  },
+  {
+   "kpi_name": "uprev_fop10",
+   "returns_csv": "output/kpi/uprev_fop10/returns.csv",
+   "rows_total": 4508,
+   "n_screen_in_universe": 207,
+   "months_screen": 37,
+   "sha256_16": "bc2a9c176edb9a8a",
+   "included": false,
+   "exclusion_reason_code": "DEFER3_CANONICAL_EXISTS(uprev_fop10_defer3を正)"
+  },
+  {
+   "kpi_name": "uprev_fop10_defer3",
+   "returns_csv": "output/kpi/uprev_fop10_defer3/returns.csv",
+   "rows_total": 4531,
+   "n_screen_in_universe": 207,
+   "months_screen": 37,
+   "sha256_16": "40afbbe1b83deb9c",
+   "included": true,
+   "exclusion_reason_code": null
+  },
+  {
+   "kpi_name": "uprev_repeater",
+   "returns_csv": "output/kpi/uprev_repeater/returns.csv",
+   "rows_total": 699,
+   "n_screen_in_universe": 22,
+   "months_screen": 16,
+   "sha256_16": "4e7ac09d6eca64a6",
+   "included": false,
+   "exclusion_reason_code": "BELOW_N_FLOOR"
+  },
+  {
+   "kpi_name": "va_top1000",
+   "returns_csv": "output/kpi/va_top1000/returns.csv",
+   "rows_total": 10443,
+   "n_screen_in_universe": 373,
+   "months_screen": 33,
+   "sha256_16": "54ca1d608f3ce3f4",
+   "included": false,
+   "exclusion_reason_code": "TOP1000_UNIVERSE"
+  },
+  {
+   "kpi_name": "volshock_5x",
+   "returns_csv": "output/kpi/volshock_5x/returns.csv",
+   "rows_total": 16996,
+   "n_screen_in_universe": 152,
+   "months_screen": 38,
+   "sha256_16": "ca8afb92a8597f18",
+   "included": true,
+   "exclusion_reason_code": null
+  },
+  {
+   "kpi_name": "volshock_5x_HOLDOUT_obs",
+   "returns_csv": "output/kpi/volshock_5x_HOLDOUT_obs/returns.csv",
+   "rows_total": 10555,
+   "n_screen_in_universe": 0,
+   "months_screen": 0,
+   "sha256_16": "ea03445b91f584c0",
+   "included": false,
+   "exclusion_reason_code": "HOLDOUT_DATA"
+  },
+  {
+   "kpi_name": "volshock_x_above200",
+   "returns_csv": "output/kpi/volshock_x_above200/returns.csv",
+   "rows_total": 10477,
+   "n_screen_in_universe": 90,
+   "months_screen": 31,
+   "sha256_16": "02157f99014fbaeb",
+   "included": false,
+   "exclusion_reason_code": "DERIVED_COMPOSITE(volshock_5x×dev200セルと等価)"
+  },
+  {
+   "kpi_name": "volshock_x_below200",
+   "returns_csv": "output/kpi/volshock_x_below200/returns.csv",
+   "rows_total": 4491,
+   "n_screen_in_universe": 29,
+   "months_screen": 16,
+   "sha256_16": "f2cd3de08bffae02",
+   "included": false,
+   "exclusion_reason_code": "DERIVED_COMPOSITE(同上)"
+  }
+ ],
+ "features": [
+  {
+   "name": "dev200",
+   "source": "kpi_sue_champion_signals.compute_dev200",
+   "threshold_provenance": "第11周 volshock_x_above200（dev200>0）で使用済みの既存閾値",
+   "buckets": [
+    {
+     "label": "above",
+     "cond": "dev200 > 0"
+    },
+    {
+     "label": "below",
+     "cond": "dev200 <= 0"
+    }
+   ]
+  },
+  {
+   "name": "quiet_ratio",
+   "source": "kpi_volshock_v2_amplifiers.compute_quiet_ratio",
+   "threshold_provenance": "第13周 v2-2（quiet_ratio>=1.2）の既存閾値",
+   "buckets": [
+    {
+     "label": "quiet",
+     "cond": "quiet_ratio >= 1.2"
+    },
+    {
+     "label": "noisy",
+     "cond": "quiet_ratio < 1.2"
+    }
+   ]
+  },
+  {
+   "name": "ul_count_10bd",
+   "source": "kpi_volshock_v3_ul_earnings.compute_ul_count_10bd",
+   "threshold_provenance": "第16周 A2（ul<=2）の既存閾値",
+   "buckets": [
+    {
+     "label": "ul_le2",
+     "cond": "ul_count_10bd <= 2"
+    },
+    {
+     "label": "ul_ge3",
+     "cond": "ul_count_10bd >= 3"
+    }
+   ]
+  },
+  {
+   "name": "dev25",
+   "source": "kpi_pead_signals.compute_dev25",
+   "threshold_provenance": "第2周 T3（dev25 0.10）の既存閾値",
+   "buckets": [
+    {
+     "label": "hot",
+     "cond": "dev25 >= 0.10"
+    },
+    {
+     "label": "cool",
+     "cond": "dev25 < 0.10"
+    }
+   ]
+  },
+  {
+   "name": "max20",
+   "source": "kpi_pead_signals.compute_max20",
+   "threshold_provenance": "第2周 T2（max20 0.10）の既存閾値",
+   "buckets": [
+    {
+     "label": "spiked",
+     "cond": "max20 >= 0.10"
+    },
+    {
+     "label": "calm",
+     "cond": "max20 < 0.10"
+    }
+   ]
+  },
+  {
+   "name": "regime",
+   "source": "returns.csv regime列（measure_base_rate.build_regime_series由来）",
+   "threshold_provenance": "§6既存のTOPIX-SMA200レジーム定義",
+   "buckets": [
+    {
+     "label": "bull",
+     "cond": "regime == 'bull'"
+    },
+    {
+     "label": "bear",
+     "cond": "regime == 'bear'"
+    }
+   ],
+   "note": "regime=='unknown'は両バケットから除外"
+  },
+  {
+   "name": "membership",
+   "source": "output/base_rate/universes_w21.csv.gz を (universe_month_used, code) で結合",
+   "threshold_provenance": "§6手順5の入替バイアス分解（新規流入2倍効果）の既存区分",
+   "buckets": [
+    {
+     "label": "new",
+     "cond": "membership == 'new'"
+    },
+    {
+     "label": "existing",
+     "cond": "membership == 'existing'"
+    }
+   ]
+  }
+ ],
+ "reference_only_cells": {
+  "_comment": "§7既検証・近傍の組合せ（population×feature単位で両バケット封印）。計算・記録はするがBH/BY選抜対象外（アンカー用途）。type: exact_duplicate=同一セルが検証済み / nested_nearby=複合条件の近傍。閾値の再利用そのもの（threshold_reuse）はfeatures[].threshold_provenanceに記録。",
+  "cells": [
+   {
+    "population": "volshock_5x",
+    "feature": "dev200",
+    "type": "exact_duplicate",
+    "source_trials": [
+     "volshock_x_above200",
+     "volshock_x_below200"
+    ],
+    "reason": "第11周で両バケット検証済み"
+   },
+   {
+    "population": "volshock_5x",
+    "feature": "quiet_ratio",
+    "type": "nested_nearby",
+    "source_trials": [
+     "volshock_x_above200_quiet"
+    ],
+    "reason": "第13周チャンピオン（above200∩quiet）の近傍"
+   },
+   {
+    "population": "volshock_5x",
+    "feature": "ul_count_10bd",
+    "type": "nested_nearby",
+    "source_trials": [
+     "volshock_x_above200_ul0",
+     "volshock_x_above200_ul_lt3"
+    ],
+    "reason": "第16/17周（above200∩UL）の近傍"
+   },
+   {
+    "population": "pead_gap8_vol3_defer3",
+    "feature": "max20",
+    "type": "exact_duplicate",
+    "source_trials": [
+     "pead_x_max20_10",
+     "pead_x_max20_dev25_10"
+    ],
+    "reason": "第2周検証済み"
+   },
+   {
+    "population": "pead_gap8_vol3_defer3",
+    "feature": "dev25",
+    "type": "exact_duplicate",
+    "source_trials": [
+     "pead_x_dev25_10",
+     "pead_x_max20_dev25_10"
+    ],
+    "reason": "第2周検証済み"
+   },
+   {
+    "population": "sue_beat",
+    "feature": "dev200",
+    "type": "exact_duplicate",
+    "source_trials": [
+     "sue_x_above200"
+    ],
+    "reason": "第19周H1検証済み・第21周配線済み"
+   },
+   {
+    "population": "sue_beat",
+    "feature": "quiet_ratio",
+    "type": "exact_duplicate",
+    "source_trials": [
+     "sue_x_quiet"
+    ],
+    "reason": "第19周H3検証済み"
+   },
+   {
+    "population": "sue_beat",
+    "feature": "ul_count_10bd",
+    "type": "exact_duplicate",
+    "source_trials": [
+     "sue_x_above200_ul0"
+    ],
+    "reason": "第19周H2検証済み（H1縮退）"
+   },
+   {
+    "population": "shortcover_turn",
+    "feature": "regime",
+    "type": "exact_duplicate",
+    "source_trials": [
+     "shortcover_x_bear"
+    ],
+    "reason": "第8周検証済み"
+   }
+  ]
+ },
+ "screen_rules": {
+  "eligibility": {
+   "min_n": 50,
+   "min_months_spanned": 12,
+   "order": "eligibility判定はp値計算より前に適用（非eligibleセルもn・月数・特徴量欠損率を記録するがp値は計算しない）"
+  },
+  "p_value": "帰無中心化・月次ブロック・ブートストラップの片側p値: 観測EVをEV_obsとし、ret列を(ret - EV_obs - cost調整の平均が0になるよう)中心化した系列に対して月ブロック復元抽出（bootstrap_ev_ciと同一の月ブロック方式・n_boot=20000・seed=42）でEV*分布を作り、p = (1 + #{EV* >= EV_obs}) / (n_boot + 1)。Monte Carlo標準誤差を併記",
+  "selection_primary": "eligible かつ 非reference_only の全セルを1家族として BH-FDR q=0.10 → 有意セルのうちlift点推定>1.0 → p昇順で上限8セル。同値pのtie-breakは (population名, feature名, bucket名) の辞書順",
+  "selection_sensitivity": "BY補正（Benjamini-Yekutieli・依存構造への保守側）の結果を全セルに併記。BH通過・BY非通過のセルは『統計的発見』と呼ばず『優先順位付け通過』とのみ記載",
+  "seed_sensitivity": "seed=42とseed=43で生存セル集合が一致することを機械確認。不一致ならn_bootを5万に上げて再判定。5万でも不一致ならFATAL停止しユーザー報告（結果の採用禁止）。この escalation 自体を凍結手順とする（Codexレビュー⑫の補強反映・実行前凍結）",
+  "ev_definition": "EV(なし・往復コスト0.3%控除) = mean(ret) - 0.003（returns.csvのret列は生値・Decision Log #5の規約どおり）"
+ },
+ "confirm_rules": {
+  "framing": "historical validation（内部検証）— 統計的な独立確認ではない。合格の意味は『前向き検証（ペーパートレード等）への優先順位付け資格』に限定",
+  "criteria": "生存セル数をSとし、確認半期で (a) 帰無中心化・片側p <= 0.05/S（Bonferroni同時補正・screen_rulesと同一のp値機構・n_boot=20000・seed=42） (b) lift点推定 > 1.0 (c) n_confirm >= 30 — 3条件すべてで確認合格。個別95%CIは参考併記に格下げ",
+  "sensitivity": "各生存セルに bull/bear レジーム別EVと2020年除外EVを参考併記（判定には使わない・期間の事後選び直し禁止）",
+  "recording": "合否によらず全生存セルをtrials.jsonlに正式行としてappend + バッチメタ1行（kpi_name=screening_batch_v1・params にグリッドJSONのsha256・セル数・eligible数・BH/BY通過数・生存数・N_before/N_after）。family-wise感度CI（ci_level=1-0.05/N_new・N_new=N_before+1+S・n_boot=10000）併記"
+ },
+ "batch_replay_rules": {
+  "_comment": "FDRのバッチ連打による無効化の防止（§6付記5項として凍結）",
+  "rules": [
+   "同一のscreen/confirm期間定義に対する追加バッチ（batch_v2等）は禁止。次バッチはscreen/confirm期間の再定義（少なくとも12ヶ月分の新規前向きデータの到着）まで凍結",
+   "同一セル・近傍セル（同一population×featureの閾値違い等）の再投入は期間再定義後も禁止（reference_only化して引き継ぐ）",
+   "batch_idの一意性はscreening_batches.jsonl読み取りでFATAL検査（既存batch_idへの再appendを拒否）",
+   "累積セル数の上限500（全バッチ通算）。超過する設計は事前にユーザー承認を要する"
+  ]
+ },
+ "prohibitions": [
+  "holdout（2023-01以降）のデータ使用禁止（確認半期の終端は202211）",
+  "実行後のグリッド・閾値・q値・上限数・eligibility床の変更禁止（床を下げての同一期間再投入も禁止）",
+  "BH選抜を通らなかったセルの事後採用禁止",
+  "reference_onlyセルの選抜対象化禁止"
+ ]
+}
