@@ -31,17 +31,55 @@ docTypeCode=360は「訂正報告書」（既存の大量保有報告書・変�
 新規/変更/訂正の判別は `docTypeCode` ではなく `docDescription` のテキスト内容で行う
 必要がある（scripts/kpi_activist_signals.py の分類ロジック参照）。
 
+利用規約/仕様書（確認日2026-07-16）:
+    本モジュールが叩く `https://api.edinet-fsa.go.jp/api/v2` は、EDINET閲覧サイト
+    (https://disclosure2.edinet-fsa.go.jp/ 。2026-07-16 curl疎通確認済み・HTTP200)の
+    「API機能」からAPIキーを登録した際に提示される利用規約に同意した上で発行される、
+    公式に提供された機械取得経路である（本プロジェクトのAPIキーは2026-07-07登録・
+    当時の利用規約に同意済み。BASE_URL自体も2026-07-07から継続して実疎通確認済み）。
+    **正確な規約ページの個別URLはこのdocstring作成時点(2026-07-16)では確定できていない**
+    （EDINET閲覧サイトはJavaScript SPAのため、curlによる静的HTML走査では規約ページへの
+    直接リンクを機械的に抽出できなかった。事実確認ルール上、未確認のURLは記載しない）。
+    正確な規約条文の参照が必要な場合は、APIキー登録時にユーザーが同意した規約ページ
+    （EDINET閲覧サイトのAPI機能メニューから遷移）を参照すること。
+
 Usage:
-    python3 scripts/edinet_fetch.py                                    # 既定期間を全取得
+    python3 scripts/edinet_fetch.py                                    # 既定期間を全取得（大量保有）
     python3 scripts/edinet_fetch.py --start 20210707 --end 20260707     # 実際に取得可能な範囲
     python3 scripts/edinet_fetch.py --status                           # 期待件数 vs 取得済み件数
     python3 scripts/edinet_fetch.py --probe                            # 疎通確認のみ（1日分・保存しない）
     python3 scripts/edinet_fetch.py --fetch-code-master                # EDINETコード→証券コード マスタ取得
+
+documents_all データセット（カタログ§8 BL-1「親子上場解消・TOB先回り」用の一次データ。
+2026-07-16 team lead指示で追加・Codexレビュー指摘を受け同日 tob→documents_all に再設計）:
+    大量保有報告書とは独立した別データセット。当日の書類一覧を **docDescriptionでの
+    事前絞り込みをせず全件・無加工のまま** `data/edinet/documents_all/YYYYMMDD.json.gz`
+    に保存する（大量保有側の `data/edinet/YYYYMMDD.json.gz` とは完全に分離。`--dataset`
+    を指定しない既存呼び出しの挙動は一切変わらない）。TOBキーワード
+    （`TOB_KEYWORDS`＝「公開買付」「自己株券買付状況報告書」）によるマッチは**ログ集計・
+    --probe表示専用**（filtered_countとしてfetch_log.jsonlと--probeに残るのみで、保存対象
+    の絞り込みには一切使わない＝将来の分類層の入口として、docDescriptionによる事前除外が
+    不可逆な偽陰性を生まないようにする設計。2026-07-16 Codexレビュー指摘で全件保存に変更）。
+
+    **直近5営業日は毎回強制再取得する**（ファイル存在チェックだけでのスキップだと、
+    18:45の日次実行時点で未提出・未反映・後日訂正された書類を永久に取りこぼす穴になる
+    ため。2026-07-16 Codexレビュー指摘）。内容（docID集合+ハッシュ）が旧ファイルと
+    変化していれば旧ファイルを `<date>.rev<連番>.json.gz` として退避してから新版を保存
+    （上書きで消さない）。変化がなければ何もしない。直近5営業日より前は、
+    `data/edinet/documents_all/` に保存済みファイルが無い日（＝欠損日）だけを取得する
+    （5年分を毎日フルスキャンしてAPIを叩き直すことはしない。既存日はネットワーク呼び出し
+    もfetch_logへの追記も発生しない）。
+
+    python3 scripts/edinet_fetch.py --dataset documents_all --probe               # 疎通確認（直近営業日）
+    python3 scripts/edinet_fetch.py --dataset documents_all --start 20210707 --end 20260716
+    python3 scripts/edinet_fetch.py --dataset documents_all                       # 日次実行の既定形（--end省略時は当日まで自動）
+    python3 scripts/edinet_fetch.py --dataset documents_all --status
 """
 from __future__ import annotations
 
 import argparse
 import datetime
+import hashlib
 import io
 import json
 import re
@@ -88,6 +126,21 @@ PROGRESS_EVERY = 50
 # 新規/変更/訂正の判別は scripts/kpi_activist_signals.py 側で docDescription のテキストを
 # 見て行う（本モジュールは350/360をまとめて素通しするだけで良い）。
 TARGET_DOC_TYPE_CODES = {"350", "360"}
+
+# --- documents_all データセット（カタログ§8 BL-1用・2026-07-16 team lead指示で追加、
+# 同日Codexレビュー指摘を受け tob→documents_all に再設計） ---
+# 公開買付関連書類は単一のordinanceCode/docTypeCodeに収まらない（届出書・意見表明報告書・
+# 対質問回答報告書・撤回届出書・自己株券買付状況報告書等、複数の書類体系にまたがる）。
+# docDescriptionによる事前絞り込みは将来の再分類を不可能にする偽陰性が不可逆なため、
+# 保存は当日の書類一覧を全件・無加工で行う。TOB_KEYWORDS はログ集計・--probe表示専用
+# （保存対象の絞り込みには使わない）。
+ALL_DOCS_DATA_ROOT = DATA_ROOT / "documents_all"
+TOB_KEYWORDS = ("公開買付", "自己株券買付状況報告書")
+ALL_DOCS_DEFAULT_START = DEFAULT_START  # 大量保有と同じ5年ローリング窓の実測境界(2021-07-07)を再利用
+# 直近何営業日を「毎回強制再取得（既存ファイルがあっても再取得し、変化があれば旧版をrev退避）」
+# 対象にするか。18:45の日次実行時点で未提出・未反映の書類が後から追加されるケースを
+# カバーする窓（2026-07-16 Codexレビュー指摘）。
+RECENT_FORCE_REFETCH_DAYS = 5
 
 # EDINETコード -> 証券コード 変換用の公式マスタ（EDINET提出者一覧、無料・APIキー不要の静的ファイル）。
 # 大量保有報告書のリストAPIは secCode が null のことが多く（提出者=株主自身は非上場が通常のため）、
@@ -270,6 +323,220 @@ def fetch_documents_for_date(date_str: str, api_key: Optional[str], run_id: str)
     }
 
 
+def _matches_tob_keywords(doc_description) -> Optional[bool]:
+    """docDescription がTOB関連キーワード（TOB_KEYWORDS）を含むか判定する。
+
+    documents_all データセットでは保存対象の絞り込みには使わない（ログ集計・--probe表示専用）。
+
+    Returns:
+        True/False: docDescriptionがstrで判定できた場合。None: docDescriptionがstrでない
+        （None含む）。呼び出し側（_fetch_all_documents）で「Noneは正常」「None以外の
+        非strは真の異常」に切り分けて集計する（2026-07-16 team lead追補）。
+    """
+    if not isinstance(doc_description, str):
+        return None
+    return any(kw in doc_description for kw in TOB_KEYWORDS)
+
+
+def _content_signature(results: list) -> tuple:
+    """results（EDINET APIレスポンスのレコードリスト）のdocID集合と正規化ハッシュを返す。
+
+    直近営業日の強制再取得モードで「内容が本当に変化したか」を判定するために使う。
+    docID集合だけでなくレコード内容のハッシュも見るのは、同一docIDのレコードが
+    withdrawalStatus等のフィールド更新だけで書き換わるケース（撤回・訂正の反映）を
+    docID集合の比較だけでは取りこぼすため。
+
+    非dict要素（レコード自体が壊れている異常なレスポンス）が混じっていても
+    AttributeErrorでクラッシュしないよう、dictでない要素は repr() を安全な代替キーとして
+    使う（2026-07-16 Codexレビュー4巡目指摘: 旧実装は全要素に無条件で r.get() を呼んでいた）。
+
+    Returns:
+        (doc_ids: frozenset[str], digest: str)
+    """
+    doc_ids = frozenset(
+        str(r.get("docID")) if isinstance(r, dict) else f"__non_dict_record__:{r!r}"
+        for r in results
+    )
+    canonical = json.dumps(results, ensure_ascii=False, sort_keys=True)
+    digest = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+    return doc_ids, digest
+
+
+def _fetch_all_documents(date_str: str, api_key: Optional[str]) -> tuple:
+    """指定営業日の書類一覧を取得する（保存はしない）。TOBキーワード該当数・null件数・
+    真のパース失敗数もログ集計用に計算して返す（保存対象の絞り込みには使わない）。
+
+    **parse_failures の定義（2026-07-16 team lead追補で確定）**: docDescription=None は
+    EDINETの正常な状態であり「パース失敗」ではない（モジュールdocstring冒頭の「重要な制約」
+    参照: 5年ローリング窓境界付近の書類はfilerName/docTypeCode/docDescription等が全て
+    nullになる。実データで境界付近76〜95%がnullであることを確認済み・当初実装は
+    これを丸ごとparse_failuresに計上しており過大だった）。したがって None は
+    null_description_count として別枠でカウントし、parse_failures は「レコード自体が
+    dictでない」「docDescriptionがNoneでもstrでもない想定外の型」等、真に異常なケースのみに
+    限定する。
+
+    APIレスポンスの "results" キー自体がlistでない異常応答（EDINET側の仕様外レスポンス）は
+    RuntimeErrorを送出する（2026-07-16 Codexレビュー4巡目指摘: 旧実装は `or []` でfalsy値
+    のみ救っており、truthyだが型が違う値〔例: 文字列〕はそのまま素通しして後続の
+    for文でレコードごとの文字を誤ってイテレートする恐れがあった。呼び出し元はRuntimeError
+    を既存の例外ハンドラで捕捉し、当該日をstatus=errorとして次の日へ継続する）。
+
+    Returns:
+        (results: list, tob_filtered_count: int, null_description_count: int, parse_failures: int)
+
+    Raises:
+        RuntimeError: "results" がlistでない場合。
+    """
+    resp = edinet_get_json("/documents.json", {"date": _to_iso_date(date_str), "type": "2"}, api_key)
+    results = resp.get("results")
+    if results is None:
+        results = []
+    if not isinstance(results, list):
+        raise RuntimeError(
+            f"[{date_str}] APIレスポンスの'results'がlistでない（型={type(results).__name__}）"
+        )
+    tob_filtered_count = 0
+    null_description_count = 0
+    parse_failures = 0
+    for r in results:
+        if not isinstance(r, dict):
+            parse_failures += 1
+            continue
+        doc_description = r.get("docDescription")
+        if doc_description is None:
+            null_description_count += 1
+            continue
+        matched = _matches_tob_keywords(doc_description)
+        if matched is None:
+            # docDescriptionがNoneではないのにstrでもない = 想定外の型 = 真の異常
+            parse_failures += 1
+        elif matched:
+            tob_filtered_count += 1
+    return results, tob_filtered_count, null_description_count, parse_failures
+
+
+def _needs_catchup(path: Path) -> bool:
+    """documents_all の欠損日キャッチアップ対象判定。
+
+    ファイルが無い、または既存ファイルが壊れて読めない、または既存ファイルの
+    parse_failures>0（＝partial保存だった）場合は再取得対象とする（2026-07-16 Codexレビュー
+    4巡目指摘: parse_failures>0の日もファイル自体は保存されるため、直近5営業日窓の外に
+    出るとファイル存在チェックだけでは「既存」として永久スキップされ、partial状態が
+    固定化してしまう穴があった）。
+    """
+    if not path.exists():
+        return True
+    try:
+        obj = jq_fetch.read_json_gz(path)
+    except Exception:
+        return True  # 壊れたファイルも再取得対象にする（自己修復）
+    if not isinstance(obj, dict):
+        return True  # gzip/JSONは読めるがトップレベルがdictでない異常ファイルも再取得（Codex GO時MINOR対応）
+    return (obj.get("parse_failures") or 0) > 0
+
+
+def fetch_documents_all_for_date(date_str: str, api_key: Optional[str], run_id: str) -> dict:
+    """指定営業日(YYYYMMDD)の書類一覧を **全件・無加工** で取得し
+    data/edinet/documents_all/{date}.json.gz に保存する（既存かつparse_failures=0ならスキップ
+    ＝ネットワーク呼出なし。既存でもpartial(parse_failures>0)だった日は再取得する）。
+
+    直近5営業日より前の欠損日キャッチアップ専用（直近5営業日は
+    fetch_documents_all_for_date_forced() を使うこと）。この関数が対象とする「直近5営業日
+    より前」の日は縦覧期間中の書類が実務上ほぼ確定済みのため、正常保存済み（parse_failures=0）
+    ファイルは無条件で信頼してスキップしてよい。
+
+    Returns:
+        {"status": "skipped_exists"|"saved", "total_count": Optional[int],
+         "filtered_count": Optional[int], "null_description_count": Optional[int],
+         "parse_failures": Optional[int], "file": Optional[str], "rev_file": None}
+    """
+    path = ALL_DOCS_DATA_ROOT / f"{date_str}.json.gz"
+    if not _needs_catchup(path):
+        return {
+            "status": "skipped_exists", "total_count": None, "filtered_count": None,
+            "null_description_count": None, "parse_failures": None, "file": None, "rev_file": None,
+        }
+
+    results, tob_filtered_count, null_description_count, parse_failures = _fetch_all_documents(date_str, api_key)
+    out_obj = {
+        "date": date_str,
+        "total_count": len(results),
+        "tob_filtered_count": tob_filtered_count,
+        "null_description_count": null_description_count,
+        "parse_failures": parse_failures,
+        "results": results,
+    }
+    jq_fetch.write_json_gz(path, out_obj)  # Canonical Module: アトミック gzip 保存を再利用
+    return {
+        "status": "saved",
+        "total_count": len(results),
+        "filtered_count": tob_filtered_count,
+        "null_description_count": null_description_count,
+        "parse_failures": parse_failures,
+        "file": str(path.relative_to(PROJECT_ROOT)),
+        "rev_file": None,
+    }
+
+
+def fetch_documents_all_for_date_forced(date_str: str, api_key: Optional[str], run_id: str) -> dict:
+    """直近営業日用: 既存ファイルの有無に関わらず必ずAPIを叩き直し、内容(docID集合+ハッシュ)が
+    旧ファイルと変化していれば旧ファイルを `<date>.rev<連番>.json.gz` として退避してから
+    新版を保存する（上書きで消さない）。変化がなければ何もしない（rev ファイルは増えない）。
+
+    18:45の日次実行時点では未提出の書類（当日夜間〜翌営業日提出分の反映遅延、後日の訂正・
+    撤回提出等）が後から追加される場合があり、ファイル存在チェックだけでのスキップは
+    永久欠損の穴になる（2026-07-16 Codexレビュー指摘）。直近5営業日だけ強制再取得することで
+    この穴を塞ぐ。
+
+    Returns:
+        {"status": "saved"|"updated"|"unchanged", "total_count": int,
+         "filtered_count": int, "null_description_count": int, "parse_failures": int,
+         "file": Optional[str]（"unchanged"時はNone）, "rev_file": Optional[str]}
+    """
+    path = ALL_DOCS_DATA_ROOT / f"{date_str}.json.gz"
+    results, tob_filtered_count, null_description_count, parse_failures = _fetch_all_documents(date_str, api_key)
+    new_ids, new_hash = _content_signature(results)
+
+    rev_file = None
+    if path.exists():
+        old_obj = jq_fetch.read_json_gz(path)
+        old_ids, old_hash = _content_signature(old_obj.get("results", []))
+        if old_ids == new_ids and old_hash == new_hash:
+            return {
+                "status": "unchanged", "total_count": len(results), "filtered_count": tob_filtered_count,
+                "null_description_count": null_description_count, "parse_failures": parse_failures,
+                "file": None, "rev_file": None,
+            }
+        rev_n = 1
+        while (path.with_name(f"{date_str}.rev{rev_n}.json.gz")).exists():
+            rev_n += 1
+        rev_path = path.with_name(f"{date_str}.rev{rev_n}.json.gz")
+        path.replace(rev_path)  # 旧版を退避（上書きで消さない）
+        rev_file = str(rev_path.relative_to(PROJECT_ROOT))
+        status = "updated"
+    else:
+        status = "saved"
+
+    out_obj = {
+        "date": date_str,
+        "total_count": len(results),
+        "tob_filtered_count": tob_filtered_count,
+        "null_description_count": null_description_count,
+        "parse_failures": parse_failures,
+        "results": results,
+    }
+    jq_fetch.write_json_gz(path, out_obj)  # Canonical Module: アトミック gzip 保存を再利用（新版はtmp+os.replaceで確定）
+    return {
+        "status": status,
+        "total_count": len(results),
+        "filtered_count": tob_filtered_count,
+        "null_description_count": null_description_count,
+        "parse_failures": parse_failures,
+        "file": str(path.relative_to(PROJECT_ROOT)),
+        "rev_file": rev_file,
+    }
+
+
 # 書類本体取得(/api/v2/documents/{docID})の type パラメータ（EDINET公式仕様書準拠の想定値。
 # 実キー未入手のため未検証）。1=XBRL, 2=PDF, 3=代替書面等, 4=英文, 5=CSV。
 BODY_TYPE_EXTENSIONS = {"1": "xbrl.zip", "2": "pdf", "3": "zip", "4": "zip", "5": "csv.zip"}
@@ -382,20 +649,30 @@ def fetch_edinet_code_master(force: bool = False) -> Path:
     return EDINET_CODE_MASTER_PATH
 
 
-def inspect_cached_date(date_str: str) -> None:
+def inspect_cached_date(date_str: str, dataset: str = "holdings") -> None:
     """既に取得済みの1営業日分のキャッシュを人間向けに要約表示する（読み取り専用・API未呼出）。
 
     実キー入手後、初回取得分の docTypeCode 分布・filerName/secCode の実際の表記を
     目視確認するための準備コマンド（team lead指示「実レスポンスでフィールド名・コード体系を
-    確認して合わせる」の実行手段）。
+    確認して合わせる」の実行手段）。dataset="documents_all" 指定時は data/edinet/documents_all/
+    を参照する。
     """
-    path = DATA_ROOT / f"{date_str}.json.gz"
+    data_root = ALL_DOCS_DATA_ROOT if dataset == "documents_all" else DATA_ROOT
+    path = data_root / f"{date_str}.json.gz"
     if not path.exists():
         raise SystemExit(f"FATAL: {path} が見つかりません。先にこの日付を取得してください。")
     obj = jq_fetch.read_json_gz(path)
     results = obj.get("results", [])
-    print(f"=== {date_str} キャッシュ内容 ===")
-    print(f"total_count(取得時点)={obj.get('total_count')} filtered_count(保存分)={obj.get('filtered_count')}")
+    print(f"=== {date_str} [{dataset}] キャッシュ内容 ===")
+    if dataset == "documents_all":
+        print(
+            f"total_count(取得時点)={obj.get('total_count')} "
+            f"tob_filtered_count={obj.get('tob_filtered_count')} "
+            f"null_description_count={obj.get('null_description_count')}（EDINETの正常状態） "
+            f"parse_failures={obj.get('parse_failures')}（真の異常のみ）"
+        )
+    else:
+        print(f"total_count(取得時点)={obj.get('total_count')} filtered_count(保存分)={obj.get('filtered_count')}")
     from collections import Counter
     type_counts = Counter(str(r.get("docTypeCode")) for r in results)
     print(f"docTypeCode分布: {dict(type_counts)}")
@@ -408,64 +685,111 @@ def inspect_cached_date(date_str: str) -> None:
         )
 
 
-def run_probe(api_key: Optional[str], run_id: str, sample_date: str = PROBE_SAMPLE_DATE) -> int:
+def run_probe(
+    api_key: Optional[str], run_id: str, dataset: str = "holdings", sample_date: Optional[str] = None
+) -> int:
     """1日分だけ実際に叩いて疎通確認する（保存はしない）。キー有無どちらでも使える。
+
+    dataset="documents_all" の場合、TOBキーワード該当は大量保有と異なり出現頻度が低く
+    固定サンプル日だと0件になりやすいため、sample_date未指定時は直近の営業日を自動選択する。
 
     Returns:
         0: 正常応答（keyが有効） / 2: 認証エラー（キー未設定 or 無効） / 1: その他のエラー
     """
-    print(f"[probe] date={sample_date} (iso={_to_iso_date(sample_date)}) にプローブ実行中...")
+    if sample_date is None:
+        if dataset == "documents_all":
+            calendar_days = jq_fetch.load_calendar_days(api_key=None, run_id=None)  # type: ignore[arg-type]
+            today_str = jq_fetch.now_jst().strftime("%Y%m%d")
+            recent = jq_fetch.business_days_in_range(calendar_days, ALL_DOCS_DEFAULT_START, today_str)
+            sample_date = recent[-1] if recent else PROBE_SAMPLE_DATE
+        else:
+            sample_date = PROBE_SAMPLE_DATE
+
+    kind = "probe" if dataset == "holdings" else f"probe_{dataset}"
+    print(f"[probe:{dataset}] date={sample_date} (iso={_to_iso_date(sample_date)}) にプローブ実行中...")
     try:
-        resp = edinet_get_json("/documents.json", {"date": _to_iso_date(sample_date), "type": "2"}, api_key)
-        results = resp.get("results") or []
-        filtered = [r for r in results if str(r.get("docTypeCode")) in TARGET_DOC_TYPE_CODES]
-        print(f"[probe] 成功: 全{len(results)}件 / docTypeCode 350,360 該当 {len(filtered)}件")
+        if dataset == "documents_all":
+            # 本処理と同じ経路を再利用（非list/非dict耐性を本処理と統一・Codex GO時MINOR対応）
+            results, _tob_count, _null_desc_count, _parse_failures = _fetch_all_documents(sample_date, api_key)
+            filtered = [r for r in results if isinstance(r, dict) and _matches_tob_keywords(r.get("docDescription"))]
+            label = "docDescriptionにTOBキーワード該当（保存は全件・このフィルタは集計専用）"
+        else:
+            resp = edinet_get_json("/documents.json", {"date": _to_iso_date(sample_date), "type": "2"}, api_key)
+            results = resp.get("results") or []
+            filtered = [r for r in results if str(r.get("docTypeCode")) in TARGET_DOC_TYPE_CODES]
+            label = "docTypeCode 350,360 該当"
+        print(f"[probe:{dataset}] 成功: 全{len(results)}件 / {label} {len(filtered)}件")
         if filtered:
-            print(f"[probe] サンプルレコード(1件目): {json.dumps(filtered[0], ensure_ascii=False)[:500]}")
+            print(f"[probe:{dataset}] サンプルレコード(1件目): {json.dumps(filtered[0], ensure_ascii=False)[:500]}")
         append_log({
-            "run_id": run_id, "ts": jq_fetch.now_jst().isoformat(), "kind": "probe", "date": sample_date,
+            "run_id": run_id, "ts": jq_fetch.now_jst().isoformat(), "kind": kind, "date": sample_date,
             "status": "probe_ok", "count": len(results), "file": None, "error": None,
         })
         return 0
     except AuthError as e:
-        print(f"[probe] 認証エラー: {e}", file=sys.stderr)
+        print(f"[probe:{dataset}] 認証エラー: {e}", file=sys.stderr)
         append_log({
-            "run_id": run_id, "ts": jq_fetch.now_jst().isoformat(), "kind": "probe", "date": sample_date,
+            "run_id": run_id, "ts": jq_fetch.now_jst().isoformat(), "kind": kind, "date": sample_date,
             "status": "probe_auth_error", "count": None, "file": None, "error": str(e),
         })
         return 2
     except RuntimeError as e:
-        print(f"[probe] エラー: {e}", file=sys.stderr)
+        print(f"[probe:{dataset}] エラー: {e}", file=sys.stderr)
         append_log({
-            "run_id": run_id, "ts": jq_fetch.now_jst().isoformat(), "kind": "probe", "date": sample_date,
+            "run_id": run_id, "ts": jq_fetch.now_jst().isoformat(), "kind": kind, "date": sample_date,
             "status": "probe_error", "count": None, "file": None, "error": str(e),
         })
         return 1
 
 
-def print_status(start: str, end: str) -> None:
-    """期待件数（期間内営業日数） vs 取得済み件数を表示する（読み取り専用・API未呼出）。"""
+_CANONICAL_DATE_FILE_RE = re.compile(r"^\d{8}$")
+
+
+def print_status(start: str, end: str, dataset: str = "holdings") -> None:
+    """期待件数（期間内営業日数） vs 取得済み件数を表示する（読み取り専用・API未呼出）。
+
+    documents_all データセットの `<date>.revN.json.gz` 退避ファイルはカウント対象外
+    （正本は常に `<date>.json.gz` の1本のみ。revファイルはあくまで変更履歴のアーカイブ）。
+    """
+    data_root = ALL_DOCS_DATA_ROOT if dataset == "documents_all" else DATA_ROOT
     calendar_days = jq_fetch.load_calendar_days(api_key=None, run_id=None)  # type: ignore[arg-type]
     expected = jq_fetch.business_days_in_range(calendar_days, start, end)
     actual = (
-        sum(1 for p in DATA_ROOT.glob("*.json.gz") if start <= p.name.removesuffix(".json.gz") <= end)
-        if DATA_ROOT.exists()
+        sum(
+            1 for p in data_root.glob("*.json.gz")
+            if _CANONICAL_DATE_FILE_RE.match(p.name.removesuffix(".json.gz"))
+            and start <= p.name.removesuffix(".json.gz") <= end
+        )
+        if data_root.exists()
         else 0
     )
-    print(f"=== EDINET キャッシュ状態（{start} 〜 {end}） ===")
+    print(f"=== EDINET[{dataset}] キャッシュ状態（{start} 〜 {end}） ===")
     print(f"documents: {actual}/{len(expected)} 件（期間内期待値・営業日ベース）")
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="EDINET API v2 大量保有報告書メタデータフェッチャー")
-    parser.add_argument("--start", default=DEFAULT_START, help=f"取得開始日 YYYYMMDD（既定 {DEFAULT_START}）")
-    parser.add_argument("--end", default=DEFAULT_END, help=f"取得終了日 YYYYMMDD（既定 {DEFAULT_END}）")
+    parser = argparse.ArgumentParser(description="EDINET API v2 メタデータフェッチャー（大量保有報告書 / documents_all）")
+    parser.add_argument(
+        "--dataset", choices=["holdings", "documents_all"], default="holdings",
+        help="取得データセット（既定 holdings=大量保有報告書・変更報告書＝従来の挙動。"
+             "documents_all=当日の書類一覧を全件・無加工保存＝カタログ§8 BL-1用・"
+             "data/edinet/documents_all/ に別保存）",
+    )
+    parser.add_argument(
+        "--start", default=None,
+        help=f"取得開始日 YYYYMMDD（既定は dataset により異なる。"
+             f"holdings={DEFAULT_START} / documents_all={ALL_DOCS_DEFAULT_START}）",
+    )
+    parser.add_argument(
+        "--end", default=None,
+        help=f"取得終了日 YYYYMMDD（既定は dataset により異なる。holdings={DEFAULT_END} / documents_all=当日・動的）",
+    )
     parser.add_argument("--status", action="store_true", help="期待件数 vs 取得済み件数を表示して終了")
     parser.add_argument("--probe", action="store_true", help="1日分だけ疎通確認して終了（保存しない）")
     parser.add_argument(
         "--inspect", metavar="YYYYMMDD",
         help="既に取得済みの1営業日分の内容（docTypeCode分布・サンプルfilerName/secCode）を表示して終了"
-             "（実キー入手後、初回取得分の実データ確認用）",
+             "（実キー入手後、初回取得分の実データ確認用。--datasetで参照先を切替）",
     )
     parser.add_argument(
         "--fetch-body", metavar="DOC_ID",
@@ -481,8 +805,18 @@ def main() -> int:
     parser.add_argument("--force", action="store_true", help="--fetch-code-master併用時、既存でも再取得する")
     args = parser.parse_args()
 
+    # --start/--end の実効値を dataset ごとに決定する。holdings は従来の argparse 既定値と
+    # 完全に同一（DEFAULT_START/DEFAULT_END）なので既存呼び出しの挙動は一切変わらない。
+    # documents_all は --end 省略時に当日(JST)まで動的に伸びる（launchd日次ジョブでの毎日catch-up用）。
+    if args.dataset == "documents_all":
+        start = args.start or ALL_DOCS_DEFAULT_START
+        end = args.end or jq_fetch.now_jst().strftime("%Y%m%d")
+    else:
+        start = args.start or DEFAULT_START
+        end = args.end or DEFAULT_END
+
     if args.status:
-        print_status(args.start, args.end)
+        print_status(start, end, dataset=args.dataset)
         return 0
 
     if args.fetch_code_master:
@@ -495,7 +829,7 @@ def main() -> int:
             return 1
 
     if args.inspect:
-        inspect_cached_date(args.inspect)
+        inspect_cached_date(args.inspect, dataset=args.dataset)
         return 0
 
     run_id = uuid.uuid4().hex
@@ -517,7 +851,7 @@ def main() -> int:
             return 1
 
     if args.probe:
-        return run_probe(api_key, run_id)
+        return run_probe(api_key, run_id, dataset=args.dataset)
 
     if api_key is None:
         print(
@@ -525,7 +859,7 @@ def main() -> int:
             "ユーザーが登録中の可能性があるため、キー無しで1回プローブして実エラーを記録します。",
             file=sys.stderr,
         )
-        probe_rc = run_probe(None, run_id)
+        probe_rc = run_probe(None, run_id, dataset=args.dataset)
         print(
             "FATAL: EDINET_API_KEY 未設定のため取得を開始できません。"
             "取得後 `export EDINET_API_KEY=\"...\"` を ~/.zshrc に追記して再実行してください"
@@ -536,26 +870,72 @@ def main() -> int:
 
     append_log({
         "run_id": run_id, "ts": jq_fetch.now_jst().isoformat(), "kind": None, "date": None,
-        "status": "run_start", "count": None, "file": None, "error": None,
+        "status": "run_start", "count": None, "file": None, "error": None, "dataset": args.dataset,
     })
 
     calendar_days = jq_fetch.load_calendar_days(api_key=None, run_id=None)  # type: ignore[arg-type]
-    dates = jq_fetch.business_days_in_range(calendar_days, args.start, args.end)
-    print(f"[edinet] 対象営業日 {len(dates)} 件（{args.start} 〜 {args.end}）")
+    dates = jq_fetch.business_days_in_range(calendar_days, start, end)
 
-    total = len(dates)
-    for idx, date_str in enumerate(dates, start=1):
+    if args.dataset == "documents_all":
+        # 直近RECENT_FORCE_REFETCH_DAYS営業日（実行時点の実日付基準。--start/--endの指定範囲とは
+        # 独立に「本当の今日」から見て直近か」で決める）は毎回強制再取得、それより前は欠損日のみ
+        # キャッチアップする（5年分を毎日フルスキャンしてAPIを叩き直すことはしない。2026-07-16
+        # Codexレビュー指摘）。
+        true_today = jq_fetch.now_jst().strftime("%Y%m%d")
+        recent_all = jq_fetch.business_days_in_range(calendar_days, ALL_DOCS_DEFAULT_START, true_today)
+        recent_window = set(recent_all[-RECENT_FORCE_REFETCH_DAYS:])
+        recent_dates = [d for d in dates if d in recent_window]
+        older_dates = [d for d in dates if d not in recent_window]
+        missing_older = [d for d in older_dates if _needs_catchup(ALL_DOCS_DATA_ROOT / f"{d}.json.gz")]
+        skipped_older = len(older_dates) - len(missing_older)
+        work_dates = recent_dates + missing_older
+        print(
+            f"[edinet:documents_all] 対象営業日 {len(dates)} 件（{start} 〜 {end}）: "
+            f"直近{len(recent_dates)}件は強制再取得、それ以前は欠損{len(missing_older)}件のみ取得"
+            f"（既存{skipped_older}件はスキップ・ネットワーク呼出/ログ追記なし）"
+        )
+    else:
+        work_dates = dates
+        print(f"[edinet:{args.dataset}] 対象営業日 {len(dates)} 件（{start} 〜 {end}）")
+        recent_window = set()
+
+    kind_label = "documents" if args.dataset == "holdings" else "documents_all"
+    total = len(work_dates)
+    for idx, date_str in enumerate(work_dates, start=1):
         ts = jq_fetch.now_jst().isoformat()
         try:
-            result = fetch_documents_for_date(date_str, api_key, run_id)
-            record = {
-                "run_id": run_id, "ts": ts, "kind": "documents", "date": date_str,
-                "status": result["status"], "count": result.get("filtered_count"),
-                "file": result.get("file"), "error": None,
-            }
+            if args.dataset == "documents_all":
+                if date_str in recent_window:
+                    result = fetch_documents_all_for_date_forced(date_str, api_key, run_id)
+                else:
+                    result = fetch_documents_all_for_date(date_str, api_key, run_id)
+                save_outcome = result["status"]
+                parse_failures = result.get("parse_failures") or 0
+                # 修正3(2026-07-16 Codexレビュー指摘・同日team lead追補で定義修正): parse_failures>0
+                # （＝docDescription=None以外の真に異常なレコードが存在した日）は成功扱いに
+                # 紛れ込ませず status を明示的に "partial" にする。docDescription=None自体は
+                # EDINETの正常状態（5年ローリング窓境界付近）であり null_description_count に
+                # 別枠計上するのみで partial 判定には使わない（実際の保存結果は save_outcome に
+                # 残すため情報は失われない）。
+                log_status = "partial" if parse_failures > 0 else save_outcome
+                record = {
+                    "run_id": run_id, "ts": ts, "kind": kind_label, "date": date_str,
+                    "status": log_status, "save_outcome": save_outcome,
+                    "count": result.get("filtered_count"), "total_count": result.get("total_count"),
+                    "null_description_count": result.get("null_description_count"),
+                    "parse_failures": result.get("parse_failures"), "rev_file": result.get("rev_file"),
+                    "file": result.get("file"), "error": None,
+                }
+            else:
+                result = fetch_documents_for_date(date_str, api_key, run_id)
+                record = {
+                    "run_id": run_id, "ts": ts, "kind": kind_label, "date": date_str,
+                    "status": result["status"], "count": result.get("filtered_count"),
+                    "file": result.get("file"), "error": None,
+                }
         except AuthError as e:
             append_log({
-                "run_id": run_id, "ts": ts, "kind": "documents", "date": date_str,
+                "run_id": run_id, "ts": ts, "kind": kind_label, "date": date_str,
                 "status": "auth_error", "count": None, "file": None, "error": str(e),
             })
             print(f"FATAL: 認証エラー（APIキーが無効または失効している可能性）: {e}", file=sys.stderr)
@@ -563,8 +943,21 @@ def main() -> int:
         except RuntimeError as e:
             print(f"WARN: [{date_str}] 取得失敗（次回再実行で再取得されます）: {e}", file=sys.stderr)
             record = {
-                "run_id": run_id, "ts": ts, "kind": "documents", "date": date_str,
+                "run_id": run_id, "ts": ts, "kind": kind_label, "date": date_str,
                 "status": "error", "count": None, "file": None, "error": str(e),
+            }
+        except Exception as e:
+            # 修正5(c)(2026-07-16 Codexレビュー4巡目指摘): AuthError/RuntimeError以外の想定外の
+            # 例外（1日分の異常データに起因するAttributeError等）でも当該日をerror記録して
+            # 次の日へ継続する。旧実装はここを捕捉しておらず、1日の異常データで残り全営業日の
+            # 処理とログが失われる（クラッシュ）恐れがあった。
+            print(
+                f"WARN: [{date_str}] 想定外エラー（次回再実行で再取得されます）: "
+                f"{type(e).__name__}: {e}", file=sys.stderr,
+            )
+            record = {
+                "run_id": run_id, "ts": ts, "kind": kind_label, "date": date_str,
+                "status": "error", "count": None, "file": None, "error": f"{type(e).__name__}: {e}",
             }
         append_log(record)
         if idx % PROGRESS_EVERY == 0 or idx == total:
