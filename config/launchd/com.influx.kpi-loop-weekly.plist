@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.influx.kpi-loop-weekly</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>-lc</string>
+        <string>~/.claude/scripts/vault-prompt-runner.sh "/Users/masaaki_nagasawa/Desktop/biz/influx/prompts/scheduled/kpi-loop-weekly.md"</string>
+    </array>
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Weekday</key>
+        <integer>1</integer>
+        <key>Hour</key>
+        <integer>9</integer>
+        <key>Minute</key>
+        <integer>41</integer>
+    </dict>
+    <key>StandardOutPath</key>
+    <string>/Users/masaaki_nagasawa/Library/Logs/influx-kpi-loop-weekly.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/masaaki_nagasawa/Library/Logs/influx-kpi-loop-weekly.log</string>
+</dict>
+</plist>
