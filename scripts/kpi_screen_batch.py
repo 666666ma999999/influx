@@ -47,7 +47,11 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).parent))
 import jq_fetch  # noqa: E402  (Canonical Module: now_jst を再利用)
 import kpi_event_study  # noqa: E402  (Canonical: load_base_rate_by_month/bootstrap_lift_ci/bootstrap_ev_ci/append_trial)
+import kpi_f03_pullback_signals as f03_v2t  # noqa: E402  (Canonical: batch_v2tグリッド検証(verify_grid_frozen)・
+# セル定義パース(load_cells_from_grid)を再利用。v2tのセルCSV自体はこのモジュールが生成する)
 import kpi_pead_signals as pead_mod  # noqa: E402  (Canonical: compute_dev25/compute_max20)
+import kpi_run_evidence  # noqa: E402  (Canonical: compute_code_tree_hash を再利用。docker本番runnerは
+# .gitをmountしないためgit_head常時Noneが既知の仕様＝content_sha256を主識別子とする既存設計を踏襲)
 import kpi_sue_champion_signals as sue_mod  # noqa: E402  (Canonical: compute_dev200)
 import kpi_volshock_v2_amplifiers as v2_amp  # noqa: E402  (Canonical: compute_quiet_ratio)
 import kpi_volshock_v3_ul_earnings as v3_ul  # noqa: E402  (Canonical: compute_ul_count_10bd)
@@ -79,6 +83,25 @@ LIFT_N_BOOT = 1000  # 点推定のみ使用（CIは参考併記）。§6既定N_
 # 不一致（=凍結後のグリッド変更）は FATAL 停止する。--grid-override（smoke用）は対象外だが、
 # その場合は --no-trials-append と --screening-ledger の併用を強制して本番台帳を保護する。
 FROZEN_GRID_HASHES = {"batch_v1": "73489b3b23a229b4"}
+
+# --- batch_v2t（第41周・カタログ§7-AF）専用の凍結パラメータ ------------------------------
+# グリッドスキーマがv1(population/feature/bucket)と全く異なるため、v2t用の判定ロジックは
+# 本ファイル下部に独立実装する（v1経路(run_screen_phase/run_confirm_phase等)は一切変更しない）。
+# セルCSV自体の生成はCanonical Module `kpi_f03_pullback_signals.py`（別プロセス・本ファイルは
+# output/kpi_screening/batch_v2t/cells/*.csv を読むだけで再生成しない）。
+V2T_CELLS_DIR_DEFAULT = f03_v2t.DEFAULT_OUTPUT_DIR / "cells"
+V2T_DISCOVERY_PERIOD = ("201611", "201912")  # grid protocol.discovery_period のYYYYMM表現
+V2T_CONFIRM_PERIOD = ("202001", "202211")  # grid protocol.confirm_period のYYYYMM表現
+V2T_N_BOOT = 10000  # grid protocol.bootstrap_spec
+V2T_SEED = 20260717  # grid protocol.bootstrap_spec
+V2T_BH_Q = 0.10
+V2T_BY_Q = 0.10
+V2T_ELIGIBILITY_MIN_N = 50  # grid protocol.eligibility_floor
+V2T_ELIGIBILITY_MIN_MONTHS = 12  # grid protocol.eligibility_floor（確認期間にも同規則を適用=confirm_ineligible）
+V2T_CONFIRM_MIN_N = 30  # grid protocol.confirm_rule
+V2T_REPRESENTATIVE_LIMIT = 2  # grid protocol.survivor_cap = min(8, 代表2) = 実質2
+V2T_LIFT_N_BOOT = 1000  # 点推定のみ使用（v1のLIFT_N_BOOTと同一規約）
+V2T_LIFT_SEED = 42
 
 
 def meta_kpi_name(batch_id: str) -> str:
@@ -830,6 +853,479 @@ def write_report(
     path.write_text("\n".join(lines), encoding="utf-8")
 
 
+# --- batch_v2t（第41周・カタログ§7-AF）専用ロジック ---------------------------------------
+
+
+def compute_v2t_pvalue(df: pd.DataFrame, n_boot: int = V2T_N_BOOT, seed: int = V2T_SEED) -> dict:
+    """grid protocol.bootstrap_spec の直接ブートストラップ片側p値
+    （p=(1+#{boot平均EV<=0})/(n_boot+1)・H0: EV<=0）。
+
+    v1の `compute_null_centered_pvalue` は帰無中心化した系列をブートストラップするのに対し、
+    v2tのグリッド仕様は「観測EVの月次ブロック・ブートストラップ分布そのもの」から直接p値を
+    出す方式（帰無中心化なし）と明記されており定義が異なるため、新規関数として実装する
+    （既存Canonical関数のシグネチャ・数値は変更しない）。
+    """
+    ret = df["ret"].to_numpy()
+    ev_obs = float(ret.mean() - ROUND_TRIP_COST)
+    tmp = pd.DataFrame({"month": df["month"].to_numpy(), "ret": ret})
+    grouped = tmp.groupby("month")["ret"].agg(["sum", "count"])
+    sums = grouped["sum"].to_numpy()
+    counts = grouped["count"].to_numpy()
+    n_months = len(sums)
+
+    rng = np.random.default_rng(seed)
+    idx_matrix = rng.integers(0, n_months, size=(n_boot, n_months))
+    sampled_sums = sums[idx_matrix].sum(axis=1)
+    sampled_counts = counts[idx_matrix].sum(axis=1)
+    ev_star = sampled_sums / sampled_counts - ROUND_TRIP_COST
+
+    exceed = int(np.sum(ev_star <= 0))
+    p = (1 + exceed) / (n_boot + 1)
+    return {"ev_obs": ev_obs, "p": p, "n_boot": n_boot, "n_months": n_months}
+
+
+def bh_adjusted_pvalues(pvals: np.ndarray) -> np.ndarray:
+    """標準BHステップアップ手続きの調整済みp値（q値）を返す（family_representative_ruleの
+    「(1)BH調整p最小」でのタイブレークにのみ使用。合否判定自体は既存の `bh_correction` を使う）。"""
+    m = len(pvals)
+    if m == 0:
+        return np.array([])
+    order = np.argsort(pvals)
+    sorted_p = pvals[order]
+    ranks = np.arange(1, m + 1)
+    adj_sorted = np.clip(sorted_p * m / ranks, 0, 1)
+    adj_sorted = np.minimum.accumulate(adj_sorted[::-1])[::-1]
+    out = np.empty(m)
+    out[order] = adj_sorted
+    return out
+
+
+def v2t_code_version() -> dict:
+    """meta_row_fields「コードcommit hash」の実体。docker本番runnerは.gitをmountしないため
+    git_head常時Noneが既知の仕様（kpi_run_evidence.compute_code_tree_hash docstring参照）。
+    そちらのcontent_sha256（scripts/*.py全体の内容ハッシュ）を主識別子として採用し、
+    git_headはホスト実行時のみ埋まる参考フィールドとして併記する（新規git呼び出しの再実装はしない）。"""
+    return kpi_run_evidence.compute_code_tree_hash()
+
+
+def load_v2t_cells_df(cells_dir: Path, cell_id: str) -> pd.DataFrame:
+    path = cells_dir / f"{cell_id}.csv"
+    if not path.exists():
+        raise SystemExit(
+            f"FATAL: v2tセルCSVが見つかりません: {path}"
+            "（先に kpi_f03_pullback_signals.py を実行してください）"
+        )
+    return pd.read_csv(path, dtype={"signal_date": str, "code": str, "month": str, "regime": str})
+
+
+def v2t_period_filter(df: pd.DataFrame, period: tuple[str, str]) -> pd.DataFrame:
+    if df.empty:
+        return df
+    out = df[df["in_universe"] == True]  # noqa: E712 (CSV読込のbool比較)
+    out = out[(out["month"] >= period[0]) & (out["month"] <= period[1])]
+    return out.reset_index(drop=True)
+
+
+def v2t_jaccard_and_corr_matrices(
+    event_sets: dict[str, set], month_counts: dict[str, dict], cell_ids: list[str]
+) -> tuple[dict, dict]:
+    """セル間イベントJaccard行列・月次シグナル件数のピアソン相関行列
+    （grid protocol.family_representative_rule必須報告・pseudo_replication_control必須診断）。"""
+    jaccard: dict[str, dict] = {}
+    for a in cell_ids:
+        jaccard[a] = {}
+        for b in cell_ids:
+            sa, sb = event_sets.get(a, set()), event_sets.get(b, set())
+            union = sa | sb
+            jaccard[a][b] = (len(sa & sb) / len(union)) if union else None
+
+    all_months = sorted({m for mc in month_counts.values() for m in mc})
+    corr: dict[str, dict] = {}
+    for a in cell_ids:
+        corr[a] = {}
+        va = np.array([month_counts.get(a, {}).get(m, 0) for m in all_months], dtype=float)
+        for b in cell_ids:
+            vb = np.array([month_counts.get(b, {}).get(m, 0) for m in all_months], dtype=float)
+            if len(all_months) < 2 or va.std() == 0 or vb.std() == 0:
+                corr[a][b] = None
+            else:
+                corr[a][b] = float(np.corrcoef(va, vb)[0, 1])
+    return jaccard, corr
+
+
+def run_v2t_screen(cells: list[dict], cells_dir: Path, base_rate_by_month: dict[str, float]) -> dict:
+    """発見期間: セル別EV/p値/lift算出 → eligibility → BH(q=0.10)+BY(q=0.10、全eligibleセル分保存）→
+    family_representative_rule（BH通過∧lift>1.0の中からBH調整p最小→n大→cell_id昇順で最大2）。"""
+    period = V2T_DISCOVERY_PERIOD
+    cell_results = []
+    event_sets: dict[str, set] = {}
+    month_counts: dict[str, dict] = {}
+
+    for c in cells:
+        df_full = load_v2t_cells_df(cells_dir, c["cell_id"])
+        df = v2t_period_filter(df_full, period)
+        n = len(df)
+        months_spanned = int(df["month"].nunique()) if n else 0
+        eligible = n >= V2T_ELIGIBILITY_MIN_N and months_spanned >= V2T_ELIGIBILITY_MIN_MONTHS
+        stats = {**c, "n": n, "months_spanned": months_spanned, "eligible": eligible}
+        if eligible:
+            pv = compute_v2t_pvalue(df)
+            lift_res = kpi_event_study.bootstrap_lift_ci(df, base_rate_by_month, n_boot=V2T_LIFT_N_BOOT, seed=V2T_LIFT_SEED)
+            stats.update(
+                ev_obs=pv["ev_obs"], p=pv["p"],
+                lift_point=lift_res["point_lift"], lift_ci_low=lift_res["ci_low"], lift_ci_high=lift_res["ci_high"],
+            )
+        else:
+            stats.update(ev_obs=None, p=None, lift_point=None, lift_ci_low=None, lift_ci_high=None)
+        cell_results.append(stats)
+        event_sets[c["cell_id"]] = set(zip(df["signal_date"], df["code"])) if n else set()
+        month_counts[c["cell_id"]] = df["month"].value_counts().to_dict() if n else {}
+
+    eligible_cells = [c for c in cell_results if c["eligible"]]
+    pvals = np.array([c["p"] for c in eligible_cells])
+    bh_pass = bh_correction(pvals, V2T_BH_Q) if len(pvals) else np.array([], dtype=bool)
+    by_pass = bh_correction(pvals, V2T_BY_Q, correction_factor=harmonic_sum(len(eligible_cells))) if len(pvals) else np.array([], dtype=bool)
+    bh_adj = bh_adjusted_pvalues(pvals)
+    for c, bh, by, adj in zip(eligible_cells, bh_pass, by_pass, bh_adj):
+        c["bh_pass"], c["by_pass"], c["bh_adj_p"] = bool(bh), bool(by), float(adj)
+    for c in cell_results:
+        if not c["eligible"]:
+            c["bh_pass"] = c["by_pass"] = c["bh_adj_p"] = None
+
+    candidates = [c for c in eligible_cells if c.get("bh_pass") and c["lift_point"] is not None and c["lift_point"] > 1.0]
+    candidates.sort(key=lambda c: (c["bh_adj_p"], -c["n"], c["cell_id"]))
+    representatives = candidates[:V2T_REPRESENTATIVE_LIMIT]
+    rep_ids = {c["cell_id"] for c in representatives}
+    for c in cell_results:
+        c["selected"] = c["cell_id"] in rep_ids
+
+    jaccard, corr = v2t_jaccard_and_corr_matrices(event_sets, month_counts, [c["cell_id"] for c in cells])
+    return {
+        "period": period, "cells": cell_results, "representatives": representatives,
+        "eligible_count": len(eligible_cells),
+        "bh_pass_count": int(sum(bh_pass)) if len(bh_pass) else 0,
+        "by_pass_count": int(sum(by_pass)) if len(by_pass) else 0,
+        "jaccard": jaccard, "corr": corr,
+    }
+
+
+def run_v2t_confirm(representatives: list[dict], cells_dir: Path, base_rate_by_month: dict[str, float]) -> dict:
+    """確認期間: 代表セル(<=2)のみ評価。有効月<12はconfirm_ineligible。
+    片側p<=0.05/S ∧ EV>0 ∧ lift>1.0 ∧ n>=30 で confirm_pass（95%CIは参考併記のみ）。"""
+    period = V2T_CONFIRM_PERIOD
+    S = len(representatives)
+    alpha = (0.05 / S) if S else None
+    results = []
+    for c in representatives:
+        df_full = load_v2t_cells_df(cells_dir, c["cell_id"])
+        df = v2t_period_filter(df_full, period)
+        n = len(df)
+        months_spanned = int(df["month"].nunique()) if n else 0
+        base = {**c, "n_confirm": n, "months_spanned": months_spanned}
+        if months_spanned < V2T_ELIGIBILITY_MIN_MONTHS:
+            results.append({
+                **base, "confirm_verdict": "confirm_ineligible",
+                "confirm_p": None, "confirm_ev_obs": None, "confirm_lift_point": None,
+                "confirm_lift_ci_low": None, "confirm_lift_ci_high": None, "ev_ci95": (None, None),
+            })
+            continue
+        pv = compute_v2t_pvalue(df)
+        lift_res = kpi_event_study.bootstrap_lift_ci(df, base_rate_by_month, n_boot=V2T_LIFT_N_BOOT, seed=V2T_LIFT_SEED)
+        ev_ci = kpi_event_study.bootstrap_ev_ci(df)
+        passed = bool(
+            n >= V2T_CONFIRM_MIN_N
+            and alpha is not None and pv["p"] <= alpha
+            and pv["ev_obs"] is not None and pv["ev_obs"] > 0
+            and lift_res["point_lift"] is not None and lift_res["point_lift"] > 1.0
+        )
+        results.append({
+            **base, "confirm_verdict": "confirm_pass" if passed else "confirm_fail",
+            "confirm_p": pv["p"], "confirm_ev_obs": pv["ev_obs"],
+            "confirm_lift_point": lift_res["point_lift"],
+            "confirm_lift_ci_low": lift_res["ci_low"], "confirm_lift_ci_high": lift_res["ci_high"],
+            "ev_ci95": (ev_ci["ci_low"], ev_ci["ci_high"]),
+        })
+    return {"period": period, "S": S, "alpha": alpha, "results": results}
+
+
+def v2t_cell_to_ledger_record(cell: dict, batch_id: str, grid_sha: str) -> dict:
+    return {
+        "run_id": uuid.uuid4().hex,
+        "ts": jq_fetch.now_jst().isoformat(),
+        "kpi_name": f"screen_v2t_{cell['cell_id']}",
+        "batch_id": batch_id,
+        "grid_sha256": grid_sha,
+        "cell_id": cell["cell_id"], "k": cell["k"], "N": cell["N"], "name": cell.get("name"),
+        "n": cell["n"], "months_spanned": cell["months_spanned"], "eligible": cell["eligible"],
+        "ev_obs": cell.get("ev_obs"), "p": cell.get("p"), "n_boot_used": V2T_N_BOOT, "seed": V2T_SEED,
+        "bh_pass": cell.get("bh_pass"), "by_pass": cell.get("by_pass"), "bh_adj_p": cell.get("bh_adj_p"),
+        "lift_point": cell.get("lift_point"), "lift_ci_low": cell.get("lift_ci_low"), "lift_ci_high": cell.get("lift_ci_high"),
+        "selected_representative": cell.get("selected", False),
+    }
+
+
+def load_v2t_screen_summary_from_ledger(ledger_path: Path, batch_id: str) -> dict:
+    """confirmフェーズ単独実行用: screening_batches.jsonlから当該batch_idの4行を読み、
+    代表セル(selected_representative=True)を再構築する。"""
+    if not ledger_path.exists():
+        raise SystemExit(f"FATAL: confirmフェーズ単独実行にはscreening_batches.jsonlが必要です: {ledger_path}")
+    rows = []
+    with open(ledger_path, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            rec = json.loads(line)
+            if rec.get("batch_id") == batch_id:
+                rows.append(rec)
+    if len(rows) != 4:
+        raise SystemExit(
+            f"FATAL: batch_id={batch_id} の行数が4ではありません: {len(rows)}件"
+            "（screen中断・不完全台帳の疑い）"
+        )
+    representatives = [
+        {"cell_id": r["cell_id"], "k": r["k"], "N": r["N"], "name": r.get("name"), "n": r["n"]}
+        for r in rows if r.get("selected_representative")
+    ]
+    return {"representatives": representatives, "eligible_count": sum(1 for r in rows if r.get("eligible")), "rows": rows}
+
+
+def check_trials_meta_replay_fatal(trials_path: Path, batch_id: str) -> None:
+    """trials.jsonlへのv2tメタ行二重append防止（v1のmain()内インライン処理と同型の独立版）。"""
+    if not trials_path.exists():
+        return
+    meta_name = meta_kpi_name(batch_id)
+    with open(trials_path, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if line and json.loads(line).get("kpi_name") == meta_name:
+                raise SystemExit(
+                    f"FATAL: trials.jsonl に {meta_name} のメタ行が既に存在（confirm の二重append防止）"
+                )
+
+
+def build_v2t_confirm_trial_record(r: dict, grid_sha: str, batch_id: str, period: tuple[str, str], S: int, alpha: Optional[float]) -> dict:
+    return {
+        "run_id": uuid.uuid4().hex,
+        "ts": jq_fetch.now_jst().isoformat(),
+        "kpi_name": f"screen_v2t_{r['cell_id']}",
+        "params": {
+            "grid_ref": "docs/stock-algo-kpi-catalog.md §7-AF",
+            "grid_sha256": grid_sha,
+            "batch_id": batch_id,
+            "cell_id": r["cell_id"], "k": r["k"], "N": r["N"], "name": r.get("name"),
+            "n_confirm": r["n_confirm"], "months_spanned": r["months_spanned"],
+            "confirm_p": r.get("confirm_p"), "confirm_ev_obs": r.get("confirm_ev_obs"),
+            "confirm_lift_point": r.get("confirm_lift_point"),
+            "confirm_lift_ci95": [r.get("confirm_lift_ci_low"), r.get("confirm_lift_ci_high")],
+            "ev_ci95_reference": list(r.get("ev_ci95", (None, None))),
+            "bonferroni_alpha": alpha, "S": S,
+            "framing": "historical validation（内部検証・独立確認ではない）。合格の意味は前向き検証への優先順位付け資格に限定",
+        },
+        "period": {"start": period[0], "end": period[1]},
+        "n": r["n_confirm"],
+        "lift": r.get("confirm_lift_point"),
+        "ci_low": r.get("confirm_lift_ci_low"),
+        "ci_high": r.get("confirm_lift_ci_high"),
+        "ev": r.get("confirm_ev_obs"),
+        "verdict": r["confirm_verdict"],
+        "entry_mode": "screening_batch_v2t_reused_returns",
+        "regime_filter": None,
+    }
+
+
+def build_v2t_meta_record(
+    batch_id: str, grid_sha: str, n_before: int, n_after: int, eligible_count: int, S: int,
+    appended_sha: Optional[str], period: tuple[str, str],
+) -> dict:
+    return {
+        "run_id": uuid.uuid4().hex,
+        "ts": jq_fetch.now_jst().isoformat(),
+        "kpi_name": meta_kpi_name(batch_id),
+        "params": {
+            "grid_sha256": grid_sha, "batch_id": batch_id,
+            "total_cells": 4, "eligible_count": eligible_count, "S": S,
+            "screening_ledger_appended_range_sha256": appended_sha,
+            "commit_hash": v2t_code_version(),
+            "n_before": n_before, "n_after": n_after,
+        },
+        "period": {"start": period[0], "end": period[1]},
+        "n": None, "lift": None, "ci_low": None, "ci_high": None, "ev": None,
+        "verdict": "batch_meta",
+        "entry_mode": "screening_batch_v2t_meta",
+        "regime_filter": None,
+    }
+
+
+def _fmt_v2t(x, spec: str = ".4f") -> str:
+    return format(x, spec) if x is not None else "-"
+
+
+def write_v2t_report(path: Path, grid: dict, grid_sha: str, screen_result: Optional[dict], confirm_result: Optional[dict]) -> None:
+    lines = [
+        f"# 第41周: F03押し目買いシグナル・候補ファクトリー第2バッチ スクリーニングレポート（batch_id={grid['batch_id']}）",
+        "",
+        f"生成日時: {jq_fetch.now_jst().isoformat()}",
+        f"グリッド: `{f03_v2t.GRID_PATH}` (sha256={grid_sha})",
+        f"発見期間: {V2T_DISCOVERY_PERIOD[0]} 〜 {V2T_DISCOVERY_PERIOD[1]} / "
+        f"確認期間: {V2T_CONFIRM_PERIOD[0]} 〜 {V2T_CONFIRM_PERIOD[1]}（historical validation・独立確認ではない）",
+        "",
+    ]
+
+    if screen_result is not None:
+        lines += [
+            "## screenフェーズ（発見期間）",
+            "",
+            f"- 総セル数: 4 / eligible(n>=50かつ12暦月以上): {screen_result['eligible_count']}",
+            f"- BH-FDR(q=0.10)通過: {screen_result['bh_pass_count']} / BY補正通過: {screen_result['by_pass_count']}",
+            f"- n_boot={V2T_N_BOOT} seed={V2T_SEED}（grid protocol.bootstrap_spec）",
+            f"- 代表セル(family_representative_rule・最大2): {[c['cell_id'] for c in screen_result['representatives']]}",
+            "",
+            "### セル別結果一覧",
+            "",
+            "| cell_id | k | N | n | months | eligible | EV_obs | p | BH調整p | BH | BY | lift点推定 | 代表 |",
+            "|---|---|---|---|---|---|---|---|---|---|---|---|---|",
+        ]
+        for c in screen_result["cells"]:
+            lines.append(
+                f"| {c['cell_id']} | {c['k']} | {c['N']} | {c['n']} | {c['months_spanned']} | {c['eligible']} | "
+                f"{_fmt_v2t(c.get('ev_obs'), '.4%')} | {_fmt_v2t(c.get('p'), '.5f')} | {_fmt_v2t(c.get('bh_adj_p'), '.5f')} | "
+                f"{c.get('bh_pass')} | {c.get('by_pass')} | {_fmt_v2t(c.get('lift_point'), '.2f')} | {c.get('selected')} |"
+            )
+        lines += [
+            "",
+            "### セル間イベントJaccard行列（発見期間・in_universe）",
+            "",
+            "| | " + " | ".join(c["cell_id"] for c in screen_result["cells"]) + " |",
+            "|---|" + "---|" * len(screen_result["cells"]),
+        ]
+        cell_ids = [c["cell_id"] for c in screen_result["cells"]]
+        for a in cell_ids:
+            row = [_fmt_v2t(screen_result["jaccard"][a][b], ".3f") for b in cell_ids]
+            lines.append(f"| {a} | " + " | ".join(row) + " |")
+        lines += [
+            "",
+            "### セル間 月次シグナル件数 相関行列（発見期間）",
+            "",
+            "| | " + " | ".join(cell_ids) + " |",
+            "|---|" + "---|" * len(cell_ids),
+        ]
+        for a in cell_ids:
+            row = [_fmt_v2t(screen_result["corr"][a][b], ".3f") for b in cell_ids]
+            lines.append(f"| {a} | " + " | ".join(row) + " |")
+        lines.append("")
+
+    if confirm_result is not None:
+        lines += [
+            "## confirmフェーズ（確認期間・historical validation）",
+            "",
+            f"- 代表セル数 S={confirm_result['S']} / Bonferroni閾値 0.05/S={_fmt_v2t(confirm_result['alpha'], '.6f')}",
+            "",
+            "| cell_id | n_confirm | months | confirm_p | confirm_lift | EV | 判定 |",
+            "|---|---|---|---|---|---|---|",
+        ]
+        for r in confirm_result["results"]:
+            lines.append(
+                f"| {r['cell_id']} | {r['n_confirm']} | {r['months_spanned']} | {_fmt_v2t(r.get('confirm_p'), '.6f')} | "
+                f"{_fmt_v2t(r.get('confirm_lift_point'), '.2f')} | {_fmt_v2t(r.get('confirm_ev_obs'), '.4%')} | "
+                f"{r['confirm_verdict']} |"
+            )
+        lines.append("")
+
+    lines += ["## 位置づけ", ""]
+    if confirm_result is not None:
+        pass_count = sum(1 for r in confirm_result["results"] if r["confirm_verdict"] == "confirm_pass")
+        if confirm_result["S"] == 0:
+            lines.append(
+                "**発見段の代表候補が0件だったため確認段は実施していない**（family_representative_ruleどおり・"
+                "screening_batches.jsonlの4行とtrials.jsonlのメタ1行のみで正常終了）。"
+            )
+        elif pass_count > 0:
+            lines.append(
+                f"確認段（historical validation）通過は {pass_count}/{confirm_result['S']} セル。これらは"
+                "「統計的に確認された発見」ではなく「前向き検証への優先順位付けを通過した候補」である。運用組み込みではない。"
+            )
+        else:
+            lines.append(
+                "**発見段の代表セルは確認段（historical validation）で全て棄却された。前向き検証へ送る新候補はなし。**"
+            )
+    else:
+        lines.append("本バッチは screen フェーズのみ実行済み。代表セルは confirm フェーズ待ちの優先順位付け候補である。")
+    lines.append("")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("\n".join(lines), encoding="utf-8")
+
+
+def run_v2t_batch_main(args: argparse.Namespace, grid_path: Path) -> int:
+    grid = f03_v2t.verify_grid_frozen(grid_path)
+    cells = f03_v2t.load_cells_from_grid(grid)
+    grid_sha = f03_v2t.EXPECTED_GRID_SHA256
+    batch_id = grid["batch_id"]
+    cells_dir = Path(args.v2t_cells_dir) if args.v2t_cells_dir else V2T_CELLS_DIR_DEFAULT
+
+    screening_ledger_path = Path(args.screening_ledger) if args.screening_ledger else DEFAULT_SCREENING_LEDGER
+    trials_path = Path(args.trials_path)
+    print(f"[v2t] batch_id={batch_id} grid_sha256={grid_sha} セル数={len(cells)} cells_dir={cells_dir}", file=sys.stderr)
+
+    base_rate_by_month = kpi_event_study.load_base_rate_by_month(BASE_RATE_DIR, UNIVERSE_WINDOW)
+
+    if args.phase in ("screen", "both"):
+        check_batch_replay_fatal(screening_ledger_path, batch_id)
+
+    screen_result = None
+    appended_range_sha256: Optional[str] = None
+    if args.phase in ("screen", "both"):
+        print("[v2t] screenフェーズ実行中...", file=sys.stderr)
+        screen_result = run_v2t_screen(cells, cells_dir, base_rate_by_month)
+        screening_records = [v2t_cell_to_ledger_record(c, batch_id, grid_sha) for c in screen_result["cells"]]
+        appended_lines = [json.dumps(r, ensure_ascii=False) for r in screening_records]
+        appended_range_sha256 = hashlib.sha256(("\n".join(appended_lines) + "\n").encode("utf-8")).hexdigest()
+        for rec in screening_records:
+            kpi_event_study.append_trial(rec, trials_path=screening_ledger_path)
+        print(
+            f"[v2t] screen完了: eligible={screen_result['eligible_count']} bh_pass={screen_result['bh_pass_count']} "
+            f"by_pass={screen_result['by_pass_count']} representatives={[c['cell_id'] for c in screen_result['representatives']]}",
+            file=sys.stderr,
+        )
+
+    confirm_result = None
+    if args.phase in ("confirm", "both"):
+        if args.phase == "both":
+            representatives = screen_result["representatives"]
+            eligible_count = screen_result["eligible_count"]
+        else:
+            screen_from_ledger = load_v2t_screen_summary_from_ledger(screening_ledger_path, batch_id)
+            representatives = screen_from_ledger["representatives"]
+            eligible_count = screen_from_ledger["eligible_count"]
+
+        check_trials_meta_replay_fatal(trials_path, batch_id)
+        print(f"[v2t] confirmフェーズ実行中... 代表セル数={len(representatives)}", file=sys.stderr)
+        confirm_result = run_v2t_confirm(representatives, cells_dir, base_rate_by_month)
+
+        n_before = sum(1 for _ in open(trials_path, encoding="utf-8")) if trials_path.exists() else 0
+        cell_records = [
+            build_v2t_confirm_trial_record(r, grid_sha, batch_id, confirm_result["period"], confirm_result["S"], confirm_result["alpha"])
+            for r in confirm_result["results"]
+        ]
+        n_after = n_before + 1 + len(cell_records)
+        meta_record = build_v2t_meta_record(
+            batch_id, grid_sha, n_before, n_after, eligible_count, confirm_result["S"], appended_range_sha256, confirm_result["period"]
+        )
+
+        if not args.no_trials_append:
+            for rec in cell_records:
+                kpi_event_study.append_trial(rec, trials_path=trials_path)
+            kpi_event_study.append_trial(meta_record, trials_path=trials_path)
+            print(f"[v2t] trials.jsonl追記完了: N_before={n_before} → N_after={n_after}", file=sys.stderr)
+        else:
+            print(f"[v2t] --no-trials-append: スキップ (would-be N_before={n_before} → N_after={n_after})", file=sys.stderr)
+
+    report_path = Path(args.output_dir) / batch_id / "report.md"
+    write_v2t_report(report_path, grid, grid_sha, screen_result, confirm_result)
+    print(f"report: {report_path}")
+    return 0
+
+
 # --- メイン処理 ---------------------------------------------------------------------
 
 
@@ -842,12 +1338,18 @@ def main() -> int:
     parser.add_argument("--screening-ledger", default=None, help="smoke test用: 既定はdata/kpi_trials/screening_batches.jsonl")
     parser.add_argument("--trials-path", default=str(DEFAULT_TRIALS_PATH))
     parser.add_argument("--no-trials-append", action="store_true", help="confirmフェーズのtrials.jsonlへの追記をスキップ（smoke用）")
+    parser.add_argument("--v2t-cells-dir", default=None, help="batch_v2t専用: セルCSVディレクトリ（既定はoutput/kpi_screening/batch_v2t/cells）")
     args = parser.parse_args()
 
     grid_path = Path(args.grid_override) if args.grid_override else Path(args.grid)
     grid = load_grid(grid_path)
     grid_sha = sha256_16(grid_path)
     batch_id = grid["batch_id"]
+
+    if batch_id == "batch_v2t":
+        # v1(population/feature/bucket)とスキーマが全く異なるため独立実装へ完全に分岐する
+        # （以下のFROZEN_GRID_HASHES照合・population読込等のv1専用ロジックは一切通らない）。
+        return run_v2t_batch_main(args, grid_path)
 
     # Codexレビュー⑬M1: 凍結ハッシュ照合と smoke 経路の本番台帳保護
     if args.grid_override:
