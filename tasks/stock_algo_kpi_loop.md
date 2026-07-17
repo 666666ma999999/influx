@@ -653,6 +653,18 @@
 - **§6付記「前向き完全性プロトコル」v6でCodex GO（6ラウンド・NO-GO×5→GO）**: 骨子=①第一証跡はappend-onlyのKPI別run_log（hash chain・paper_today.mdは二次証跡） ②固定窓**2026-08-01〜2027-07-31**（全月coverage-qualified必須・延長なし・全月qualifiedでなければ窓失効） ③欠測許容=月≤1営業日/窓累計≤4/critical dates除く・再現不能欠測は即窓失効 ④窓失効=alpha消費済みの正式試行として台帳記録・再登録は自動権利でない ⑤レジーム月次分類=営業日多数決(同数bear)・未充足はcutoff機械延長(シグナル包含) ⑥**run_log稼働期限2026-07-31**（未達=窓失効） ⑦2026-07部分月の取引は機械的包含。**凍結はユーザー承認待ち**・GO時MINOR8点（正式判定対象KPIのα付き列挙・worst decile定義・外部障害証跡列挙・累計欠測の適用期間明記・レジーム多数決の母集合明記・hash chain別媒体・critical_dates生成規則凍結・「完全暦月の具体化」と正直記載）は凍結本文に反映すること
 - **P3レポートの発見**: 陣別alpha導入(7/13)前に登録した4系統（volshock系3+shortcover_x_bear）は前向きαが凍結文書に未明記 → §6付記凍結時のKPI列挙で解消予定
 
+### 2026-07-17 第41周: テクニカル名人5アカウント投稿収穫 + 候補ファクトリー第2バッチ（進行中）
+- **発端**: ユーザーが5アカウント（@Biz_zatukora/@kakatothecat/@tomoyaasakura/@Drdebuneko/@noatake1127=たけぞう）の1年分投稿からのKPI発掘を指示。敵対レビュー2ラウンド実施（R1=方法論批判29指摘→ユーザー是正「実投稿を誰も読んでいない」→R2=根本原因+再設計・フェーズ2クロス攻撃まで完了）
+- **R2の核心（両レビュアー一致）**: ①実投稿を読まずメタ層（統計監査）だけで議論した ②「収穫（無料・分母消費なし）」と「検証（Bonferroni消費）」の混同が仮説回収を封殺した
+- **ユーザー裁定（2026-07-17・AskUserQuestion）**: 収穫/検証分離 / **ファクトリー型で即ループ承認**（第22周`kpi_screen_batch.py`型の第2バッチ=決定③の例外裁定・分母コストは生存上限8+メタ1行に限定） / **AI 2パス判定**（別文脈2体独立→不一致のみ人間裁定+両方非候補から抜取監査k=20） / ゴール非写像型（ローテーション/クロスアセット等）は**§8保留台帳へ**（検定には載せない） / ファクトリー投入候補は全件ユーザー最終確認 / 目標定義(+20%/20bd・10本)不変
+- **収集**: `research_influencers.py --phase collect`（canonical・maaaki Cookie 2026-09-26有効）で四半期4窓×5アカウント→`output/research/masters_20260717/`。窓1-3完了（窓3のBKLZのみ0件=要完全性判定）・窓4実行中。窓1実測272件
+- **Batch 0完了✅**: `scripts/normalize_master_posts.py`（新規・syndication APIで原文補完・冪等・完全性台帳）。**発見: X UI自動翻訳で朝倉分は全件英訳保存→原文復元を実測**。最終: **1086/1086 ok・翻訳復元178・切断修復573・エラー0**
+- **Batch 1完了✅**: `scripts/harvest_master_posts.py`実装（外部APIキーがマシン上に存在せず→**セッション内サブエージェント28体で代替実行**: passA=Fable5×14+passB=Sonnet5×14・全数照合ゲートでA04欠落14件を検出→追補・一致率71.5%）。ユーザー裁定「片方でも候補は候補に倒す」→**最終候補558件**（昇格273・安全側34）
+- **Batch 2完了✅**: 意味クラスタ23ファミリー（被覆558/558検算）→ **catalog §8-5に登録済み**（goal_mappable: true=6ファミリー134件→第2バッチ起草対象 / partial=8 / false=9保留）。抜取監査20件（seed42・両パス非候補から）→見落としなし・ユーザー承認済み。tracked正本=`data/masters_harvest_20260717/`
+- **Batch 3完了✅（§7-AF凍結）**: batch_v2t事前登録をCodex敵対レビュー4巡（NO-GO×3→GO）で凍結。**範囲はユーザー追加裁定でF03押し目買いモメンタムのみ・4セル**（F04=リバーサルfamily変種・F07=sector_momentum_laggard反対バケット＝近傍再投入としてCodexが実名簿突合で棄却→除外。F09/F10/F11も除外・§8-5処遇欄更新済み）。凍結仕様=config/screening_grid_v2t.json（sha256=e9a06fee…・全実行でsha一致FATALゲート）+catalog §7-AF。要点: 発見期間BH+BY両掛け・family代表最大2（BH通過∧lift>1のみ）・確認期間片側p≤0.05/S・セル×銘柄20営業日クールダウン+エピソード消費規則・分母コスト最大+3行。decisions.md記録済み（2026-07-17）
+- **残り**: Batch 4=F03シグナル生成実装→頻度dry-run→screen→confirm実行→台帳監査→§7-AF✅ / 投入前のユーザー最終確認（確認②・生存セルが出た場合）
+- 旧データ注意: `output/research/tweets_{tomoyaasakura,biz_zatukora,kakatothecat}.json`（93件・切断英訳・candidate_scoreはアカウント一定で無効）は窓1に内包されるため収穫はmasters_20260717のみ使用。backup-20260717/に原本保全済み
+
 ### Avoid Repeating
 - `WebFetch` で `https://jpx-jquants.com/pricing` と `https://jpx.gitbook.io/j-quants-ja/` を試したが、どちらもJavaScriptレンダリングのSPAで実体コンテンツが取得できず「/ja」のみ返ってきた。**同じURLへの再WebFetchは無意味**。
 - `mcp__firecrawl__firecrawl_scrape` も同ページで "Request failed while trying to scrape" のエラーで失敗した。原因未特定のまま同一呼び出しを繰り返さない。

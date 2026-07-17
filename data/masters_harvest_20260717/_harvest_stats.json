@@ -1,0 +1,41 @@
+{
+ "method": "session-subagents (passA=fable5, passB=sonnet-5) — 外部API不使用",
+ "generated_at": "2026-07-17T06:45:25.020071+00:00",
+ "raw_records": 1086,
+ "representatives": 1077,
+ "judged": 1077,
+ "agreement_rate": 0.7149,
+ "triage_distribution": {
+  "hypothesis_candidate": 285,
+  "non_candidate": 457,
+  "position_disclosure": 24,
+  "DISAGREE": 307,
+  "context_pending": 4
+ },
+ "candidates_both_pass": 285,
+ "disagreements": 307,
+ "both_non_candidate": 457,
+ "audit_sample_size": 20,
+ "label_distribution": {
+  "非投資投稿": 349,
+  "マクロ・クロスアセット": 225,
+  "価格パターン": 193,
+  "センチメント・バブル警戒": 166,
+  "ファンダメンタルズ": 163,
+  "セクター連動・ローテーション": 160,
+  "需給・ポジショニング": 158,
+  "イベント": 142,
+  "リスク管理・exit": 110,
+  "検証不能": 95,
+  "売買シグナル": 46,
+  "文脈欠落": 29,
+  "決算期待差": 25
+ },
+ "per_account": {
+  "Biz_zatukora": 178,
+  "Drdebuneko": 231,
+  "kakatothecat": 268,
+  "noatake1127": 242,
+  "tomoyaasakura": 158
+ }
+}
