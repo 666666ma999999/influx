@@ -1,0 +1,91 @@
+{
+  "batch_id": "batch_v2t",
+  "schema_version": "2.0",
+  "status": "FROZEN_PRE_REGISTERED_2026-07-17",
+  "created": "2026-07-17",
+  "provenance": {
+    "hypothesis_source": "名人5アカウント投稿収穫（catalog §8-5・data/masters_harvest_20260717/families.json・F03=19投稿）",
+    "user_exception_ruling": "2026-07-17 決定③例外（vault decisions.md）: ツイート由来仮説に限り候補ファクトリー第2バッチを1回だけ許可。近傍再投入禁止は解除していない",
+    "user_scope_ruling": "2026-07-17 追加裁定: F03のみで進める（F04/F07は下記理由で除外）",
+    "families_included": [
+      "F03"
+    ],
+    "families_excluded": {
+      "F04": "excluded: 敗北済み価格リバーサルfamily（§7-AD停止裁定・strev_20d/raw_strev/resid_strev/sell_reg_trigger_rebound/ll_release_rebound）の条件付き変種。再訴は期間再定義+追加裁定後のみ",
+      "F07": "excluded: 既存fail sector_momentum_laggard(n=2810)/sector_sympathy_volshock(n=2191)と同一設計の反対バケット＝近傍再投入。§7-V業種波及family追加変種禁止にも抵触",
+      "F09": "excluded: 既存SUE/PEAD/guidance familyの同期間変種＝§6拡張ルール第5項（既存母集団×追加特徴量の同期間禁止）",
+      "F10": "excluded: TOBは§7-AE進行中・M&A/提携/製品イベントはTDnetアドオン購入判断待ち（2026-08）",
+      "F11": "excluded: 政策ヘッドラインの体系的データ源なし"
+    },
+    "note": "excluded は「本バッチの選抜母集団に含めない」の意。専用台帳にセルとしては記録しない（§8-5に除外理由を記録済み）"
+  },
+  "protocol": {
+    "inherits": "§7-K（第22周候補ファクトリーv1）の凍結プロトコルを踏襲し、本項の明示規定が§7-K表現と異なる場合は本項を正とする",
+    "discovery_period": "2016-11-01..2019-12-31（約38ヶ月・『発見期間』）",
+    "confirm_period": "2020-01-01..2022-11-30（約35ヶ月・『確認期間』）",
+    "holdout_prohibition": "2023-01-01以降のデータは一切使用しない",
+    "universe": "月間売買代金TOP500。シグナル日Dの属する月の universes_w21.csv.gz membership 行に銘柄が存在すること（既存Canonical規約=kpi_event_study.py の月次結合と完全一致）",
+    "entry_exit": "シグナル日D（引け後確定）の翌営業日寄付エントリー・EV=20営業日後終値リターン（コスト0.3%込）・liftの+20%到達判定は既存Canonical関数（kpi_event_study.py）の§0定義に完全一致させ独自定義を導入しない・S高等でD+1寄付約定不能の場合は§6既存規約（最大3営業日繰延・不能なら除外）を継承・権利落ち調整済み株価(AdjC/AdjH/AdjL)使用・上場廃止/TOB決済は§6既存規約を継承",
+    "ret_stop8": "参考指標としてのみ併記（判定に使用しない）",
+    "screening_rule": "発見期間の各セルEV（コスト0.3%込・20営業日後終値リターン平均）について片側p値（H0: EV<=0・月次ブロックブートストラップ）を算出し、全eligibleセルにBH(q=0.10)とBY(q=0.10)の両方を適用して全セル分を保存・報告。選抜はBH基準・副次条件 lift点推定>1.0",
+    "eligibility_floor": "発見期間 in_universe イベントn>=50 かつ 12暦月以上に分散",
+    "family_representative_rule": "本バッチはF03の1 family（4セルは閾値変種で高相関）のため、確認期間へ進める代表セルは最大2。代表の候補集合はBH(q=0.10)通過かつlift点推定>1.0のセルのみとし、その中から (1)BH調整p最小 (2)同値ならn大 (3)なおも同値ならcell_id昇順で選出（結果解釈の余地なし・候補が0なら確認段なしでバッチ終了=メタ1行のみ算入）。セル間の月次シグナル相関とイベントJaccard行列を必須報告",
+    "survivor_cap": "min(8, 代表2) = 実質2",
+    "confirm_rule": "確認期間で 片側p <= 0.05/S（S=確認に進んだ代表セル数・月次ブロックブートストラップ） かつ EV点推定>0 かつ lift点推定>1.0 かつ n>=30。95%CIは参考値として併記（判定に不使用）",
+    "bootstrap_spec": "月次ブロック・n_boot=10000・seed=20260717・p=(1+#{boot平均<=0})/(n_boot+1)。有効月<12はeligibility落ちとして記録（確認期間にも同規則を適用し confirm_ineligible として台帳記録）",
+    "ledger_rule": {
+      "dedicated_ledger": "全4セル（eligibility落ち・BH/BY落ち含む）を screening_batches.jsonl に必ず1行ずつappend（IMMUTABLE・batch_v1と同一ファイル・batch_idで区別）",
+      "trials_jsonl": "確認期間へ進んだ全代表セル（<=2）を確認結果にかかわらず1行ずつappend＋バッチメタ1行。確認実行不能・欠損・例外終了も行を省略せず専用verdictで算入。分母コスト最大+3行（メタ1+代表2）",
+      "meta_row_fields": "N_before/N_after/総セル数/eligible数/S/grid_sha256/専用台帳追記範囲のsha256/コードcommit hash"
+    },
+    "pseudo_replication_control": "クールダウンは各 cell_id × code 内で独立適用（前シグナルから20営業日未満は同一セル・同一銘柄で不発火）＝セル内20営業日非重複ポジション保証。同一日・同一銘柄の複数セル発火は許容（セルは独立評価・実装順非依存）し重複はJaccard行列で開示。エピソード初回規則は各セル内で適用。診断必須項目=セル別{生シグナル数, イベント化後数, 重複除去数, 欠損による非判定数, cooldown_blocked_first_touch_count, ユニーク銘柄数, 月別件数}。件数を見た後の分位化・定義変更は禁止",
+    "frequency_dry_run": "凍結後・リターン結合前に、シグナル件数のみの頻度監査（リターン列を一切生成しない）を1回実施し別ログに保存してよい。その結果による定義変更は不可（変更する場合は本バッチ放棄→新規事前登録＝分母加算）"
+  },
+  "cell_common_definitions": {
+    "price_fields": "全て調整済み（AdjC=調整終値, AdjH=調整高値, AdjL=調整安値）。出来高条件は本バッチでは不使用",
+    "MA_k(D)": "mean(AdjC[D-k+1 .. D])。区間内に有限・正のAdjCがちょうどk観測揃う場合のみ定義され、1件でも欠損・非正なら当該日を非シグナルとする（MA25・MA5/10・前日MAすべて同規則）。当日終値を含む（シグナルは当日引け後確定・エントリー翌営業日寄付でPIT整合）",
+    "high_update_day": "営業日Uが『60日高値更新日』であるとは AdjH(U) > max(AdjH[U-60 .. U-1]) を満たすこと（同値は非更新・遡及窓に欠損がある場合は有効データのみで比較し窓実長<40営業日なら判定不能=非更新）",
+    "uptrend_base(D)": "AdjC(D) > MA_25(D)",
+    "recent_high(D, N)": "∃U ∈ [D-N .. D-1] が60日高値更新日（U < D 必須＝高値更新当日のタッチは非シグナル。ブレイク当日エントリー型high52_breakoutとの分離を保証）",
+    "first_touch(D, k)": "AdjL(D) <= 1.01 * MA_k(D) かつ AdjL(D-1) > 1.01 * MA_k(D-1)。AdjL(D)/AdjL(D-1)/AdjH(U)はいずれも有限・正であること（欠損・非正は非シグナル）。下方の深さに下限は設けない（MA大幅割れの急落タッチも意図的に包含）",
+    "episode_rule": "エピソード=銘柄の直近の『60日高値更新日』U*（U* < D）から始まる区間。シグナルはU*+1以降の初回タッチのみ（U*が更新されたら新エピソード）。first_touchが成立した時点で、クールダウン中か否かにかかわらず当該セルのエピソードを消費する（クールダウン中ならシグナルは出さず、そのエピソードからの後日振替もしない）"
+  },
+  "cells": [
+    {
+      "cell_id": "v2t-F03-01",
+      "name": "押し目MA5×高値10日",
+      "trigger_full_logic": "uptrend_base(D) AND recent_high(D, 10) AND first_touch(D, 5) AND episode_rule AND クールダウン充足 AND in_universe(D)",
+      "direction": "long"
+    },
+    {
+      "cell_id": "v2t-F03-02",
+      "name": "押し目MA5×高値20日",
+      "trigger_full_logic": "uptrend_base(D) AND recent_high(D, 20) AND first_touch(D, 5) AND episode_rule AND クールダウン充足 AND in_universe(D)",
+      "direction": "long"
+    },
+    {
+      "cell_id": "v2t-F03-03",
+      "name": "押し目MA10×高値10日",
+      "trigger_full_logic": "uptrend_base(D) AND recent_high(D, 10) AND first_touch(D, 10) AND episode_rule AND クールダウン充足 AND in_universe(D)",
+      "direction": "long"
+    },
+    {
+      "cell_id": "v2t-F03-04",
+      "name": "押し目MA10×高値20日",
+      "trigger_full_logic": "uptrend_base(D) AND recent_high(D, 20) AND first_touch(D, 10) AND episode_rule AND クールダウン充足 AND in_universe(D)",
+      "direction": "long"
+    }
+  ],
+  "cell_overlap_note": "4セルは (k,N)∈{5,10}×{10,20} の閾値変種で相互包含に近い（N=10⊂N=20）。同一日・同一銘柄が複数セルで発火することを許容し（各セルは独立に評価・クールダウンもセル内独立）、重複はJaccard行列で開示。family_representative_ruleが確認段の多重性を制御する",
+  "avoidance_crosscheck": {
+    "F03_vs_golden_cross": "GC25/75(fail・逆指標)はMA交差の遅行シグナル。本セルは既成立トレンド内の押し目タイミングでMA交差を使わない",
+    "F03_vs_range_breakout": "range_breakout(fail)は低ボラ収縮からの放れ（入口=静止状態）。本セルは高値更新直後の既トレンド銘柄（入口=運動状態）で逆",
+    "F03_vs_high52_breakout": "high52_breakout(既試行)は高値ブレイク当日エントリー。本セルはブレイク後の押し目待ちで、エントリー点が構造的に異なる（trials.jsonl名簿と突合済み・押し目型は未試行）",
+    "F03_prior_note": "テクニカル価格系familyは本システムで実績が悪い（事前確率低）ことを正直に記録。§8-5由来の名人仮説の初の検定として価値は仮説源の新規性にある"
+  },
+  "implementation_notes": {
+    "signal_generator": "F03用1本を新規実装（load_bars_day等のCanonical読み込み再利用・returns.csv互換出力）→ kpi_screen_batch.py のv2対応で判定",
+    "output_paths": "output/kpi_screening/batch_v2t/{report.md, cells/*.csv}・専用台帳=data/kpi_trials/screening_batches.jsonl（append）",
+    "grid_freeze": "凍結時に本ファイルのsha256を§7-AFに記載・以後の変更禁止（変更=本バッチ放棄→新規事前登録）"
+  }
+}
