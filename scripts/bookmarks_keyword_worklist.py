@@ -100,7 +100,7 @@ import bookmarks_keyword_common as common  # noqa: E402
 DEFAULT_RAW = "output/bookmarks.jsonl"
 DEFAULT_LEDGER = "output/bookmarks/keywords_ledger.jsonl"
 DEFAULT_NOTE = str(
-    Path.home() / "Documents" / "Obsidian Vault" / "02_Ai" / "influx" / "influx_x_search_keywords.md"
+    Path.home() / "Documents" / "Obsidian Vault" / "02_Ai" / "x-buzz" / "influx-x" / "influx_x_search_keywords.md"
 )
 DEFAULT_OUT = "output/bookmarks/keyword_worklist.json"
 DEFAULT_DOWNLOADS_DIR = str(Path.home() / "Downloads")

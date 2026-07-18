@@ -40,7 +40,7 @@ DEFAULT_LEDGER = "output/bookmarks/keywords_ledger.jsonl"
 DEFAULT_OUT = "output/bookmarks/x_keywords.html"
 
 OBSIDIAN_NOTE_URI = (
-    "obsidian://open?vault=Obsidian%20Vault&file=02_Ai%2Finflux%2Finflux_x_search_keywords.md"
+    "obsidian://open?vault=Obsidian%20Vault&file=02_Ai%2Fx-buzz%2Finflux-x%2Finflux_x_search_keywords.md"
 )
 
 EVIDENCE_DISPLAY_LIMIT = 3

@@ -58,7 +58,7 @@ DEFAULT_RAW = "output/bookmarks.jsonl"
 DEFAULT_LEDGER = "output/bookmarks/keywords_ledger.jsonl"
 DEFAULT_LATEST = "output/bookmarks/keywords_latest.json"
 DEFAULT_NOTE = str(
-    Path.home() / "Documents" / "Obsidian Vault" / "02_Ai" / "influx" / "influx_x_search_keywords.md"
+    Path.home() / "Documents" / "Obsidian Vault" / "02_Ai" / "x-buzz" / "influx-x" / "influx_x_search_keywords.md"
 )
 
 ACTIVE_CLUSTER_LIMIT = 12  # bookmarks_keyword_worklist.ACTIVE_CLUSTER_LIMIT と同値を維持すること
@@ -788,7 +788,7 @@ def render_note(latest, raw_lookup, canonical_total, empty_text_excluded, now=No
     lines.append("---")
     lines.append("project: influx")
     lines.append("type: auto-generated-mirror")
-    lines.append('folder: "02_Ai/influx/"')
+    lines.append('folder: "02_Ai/x-buzz/influx-x/"')
     lines.append('categories: "[[influx_ope]]"')
     lines.append(f"last_updated: {now.strftime('%Y-%m-%d')}")
     lines.append("tags: [x-search, keywords]")
