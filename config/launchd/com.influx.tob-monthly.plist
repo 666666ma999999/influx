@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.influx.tob-monthly</string>
+
+    <!-- §7-AE-v2 (ii) 前向き観察: 毎月1〜10日の朝(7:30・daily_pipelineの7:00より後)に起動する
+         （v1のDay1〜5からDay1〜10へ拡大・2026-07-18 v2凍結項目7。祝日・年末年始等で月初第1営業日が
+         5日を超えてずれるケースへの耐性を高める）。月初第1営業日以外は
+         scripts/kpi_tob_candidate_score.py --forward が自己判定して即exit 0するため、
+         Day1〜10のどれが実際の月初第1営業日であっても正しく1回だけ実行される（同月内の
+         2回目以降の起動は月次run-logの冪等ガードでもno-op化される・§7-AE-v2凍結項目6）。 -->
+    <key>StartCalendarInterval</key>
+    <array>
+        <dict>
+            <key>Day</key>
+            <integer>1</integer>
+            <key>Hour</key>
+            <integer>7</integer>
+            <key>Minute</key>
+            <integer>30</integer>
+        </dict>
+        <dict>
+            <key>Day</key>
+            <integer>2</integer>
+            <key>Hour</key>
+            <integer>7</integer>
+            <key>Minute</key>
+            <integer>30</integer>
+        </dict>
+        <dict>
+            <key>Day</key>
+            <integer>3</integer>
+            <key>Hour</key>
+            <integer>7</integer>
+            <key>Minute</key>
+            <integer>30</integer>
+        </dict>
+        <dict>
+            <key>Day</key>
+            <integer>4</integer>
+            <key>Hour</key>
+            <integer>7</integer>
+            <key>Minute</key>
+            <integer>30</integer>
+        </dict>
+        <dict>
+            <key>Day</key>
+            <integer>5</integer>
+            <key>Hour</key>
+            <integer>7</integer>
+            <key>Minute</key>
+            <integer>30</integer>
+        </dict>
+        <dict>
+            <key>Day</key>
+            <integer>6</integer>
+            <key>Hour</key>
+            <integer>7</integer>
+            <key>Minute</key>
+            <integer>30</integer>
+        </dict>
+        <dict>
+            <key>Day</key>
+            <integer>7</integer>
+            <key>Hour</key>
+            <integer>7</integer>
+            <key>Minute</key>
+            <integer>30</integer>
+        </dict>
+        <dict>
+            <key>Day</key>
+            <integer>8</integer>
+            <key>Hour</key>
+            <integer>7</integer>
+            <key>Minute</key>
+            <integer>30</integer>
+        </dict>
+        <dict>
+            <key>Day</key>
+            <integer>9</integer>
+            <key>Hour</key>
+            <integer>7</integer>
+            <key>Minute</key>
+            <integer>30</integer>
+        </dict>
+        <dict>
+            <key>Day</key>
+            <integer>10</integer>
+            <key>Hour</key>
+            <integer>7</integer>
+            <key>Minute</key>
+            <integer>30</integer>
+        </dict>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/masaaki_nagasawa/Desktop/biz/influx</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>-c</string>
+        <string>exec /usr/bin/python3 /Users/masaaki_nagasawa/Desktop/biz/influx/scripts/kpi_tob_candidate_score.py --forward --output-dir /Users/masaaki_nagasawa/Desktop/biz/influx/output/kpi/tob_candidate_v2 --monitoring-dir /Users/masaaki_nagasawa/Desktop/biz/influx/data/monitoring/tob_forward</string>
+    </array>
+
+    <key>RunAtLoad</key>
+    <false/>
+
+    <key>StandardOutPath</key>
+    <string>/Users/masaaki_nagasawa/Library/Logs/influx-tob-monthly.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/masaaki_nagasawa/Library/Logs/influx-tob-monthly.log</string>
+</dict>
+</plist>
