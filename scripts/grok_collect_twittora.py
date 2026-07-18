@@ -49,6 +49,7 @@ DEFAULT_MIN_LIKES = 50
 DEFAULT_DAYS = 7
 DEFAULT_PER_QUERY = 8
 MODEL = "grok-4-1-fast-non-reasoning"
+_QUERY_ERRORS = 0  # 2026-07-18: クレジット切れ等を「0件成功」と偽らないためのカウンタ
 
 
 class BuzzTweet(BaseModel):
@@ -98,6 +99,8 @@ def search_query(client: Client, query: str, days: int, min_likes: int, per_quer
         _, parsed = chat.parse(BuzzCollectionResult)
     except Exception as exc:
         print(f"  ✗ '{query}' parse 失敗: {exc}", file=sys.stderr)
+        global _QUERY_ERRORS
+        _QUERY_ERRORS += 1
         return []
     if not parsed:
         return []
@@ -219,6 +222,12 @@ def main() -> int:
 
     deduped = dedupe(all_tweets)
     print(f"\nTotal: {len(all_tweets)} fetched, {len(deduped)} unique")
+    if not deduped:
+        if _QUERY_ERRORS:
+            print(f"ERROR: 全 {_QUERY_ERRORS} クエリが失敗（API エラー・クレジット切れ等）。空ファイルは書かず異常終了する", file=sys.stderr)
+            sys.exit(1)
+        print("0件（閾値超えの投稿なし）。空ファイルは書かない")
+        sys.exit(0)
 
     today = datetime.now(JST).date().isoformat()
     out_dir = Path(args.output_dir)
