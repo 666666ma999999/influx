@@ -662,7 +662,7 @@
 - **Batch 1完了✅**: `scripts/harvest_master_posts.py`実装（外部APIキーがマシン上に存在せず→**セッション内サブエージェント28体で代替実行**: passA=Fable5×14+passB=Sonnet5×14・全数照合ゲートでA04欠落14件を検出→追補・一致率71.5%）。ユーザー裁定「片方でも候補は候補に倒す」→**最終候補558件**（昇格273・安全側34）
 - **Batch 2完了✅**: 意味クラスタ23ファミリー（被覆558/558検算）→ **catalog §8-5に登録済み**（goal_mappable: true=6ファミリー134件→第2バッチ起草対象 / partial=8 / false=9保留）。抜取監査20件（seed42・両パス非候補から）→見落としなし・ユーザー承認済み。tracked正本=`data/masters_harvest_20260717/`
 - **Batch 3完了✅（§7-AF凍結）**: batch_v2t事前登録をCodex敵対レビュー4巡（NO-GO×3→GO）で凍結。**範囲はユーザー追加裁定でF03押し目買いモメンタムのみ・4セル**（F04=リバーサルfamily変種・F07=sector_momentum_laggard反対バケット＝近傍再投入としてCodexが実名簿突合で棄却→除外。F09/F10/F11も除外・§8-5処遇欄更新済み）。凍結仕様=config/screening_grid_v2t.json（sha256=e9a06fee…・全実行でsha一致FATALゲート）+catalog §7-AF。要点: 発見期間BH+BY両掛け・family代表最大2（BH通過∧lift>1のみ）・確認期間片側p≤0.05/S・セル×銘柄20営業日クールダウン+エピソード消費規則・分母コスト最大+3行。decisions.md記録済み（2026-07-17）
-- **残り**: Batch 4=F03シグナル生成実装→頻度dry-run→screen→confirm実行→台帳監査→§7-AF✅ / 投入前のユーザー最終確認（確認②・生存セルが出た場合）
+- **Batch 4完了✅（第41周クローズ・2026-07-18）**: 本番実行完了（シグナル生成は分離コンテナで一晩自走・screen+confirmは翌朝正引数で実行）。**結果: 全4セル発見段fail**（EV -0.02〜-0.33%・p 0.51〜0.66・BH/BY通過0・代表0→確認段なし・lift 1.22〜1.37は1超だがEV負=左裾重い）。台帳: screening 224→228・trials 109→**110**（メタ1行のみ=分母コスト最小）。catalog §7-AF✅・§8-5 F03行=検定済みfailに更新。教訓: ホスト側バックグラウンドジョブが3度killされた→長時間ジョブはnohup分離+マーカー方式が正（ハーネス背景ジョブは通知役に使わない）。再開スクリプトの引数ミス（--batch-id不存在）で1回空振り→CLIは実装のargparseを確認してから叩く
 - 旧データ注意: `output/research/tweets_{tomoyaasakura,biz_zatukora,kakatothecat}.json`（93件・切断英訳・candidate_scoreはアカウント一定で無効）は窓1に内包されるため収穫はmasters_20260717のみ使用。backup-20260717/に原本保全済み
 
 ### Avoid Repeating
