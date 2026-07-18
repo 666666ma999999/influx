@@ -1,0 +1,2171 @@
+{
+  "generated_at": "2026-07-18T02:29:32.308741+00:00",
+  "sources": {
+    "trials_jsonl_lines": 110,
+    "trials_jsonl_unique_kpi_names": 93,
+    "catalog_sections": [
+      "§7-D 採掘したが見送り(catalog:574-582)",
+      "§8-2 突合で落ちた/降格したもの(catalog:2541-2548)",
+      "§7-AF 除外family(catalog:2514,2581-2592)",
+      "回避知見: GC逆指標(catalog:1486-1491)",
+      "回避知見: 低ボラ入口不可(catalog:73,764)",
+      "回避知見: S高追随EV-8%(catalog:731-735)",
+      "回避知見: S安反発EV-5.14%(catalog:1784,1881)",
+      "回避知見: §7-AD無条件リバーサル不利(catalog:2453-2464)"
+    ]
+  },
+  "unknown_kpi_names": [],
+  "entries": [
+    {
+      "fp_id": "FP-001",
+      "source": "trials",
+      "name": "pead_initial_gap8_vol3",
+      "family": "SUE/PEAD",
+      "entry_condition": "決算発表寄付ギャップ+8%以上×出来高3倍以上（FinancialStatements）の買い",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2018-12",
+      "verdict": "pending",
+      "keywords": [
+        "PEAD",
+        "SUE",
+        "ガイダンス",
+        "サプライズ",
+        "上方修正",
+        "決算",
+        "進捗率"
+      ],
+      "ref": "trials.jsonl kpi_name=pead_initial_gap8_vol3 (n_rows=4, max_n=666)"
+    },
+    {
+      "fp_id": "FP-002",
+      "source": "trials",
+      "name": "pead_x_max20_10",
+      "family": "SUE/PEAD",
+      "entry_condition": "pead_gap8_vol3にfilter_max20(20日高値からの位置10%以内)を追加した絞り込み",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "pending",
+      "keywords": [
+        "PEAD",
+        "SUE",
+        "ガイダンス",
+        "サプライズ",
+        "上方修正",
+        "決算",
+        "進捗率"
+      ],
+      "ref": "trials.jsonl kpi_name=pead_x_max20_10 (n_rows=1, max_n=628)"
+    },
+    {
+      "fp_id": "FP-003",
+      "source": "trials",
+      "name": "pead_x_dev25_10",
+      "family": "SUE/PEAD",
+      "entry_condition": "pead_gap8_vol3にfilter_dev25(25日線乖離10%以内)を追加した絞り込み",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "pending",
+      "keywords": [
+        "PEAD",
+        "SUE",
+        "ガイダンス",
+        "サプライズ",
+        "上方修正",
+        "決算",
+        "進捗率"
+      ],
+      "ref": "trials.jsonl kpi_name=pead_x_dev25_10 (n_rows=1, max_n=623)"
+    },
+    {
+      "fp_id": "FP-004",
+      "source": "trials",
+      "name": "pead_x_max20_dev25_10",
+      "family": "SUE/PEAD",
+      "entry_condition": "pead_gap8_vol3にmax20とdev25の両フィルタを重ねた絞り込み",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "pending",
+      "keywords": [
+        "PEAD",
+        "SUE",
+        "ガイダンス",
+        "サプライズ",
+        "上方修正",
+        "決算",
+        "進捗率"
+      ],
+      "ref": "trials.jsonl kpi_name=pead_x_max20_dev25_10 (n_rows=1, max_n=601)"
+    },
+    {
+      "fp_id": "FP-005",
+      "source": "trials",
+      "name": "uprev_fop10",
+      "family": "SUE/PEAD",
+      "entry_condition": "業績予想の上方修正10%以上（EarnForecastRevision）の買い",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "pending",
+      "keywords": [
+        "PEAD",
+        "SUE",
+        "ガイダンス",
+        "サプライズ",
+        "上方修正",
+        "決算",
+        "進捗率"
+      ],
+      "ref": "trials.jsonl kpi_name=uprev_fop10 (n_rows=1, max_n=450)"
+    },
+    {
+      "fp_id": "FP-006",
+      "source": "trials",
+      "name": "pead_gap8_vol3_defer3",
+      "family": "SUE/PEAD",
+      "entry_condition": "pead_initial_gap8_vol3のdefer_entry(S高翌日繰延最大3営業日)版",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "pending",
+      "keywords": [
+        "PEAD",
+        "SUE",
+        "ガイダンス",
+        "サプライズ",
+        "上方修正",
+        "決算",
+        "進捗率"
+      ],
+      "ref": "trials.jsonl kpi_name=pead_gap8_vol3_defer3 (n_rows=1, max_n=666)"
+    },
+    {
+      "fp_id": "FP-007",
+      "source": "trials",
+      "name": "uprev_fop10_defer3",
+      "family": "SUE/PEAD",
+      "entry_condition": "uprev_fop10のdefer_entry(S高翌日繰延最大3営業日)版",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "pending",
+      "keywords": [
+        "PEAD",
+        "SUE",
+        "ガイダンス",
+        "サプライズ",
+        "上方修正",
+        "決算",
+        "進捗率"
+      ],
+      "ref": "trials.jsonl kpi_name=uprev_fop10_defer3 (n_rows=1, max_n=451)"
+    },
+    {
+      "fp_id": "FP-008",
+      "source": "trials",
+      "name": "shinchoku_1q40",
+      "family": "SUE/PEAD",
+      "entry_condition": "1Q時点で通期進捗率40%以上（1QFinancialStatements）の買い",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "pending",
+      "keywords": [
+        "PEAD",
+        "SUE",
+        "ガイダンス",
+        "サプライズ",
+        "上方修正",
+        "決算",
+        "進捗率"
+      ],
+      "ref": "trials.jsonl kpi_name=shinchoku_1q40 (n_rows=1, max_n=144)"
+    },
+    {
+      "fp_id": "FP-009",
+      "source": "trials",
+      "name": "volshock_5x",
+      "family": "出来高ショック",
+      "entry_condition": "当日出来高が20日平均の5倍以上×陽線×騰落率+2〜8%（初動）の買い",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "pending",
+      "keywords": [
+        "volshock",
+        "出来高",
+        "出来高ショック",
+        "売買代金"
+      ],
+      "ref": "trials.jsonl kpi_name=volshock_5x (n_rows=1, max_n=292)"
+    },
+    {
+      "fp_id": "FP-010",
+      "source": "trials",
+      "name": "shinchoku_allq",
+      "family": "SUE/PEAD",
+      "entry_condition": "1Q/2Q/3Q各四半期の進捗率閾値(40/65/85%)を跨いだ複合進捗シグナル",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "pending",
+      "keywords": [
+        "PEAD",
+        "SUE",
+        "ガイダンス",
+        "サプライズ",
+        "上方修正",
+        "決算",
+        "進捗率"
+      ],
+      "ref": "trials.jsonl kpi_name=shinchoku_allq (n_rows=1, max_n=1058)"
+    },
+    {
+      "fp_id": "FP-011",
+      "source": "trials",
+      "name": "pead_x_shinchoku",
+      "family": "SUE/PEAD",
+      "entry_condition": "PEAD側(gap8/vol3)×進捗率側(shinchoku_allq)の複合AND条件",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "pending",
+      "keywords": [
+        "PEAD",
+        "SUE",
+        "ガイダンス",
+        "サプライズ",
+        "上方修正",
+        "決算",
+        "進捗率"
+      ],
+      "ref": "trials.jsonl kpi_name=pead_x_shinchoku (n_rows=1, max_n=83)"
+    },
+    {
+      "fp_id": "FP-012",
+      "source": "trials",
+      "name": "shortcover_turn",
+      "family": "需給/信用",
+      "entry_condition": "信用集計指標が閾値到達後に反転（踏み上げ転換）した銘柄の買い",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "pending",
+      "keywords": [
+        "信用",
+        "空売り",
+        "貸借",
+        "踏み上げ",
+        "需給"
+      ],
+      "ref": "trials.jsonl kpi_name=shortcover_turn (n_rows=1, max_n=3525)"
+    },
+    {
+      "fp_id": "FP-013",
+      "source": "trials",
+      "name": "margin_urinaga_trend",
+      "family": "需給/信用",
+      "entry_condition": "信用売り長トレンド（25日線・20日高値との複合）に基づく買い",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "fail",
+      "keywords": [
+        "信用",
+        "空売り",
+        "貸借",
+        "踏み上げ",
+        "需給"
+      ],
+      "ref": "trials.jsonl kpi_name=margin_urinaga_trend (n_rows=1, max_n=7374)"
+    },
+    {
+      "fp_id": "FP-014",
+      "source": "trials",
+      "name": "shortcover_x_bear",
+      "family": "需給/信用",
+      "entry_condition": "shortcover_turnにbearレジームフィルタを重ねた絞り込み",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "pending",
+      "keywords": [
+        "信用",
+        "空売り",
+        "貸借",
+        "踏み上げ",
+        "需給"
+      ],
+      "ref": "trials.jsonl kpi_name=shortcover_x_bear (n_rows=1, max_n=1639)"
+    },
+    {
+      "fp_id": "FP-015",
+      "source": "trials",
+      "name": "pead_gap8_vol3_defer3_HOLDOUT",
+      "family": "SUE/PEAD",
+      "entry_condition": "pead_gap8_vol3_defer3のholdout期間(2023-01〜2026-05)再確認",
+      "universe": "TOP500",
+      "period_tested": "2023-01〜2026-05",
+      "verdict": "pending",
+      "keywords": [
+        "PEAD",
+        "SUE",
+        "ガイダンス",
+        "サプライズ",
+        "上方修正",
+        "決算",
+        "進捗率"
+      ],
+      "ref": "trials.jsonl kpi_name=pead_gap8_vol3_defer3_HOLDOUT (n_rows=1, max_n=592)"
+    },
+    {
+      "fp_id": "FP-016",
+      "source": "trials",
+      "name": "volshock_5x_HOLDOUT_obs",
+      "family": "出来高ショック",
+      "entry_condition": "volshock_5xのholdout期間(2023-01〜2026-05)再確認",
+      "universe": "TOP500",
+      "period_tested": "2023-01〜2026-05",
+      "verdict": "pending",
+      "keywords": [
+        "volshock",
+        "出来高",
+        "出来高ショック",
+        "売買代金"
+      ],
+      "ref": "trials.jsonl kpi_name=volshock_5x_HOLDOUT_obs (n_rows=1, max_n=289)"
+    },
+    {
+      "fp_id": "FP-017",
+      "source": "trials",
+      "name": "strev_20d",
+      "family": "価格リバーサル",
+      "entry_condition": "直近20営業日リターン下位10%（売られ過ぎ銘柄）のロング",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "pending",
+      "keywords": [
+        "ランキングポート",
+        "リバーサル",
+        "反発",
+        "反転",
+        "押し目",
+        "逆張り"
+      ],
+      "ref": "trials.jsonl kpi_name=strev_20d (n_rows=1, max_n=3299)"
+    },
+    {
+      "fp_id": "FP-018",
+      "source": "trials",
+      "name": "high52_breakout",
+      "family": "ブレイクアウト",
+      "entry_condition": "252日高値更新×出来高20日平均の2倍以上（52週高値ブレイク）の買い",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "pending",
+      "keywords": [
+        "ギャップ",
+        "ブレイク",
+        "レンジ",
+        "連騰",
+        "高値更新"
+      ],
+      "ref": "trials.jsonl kpi_name=high52_breakout (n_rows=1, max_n=2278)"
+    },
+    {
+      "fp_id": "FP-019",
+      "source": "trials",
+      "name": "activist_5pct",
+      "family": "イベント",
+      "entry_condition": "EDINET大量保有報告書(5%ルール)によるアクティビスト参入検知の買い",
+      "universe": "TOP500",
+      "period_tested": "2021-07〜2022-11",
+      "verdict": "fail",
+      "keywords": [
+        "IPO",
+        "TOB",
+        "アクティビスト",
+        "分割",
+        "区分",
+        "大量保有",
+        "格付け"
+      ],
+      "ref": "trials.jsonl kpi_name=activist_5pct (n_rows=1, max_n=18)"
+    },
+    {
+      "fp_id": "FP-020",
+      "source": "trials",
+      "name": "volshock_x_above200",
+      "family": "出来高ショック",
+      "entry_condition": "volshock_5xに200日線上(above200)フィルタを重ねた絞り込み",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "pending",
+      "keywords": [
+        "volshock",
+        "出来高",
+        "出来高ショック",
+        "売買代金"
+      ],
+      "ref": "trials.jsonl kpi_name=volshock_x_above200 (n_rows=1, max_n=180)"
+    },
+    {
+      "fp_id": "FP-021",
+      "source": "trials",
+      "name": "volshock_x_below200",
+      "family": "出来高ショック",
+      "entry_condition": "volshock_5xに200日線下(below200)フィルタを重ねた絞り込み",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "fail",
+      "keywords": [
+        "volshock",
+        "出来高",
+        "出来高ショック",
+        "売買代金"
+      ],
+      "ref": "trials.jsonl kpi_name=volshock_x_below200 (n_rows=1, max_n=67)"
+    },
+    {
+      "fp_id": "FP-022",
+      "source": "trials",
+      "name": "volshock_x_above200_exit_C1",
+      "family": "出来高ショック",
+      "entry_condition": "volshock_x_above200母集団のexit比較（C1: -8%固定ストップ）",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "pending",
+      "keywords": [
+        "volshock",
+        "出来高",
+        "出来高ショック",
+        "売買代金"
+      ],
+      "ref": "trials.jsonl kpi_name=volshock_x_above200_exit_C1 (n_rows=1, max_n=180)"
+    },
+    {
+      "fp_id": "FP-023",
+      "source": "trials",
+      "name": "volshock_x_above200_exit_C2",
+      "family": "出来高ショック",
+      "entry_condition": "volshock_x_above200母集団のexit比較（C2: -10%固定ストップ）",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "pending",
+      "keywords": [
+        "volshock",
+        "出来高",
+        "出来高ショック",
+        "売買代金"
+      ],
+      "ref": "trials.jsonl kpi_name=volshock_x_above200_exit_C2 (n_rows=1, max_n=180)"
+    },
+    {
+      "fp_id": "FP-024",
+      "source": "trials",
+      "name": "volshock_x_above200_exit_C3",
+      "family": "出来高ショック",
+      "entry_condition": "volshock_x_above200母集団のexit比較（C3固定ストップ変種）",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "pending",
+      "keywords": [
+        "volshock",
+        "出来高",
+        "出来高ショック",
+        "売買代金"
+      ],
+      "ref": "trials.jsonl kpi_name=volshock_x_above200_exit_C3 (n_rows=1, max_n=180)"
+    },
+    {
+      "fp_id": "FP-025",
+      "source": "trials",
+      "name": "volshock_x_above200_exit_E1",
+      "family": "出来高ショック",
+      "entry_condition": "volshock_x_above200母集団のexit比較（E1: シナリオ崩壊型）",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "pending",
+      "keywords": [
+        "volshock",
+        "出来高",
+        "出来高ショック",
+        "売買代金"
+      ],
+      "ref": "trials.jsonl kpi_name=volshock_x_above200_exit_E1 (n_rows=1, max_n=180)"
+    },
+    {
+      "fp_id": "FP-026",
+      "source": "trials",
+      "name": "volshock_x_above200_exit_E2",
+      "family": "出来高ショック",
+      "entry_condition": "volshock_x_above200母集団のexit比較（E2: ATRストップ）",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "pending",
+      "keywords": [
+        "volshock",
+        "出来高",
+        "出来高ショック",
+        "売買代金"
+      ],
+      "ref": "trials.jsonl kpi_name=volshock_x_above200_exit_E2 (n_rows=1, max_n=180)"
+    },
+    {
+      "fp_id": "FP-027",
+      "source": "trials",
+      "name": "volshock_x_above200_exit_E3",
+      "family": "出来高ショック",
+      "entry_condition": "volshock_x_above200母集団のexit比較（E3: ベータストップ）",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "pending",
+      "keywords": [
+        "volshock",
+        "出来高",
+        "出来高ショック",
+        "売買代金"
+      ],
+      "ref": "trials.jsonl kpi_name=volshock_x_above200_exit_E3 (n_rows=1, max_n=180)"
+    },
+    {
+      "fp_id": "FP-028",
+      "source": "trials",
+      "name": "volshock_x_above200_exit_E4",
+      "family": "出来高ショック",
+      "entry_condition": "volshock_x_above200母集団のexit比較（E4: 2段階ATRストップ）",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "pending",
+      "keywords": [
+        "volshock",
+        "出来高",
+        "出来高ショック",
+        "売買代金"
+      ],
+      "ref": "trials.jsonl kpi_name=volshock_x_above200_exit_E4 (n_rows=1, max_n=180)"
+    },
+    {
+      "fp_id": "FP-029",
+      "source": "trials",
+      "name": "volshock_x_above200_micro",
+      "family": "出来高ショック",
+      "entry_condition": "volshock_x_above200に時価総額下位30%(micro_cap)増幅フィルタを重ねた絞り込み",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "pending",
+      "keywords": [
+        "volshock",
+        "出来高",
+        "出来高ショック",
+        "売買代金"
+      ],
+      "ref": "trials.jsonl kpi_name=volshock_x_above200_micro (n_rows=1, max_n=97)"
+    },
+    {
+      "fp_id": "FP-030",
+      "source": "trials",
+      "name": "volshock_x_above200_quiet",
+      "family": "出来高ショック",
+      "entry_condition": "volshock_x_above200にquiet_to_active_volume(静けさ→活性化)増幅フィルタを重ねたチャンピオン構成",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "racing",
+      "keywords": [
+        "volshock",
+        "出来高",
+        "出来高ショック",
+        "売買代金"
+      ],
+      "ref": "trials.jsonl kpi_name=volshock_x_above200_quiet (n_rows=2, max_n=89)"
+    },
+    {
+      "fp_id": "FP-031",
+      "source": "trials",
+      "name": "volshock_quiet",
+      "family": "出来高ショック",
+      "entry_condition": "volshock_5xにabove200フィルタなしでquiet増幅フィルタのみ重ねた絞り込み",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "pending",
+      "keywords": [
+        "volshock",
+        "出来高",
+        "出来高ショック",
+        "売買代金"
+      ],
+      "ref": "trials.jsonl kpi_name=volshock_quiet (n_rows=1, max_n=120)"
+    },
+    {
+      "fp_id": "FP-032",
+      "source": "trials",
+      "name": "shortup_lowrise",
+      "family": "需給/信用",
+      "entry_condition": "信用売り長ストリーク×直近安値切り上げの複合買い",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "pending",
+      "keywords": [
+        "信用",
+        "空売り",
+        "貸借",
+        "踏み上げ",
+        "需給"
+      ],
+      "ref": "trials.jsonl kpi_name=shortup_lowrise (n_rows=1, max_n=5435)"
+    },
+    {
+      "fp_id": "FP-033",
+      "source": "trials",
+      "name": "va_top1000",
+      "family": "出来高ショック",
+      "entry_condition": "volshock_x_above200と同一定義をユニバースTOP1000に拡張した感度検証",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "pending",
+      "keywords": [
+        "volshock",
+        "出来高",
+        "出来高ショック",
+        "売買代金"
+      ],
+      "ref": "trials.jsonl kpi_name=va_top1000 (n_rows=1, max_n=717)"
+    },
+    {
+      "fp_id": "FP-034",
+      "source": "trials",
+      "name": "vaq_top1000",
+      "family": "出来高ショック",
+      "entry_condition": "va_top1000にquiet増幅フィルタを重ねたTOP1000版",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "pending",
+      "keywords": [
+        "volshock",
+        "出来高",
+        "出来高ショック",
+        "売買代金"
+      ],
+      "ref": "trials.jsonl kpi_name=vaq_top1000 (n_rows=1, max_n=314)"
+    },
+    {
+      "fp_id": "FP-035",
+      "source": "trials",
+      "name": "vaq_top1000_exit_E1",
+      "family": "出来高ショック",
+      "entry_condition": "vaq_top1000母集団のexit比較（E1: シナリオ崩壊型）",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "pending",
+      "keywords": [
+        "volshock",
+        "出来高",
+        "出来高ショック",
+        "売買代金"
+      ],
+      "ref": "trials.jsonl kpi_name=vaq_top1000_exit_E1 (n_rows=1, max_n=314)"
+    },
+    {
+      "fp_id": "FP-036",
+      "source": "trials",
+      "name": "va_top1000_exit_E1",
+      "family": "出来高ショック",
+      "entry_condition": "va_top1000母集団のexit比較（E1: シナリオ崩壊型）",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "pending",
+      "keywords": [
+        "volshock",
+        "出来高",
+        "出来高ショック",
+        "売買代金"
+      ],
+      "ref": "trials.jsonl kpi_name=va_top1000_exit_E1 (n_rows=1, max_n=717)"
+    },
+    {
+      "fp_id": "FP-037",
+      "source": "trials",
+      "name": "sector_momentum_laggard",
+      "family": "業種波及",
+      "entry_condition": "33業種指数60日リターン上位分位の業種に属し、業種内では自銘柄60日リターンが下位40%（出遅れ）の買い",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "fail",
+      "keywords": [
+        "スピルオーバー",
+        "セクター",
+        "業種",
+        "波及"
+      ],
+      "ref": "trials.jsonl kpi_name=sector_momentum_laggard (n_rows=1, max_n=2810)"
+    },
+    {
+      "fp_id": "FP-038",
+      "source": "trials",
+      "name": "sh_dip_reentry",
+      "family": "ストップ高安",
+      "entry_condition": "ストップ高後3〜10営業日で5〜15%押し目・出来高維持での再上昇買い（翌日追撃は除く）",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "avoid",
+      "keywords": [
+        "LL",
+        "S安",
+        "S高",
+        "UL",
+        "ストップ安",
+        "ストップ高"
+      ],
+      "ref": "trials.jsonl kpi_name=sh_dip_reentry (n_rows=2, max_n=246)"
+    },
+    {
+      "fp_id": "FP-039",
+      "source": "trials",
+      "name": "range_breakout",
+      "family": "ブレイクアウト",
+      "entry_condition": "60日レンジ幅15%未満（低ボラ収縮）からレンジ上限×1.02上抜け×出来高2倍の買い",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "fail",
+      "keywords": [
+        "ギャップ",
+        "ブレイク",
+        "レンジ",
+        "連騰",
+        "高値更新"
+      ],
+      "ref": "trials.jsonl kpi_name=range_breakout (n_rows=1, max_n=316)"
+    },
+    {
+      "fp_id": "FP-040",
+      "source": "trials",
+      "name": "ma200_reclaim",
+      "family": "MA/GC",
+      "entry_condition": "前日終値<200日線・当日終値>200日線（200日線奪回クロス）の買い",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "fail",
+      "keywords": [
+        "GC",
+        "MA",
+        "ゴールデンクロス",
+        "移動平均",
+        "線奪回"
+      ],
+      "ref": "trials.jsonl kpi_name=ma200_reclaim (n_rows=1, max_n=935)"
+    },
+    {
+      "fp_id": "FP-041",
+      "source": "trials",
+      "name": "sector_momentum_laggard_exit_E1",
+      "family": "業種波及",
+      "entry_condition": "sector_momentum_laggard母集団のexit比較（E1: シナリオ崩壊型）",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "pending",
+      "keywords": [
+        "スピルオーバー",
+        "セクター",
+        "業種",
+        "波及"
+      ],
+      "ref": "trials.jsonl kpi_name=sector_momentum_laggard_exit_E1 (n_rows=1, max_n=2810)"
+    },
+    {
+      "fp_id": "FP-042",
+      "source": "trials",
+      "name": "range_breakout_exit_E1",
+      "family": "ブレイクアウト",
+      "entry_condition": "range_breakout母集団のexit比較（E1: シナリオ崩壊型）",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "pending",
+      "keywords": [
+        "ギャップ",
+        "ブレイク",
+        "レンジ",
+        "連騰",
+        "高値更新"
+      ],
+      "ref": "trials.jsonl kpi_name=range_breakout_exit_E1 (n_rows=1, max_n=316)"
+    },
+    {
+      "fp_id": "FP-043",
+      "source": "trials",
+      "name": "ma200_reclaim_exit_E1",
+      "family": "MA/GC",
+      "entry_condition": "ma200_reclaim母集団のexit比較（E1: シナリオ崩壊型）",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "pending",
+      "keywords": [
+        "GC",
+        "MA",
+        "ゴールデンクロス",
+        "移動平均",
+        "線奪回"
+      ],
+      "ref": "trials.jsonl kpi_name=ma200_reclaim_exit_E1 (n_rows=1, max_n=935)"
+    },
+    {
+      "fp_id": "FP-044",
+      "source": "trials",
+      "name": "sh_dip_reentry_exit_E1",
+      "family": "ストップ高安",
+      "entry_condition": "sh_dip_reentry母集団のexit比較（E1: シナリオ崩壊型）",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "pending",
+      "keywords": [
+        "LL",
+        "S安",
+        "S高",
+        "UL",
+        "ストップ安",
+        "ストップ高"
+      ],
+      "ref": "trials.jsonl kpi_name=sh_dip_reentry_exit_E1 (n_rows=1, max_n=246)"
+    },
+    {
+      "fp_id": "FP-045",
+      "source": "trials",
+      "name": "volshock_x_above200_quiet_ul0",
+      "family": "出来高ショック",
+      "entry_condition": "チャンピオン(volshock_x_above200_quiet)にul_count_10bd==0(ストップ高0回)フィルタを重ねた絞り込み",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "rejected",
+      "keywords": [
+        "volshock",
+        "出来高",
+        "出来高ショック",
+        "売買代金"
+      ],
+      "ref": "trials.jsonl kpi_name=volshock_x_above200_quiet_ul0 (n_rows=1, max_n=56)"
+    },
+    {
+      "fp_id": "FP-046",
+      "source": "trials",
+      "name": "volshock_x_above200_quiet_ul_lt3",
+      "family": "出来高ショック",
+      "entry_condition": "チャンピオンにul_count_10bd<=2(ストップ高2回以下)フィルタを重ねた絞り込み",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "pending",
+      "keywords": [
+        "volshock",
+        "出来高",
+        "出来高ショック",
+        "売買代金"
+      ],
+      "ref": "trials.jsonl kpi_name=volshock_x_above200_quiet_ul_lt3 (n_rows=1, max_n=70)"
+    },
+    {
+      "fp_id": "FP-047",
+      "source": "trials",
+      "name": "volshock_x_above200_quiet_earnprox20",
+      "family": "出来高ショック",
+      "entry_condition": "チャンピオンにearnings_remaining_bd<=20(決算接近推定)フィルタを重ねた絞り込み",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "rejected",
+      "keywords": [
+        "volshock",
+        "出来高",
+        "出来高ショック",
+        "売買代金"
+      ],
+      "ref": "trials.jsonl kpi_name=volshock_x_above200_quiet_earnprox20 (n_rows=1, max_n=16)"
+    },
+    {
+      "fp_id": "FP-048",
+      "source": "trials",
+      "name": "ul_fade_standalone",
+      "family": "ストップ高安",
+      "entry_condition": "直近10営業日でストップ高(UL)3回以上到達×前日未達（新規到達日）の追随買い",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "avoid",
+      "keywords": [
+        "LL",
+        "S安",
+        "S高",
+        "UL",
+        "ストップ安",
+        "ストップ高"
+      ],
+      "ref": "trials.jsonl kpi_name=ul_fade_standalone (n_rows=1, max_n=105)"
+    },
+    {
+      "fp_id": "FP-049",
+      "source": "trials",
+      "name": "volshock_x_above200_ul_lt3",
+      "family": "出来高ショック",
+      "entry_condition": "volshock_x_above200(above200無印・広母集団)にul_count_10bd<=2を重ねた広域再確認",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "pending",
+      "keywords": [
+        "volshock",
+        "出来高",
+        "出来高ショック",
+        "売買代金"
+      ],
+      "ref": "trials.jsonl kpi_name=volshock_x_above200_ul_lt3 (n_rows=1, max_n=175)"
+    },
+    {
+      "fp_id": "FP-050",
+      "source": "trials",
+      "name": "high52_break_vol",
+      "family": "ブレイクアウト",
+      "entry_condition": "high52_breakoutの終値基準・251日窓への定義微調整版（出来高倍率条件は同一）",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "rejected",
+      "keywords": [
+        "ギャップ",
+        "ブレイク",
+        "レンジ",
+        "連騰",
+        "高値更新"
+      ],
+      "ref": "trials.jsonl kpi_name=high52_break_vol (n_rows=1, max_n=1791)"
+    },
+    {
+      "fp_id": "FP-051",
+      "source": "trials",
+      "name": "dividend_uprev",
+      "family": "SUE/PEAD",
+      "entry_condition": "配当予想の増額修正（DividendForecastRevision・同一会計年度限定）の買い",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "fail",
+      "keywords": [
+        "PEAD",
+        "SUE",
+        "ガイダンス",
+        "サプライズ",
+        "上方修正",
+        "決算",
+        "進捗率"
+      ],
+      "ref": "trials.jsonl kpi_name=dividend_uprev (n_rows=1, max_n=147)"
+    },
+    {
+      "fp_id": "FP-052",
+      "source": "trials",
+      "name": "sue_beat",
+      "family": "SUE/PEAD",
+      "entry_condition": "営業利益実績が直前予想比+10%以上のビート（2Q/FY限定・SUE型）の買い",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "pending",
+      "keywords": [
+        "PEAD",
+        "SUE",
+        "ガイダンス",
+        "サプライズ",
+        "上方修正",
+        "決算",
+        "進捗率"
+      ],
+      "ref": "trials.jsonl kpi_name=sue_beat (n_rows=1, max_n=818)"
+    },
+    {
+      "fp_id": "FP-053",
+      "source": "trials",
+      "name": "uprev_repeater",
+      "family": "SUE/PEAD",
+      "entry_condition": "uprev_fop10のうち過去2年以内に2回以上上方修正した常連銘柄のみに絞った買い",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "rejected",
+      "keywords": [
+        "PEAD",
+        "SUE",
+        "ガイダンス",
+        "サプライズ",
+        "上方修正",
+        "決算",
+        "進捗率"
+      ],
+      "ref": "trials.jsonl kpi_name=uprev_repeater (n_rows=1, max_n=52)"
+    },
+    {
+      "fp_id": "FP-054",
+      "source": "trials",
+      "name": "sue_x_above200",
+      "family": "SUE/PEAD",
+      "entry_condition": "sue_beat母集団に200日線上(above200)フィルタを重ねた絞り込み",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "racing",
+      "keywords": [
+        "PEAD",
+        "SUE",
+        "ガイダンス",
+        "サプライズ",
+        "上方修正",
+        "決算",
+        "進捗率"
+      ],
+      "ref": "trials.jsonl kpi_name=sue_x_above200 (n_rows=2, max_n=516)"
+    },
+    {
+      "fp_id": "FP-055",
+      "source": "trials",
+      "name": "sue_x_above200_ul0",
+      "family": "SUE/PEAD",
+      "entry_condition": "sue_x_above200相当にul_count_10bd<=2(ストップ高頻発除外)を重ねた絞り込み",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "pending",
+      "keywords": [
+        "PEAD",
+        "SUE",
+        "ガイダンス",
+        "サプライズ",
+        "上方修正",
+        "決算",
+        "進捗率"
+      ],
+      "ref": "trials.jsonl kpi_name=sue_x_above200_ul0 (n_rows=1, max_n=516)"
+    },
+    {
+      "fp_id": "FP-056",
+      "source": "trials",
+      "name": "sue_x_quiet",
+      "family": "SUE/PEAD",
+      "entry_condition": "sue_beat母集団にquiet_ratio>=1.2(静けさ)フィルタを重ねた絞り込み",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "pending",
+      "keywords": [
+        "PEAD",
+        "SUE",
+        "ガイダンス",
+        "サプライズ",
+        "上方修正",
+        "決算",
+        "進捗率"
+      ],
+      "ref": "trials.jsonl kpi_name=sue_x_quiet (n_rows=1, max_n=183)"
+    },
+    {
+      "fp_id": "FP-057",
+      "source": "trials",
+      "name": "margin_pampan",
+      "family": "需給/信用",
+      "entry_condition": "信用買い残の消化日数(LongVol/20日平均出来高)が10日以上（カタログ§2-B原義の簡易1条件版）の買い",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "rejected",
+      "keywords": [
+        "信用",
+        "空売り",
+        "貸借",
+        "踏み上げ",
+        "需給"
+      ],
+      "ref": "trials.jsonl kpi_name=margin_pampan (n_rows=1, max_n=36)"
+    },
+    {
+      "fp_id": "FP-058",
+      "source": "trials",
+      "name": "karauri_fuel",
+      "family": "需給/信用",
+      "entry_condition": "空売り残高(調整済み)が4回前スナップショット比+50%以上増加かつ出来高20日平均の2倍以上の買い",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "fail",
+      "keywords": [
+        "信用",
+        "空売り",
+        "貸借",
+        "踏み上げ",
+        "需給"
+      ],
+      "ref": "trials.jsonl kpi_name=karauri_fuel (n_rows=1, max_n=239)"
+    },
+    {
+      "fp_id": "FP-059",
+      "source": "trials",
+      "name": "sue_x_above200_exit_stop8",
+      "family": "SUE/PEAD",
+      "entry_condition": "sue_x_above200母集団のexit比較（-8%固定ストップロス版・secondary endpoint）",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "pending",
+      "keywords": [
+        "PEAD",
+        "SUE",
+        "ガイダンス",
+        "サプライズ",
+        "上方修正",
+        "決算",
+        "進捗率"
+      ],
+      "ref": "trials.jsonl kpi_name=sue_x_above200_exit_stop8 (n_rows=1, max_n=516)"
+    },
+    {
+      "fp_id": "FP-060",
+      "source": "trials",
+      "name": "sue_x_above200_exit_e1",
+      "family": "SUE/PEAD",
+      "entry_condition": "sue_x_above200母集団のexit比較（E1シナリオ崩壊型・secondary endpoint）",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "pending",
+      "keywords": [
+        "PEAD",
+        "SUE",
+        "ガイダンス",
+        "サプライズ",
+        "上方修正",
+        "決算",
+        "進捗率"
+      ],
+      "ref": "trials.jsonl kpi_name=sue_x_above200_exit_e1 (n_rows=1, max_n=516)"
+    },
+    {
+      "fp_id": "FP-061",
+      "source": "trials",
+      "name": "screen_v1_pead_gap8_vol3_defer3_quiet_ratio_quiet",
+      "family": "SUE/PEAD",
+      "entry_condition": "pead_gap8_vol3_defer3母集団にquiet_ratio>=1.2を掛けたスクリーニングバッチv1セル",
+      "universe": "TOP500",
+      "period_tested": "202001〜202211",
+      "verdict": "rejected",
+      "keywords": [
+        "PEAD",
+        "SUE",
+        "ガイダンス",
+        "サプライズ",
+        "上方修正",
+        "決算",
+        "進捗率"
+      ],
+      "ref": "trials.jsonl kpi_name=screen_v1_pead_gap8_vol3_defer3_quiet_ratio_quiet (n_rows=1, max_n=81)"
+    },
+    {
+      "fp_id": "FP-062",
+      "source": "trials",
+      "name": "screening_batch_v1",
+      "family": "その他",
+      "entry_condition": "スクリーニングバッチ登録メタ行（batch_id=batch_v1・仮説シグネチャではない・n_cells等の集計行）",
+      "universe": "TOP500",
+      "period_tested": "202001〜202211",
+      "verdict": "pending",
+      "keywords": [],
+      "ref": "trials.jsonl kpi_name=screening_batch_v1 (n_rows=1, max_n=None)"
+    },
+    {
+      "fp_id": "FP-063",
+      "source": "trials",
+      "name": "turnover_rank_surge",
+      "family": "出来高ショック",
+      "entry_condition": "売買代金順位が20営業日前301位以下から当日100位以内へ急上昇（陽線条件付き）の買い",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "racing",
+      "keywords": [
+        "volshock",
+        "出来高",
+        "出来高ショック",
+        "売買代金"
+      ],
+      "ref": "trials.jsonl kpi_name=turnover_rank_surge (n_rows=2, max_n=1237)"
+    },
+    {
+      "fp_id": "FP-064",
+      "source": "trials",
+      "name": "sell_reg_trigger_rebound",
+      "family": "価格リバーサル",
+      "entry_condition": "前日比-10%到達（値幅制限トリガー近似）の翌営業日買い",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "racing",
+      "keywords": [
+        "ランキングポート",
+        "リバーサル",
+        "反発",
+        "反転",
+        "押し目",
+        "逆張り"
+      ],
+      "ref": "trials.jsonl kpi_name=sell_reg_trigger_rebound (n_rows=2, max_n=2943)"
+    },
+    {
+      "fp_id": "FP-065",
+      "source": "trials",
+      "name": "golden_cross_2575",
+      "family": "MA/GC",
+      "entry_condition": "25日線が75日線を下から上へ抜けるゴールデンクロス（25/75日）の買い",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "fail",
+      "keywords": [
+        "GC",
+        "MA",
+        "ゴールデンクロス",
+        "移動平均",
+        "線奪回"
+      ],
+      "ref": "trials.jsonl kpi_name=golden_cross_2575 (n_rows=1, max_n=5116)"
+    },
+    {
+      "fp_id": "FP-066",
+      "source": "trials",
+      "name": "resid_momentum_entry",
+      "family": "その他",
+      "entry_condition": "TOPIX 1ファクター残差ベースのモメンタムスコア上位decile新規入り（残差モメンタム）",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "fail",
+      "keywords": [],
+      "ref": "trials.jsonl kpi_name=resid_momentum_entry (n_rows=1, max_n=712)"
+    },
+    {
+      "fp_id": "FP-067",
+      "source": "trials",
+      "name": "resid_strev_entry",
+      "family": "価格リバーサル",
+      "entry_condition": "TOPIX 1ファクター残差ベースの直近1ヶ月反転スコア上位decile新規入り",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "fail",
+      "keywords": [
+        "ランキングポート",
+        "リバーサル",
+        "反発",
+        "反転",
+        "押し目",
+        "逆張り"
+      ],
+      "ref": "trials.jsonl kpi_name=resid_strev_entry (n_rows=1, max_n=1502)"
+    },
+    {
+      "fp_id": "FP-068",
+      "source": "trials",
+      "name": "raw_momentum_entry",
+      "family": "その他",
+      "entry_condition": "素の12ヶ月モメンタム(σ標準化なし)上位decile新規入り（残差化の対照基準線）",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "rejected",
+      "keywords": [],
+      "ref": "trials.jsonl kpi_name=raw_momentum_entry (n_rows=1, max_n=388)"
+    },
+    {
+      "fp_id": "FP-069",
+      "source": "trials",
+      "name": "raw_strev_entry",
+      "family": "価格リバーサル",
+      "entry_condition": "素の(-r[t-1])上位decile新規入り（strev_20dの月次イベント化・残差化なし版）",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "racing",
+      "keywords": [
+        "ランキングポート",
+        "リバーサル",
+        "反発",
+        "反転",
+        "押し目",
+        "逆張り"
+      ],
+      "ref": "trials.jsonl kpi_name=raw_strev_entry (n_rows=2, max_n=1501)"
+    },
+    {
+      "fp_id": "FP-070",
+      "source": "trials",
+      "name": "margin_expand_yoy",
+      "family": "SUE/PEAD",
+      "entry_condition": "単四半期営業利益率が前年同期比+2pt以上改善かつ増収（決算開示イベント）の買い",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "racing",
+      "keywords": [
+        "PEAD",
+        "SUE",
+        "ガイダンス",
+        "サプライズ",
+        "上方修正",
+        "決算",
+        "進捗率"
+      ],
+      "ref": "trials.jsonl kpi_name=margin_expand_yoy (n_rows=2, max_n=2091)"
+    },
+    {
+      "fp_id": "FP-071",
+      "source": "trials",
+      "name": "sector_sympathy_volshock",
+      "family": "業種波及",
+      "entry_condition": "同業種内で他銘柄がvolshock_5x発火した当日、volshock未成立の同業種内出来高中央値以上銘柄への波及買い",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "fail",
+      "keywords": [
+        "スピルオーバー",
+        "セクター",
+        "業種",
+        "波及"
+      ],
+      "ref": "trials.jsonl kpi_name=sector_sympathy_volshock (n_rows=1, max_n=2191)"
+    },
+    {
+      "fp_id": "FP-072",
+      "source": "trials",
+      "name": "gap_hold_close_strong",
+      "family": "ブレイクアウト",
+      "entry_condition": "寄付+3%以上ギャップ×終値が寄付以上を維持×日中レンジ上位20%引け×出来高2倍の買い",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "racing",
+      "keywords": [
+        "ギャップ",
+        "ブレイク",
+        "レンジ",
+        "連騰",
+        "高値更新"
+      ],
+      "ref": "trials.jsonl kpi_name=gap_hold_close_strong (n_rows=2, max_n=1172)"
+    },
+    {
+      "fp_id": "FP-073",
+      "source": "trials",
+      "name": "ll_release_rebound",
+      "family": "ストップ高安",
+      "entry_condition": "ストップ安(LL)エピソード後、10営業日以内で初めて出来高を伴う陽線が出た日の買い",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "avoid",
+      "keywords": [
+        "LL",
+        "S安",
+        "S高",
+        "UL",
+        "ストップ安",
+        "ストップ高"
+      ],
+      "ref": "trials.jsonl kpi_name=ll_release_rebound (n_rows=1, max_n=233)"
+    },
+    {
+      "fp_id": "FP-074",
+      "source": "trials",
+      "name": "three_up_ignition",
+      "family": "ブレイクアウト",
+      "entry_condition": "3営業日連続の陽線×高値切り上げ×終値切り上げ×出来高合計3倍以上（初回性条件付き）の買い",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "racing",
+      "keywords": [
+        "ギャップ",
+        "ブレイク",
+        "レンジ",
+        "連騰",
+        "高値更新"
+      ],
+      "ref": "trials.jsonl kpi_name=three_up_ignition (n_rows=2, max_n=3176)"
+    },
+    {
+      "fp_id": "FP-075",
+      "source": "trials",
+      "name": "rs_line_high",
+      "family": "ブレイクアウト",
+      "entry_condition": "対TOPIX相対力(RS)ラインが252日新高値かつ株価自体は未新高値（先行ブレイク）の買い",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "rejected",
+      "keywords": [
+        "ギャップ",
+        "ブレイク",
+        "レンジ",
+        "連騰",
+        "高値更新"
+      ],
+      "ref": "trials.jsonl kpi_name=rs_line_high (n_rows=1, max_n=1011)"
+    },
+    {
+      "fp_id": "FP-076",
+      "source": "trials",
+      "name": "engulf_reversal_day",
+      "family": "価格リバーサル",
+      "entry_condition": "安寄り後に陽線で前日終値を上回る包み足（bullish engulfing）×出来高1.5倍の買い",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "racing",
+      "keywords": [
+        "ランキングポート",
+        "リバーサル",
+        "反発",
+        "反転",
+        "押し目",
+        "逆張り"
+      ],
+      "ref": "trials.jsonl kpi_name=engulf_reversal_day (n_rows=2, max_n=2021)"
+    },
+    {
+      "fp_id": "FP-077",
+      "source": "trials",
+      "name": "mkt_upgrade",
+      "family": "イベント",
+      "entry_condition": "月末マスターの市場区分(MarketCode)が上位区分へ昇格した銘柄の買い",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "pending",
+      "keywords": [
+        "IPO",
+        "TOB",
+        "アクティビスト",
+        "分割",
+        "区分",
+        "大量保有",
+        "格付け"
+      ],
+      "ref": "trials.jsonl kpi_name=mkt_upgrade (n_rows=1, max_n=33)"
+    },
+    {
+      "fp_id": "FP-078",
+      "source": "trials",
+      "name": "updown_vol_ratio_high",
+      "family": "出来高ショック",
+      "entry_condition": "20営業日の上昇日出来高合計÷下落日出来高合計が3.0以上に到達した日の買い",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "rejected",
+      "keywords": [
+        "volshock",
+        "出来高",
+        "出来高ショック",
+        "売買代金"
+      ],
+      "ref": "trials.jsonl kpi_name=updown_vol_ratio_high (n_rows=1, max_n=3743)"
+    },
+    {
+      "fp_id": "FP-079",
+      "source": "trials",
+      "name": "preearnings_runup",
+      "family": "SUE/PEAD",
+      "entry_condition": "次回決算まで推定5営業日以内到達×quiet_ratio>=1.2（決算接近・事前ランアップ）の買い",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "rejected",
+      "keywords": [
+        "PEAD",
+        "SUE",
+        "ガイダンス",
+        "サプライズ",
+        "上方修正",
+        "決算",
+        "進捗率"
+      ],
+      "ref": "trials.jsonl kpi_name=preearnings_runup (n_rows=1, max_n=1508)"
+    },
+    {
+      "fp_id": "FP-080",
+      "source": "trials",
+      "name": "mrgn_upgrade",
+      "family": "需給/信用",
+      "entry_condition": "月末マスターで信用区分(Mrgn)が「信用」から「貸借」へ昇格した銘柄の買い",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "rejected",
+      "keywords": [
+        "信用",
+        "空売り",
+        "貸借",
+        "踏み上げ",
+        "需給"
+      ],
+      "ref": "trials.jsonl kpi_name=mrgn_upgrade (n_rows=1, max_n=49)"
+    },
+    {
+      "fp_id": "FP-081",
+      "source": "trials",
+      "name": "scalecat_upgrade",
+      "family": "イベント",
+      "entry_condition": "月末マスターの規模区分(ScaleCategory：Core30/Large70/Mid400等)が上位へ昇格した銘柄の買い",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "rejected",
+      "keywords": [
+        "IPO",
+        "TOB",
+        "アクティビスト",
+        "分割",
+        "区分",
+        "大量保有",
+        "格付け"
+      ],
+      "ref": "trials.jsonl kpi_name=scalecat_upgrade (n_rows=1, max_n=179)"
+    },
+    {
+      "fp_id": "FP-082",
+      "source": "trials",
+      "name": "sales_beat",
+      "family": "SUE/PEAD",
+      "entry_condition": "売上実績が直前予想比+5%以上のビート（sue_beatと同型as-of・2Q/FY限定）の買い",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "racing",
+      "keywords": [
+        "PEAD",
+        "SUE",
+        "ガイダンス",
+        "サプライズ",
+        "上方修正",
+        "決算",
+        "進捗率"
+      ],
+      "ref": "trials.jsonl kpi_name=sales_beat (n_rows=2, max_n=282)"
+    },
+    {
+      "fp_id": "FP-083",
+      "source": "trials",
+      "name": "guidance_fy_strong",
+      "family": "SUE/PEAD",
+      "entry_condition": "FY決算開示で来期売上予想が今期比+10%以上の強気ガイダンスの買い",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "racing",
+      "keywords": [
+        "PEAD",
+        "SUE",
+        "ガイダンス",
+        "サプライズ",
+        "上方修正",
+        "決算",
+        "進捗率"
+      ],
+      "ref": "trials.jsonl kpi_name=guidance_fy_strong (n_rows=2, max_n=683)"
+    },
+    {
+      "fp_id": "FP-084",
+      "source": "trials",
+      "name": "cfo_margin_improve",
+      "family": "SUE/PEAD",
+      "entry_condition": "営業CF/売上高が前年同期比+3pt以上改善かつ増収（2Q/FY開示）の買い",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "racing",
+      "keywords": [
+        "PEAD",
+        "SUE",
+        "ガイダンス",
+        "サプライズ",
+        "上方修正",
+        "決算",
+        "進捗率"
+      ],
+      "ref": "trials.jsonl kpi_name=cfo_margin_improve (n_rows=2, max_n=750)"
+    },
+    {
+      "fp_id": "FP-085",
+      "source": "trials",
+      "name": "cfo_turnaround",
+      "family": "SUE/PEAD",
+      "entry_condition": "営業CF/売上高が前年同期マイナスから当期+2%以上へ転換（黒字転換）の買い",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "pending",
+      "keywords": [
+        "PEAD",
+        "SUE",
+        "ガイダンス",
+        "サプライズ",
+        "上方修正",
+        "決算",
+        "進捗率"
+      ],
+      "ref": "trials.jsonl kpi_name=cfo_turnaround (n_rows=1, max_n=145)"
+    },
+    {
+      "fp_id": "FP-086",
+      "source": "trials",
+      "name": "short_crowd_exit",
+      "family": "需給/信用",
+      "entry_condition": "空売り建玉0.5%以上保有の複数機関投資家(アクティブReporter2者以上)が一斉撤退した銘柄の買い",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "rejected",
+      "keywords": [
+        "信用",
+        "空売り",
+        "貸借",
+        "踏み上げ",
+        "需給"
+      ],
+      "ref": "trials.jsonl kpi_name=short_crowd_exit (n_rows=1, max_n=6172)"
+    },
+    {
+      "fp_id": "FP-087",
+      "source": "trials",
+      "name": "nr7_breakout",
+      "family": "ブレイクアウト",
+      "entry_condition": "直近7営業日で最小の日中レンジ（NR7）を付けた翌営業日に前日高値を出来高1.5倍超で上抜けた買い",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "rejected",
+      "keywords": [
+        "ギャップ",
+        "ブレイク",
+        "レンジ",
+        "連騰",
+        "高値更新"
+      ],
+      "ref": "trials.jsonl kpi_name=nr7_breakout (n_rows=1, max_n=3481)"
+    },
+    {
+      "fp_id": "FP-088",
+      "source": "trials",
+      "name": "split_execution",
+      "family": "イベント",
+      "entry_condition": "株式分割の実施日（AdjFactor<=0.5＝1:2以上の分割）を起点にした買い",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "rejected",
+      "keywords": [
+        "IPO",
+        "TOB",
+        "アクティビスト",
+        "分割",
+        "区分",
+        "大量保有",
+        "格付け"
+      ],
+      "ref": "trials.jsonl kpi_name=split_execution (n_rows=1, max_n=179)"
+    },
+    {
+      "fp_id": "FP-089",
+      "source": "trials",
+      "name": "earnings_spillover",
+      "family": "SUE/PEAD",
+      "entry_condition": "同業種内でsales_beat銘柄(leader)が出た日、同業種未発表銘柄への波及買い",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "racing",
+      "keywords": [
+        "PEAD",
+        "SUE",
+        "ガイダンス",
+        "サプライズ",
+        "上方修正",
+        "決算",
+        "進捗率"
+      ],
+      "ref": "trials.jsonl kpi_name=earnings_spillover (n_rows=2, max_n=2460)"
+    },
+    {
+      "fp_id": "FP-090",
+      "source": "trials",
+      "name": "rank_port_v1_composite",
+      "family": "価格リバーサル",
+      "entry_condition": "モメンタム(F2)×リバーサル(F8)を等ウェイト合成した連続横断ランキングロングショート型ポートフォリオ",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2026-06",
+      "verdict": "rejected",
+      "keywords": [
+        "ランキングポート",
+        "リバーサル",
+        "反発",
+        "反転",
+        "押し目",
+        "逆張り"
+      ],
+      "ref": "trials.jsonl kpi_name=rank_port_v1_composite (n_rows=1, max_n=113)"
+    },
+    {
+      "fp_id": "FP-091",
+      "source": "trials",
+      "name": "rank_port_v1_f2only",
+      "family": "価格リバーサル",
+      "entry_condition": "rank_port_v1のトレンド因子(F2)単独版（合成の対照群）",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2026-06",
+      "verdict": "pending",
+      "keywords": [
+        "ランキングポート",
+        "リバーサル",
+        "反発",
+        "反転",
+        "押し目",
+        "逆張り"
+      ],
+      "ref": "trials.jsonl kpi_name=rank_port_v1_f2only (n_rows=1, max_n=109)"
+    },
+    {
+      "fp_id": "FP-092",
+      "source": "trials",
+      "name": "rank_port_v1_f8only",
+      "family": "価格リバーサル",
+      "entry_condition": "rank_port_v1のリバーサル因子(F8=strev)単独版（合成の対照群）",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2026-06",
+      "verdict": "pending",
+      "keywords": [
+        "ランキングポート",
+        "リバーサル",
+        "反発",
+        "反転",
+        "押し目",
+        "逆張り"
+      ],
+      "ref": "trials.jsonl kpi_name=rank_port_v1_f8only (n_rows=1, max_n=113)"
+    },
+    {
+      "fp_id": "FP-093",
+      "source": "trials",
+      "name": "screening_batch_v2t",
+      "family": "その他",
+      "entry_condition": "スクリーニングバッチ登録メタ行（batch_id=batch_v2t・仮説シグネチャではない・F03押し目買い4セルの集計行）",
+      "universe": "TOP500",
+      "period_tested": "202001〜202211",
+      "verdict": "pending",
+      "keywords": [],
+      "ref": "trials.jsonl kpi_name=screening_batch_v2t (n_rows=1, max_n=None)"
+    },
+    {
+      "source": "avoidance",
+      "name": "GC逆指標",
+      "family": "MA/GC",
+      "entry_condition": "移動平均線クロス／奪回系シグナル全般（ゴールデンクロス25/75日・200日線奪回）の買い",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "avoid",
+      "keywords": [
+        "GC",
+        "MA",
+        "ゴールデンクロス",
+        "定番テクニカル",
+        "移動平均",
+        "線奪回",
+        "逆指標"
+      ],
+      "ref": "catalog:1486-1491（golden_cross_2575 fail + ma200_reclaim fail の2敗を踏まえた確定知見: 「監視者の多い定番テクニカル転換シグナルは+20%狙いでは逆指標」）",
+      "fp_id": "FP-094"
+    },
+    {
+      "source": "avoidance",
+      "name": "低ボラ入口不可",
+      "family": "ブレイクアウト",
+      "entry_condition": "60日レンジ幅15%未満など低ボラティリティ銘柄のレンジ収縮→上放れ型ブレイク買い",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "avoid",
+      "keywords": [
+        "BBスクイーズ",
+        "ギャップ",
+        "ブレイク",
+        "レンジ",
+        "低ボラ",
+        "連騰",
+        "高値更新"
+      ],
+      "ref": "catalog:73（表: range_breakout fail・lift0.12[0,0.35]・『低ボラ銘柄は構造的に+20%が出ない』）/ catalog:764",
+      "fp_id": "FP-095"
+    },
+    {
+      "source": "avoidance",
+      "name": "S高追随EV-8%",
+      "family": "ストップ高安",
+      "entry_condition": "ストップ高多発銘柄（直近10営業日UL3回以上到達）への新規追随買い・保有継続",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "avoid",
+      "keywords": [
+        "LL",
+        "S安",
+        "S高",
+        "UL",
+        "ストップ安",
+        "ストップ高",
+        "フェード",
+        "追随買い"
+      ],
+      "ref": "catalog:731-735（ul_fade_standalone: EV点推定-8.13% CI[-14.10%,-1.41%]・事前凍結基準によりfade確認=成立）",
+      "fp_id": "FP-096"
+    },
+    {
+      "source": "avoidance",
+      "name": "S安反発EV-5.14%",
+      "family": "ストップ高安",
+      "entry_condition": "ストップ安張り付き解放後、出来高を伴う初陽線での反発買い",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2022-11",
+      "verdict": "avoid",
+      "keywords": [
+        "LL",
+        "S安",
+        "S高",
+        "UL",
+        "ストップ安",
+        "ストップ高",
+        "リバウンド買い",
+        "解放反発"
+      ],
+      "ref": "catalog:1784,1881（ll_release_rebound: lift3.10[1.99,4.65]だがEV(なし)-5.14%[-8.09%,-2.36%]・除外=AVOIDANCE_SIGNAL）",
+      "fp_id": "FP-097"
+    },
+    {
+      "source": "avoidance",
+      "name": "§7-AD無条件リバーサル不利",
+      "family": "価格リバーサル",
+      "entry_condition": "イベント条件を外した連続横断ランキング型トレンド×リバーサル合成ロングショートポートフォリオ",
+      "universe": "TOP500",
+      "period_tested": "2016-11〜2026-06",
+      "verdict": "avoid",
+      "keywords": [
+        "ランキングポート",
+        "リバーサル",
+        "反発",
+        "反転",
+        "型転換",
+        "押し目",
+        "無条件",
+        "逆張り",
+        "連続ランキング"
+      ],
+      "ref": "catalog:2453-2464（rank_port_v1_composite v1棄却・コスト後月次超過-0.19%・NW t=-0.49・『この期間・TOP500・コスト条件では短期リバーサル買いが一貫して不利』・型転換トラックはv1で一旦停止）",
+      "fp_id": "FP-098"
+    },
+    {
+      "source": "misokuri",
+      "name": "アクティビスト5%参入(再訴)",
+      "family": "イベント",
+      "verdict": "excluded",
+      "entry_condition": "大量保有報告書(5%ルール)提出をトリガーにしたロング（activist_5pctの再訴）",
+      "universe": "N/A",
+      "period_tested": "N/A",
+      "keywords": [
+        "IPO",
+        "TOB",
+        "アクティビスト",
+        "再訴",
+        "分割",
+        "区分",
+        "大量保有",
+        "格付け"
+      ],
+      "ref": "catalog:2543（§8-2: activist_5pct §6 fail済み＋EDINET保有割合フィールド不在で§7-P実施不能確定。再試行は新データ源＋新定義＋期間再定義の三条件でのみ）",
+      "fp_id": "FP-099"
+    },
+    {
+      "source": "misokuri",
+      "name": "空売り残高0.5%開示の解消買い戻し",
+      "family": "需給/信用",
+      "verdict": "excluded",
+      "entry_condition": "空売り残高0.5%開示の解消（撤退）を検知した買い戻し",
+      "universe": "N/A",
+      "period_tested": "N/A",
+      "keywords": [
+        "0.5%開示",
+        "信用",
+        "空売り",
+        "解消買い戻し",
+        "貸借",
+        "踏み上げ",
+        "需給"
+      ],
+      "ref": "catalog:2544（§8-2: short_crowd_exit既試行(pending)と同概念の疑い。事前登録前に§7の該当周を突合し同一なら変種禁止）",
+      "fp_id": "FP-100"
+    },
+    {
+      "source": "misokuri",
+      "name": "株式分割「発表」",
+      "family": "イベント",
+      "verdict": "excluded",
+      "entry_condition": "株式分割の発表日（実施日ではない）を起点にした買い",
+      "universe": "N/A",
+      "period_tested": "N/A",
+      "keywords": [
+        "IPO",
+        "TOB",
+        "アクティビスト",
+        "分割",
+        "分割発表",
+        "区分",
+        "大量保有",
+        "格付け"
+      ],
+      "ref": "catalog:2545（§8-2: split family同一期間変種禁止。§7でsplit_execution rejected済み。期間再定義後のみ）",
+      "fp_id": "FP-101"
+    },
+    {
+      "source": "misokuri",
+      "name": "アナリスト格上げドリフト",
+      "family": "その他",
+      "verdict": "excluded",
+      "entry_condition": "アナリスト格付け/レーティング引き上げ後のドリフト買い",
+      "universe": "N/A",
+      "period_tested": "N/A",
+      "keywords": [
+        "アナリスト",
+        "格上げ"
+      ],
+      "ref": "catalog:2546（§8-2: データ経路が全滅=主要8サイト規約禁止・有償のみ。効果は小型>大型でTOP500と不整合。hold続行）",
+      "fp_id": "FP-102"
+    },
+    {
+      "source": "misokuri",
+      "name": "IPOロックアップ明け",
+      "family": "イベント",
+      "verdict": "excluded",
+      "entry_condition": "IPOロックアップ解除日を起点にしたポジション",
+      "universe": "N/A",
+      "period_tested": "N/A",
+      "keywords": [
+        "IPO",
+        "TOB",
+        "アクティビスト",
+        "ロックアップ",
+        "分割",
+        "区分",
+        "大量保有",
+        "格付け"
+      ],
+      "ref": "catalog:2547（§8-2: TOP500対象外。不採用）",
+      "fp_id": "FP-103"
+    },
+    {
+      "source": "misokuri",
+      "name": "格付け引き上げ",
+      "family": "イベント",
+      "verdict": "excluded",
+      "entry_condition": "信用格付け機関による格付け引き上げ後の株価反応取り",
+      "universe": "N/A",
+      "period_tested": "N/A",
+      "keywords": [
+        "IPO",
+        "TOB",
+        "アクティビスト",
+        "分割",
+        "区分",
+        "大量保有",
+        "格付け"
+      ],
+      "ref": "catalog:2548（§8-2: 株式への波及実証が薄い。不採用）",
+      "fp_id": "FP-104"
+    },
+    {
+      "source": "misokuri",
+      "name": "市場パニック逆張り買い",
+      "family": "価格リバーサル",
+      "verdict": "pending",
+      "entry_condition": "市場全体パニック局面での個別銘柄逆張り買い",
+      "universe": "N/A",
+      "period_tested": "N/A",
+      "keywords": [
+        "ランキングポート",
+        "リバーサル",
+        "反発",
+        "反転",
+        "市場パニック",
+        "押し目",
+        "逆張り"
+      ],
+      "ref": "catalog:576（§7-D: 棄却済みリバーサル家族の派生。市場条件付けの差分はあるが家族リスク濃厚 → hold）",
+      "fp_id": "FP-105"
+    },
+    {
+      "source": "misokuri",
+      "name": "決算ビート×来期ガイダンス常連",
+      "family": "SUE/PEAD",
+      "verdict": "excluded",
+      "entry_condition": "決算ビート×保守的ガイダンス常連銘柄への買い",
+      "universe": "N/A",
+      "period_tested": "N/A",
+      "keywords": [
+        "PEAD",
+        "SUE",
+        "ガイダンス",
+        "ガイダンス常連",
+        "サプライズ",
+        "上方修正",
+        "決算",
+        "進捗率"
+      ],
+      "ref": "catalog:577（§7-D: PEAD家族(holdout棄却)+カタログD群既存の再発見 → 追加せず。D群『上方修正常連』の優先度裏付けとしてのみ記録）",
+      "fp_id": "FP-106"
+    },
+    {
+      "source": "misokuri",
+      "name": "踏み上げ複合(信用倍率×トレンド×出来高)",
+      "family": "需給/信用",
+      "verdict": "rejected",
+      "entry_condition": "信用倍率≤1.2×トレンド×出来高の踏み上げ複合買い",
+      "universe": "N/A",
+      "period_tested": "N/A",
+      "keywords": [
+        "信用",
+        "空売り",
+        "貸借",
+        "踏み上げ",
+        "踏み上げ複合",
+        "需給"
+      ],
+      "ref": "catalog:578（§7-D: 棄却済み『売り長×トレンド(リフト0.60)』の閾値変更版 → 却下）",
+      "fp_id": "FP-107"
+    },
+    {
+      "source": "misokuri",
+      "name": "月足RSI地合い/複合下落底スコア",
+      "family": "その他",
+      "verdict": "pending",
+      "entry_condition": "月足RSI地合いおよび複合下落底スコアに基づく買い",
+      "universe": "N/A",
+      "period_tested": "N/A",
+      "keywords": [
+        "RSI",
+        "地合い"
+      ],
+      "ref": "catalog:579（§7-D: bear地合い確定知見と重複・米国固有指標の縮小版 → hold）",
+      "fp_id": "FP-108"
+    },
+    {
+      "source": "misokuri",
+      "name": "海外投資家フロー/自社株買い/指数入替/個別空売り比率(v1再発見)",
+      "family": "その他",
+      "verdict": "excluded",
+      "entry_condition": "海外投資家フロー・自社株買い・指数入替・個別空売り比率の各シグナル",
+      "universe": "N/A",
+      "period_tested": "N/A",
+      "keywords": [
+        "指数入替",
+        "海外投資家フロー",
+        "自社株買い"
+      ],
+      "ref": "catalog:580（§7-D: カタログ§2既存v1の再発見。新規性なし・優先度メモのみ）",
+      "fp_id": "FP-109"
+    },
+    {
+      "source": "misokuri",
+      "name": "EDINET保有目的別再分割",
+      "family": "イベント",
+      "verdict": "rejected",
+      "entry_condition": "EDINET大量保有報告書の保有目的別再分割に基づく買い",
+      "universe": "N/A",
+      "period_tested": "2021-07〜2022-11",
+      "keywords": [
+        "EDINET",
+        "IPO",
+        "TOB",
+        "アクティビスト",
+        "保有目的",
+        "分割",
+        "区分",
+        "大量保有",
+        "格付け"
+      ],
+      "ref": "catalog:581（§7-D: n=18の再分割は統計的に無意味 → 却下。activist_5pct fail(n=18)と同一母集団）",
+      "fp_id": "FP-110"
+    },
+    {
+      "source": "misokuri",
+      "name": "大型低PBR希少性/小型IPO再エントリー",
+      "family": "その他",
+      "verdict": "rejected",
+      "entry_condition": "大型低PBR希少性銘柄および小型IPO再エントリーに基づく買い",
+      "universe": "N/A",
+      "period_tested": "N/A",
+      "keywords": [
+        "IPO再エントリー",
+        "低PBR"
+      ],
+      "ref": "catalog:582（§7-D: +20%/月との適合度問題・上場前データ不能 → 却下）",
+      "fp_id": "FP-111"
+    },
+    {
+      "source": "excluded_family",
+      "name": "F04 急落・売られすぎからの反発(逆張り)",
+      "family": "価格リバーサル",
+      "verdict": "excluded",
+      "entry_condition": "投げ売り一巡・悪材料鈍化を底サインにしたロング（急落・売られすぎ反発）",
+      "universe": "N/A",
+      "period_tested": "N/A（名人投稿収穫・§8-5仮説在庫）",
+      "keywords": [
+        "F04",
+        "ランキングポート",
+        "リバーサル",
+        "反発",
+        "反転",
+        "名人投稿",
+        "売られすぎ反発",
+        "押し目",
+        "逆張り"
+      ],
+      "ref": "catalog:2514,2591（§7-AF: 敗北済み価格リバーサルfamily(§7-AD停止裁定・strev系5試行)の条件付き変種。再訴は期間再定義+追加裁定後のみ。⚠️S安反発EV-5.14%の回避知見と要突合）",
+      "fp_id": "FP-112"
+    },
+    {
+      "source": "excluded_family",
+      "name": "F07 主導テーマ・セクター順張り物色",
+      "family": "業種波及",
+      "verdict": "excluded",
+      "entry_condition": "主導テーマ（光/宇宙/メモリ/レアアース/電力等）内の強い銘柄を買う",
+      "universe": "N/A",
+      "period_tested": "N/A（名人投稿収穫・§8-5仮説在庫）",
+      "keywords": [
+        "F07",
+        "スピルオーバー",
+        "セクター",
+        "セクター順張り",
+        "名人投稿",
+        "業種",
+        "波及"
+      ],
+      "ref": "catalog:2514,2581（§7-AF: 既存fail sector_momentum_laggard(n=2810)等と同一設計の反対バケット＝近傍再投入。§7-V業種波及family変種禁止にも抵触）",
+      "fp_id": "FP-113"
+    },
+    {
+      "source": "excluded_family",
+      "name": "F09 決算・業績サプライズ(PEAD/ストップ高/期待差)",
+      "family": "SUE/PEAD",
+      "verdict": "excluded",
+      "entry_condition": "サプライズ反応とドリフト（決算・業績サプライズ全般）",
+      "universe": "N/A",
+      "period_tested": "N/A（名人投稿収穫・§8-5仮説在庫）",
+      "keywords": [
+        "F09",
+        "PEAD",
+        "SUE",
+        "ガイダンス",
+        "サプライズ",
+        "上方修正",
+        "名人投稿",
+        "決算",
+        "進捗率"
+      ],
+      "ref": "catalog:2514,2587（§7-AF: 既存SUE/PEAD系と近縁＝dedup要。§6拡張ルール5項＝同一期間への追加バッチ禁止）",
+      "fp_id": "FP-114"
+    },
+    {
+      "source": "excluded_family",
+      "name": "F10 コーポレートイベント・カタリスト(TOB/M&A/提携/製品)",
+      "family": "イベント",
+      "verdict": "excluded",
+      "entry_condition": "企業固有イベント（TOB/M&A/業務提携/新製品）への反応買い",
+      "universe": "N/A",
+      "period_tested": "N/A（名人投稿収穫・§8-5仮説在庫）",
+      "keywords": [
+        "F10",
+        "IPO",
+        "M&A",
+        "TOB",
+        "アクティビスト",
+        "分割",
+        "区分",
+        "名人投稿",
+        "大量保有",
+        "格付け"
+      ],
+      "ref": "catalog:2514,2592（§7-AF: BL-1/§7-AE（TOB）と統合整理。他はTDnetアドオン判断待ち）",
+      "fp_id": "FP-115"
+    },
+    {
+      "source": "excluded_family",
+      "name": "F11 国策・政策テーマ株",
+      "family": "その他",
+      "verdict": "excluded",
+      "entry_condition": "政府支援・国策・規制（AI/半導体支援・防衛・原発・重要鉱物）関連銘柄への買い",
+      "universe": "N/A",
+      "period_tested": "N/A（名人投稿収穫・§8-5仮説在庫）",
+      "keywords": [
+        "F11",
+        "名人投稿",
+        "国策",
+        "政策テーマ"
+      ],
+      "ref": "catalog:2514,2586（§7-AF: データ源なし）",
+      "fp_id": "FP-116"
+    }
+  ]
+}
