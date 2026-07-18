@@ -2501,6 +2501,34 @@ in-sampleの重なり）。主要アウトカム=§0標準の20営業日フォ�
 **台帳**: 1行（verdict=reference_observation）・頻度報告は「書類632件≠案件数」を明記し
 案件統合後の実数を試行内で報告。実装・実行は本登録の凍結後に着手（変更は新試行=分母加算）。
 
+> **⚠️ v1無効化（2026-07-18・Codex実装レビュー裁定）**: 実装時に凍結式 PBR=(AdjC×ShOutFY)÷Eq の
+> **単位不整合**が発覚（AdjCは後年株式分割の遡及調整済み・ShOutFYは生株数のため、分割銘柄の時価総額が
+> 分割倍率分歪む。実測: 58010古河電工 C=2155/AdjC=215.5→PBR=0.0485に歪み誤って最上位化）。
+> 生値Cへの修正は「ランキングを変える実質変更・異常観察後の事後修正」であり本項の
+> 「変更は新試行=分母加算」に該当（Codex裁定: エラッタ扱い不可）。**v1は
+> verdict=invalidated（invalidation_reason=specification_unit_mismatch）として台帳記録し、§7-AE-v2として再事前登録**（下記）。
+
+### §7-AE-v2 事前登録（❄️凍結 2026-07-18・Codex敵対レビューR4 GO［NO-GO×3→GO］）: 第40周改 TOB候補スコアv2 — v1の単位修正+レビュー指摘8項目の修復
+
+**継承**: 仮説・位置づけ（決定③初の正規適用・α非消費の参考観測(i)+前向き観察(ii)・正式verdictなし）・
+universe(TOP500)・月初第1営業日算出・上位50・同値=平均順位・50位境界同率全員・情報cutoff
+（fins DiscDate<月初日 strict・価格=前営業日）・自己TOB除外・案件統合（初回submitDateTime）・
+基準日以前TOB既存の対象会社は母集団除外・(i)期間2021-08〜2022-11・63bd/2022-11-30打切り・
+2023年以降のEDINET書類不使用 — すべてv1から変更なし。
+
+**v1からの変更点（凍結対象）**:
+1. **スコア式の単位整合**: PBR = (前営業日**生値C** × 直近開示ShOutFY) ÷ 直近開示Eq / ネットキャッシュ比率 = CashEq ÷ (**生値C**×ShOutFY)。フォワードリターン計算は従来どおり調整株価Canonical（変更なし）
+2. **masterのas-of規則を明文化**: ProdCat分類は「snapshot日より前で最新のmaster」を使用し、**master_date_used == 前営業日 でなければFATAL**（黙ってさらに古いmasterに遡らない）
+3. **TOBラベル・リターンの観測単位を両群で統一**: 主解析スコア群=銘柄ごと初回top50選出月のみ（analysis_group=score_primary）／**主解析対照群=銘柄ごと全期間で初めてeligibleかつrank51位以下になった月のみ（control_primary）**。同一銘柄の両群所属は**選出順序を問わず許容**（control_primary→score_primary・score_primary→control_primaryの両方向とも別群・別観測として扱い、両群重複銘柄数を診断報告）。全月次系列は両群とも参考解析（score_repeat_ref_only / control_repeat_ref_only）。analysis_groupの許容値はこの4値のみ。ラベル行には first_selection_flag / label_window_start / raw_label_end_bday / effective_label_end / observed_bdays を保持。**部分打切り観測は従来規則を継承し「観測可能日数内で未発生=未発生」として率の分母に含める**（併せて「完全63bd観測可能なスナップショットのみ」の感度分析を事前指定）
+4. **対照群にも同一規則でTOBラベル付与**（同一63bd窓・同一打切り）→ score_primary vs control_primary の率・差・比を報告（「ベースレート比の濃縮」を初めて評価可能にする）
+5. **secCode解決の名寄せPIT復元（主解析=機械的一意一致のみ）**: 正規化=NFKC→英字大文字化→空白（全半角）除去→**先頭・末尾にある法人格語［株式会社/合同会社/有限会社/(株)（NFKC後表現・全角形も同一化される）］を反復除去**→記号「・．，－ー()&」除去（この処理順を固定・法人格除去が記号除去より先）。masterは**初回submitDate以前で最新**の月次J-Quants master（Code+CoName）。**正規化後の完全一致が一意に定まる場合のみ採用**・複数候補=ambiguous（不採用）・前方一致は使わない。**人手確認による復元は主解析に使わず感度分析専用**（証券コードが明記された一次資料のみ・確認者/資料hash/確認日時/根拠文字列を監査CSVに記録・確認者にはスコア順位/top50在籍/ラベル/リターンを見せないブラインド手順）。凍結後の別名辞書追加は禁止（追加=v3または感度分析）。92対象会社全件の resolved/unresolved/ambiguous と根拠を監査CSVに残す。**未解決が残る場合、TOB濃縮の数字は「選択バイアスにより方向不明」と表記**（過小評価と断定しない）
+6. **(ii)前向き観察の証跡（恒久規則を凍結）**: daily chainとは独立の月次run-log `data/monitoring/tob_forward/run_log.jsonl`。規則: genesis prev_hash=64個の"0" / canonical JSON=UTF-8・キー昇順・separators(",",":")・row_hashフィールド除外 / row_hash=SHA256(canonical_json) / **append前に末尾連結を検証（prev_hash==直前行row_hash、かつ直前行のcanonical JSONからrow_hashを再計算して保存値と一致確認）し不一致FATAL** / flock排他+flush+fsync / 出力CSVはtmp書き→原子rename→そのhashをrun-log行に記録 / **同月成功行が既存: 入力・スクリプト・出力hash全一致=no-op、1つでも不一致=上書きせずFATAL** / 失敗実行も同run_logに status=failed で記録 / top50_nは同率境界で50超を許容。記録フィールド=入力ファイルhash群・スクリプトhash・master日（==前営業日をFATAL検証）・cutoff日・出力hash・行数・top50_n・実行時刻・終了状態。daily証跡チェーン（KPI_DEPENDENCY_TABLE）には配線しない（安全分離）。**証跡実装完了までforwardは「準備済み・未稼働」（台帳にも forward_status=prepared_not_active と明記）**
+7. **plist修正**: 起動日をDay1〜10に拡大（+スクリプト内の月初第1営業日判定・上記6の冪等ガード）・WorkingDirectory設定・出力先を絶対パス引数で明示・bootstrap状態は `launchctl print` 出力で運用証跡化
+8. **頻度報告の出典整合**: **「632件」は凍結時に走査条件・期間・重複排除規則が保存されていない概数**であり正式な段階表の母数には使わない（参考注記のみ）。正式値は再現可能な実走査から開始: 分析窓2021-07-07〜2022-11-30・docTypeCode 240/250/260/270/280 = **307件** → subjectあり305 → 自己TOB除外後 distinct対象会社92 → 機械一意一致で解決N件（+感度分析の人手復元M件）→ 未解決残K件、の段階表を入力manifest hash付きで報告
+
+**台帳**: 2行 — v1: **verdict=invalidated・invalidation_reason=specification_unit_mismatch**（既存台帳消費者の互換性のためverdict値は一般語・α非消費・歴史的分母算入） /
+v2: verdict=reference_observation（(i)完了後に追記・Codexレビュー提示のフィールドテンプレート準拠・artifacts hash付き・forward_status=prepared_not_active明記）。
+
 ### §7-AF 第41周: ツイート由来ファクトリー第2バッチ batch_v2t（✅実行完了 2026-07-18・**全4セル発見段fail**・凍結2026-07-17・Codex R4 GO［NO-GO×3→GO］）
 
 **結果（2026-07-18実行・report=output/kpi_screening/batch_v2t/report.md）**: eligible 4/4（n=4160〜4951・38ヶ月）・**EV全セル負**（-0.02%〜-0.33%）・片側p=0.505〜0.661・**BH(q=0.10)通過0・BY通過0・代表候補0→確認段なし**。lift点推定は1.22〜1.37と1超（+20%到達率はベース比で高い）だがEV負＝左裾が重く平均では負ける形。台帳: screening_batches.jsonl 224→228行・trials.jsonl 109→110行（メタ1行のみ・**分母コストは最小の+1**）。Jaccard: k同一ペア0.90/0.97・k跨ぎ0.05。**F03「名人の押し目買い」は歴史データで正直に棄却**（テクニカル価格系の事前確率低の実績に整合）。凍結仕様・実装・ガード（sha照合/replay/二重append）は全て設計どおり機能した。
