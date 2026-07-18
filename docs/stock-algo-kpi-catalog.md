@@ -2526,7 +2526,7 @@ universe(TOP500)・月初第1営業日算出・上位50・同値=平均順位・
 7. **plist修正**: 起動日をDay1〜10に拡大（+スクリプト内の月初第1営業日判定・上記6の冪等ガード）・WorkingDirectory設定・出力先を絶対パス引数で明示・bootstrap状態は `launchctl print` 出力で運用証跡化
 8. **頻度報告の出典整合**: **「632件」は凍結時に走査条件・期間・重複排除規則が保存されていない概数**であり正式な段階表の母数には使わない（参考注記のみ）。正式値は再現可能な実走査から開始: 分析窓2021-07-07〜2022-11-30・docTypeCode 240/250/260/270/280 = **307件** → subjectあり305 → 自己TOB除外後 distinct対象会社92 → 機械一意一致で解決N件（+感度分析の人手復元M件）→ 未解決残K件、の段階表を入力manifest hash付きで報告
 
-**台帳**: 2行 — v1: **verdict=invalidated・invalidation_reason=specification_unit_mismatch**（既存台帳消費者の互換性のためverdict値は一般語・α非消費・歴史的分母算入） /
+**台帳**: 2行（kpi_name= tob_candidate_score_v1 / tob_candidate_score_v2） — v1: **verdict=invalidated・invalidation_reason=specification_unit_mismatch**（✅追記済み2026-07-18・110→111行目）（既存台帳消費者の互換性のためverdict値は一般語・α非消費・歴史的分母算入） /
 v2: verdict=reference_observation（(i)完了後に追記・Codexレビュー提示のフィールドテンプレート準拠・artifacts hash付き・forward_status=prepared_not_active明記）。
 
 ### §7-AF 第41周: ツイート由来ファクトリー第2バッチ batch_v2t（✅実行完了 2026-07-18・**全4セル発見段fail**・凍結2026-07-17・Codex R4 GO［NO-GO×3→GO］）
