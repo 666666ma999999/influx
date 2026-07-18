@@ -2508,7 +2508,9 @@ in-sampleの重なり）。主要アウトカム=§0標準の20営業日フォ�
 > 「変更は新試行=分母加算」に該当（Codex裁定: エラッタ扱い不可）。**v1は
 > verdict=invalidated（invalidation_reason=specification_unit_mismatch）として台帳記録し、§7-AE-v2として再事前登録**（下記）。
 
-### §7-AE-v2 事前登録（❄️凍結 2026-07-18・Codex敵対レビューR4 GO［NO-GO×3→GO］）: 第40周改 TOB候補スコアv2 — v1の単位修正+レビュー指摘8項目の修復
+### §7-AE-v2 事前登録（✅(i)実行完了 2026-07-18・凍結=R4 GO・実装後レビュー=NO-GO→修正→GO・実装commit 5628f71）: 第40周改 TOB候補スコアv2
+
+**(i)結果（参考観測・正式verdictなし・台帳112行目・report=output/kpi/tob_candidate_v2/）**: 名寄せPIT復元で**案件解決13→77/92**（unresolved15・ambiguous0・上場廃止組の系統的取りこぼしを解消）。主解析 score_primary（N=99・銘柄初回選出）: **P(+20%)=0.0%・EV-0.06%・TOBラベル0件** vs control_primary（N=759）: P20=6.6%・EV+0.27%・TOBラベル2件(0.26%) → **低PBR×現金リッチ濃縮仮説を支持しない**（率比0.00倍・完全63bd感度でも同方向）。注意: 両群とも初月2021-08集中（50.5%/56.9%）・control後月327件は新規流入280等が混在＝記述的比較（同期月マッチ対照でない）。**(ii)前向き観察は forward_status=prepared_not_active**（bootstrap=来月初の実地監査GO後・14項目ゲート）。
 
 **継承**: 仮説・位置づけ（決定③初の正規適用・α非消費の参考観測(i)+前向き観察(ii)・正式verdictなし）・
 universe(TOP500)・月初第1営業日算出・上位50・同値=平均順位・50位境界同率全員・情報cutoff

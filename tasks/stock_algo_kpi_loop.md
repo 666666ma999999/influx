@@ -670,7 +670,8 @@
 - **Codex実装レビュー: NO-GO→「生値C修正は仕様変更＝新試行」裁定** → ユーザー承認で v1無効化+v2再登録の道へ
 - **§7-AE-v2 凍結✅**（Codex R4 GO・NO-GO×3→GO・本文SHA-256=cb3dbc83…・コミット99eee9e）: 生値C式・score/control両群とも銘柄初回観測が主解析・機械的一意名寄せ（人手復元は感度分析専用ブラインド）・632は概数降格307起点・独立月次run-log恒久規則・plist Day1-10
 - **台帳**: v1無効化行 ✅追記済み（110→111・verdict=invalidated・α非消費）。v2行は(i)再実行+実装後レビューGO後
-- **残り**: v2実装修復（ビルダー）→ output/kpi/tob_candidate_v2/ に分離再実行 → Codex実装後レビュー → v2台帳行 → forwardは証跡/plist監査GO後にbootstrap（別ゲート・ユーザーのlaunchctl load）
+- **v2実装・(i)完了✅（2026-07-18）**: 実装後レビューNO-GO5件（analysis_groupガード/組成注記/run-log全chain検証/stage冪等/入力manifest7項目）→修正→**Codex最終GO**（敵対テスト34件PASS・実装commit 5628f71）。**(i)結果: 仮説不支持**（score_primary N=99: P20=0.0%/EV-0.06%/TOB 0件 vs control_primary N=759: 6.6%/+0.27%/2件・名寄せ復元13→77案件）。台帳112行（v1=invalidated 111行目・v2=reference_observation 112行目・α非消費）
+- **残り**: forwardのbootstrap=来月初（2026-08-03月初第1営業日）の実地監査GO後にユーザーのlaunchctl load（14項目ゲート・prepared_not_active維持）
 
 ### 2026-07-18 第3ラウンド敵対レビュー: 「X投稿から他の仮説を検索する方法」→ Step0反証でX検索格下げ確定
 - **レビュー（A3=Fable別文脈/B3=Codex・異例の収束）**: ボトルネックはソース選定でなく「現有データ軸∩ゴール写像∩非近傍」の三重フィルタが構造的に狭いこと。検索するなら現有データ軸から逆引き（信用/空売り・指数入替・EDINET・決算フィールド）・§7-AE優先・週次定常化は時期尚早・Xはrecall不透明で§6完全性と非互換=永久に発見経路止まり
