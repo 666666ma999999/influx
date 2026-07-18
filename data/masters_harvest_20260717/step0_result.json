@@ -1,0 +1,2862 @@
+{
+ "summary": {
+  "generated_at": "2026-07-18",
+  "total": 558,
+  "label_counts": {
+   "GOAL_MISMATCH": 298,
+   "NEARBY_REENTRY": 176,
+   "DEFINITION_INCOMPLETE": 48,
+   "DATA_FAIL": 36
+  },
+  "EXECUTABLE_NEW_count": 0,
+  "UNLOCK_SOON_count": 0,
+  "結論": "三重フィルタ(現有データ軸∩ゴール写像∩非近傍)を通る候補はF03(検定済fail)以外に0本。ゴール写像可能な6ファミリー(F03/F04/F07/F09/F10/F11)は全て既存署名(F03=検定済/FP-093、F04-F11=FP-112〜116)の近傍であり、それ以外は全てGate2(ゴール=日本単一株+20%/20bdロング)かGate1(現有データ軸)で脱落。したがって「X投稿ソースを替えれば検定可能な仮説が増える」というソース律速仮説は棄却。律速はソースの豊かさではなく、(1)ゴール定義(+20%/20bd・日本単一株ロング)への写像、(2)現有データ軸(J-Quants/EDINET)、(3)既に踏破済みの機序空間、の三重制約。",
+  "内訳解説": {
+   "GOAL_MISMATCH": "指数/為替/金/BTC/ショート/回避/相対ローテ/サイジング/米国株/未上場 — ゴール(日本単一株ロング+20%/20bd)に写像不能(Gate2 FAIL)",
+   "NEARBY_REENTRY": "ゴール写像は可能だが機序が116署名のいずれかに衝突(Gate3 FAIL)。F03/04/07/09/10/11の134件＋F02(volshock)/F06(reversal)/F08(sympathy)/F18(breakout/MA)/F22(event)の42件",
+   "DATA_FAIL": "入口が現有データ軸外(Gate1 FAIL): F05センチメント/SNS言及、F13原油/地政学ヘッドライン",
+   "DEFINITION_INCOMPLETE": "PIT入口/対象銘柄が定義不能(検証不能/文脈欠落)"
+  }
+ },
+ "executable_new": [],
+ "unlock_soon": [],
+ "near_miss_却下明細": [
+  {
+   "id": "2077207620843368644",
+   "user": "tomoyaasakura",
+   "family": "F22",
+   "claim要約": "SBIがブロックチェーン上でグローバルに管理・売買できる日本株ファンドを世界初で展開し、日本株投信に加えMMFや円債ファンドについてもブロックチェーン上での展開を検討していると報じ",
+   "割当ラベル": "NEARBY_REENTRY",
+   "却下理由": "暗号資産/トークン化の制度・事業発表→関連日本株(SBI等)ロング=コーポレートイベント/テーマ長（FP-113/115）。検知はTDnet/ニュース依存",
+   "最接近だが不成立の要点": "SBI(8473)・発表後20bd+20%でGate2は通るが、機序=好材料IR/事業発表への反応買い=FP-115(F10コーポレートイベント)近傍。検知もTDnet/ニュース依存(現有軸外)。passA(fable5)はgoal_mappable=Falseと判定"
+  },
+  {
+   "id": "2077182208750805014",
+   "user": "tomoyaasakura",
+   "family": "F22",
+   "claim要約": "SBIGAMが日本株ファンドのパブリック・オンチェーン化を世界で初めて実現し、シンガポールMAS規制下のDigiFTでトークン化することで世界中の投資家が24時間365日日本株へア",
+   "割当ラベル": "NEARBY_REENTRY",
+   "却下理由": "暗号資産/トークン化の制度・事業発表→関連日本株(SBI等)ロング=コーポレートイベント/テーマ長（FP-113/115）。検知はTDnet/ニュース依存",
+   "最接近だが不成立の要点": "同上(SBIオンチェーン日本株ファンド発表)。単発ナラティブでスクリーニング母集団化不能・機序はFP-115近傍"
+  },
+  {
+   "id": "2011725996362502481",
+   "user": "noatake1127",
+   "family": "F22",
+   "claim要約": "りそなとJCBがステーブルコインでの買い物を可能にする取り組みを進めており、加盟店の決済手数料が軽減されると報じている。",
+   "割当ラベル": "NEARBY_REENTRY",
+   "却下理由": "暗号資産/トークン化の制度・事業発表→関連日本株(SBI等)ロング=コーポレートイベント/テーマ長（FP-113/115）。検知はTDnet/ニュース依存",
+   "最接近だが不成立の要点": "りそなHD×JCBステーブルコイン提携。JP株だが提携/製品発表への反応買い=FP-115近傍・TDnet依存"
+  },
+  {
+   "id": "2044624356643602473",
+   "user": "Drdebuneko",
+   "family": "F08",
+   "claim要約": "山一電機がやれるならエンプラスもやれるという道理だ、という比較観。",
+   "割当ラベル": "NEARBY_REENTRY",
+   "却下理由": "同業先行株→出遅れ株の追随買い=セクター内シンパシー（FP-071/037）",
+   "最接近だが不成立の要点": "エンプラス(山一電機に追随)。JP単一株ロングだが同業シンパシー/出遅れ追随=FP-071/037近傍"
+  },
+  {
+   "id": "1975406138788307223",
+   "user": "kakatothecat",
+   "family": "F06",
+   "claim要約": "やはりサポートラインを割り込ませて個人投資家にポジションを投げさせる仕掛けで、典型的なレジサポ転換なのに支えられず狼狽売りした資金を燃料に上げていくいつものパターンだ、昨夜は上下に",
+   "割当ラベル": "NEARBY_REENTRY",
+   "却下理由": "騙し割れ→狼狽売り→反発=価格リバーサル（FP-064/076/097）。原文は米国株・オプションフロー依存",
+   "最接近だが不成立の要点": "騙し割れ→狼狽売り→反発。JP適用可だが価格リバーサル=FP-064/076/097近傍。原ツイートは米国株(SoFi等)"
+  }
+ ],
+ "判定台帳": [
+  {
+   "id": "1978032033751314713",
+   "label": "NEARBY_REENTRY",
+   "reason": "バブル局面のジャンク株=出来高急増ロング（FP-009 volshock/出来高ショック族）。原ツイートは米ミーム株"
+  },
+  {
+   "id": "1978030298722902452",
+   "label": "NEARBY_REENTRY",
+   "reason": "バブル局面のジャンク株=出来高急増ロング（FP-009 volshock/出来高ショック族）。原ツイートは米ミーム株"
+  },
+  {
+   "id": "1977999925922427205",
+   "label": "DATA_FAIL",
+   "reason": "センチメント/SNS言及/インフルエンサー動向が入口で現有データ軸外（influx派生KPIは別枠#165/#168でhold）"
+  },
+  {
+   "id": "1977987393660780877",
+   "label": "GOAL_MISMATCH",
+   "reason": "暦アノマリー→指数タイミングで単一株イベントでない（Gate2 FAIL）"
+  },
+  {
+   "id": "1977985950979657809",
+   "label": "NEARBY_REENTRY",
+   "reason": "バブル局面のジャンク株=出来高急増ロング（FP-009 volshock/出来高ショック族）。原ツイートは米ミーム株"
+  },
+  {
+   "id": "1977953061449646191",
+   "label": "NEARBY_REENTRY",
+   "reason": "バブル局面のジャンク株=出来高急増ロング（FP-009 volshock/出来高ショック族）。原ツイートは米ミーム株"
+  },
+  {
+   "id": "1977951918967366089",
+   "label": "NEARBY_REENTRY",
+   "reason": "上昇トレンド押し目買い=F03（検定済fail・FP-093 screening_batch_v2t/§7-G T4）"
+  },
+  {
+   "id": "1977947737816490405",
+   "label": "GOAL_MISMATCH",
+   "reason": "リスク管理・ポジション規律・サイジングでエントリー信号でない（Gate2 FAIL）"
+  },
+  {
+   "id": "1977937756371251562",
+   "label": "DEFINITION_INCOMPLETE",
+   "reason": "PIT入口/対象銘柄が定義不能（F05・センチメント・バブル警戒/検証不能）"
+  },
+  {
+   "id": "1977858401188344253",
+   "label": "NEARBY_REENTRY",
+   "reason": "主導テーマ・セクター順張り=F07（FP-113）"
+  },
+  {
+   "id": "1977751094542393457",
+   "label": "NEARBY_REENTRY",
+   "reason": "バブル局面のジャンク株=出来高急増ロング（FP-009 volshock/出来高ショック族）。原ツイートは米ミーム株"
+  },
+  {
+   "id": "1977750508715581936",
+   "label": "NEARBY_REENTRY",
+   "reason": "バブル局面のジャンク株=出来高急増ロング（FP-009 volshock/出来高ショック族）。原ツイートは米ミーム株"
+  },
+  {
+   "id": "1977750221464473875",
+   "label": "NEARBY_REENTRY",
+   "reason": "バブル局面のジャンク株=出来高急増ロング（FP-009 volshock/出来高ショック族）。原ツイートは米ミーム株"
+  },
+  {
+   "id": "1977740199334494487",
+   "label": "NEARBY_REENTRY",
+   "reason": "主導テーマ・セクター順張り=F07（FP-113）"
+  },
+  {
+   "id": "1977731525455097958",
+   "label": "DEFINITION_INCOMPLETE",
+   "reason": "PIT入口/対象銘柄が定義不能（F18・価格パターン/売買シグナル）"
+  },
+  {
+   "id": "1977730110523421043",
+   "label": "DEFINITION_INCOMPLETE",
+   "reason": "PIT入口/対象銘柄が定義不能（F18・価格パターン/売買シグナル）"
+  },
+  {
+   "id": "1977721333149515789",
+   "label": "NEARBY_REENTRY",
+   "reason": "決算・業績サプライズ/PEAD=F09（FP-114＋SUE/PEAD 29署名）"
+  },
+  {
+   "id": "1977709879600066996",
+   "label": "NEARBY_REENTRY",
+   "reason": "バブル局面のジャンク株=出来高急増ロング（FP-009 volshock/出来高ショック族）。原ツイートは米ミーム株"
+  },
+  {
+   "id": "1977654050402570729",
+   "label": "NEARBY_REENTRY",
+   "reason": "上昇トレンド押し目買い=F03（検定済fail・FP-093 screening_batch_v2t/§7-G T4）"
+  },
+  {
+   "id": "1977650498506522788",
+   "label": "NEARBY_REENTRY",
+   "reason": "主導テーマ・セクター順張り=F07（FP-113）"
+  },
+  {
+   "id": "1977645865985781827",
+   "label": "NEARBY_REENTRY",
+   "reason": "主導テーマ・セクター順張り=F07（FP-113）"
+  },
+  {
+   "id": "1977633439772979682",
+   "label": "NEARBY_REENTRY",
+   "reason": "主導テーマ・セクター順張り=F07（FP-113）"
+  },
+  {
+   "id": "1977632330165670302",
+   "label": "GOAL_MISMATCH",
+   "reason": "未上場/非投資/海外イベントで日本上場単一株ロングでない（Gate2 FAIL）"
+  },
+  {
+   "id": "2044928062765351032",
+   "label": "DATA_FAIL",
+   "reason": "センチメント/SNS言及/インフルエンサー動向が入口で現有データ軸外（influx派生KPIは別枠#165/#168でhold）"
+  },
+  {
+   "id": "2044927899313254577",
+   "label": "DEFINITION_INCOMPLETE",
+   "reason": "PIT入口/対象銘柄が定義不能（F05・センチメント・バブル警戒/検証不能）"
+  },
+  {
+   "id": "2044927003988762626",
+   "label": "DATA_FAIL",
+   "reason": "センチメント/SNS言及/インフルエンサー動向が入口で現有データ軸外（influx派生KPIは別枠#165/#168でhold）"
+  },
+  {
+   "id": "2044920140765286578",
+   "label": "GOAL_MISMATCH",
+   "reason": "半導体・高PER株の過熱→調整の下落/回避方向でロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2044907497430077602",
+   "label": "NEARBY_REENTRY",
+   "reason": "主導テーマ・セクター順張り=F07（FP-113）"
+  },
+  {
+   "id": "2044782904367370479",
+   "label": "NEARBY_REENTRY",
+   "reason": "主導テーマ・セクター順張り=F07（FP-113）"
+  },
+  {
+   "id": "2044773637673402876",
+   "label": "DEFINITION_INCOMPLETE",
+   "reason": "PIT入口/対象銘柄が定義不能（UA・売買シグナル/検証不能）"
+  },
+  {
+   "id": "2044772891414409611",
+   "label": "GOAL_MISMATCH",
+   "reason": "Fear&Greed等の指数センチメント逆張りで単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2044729666465124688",
+   "label": "GOAL_MISMATCH",
+   "reason": "リスク管理・ポジション規律・サイジングでエントリー信号でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2044727996083540270",
+   "label": "GOAL_MISMATCH",
+   "reason": "リスク管理・ポジション規律・サイジングでエントリー信号でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2044717275824214214",
+   "label": "GOAL_MISMATCH",
+   "reason": "リスク管理・ポジション規律・サイジングでエントリー信号でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2044716495402639517",
+   "label": "GOAL_MISMATCH",
+   "reason": "リスク管理・ポジション規律・サイジングでエントリー信号でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2044707423504744599",
+   "label": "DEFINITION_INCOMPLETE",
+   "reason": "PIT入口/対象銘柄が定義不能（F19・リスク管理・exit/検証不能）"
+  },
+  {
+   "id": "2044707176527393124",
+   "label": "GOAL_MISMATCH",
+   "reason": "リスク管理・ポジション規律・サイジングでエントリー信号でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2044689043137712283",
+   "label": "DEFINITION_INCOMPLETE",
+   "reason": "PIT入口/対象銘柄が定義不能（F19・センチメント・バブル警戒/リスク管理・exit）"
+  },
+  {
+   "id": "2044688084919590926",
+   "label": "GOAL_MISMATCH",
+   "reason": "リスク管理・ポジション規律・サイジングでエントリー信号でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2077934188129636649",
+   "label": "NEARBY_REENTRY",
+   "reason": "急落・売られすぎからの反発=F04（FP-112）"
+  },
+  {
+   "id": "2077931460615684459",
+   "label": "GOAL_MISMATCH",
+   "reason": "半導体・高PER株の過熱→調整の下落/回避方向でロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2077909848281526684",
+   "label": "NEARBY_REENTRY",
+   "reason": "急落・売られすぎからの反発=F04（FP-112）"
+  },
+  {
+   "id": "2077897031662854491",
+   "label": "DEFINITION_INCOMPLETE",
+   "reason": "PIT入口/対象銘柄が定義不能（F19・リスク管理・exit/検証不能）"
+  },
+  {
+   "id": "2077896085419511821",
+   "label": "GOAL_MISMATCH",
+   "reason": "リスク管理・ポジション規律・サイジングでエントリー信号でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2077889135139049600",
+   "label": "GOAL_MISMATCH",
+   "reason": "リスク管理・ポジション規律・サイジングでエントリー信号でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2077883119240458585",
+   "label": "GOAL_MISMATCH",
+   "reason": "リスク管理・ポジション規律・サイジングでエントリー信号でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2077860206139343345",
+   "label": "GOAL_MISMATCH",
+   "reason": "リスク管理・ポジション規律・サイジングでエントリー信号でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2077856661482733680",
+   "label": "GOAL_MISMATCH",
+   "reason": "リスク管理・ポジション規律・サイジングでエントリー信号でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2077848376029442378",
+   "label": "GOAL_MISMATCH",
+   "reason": "セクター・国・資産の相対ローテーション/分散（相対・指数・回避脚中心で単一株+20%入口でない・Gate2 FAIL）"
+  },
+  {
+   "id": "2077763668020977999",
+   "label": "NEARBY_REENTRY",
+   "reason": "急落・売られすぎからの反発=F04（FP-112）"
+  },
+  {
+   "id": "2077756247596749028",
+   "label": "NEARBY_REENTRY",
+   "reason": "急落・売られすぎからの反発=F04（FP-112）"
+  },
+  {
+   "id": "2077751748882841685",
+   "label": "GOAL_MISMATCH",
+   "reason": "チャート水準だが下落継続/売り/指数/米国株が主で+20%ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2077735843490603245",
+   "label": "DEFINITION_INCOMPLETE",
+   "reason": "PIT入口/対象銘柄が定義不能（F18・価格パターン）"
+  },
+  {
+   "id": "2077708648395276542",
+   "label": "GOAL_MISMATCH",
+   "reason": "Fear&Greed等の指数センチメント逆張りで単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2077697551541907559",
+   "label": "NEARBY_REENTRY",
+   "reason": "決算・業績サプライズ/PEAD=F09（FP-114＋SUE/PEAD 29署名）"
+  },
+  {
+   "id": "2077672827164172428",
+   "label": "GOAL_MISMATCH",
+   "reason": "リスク管理・ポジション規律・サイジングでエントリー信号でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2077662109962506394",
+   "label": "DATA_FAIL",
+   "reason": "センチメント/SNS言及/インフルエンサー動向が入口で現有データ軸外（influx派生KPIは別枠#165/#168でhold）"
+  },
+  {
+   "id": "1978955901907214606",
+   "label": "DEFINITION_INCOMPLETE",
+   "reason": "PIT入口/対象銘柄が定義不能（F05・センチメント・バブル警戒/マクロ・クロスアセット）"
+  },
+  {
+   "id": "1978853437505724739",
+   "label": "GOAL_MISMATCH",
+   "reason": "リスク管理・ポジション規律・サイジングでエントリー信号でない（Gate2 FAIL）"
+  },
+  {
+   "id": "1978839531018133941",
+   "label": "GOAL_MISMATCH",
+   "reason": "セクター・国・資産の相対ローテーション/分散（相対・指数・回避脚中心で単一株+20%入口でない・Gate2 FAIL）"
+  },
+  {
+   "id": "1978810530950210046",
+   "label": "NEARBY_REENTRY",
+   "reason": "決算・業績サプライズ/PEAD=F09（FP-114＋SUE/PEAD 29署名）"
+  },
+  {
+   "id": "1978808736194945284",
+   "label": "NEARBY_REENTRY",
+   "reason": "急落・売られすぎからの反発=F04（FP-112）"
+  },
+  {
+   "id": "1978803900149821463",
+   "label": "NEARBY_REENTRY",
+   "reason": "急落・売られすぎからの反発=F04（FP-112）"
+  },
+  {
+   "id": "1978802885644480960",
+   "label": "DATA_FAIL",
+   "reason": "センチメント/SNS言及/インフルエンサー動向が入口で現有データ軸外（influx派生KPIは別枠#165/#168でhold）"
+  },
+  {
+   "id": "1978786100819681652",
+   "label": "GOAL_MISMATCH",
+   "reason": "セクター・国・資産の相対ローテーション/分散（相対・指数・回避脚中心で単一株+20%入口でない・Gate2 FAIL）"
+  },
+  {
+   "id": "1978779853684904060",
+   "label": "NEARBY_REENTRY",
+   "reason": "国策・政策テーマ株=F11（FP-116）。政策ヘッドラインは現有データ軸外でもある"
+  },
+  {
+   "id": "1978766351113064659",
+   "label": "GOAL_MISMATCH",
+   "reason": "リスク管理・ポジション規律・サイジングでエントリー信号でない（Gate2 FAIL）"
+  },
+  {
+   "id": "1978762209116160421",
+   "label": "GOAL_MISMATCH",
+   "reason": "チャート水準だが下落継続/売り/指数/米国株が主で+20%ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "1978745051409764651",
+   "label": "DATA_FAIL",
+   "reason": "センチメント/SNS言及/インフルエンサー動向が入口で現有データ軸外（influx派生KPIは別枠#165/#168でhold）"
+  },
+  {
+   "id": "1978734788732432504",
+   "label": "GOAL_MISMATCH",
+   "reason": "リスク管理・ポジション規律・サイジングでエントリー信号でない（Gate2 FAIL）"
+  },
+  {
+   "id": "1978733981400215875",
+   "label": "NEARBY_REENTRY",
+   "reason": "国策・政策テーマ株=F11（FP-116）。政策ヘッドラインは現有データ軸外でもある"
+  },
+  {
+   "id": "1978674058439877070",
+   "label": "GOAL_MISMATCH",
+   "reason": "セクター・国・資産の相対ローテーション/分散（相対・指数・回避脚中心で単一株+20%入口でない・Gate2 FAIL）"
+  },
+  {
+   "id": "1978662112793595938",
+   "label": "GOAL_MISMATCH",
+   "reason": "チャート水準だが下落継続/売り/指数/米国株が主で+20%ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "1978660872936472913",
+   "label": "GOAL_MISMATCH",
+   "reason": "セクター・国・資産の相対ローテーション/分散（相対・指数・回避脚中心で単一株+20%入口でない・Gate2 FAIL）"
+  },
+  {
+   "id": "1978660411575586875",
+   "label": "GOAL_MISMATCH",
+   "reason": "リスク管理・ポジション規律・サイジングでエントリー信号でない（Gate2 FAIL）"
+  },
+  {
+   "id": "1978477088278782362",
+   "label": "GOAL_MISMATCH",
+   "reason": "セクター・国・資産の相対ローテーション/分散（相対・指数・回避脚中心で単一株+20%入口でない・Gate2 FAIL）"
+  },
+  {
+   "id": "1978450698506240381",
+   "label": "DATA_FAIL",
+   "reason": "センチメント/SNS言及/インフルエンサー動向が入口で現有データ軸外（influx派生KPIは別枠#165/#168でhold）"
+  },
+  {
+   "id": "1978448134821810330",
+   "label": "NEARBY_REENTRY",
+   "reason": "急落・売られすぎからの反発=F04（FP-112）"
+  },
+  {
+   "id": "1978420648746590581",
+   "label": "NEARBY_REENTRY",
+   "reason": "主導テーマ・セクター順張り=F07（FP-113）"
+  },
+  {
+   "id": "1978408606761365825",
+   "label": "NEARBY_REENTRY",
+   "reason": "主導テーマ・セクター順張り=F07（FP-113）"
+  },
+  {
+   "id": "1978407660467695656",
+   "label": "DATA_FAIL",
+   "reason": "センチメント/SNS言及/インフルエンサー動向が入口で現有データ軸外（influx派生KPIは別枠#165/#168でhold）"
+  },
+  {
+   "id": "1978405760901017738",
+   "label": "NEARBY_REENTRY",
+   "reason": "主導テーマ・セクター順張り=F07（FP-113）"
+  },
+  {
+   "id": "1978383328798462185",
+   "label": "GOAL_MISMATCH",
+   "reason": "チャート水準だが下落継続/売り/指数/米国株が主で+20%ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2012270320049340839",
+   "label": "GOAL_MISMATCH",
+   "reason": "セクター・国・資産の相対ローテーション/分散（相対・指数・回避脚中心で単一株+20%入口でない・Gate2 FAIL）"
+  },
+  {
+   "id": "2012166664561864742",
+   "label": "NEARBY_REENTRY",
+   "reason": "主導テーマ・セクター順張り=F07（FP-113）"
+  },
+  {
+   "id": "2012096217426297271",
+   "label": "NEARBY_REENTRY",
+   "reason": "上昇トレンド押し目買い=F03（検定済fail・FP-093 screening_batch_v2t/§7-G T4）"
+  },
+  {
+   "id": "2012052277172060379",
+   "label": "NEARBY_REENTRY",
+   "reason": "上昇トレンド押し目買い=F03（検定済fail・FP-093 screening_batch_v2t/§7-G T4）"
+  },
+  {
+   "id": "2012045825447510236",
+   "label": "GOAL_MISMATCH",
+   "reason": "対象が金/銀/BTC/為替で日本単一株でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2012041570607092092",
+   "label": "GOAL_MISMATCH",
+   "reason": "対象が金/銀/BTC/為替で日本単一株でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2012040447628361952",
+   "label": "DEFINITION_INCOMPLETE",
+   "reason": "PIT入口/対象銘柄が定義不能（F19・センチメント・バブル警戒/リスク管理・exit）"
+  },
+  {
+   "id": "2012039406220374444",
+   "label": "GOAL_MISMATCH",
+   "reason": "チャート水準だが下落継続/売り/指数/米国株が主で+20%ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2012035340811575431",
+   "label": "GOAL_MISMATCH",
+   "reason": "チャート水準だが下落継続/売り/指数/米国株が主で+20%ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2011990800478191897",
+   "label": "GOAL_MISMATCH",
+   "reason": "セクター・国・資産の相対ローテーション/分散（相対・指数・回避脚中心で単一株+20%入口でない・Gate2 FAIL）"
+  },
+  {
+   "id": "2011961524789866836",
+   "label": "DATA_FAIL",
+   "reason": "センチメント/SNS言及/インフルエンサー動向が入口で現有データ軸外（influx派生KPIは別枠#165/#168でhold）"
+  },
+  {
+   "id": "2011951605872988599",
+   "label": "NEARBY_REENTRY",
+   "reason": "上昇トレンド押し目買い=F03（検定済fail・FP-093 screening_batch_v2t/§7-G T4）"
+  },
+  {
+   "id": "2011950261343043868",
+   "label": "GOAL_MISMATCH",
+   "reason": "対象が金/銀/BTC/為替で日本単一株でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2011930133872198059",
+   "label": "NEARBY_REENTRY",
+   "reason": "国策・政策テーマ株=F11（FP-116）。政策ヘッドラインは現有データ軸外でもある"
+  },
+  {
+   "id": "2011926047395021064",
+   "label": "NEARBY_REENTRY",
+   "reason": "国策・政策テーマ株=F11（FP-116）。政策ヘッドラインは現有データ軸外でもある"
+  },
+  {
+   "id": "2011907657888604164",
+   "label": "NEARBY_REENTRY",
+   "reason": "上昇トレンド押し目買い=F03（検定済fail・FP-093 screening_batch_v2t/§7-G T4）"
+  },
+  {
+   "id": "2011906635049157009",
+   "label": "DEFINITION_INCOMPLETE",
+   "reason": "PIT入口/対象銘柄が定義不能（F05・センチメント・バブル警戒/マクロ・クロスアセット）"
+  },
+  {
+   "id": "2044926744914964988",
+   "label": "DEFINITION_INCOMPLETE",
+   "reason": "PIT入口/対象銘柄が定義不能（UA・検証不能）"
+  },
+  {
+   "id": "2044920698620309529",
+   "label": "DEFINITION_INCOMPLETE",
+   "reason": "PIT入口/対象銘柄が定義不能（UA・検証不能）"
+  },
+  {
+   "id": "2044804145069355321",
+   "label": "NEARBY_REENTRY",
+   "reason": "テクニカル水準のロング=ブレイク/MA反発/リバーサル/ストップ高/出来高（FP-018/039/040/048/072/076/094等）"
+  },
+  {
+   "id": "2044803573809307924",
+   "label": "NEARBY_REENTRY",
+   "reason": "主導テーマ・セクター順張り=F07（FP-113）"
+  },
+  {
+   "id": "2044799981589291276",
+   "label": "GOAL_MISMATCH",
+   "reason": "リスク管理・ポジション規律・サイジングでエントリー信号でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2044799129726201952",
+   "label": "NEARBY_REENTRY",
+   "reason": "主導テーマ・セクター順張り=F07（FP-113）"
+  },
+  {
+   "id": "2044790245993132032",
+   "label": "NEARBY_REENTRY",
+   "reason": "主導テーマ・セクター順張り=F07（FP-113）"
+  },
+  {
+   "id": "2044788560776351913",
+   "label": "NEARBY_REENTRY",
+   "reason": "主導テーマ・セクター順張り=F07（FP-113）"
+  },
+  {
+   "id": "2044759633336959256",
+   "label": "DEFINITION_INCOMPLETE",
+   "reason": "PIT入口/対象銘柄が定義不能（F05・センチメント・バブル警戒/検証不能）"
+  },
+  {
+   "id": "2044752084235677974",
+   "label": "GOAL_MISMATCH",
+   "reason": "セクター・国・資産の相対ローテーション/分散（相対・指数・回避脚中心で単一株+20%入口でない・Gate2 FAIL）"
+  },
+  {
+   "id": "2044751053460238599",
+   "label": "GOAL_MISMATCH",
+   "reason": "チャート水準だが下落継続/売り/指数/米国株が主で+20%ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2044750639402778828",
+   "label": "NEARBY_REENTRY",
+   "reason": "上昇トレンド押し目買い=F03（検定済fail・FP-093 screening_batch_v2t/§7-G T4）"
+  },
+  {
+   "id": "2044733501367529650",
+   "label": "NEARBY_REENTRY",
+   "reason": "急落・売られすぎからの反発=F04（FP-112）"
+  },
+  {
+   "id": "2044731256601190757",
+   "label": "DEFINITION_INCOMPLETE",
+   "reason": "PIT入口/対象銘柄が定義不能（F17・イベント/センチメント・バブル警戒）"
+  },
+  {
+   "id": "2044720269525487669",
+   "label": "GOAL_MISMATCH",
+   "reason": "チャート水準だが下落継続/売り/指数/米国株が主で+20%ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2044716707256955178",
+   "label": "DEFINITION_INCOMPLETE",
+   "reason": "PIT入口/対象銘柄が定義不能（F12・イベント/マクロ・クロスアセット）"
+  },
+  {
+   "id": "2044713509368570278",
+   "label": "GOAL_MISMATCH",
+   "reason": "セクター・国・資産の相対ローテーション/分散（相対・指数・回避脚中心で単一株+20%入口でない・Gate2 FAIL）"
+  },
+  {
+   "id": "2044710093581889849",
+   "label": "GOAL_MISMATCH",
+   "reason": "セクター・国・資産の相対ローテーション/分散（相対・指数・回避脚中心で単一株+20%入口でない・Gate2 FAIL）"
+  },
+  {
+   "id": "2044691773893824850",
+   "label": "DEFINITION_INCOMPLETE",
+   "reason": "PIT入口/対象銘柄が定義不能（F19・リスク管理・exit/価格パターン）"
+  },
+  {
+   "id": "2044687816974831711",
+   "label": "GOAL_MISMATCH",
+   "reason": "セクター・国・資産の相対ローテーション/分散（相対・指数・回避脚中心で単一株+20%入口でない・Gate2 FAIL）"
+  },
+  {
+   "id": "2044676244613251109",
+   "label": "GOAL_MISMATCH",
+   "reason": "セクター・国・資産の相対ローテーション/分散（相対・指数・回避脚中心で単一株+20%入口でない・Gate2 FAIL）"
+  },
+  {
+   "id": "2044675070757642271",
+   "label": "NEARBY_REENTRY",
+   "reason": "上昇トレンド押し目買い=F03（検定済fail・FP-093 screening_batch_v2t/§7-G T4）"
+  },
+  {
+   "id": "2044625169906618458",
+   "label": "GOAL_MISMATCH",
+   "reason": "暦アノマリー→指数タイミングで単一株イベントでない（Gate2 FAIL）"
+  },
+  {
+   "id": "2044624356643602473",
+   "label": "NEARBY_REENTRY",
+   "reason": "同業先行株→出遅れ株の追随買い=セクター内シンパシー（FP-071/037）"
+  },
+  {
+   "id": "2044623856292466752",
+   "label": "GOAL_MISMATCH",
+   "reason": "Fear&Greed等の指数センチメント逆張りで単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2044618809571791299",
+   "label": "GOAL_MISMATCH",
+   "reason": "チャート水準だが下落継続/売り/指数/米国株が主で+20%ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2044595611606098112",
+   "label": "NEARBY_REENTRY",
+   "reason": "主導テーマ・セクター順張り=F07（FP-113）"
+  },
+  {
+   "id": "2044571090299899996",
+   "label": "GOAL_MISMATCH",
+   "reason": "リスク管理・ポジション規律・サイジングでエントリー信号でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2044416550560817508",
+   "label": "DEFINITION_INCOMPLETE",
+   "reason": "PIT入口/対象銘柄が定義不能（F19・セクター連動・ローテーション/検証不能）"
+  },
+  {
+   "id": "2044414380356546818",
+   "label": "GOAL_MISMATCH",
+   "reason": "リスク管理・ポジション規律・サイジングでエントリー信号でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2044403147872026769",
+   "label": "NEARBY_REENTRY",
+   "reason": "主導テーマ・セクター順張り=F07（FP-113）"
+  },
+  {
+   "id": "2044401849156177952",
+   "label": "NEARBY_REENTRY",
+   "reason": "主導テーマ・セクター順張り=F07（FP-113）"
+  },
+  {
+   "id": "2044396076049072422",
+   "label": "DEFINITION_INCOMPLETE",
+   "reason": "PIT入口/対象銘柄が定義不能（F19・価格パターン/売買シグナル）"
+  },
+  {
+   "id": "2077910322976018793",
+   "label": "NEARBY_REENTRY",
+   "reason": "急落・売られすぎからの反発=F04（FP-112）"
+  },
+  {
+   "id": "2077886885033361859",
+   "label": "GOAL_MISMATCH",
+   "reason": "チャート水準だが下落継続/売り/指数/米国株が主で+20%ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2077779319901032887",
+   "label": "GOAL_MISMATCH",
+   "reason": "チャート水準だが下落継続/売り/指数/米国株が主で+20%ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2077765570834190466",
+   "label": "GOAL_MISMATCH",
+   "reason": "セクター・国・資産の相対ローテーション/分散（相対・指数・回避脚中心で単一株+20%入口でない・Gate2 FAIL）"
+  },
+  {
+   "id": "2077737540602470454",
+   "label": "GOAL_MISMATCH",
+   "reason": "リスク管理・ポジション規律・サイジングでエントリー信号でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2077736559290589467",
+   "label": "NEARBY_REENTRY",
+   "reason": "テクニカル水準のロング=ブレイク/MA反発/リバーサル/ストップ高/出来高（FP-018/039/040/048/072/076/094等）"
+  },
+  {
+   "id": "2077727035435446575",
+   "label": "GOAL_MISMATCH",
+   "reason": "セクター・国・資産の相対ローテーション/分散（相対・指数・回避脚中心で単一株+20%入口でない・Gate2 FAIL）"
+  },
+  {
+   "id": "2077714891499282514",
+   "label": "NEARBY_REENTRY",
+   "reason": "テクニカル水準のロング=ブレイク/MA反発/リバーサル/ストップ高/出来高（FP-018/039/040/048/072/076/094等）"
+  },
+  {
+   "id": "2077712485453565976",
+   "label": "NEARBY_REENTRY",
+   "reason": "決算・業績サプライズ/PEAD=F09（FP-114＋SUE/PEAD 29署名）"
+  },
+  {
+   "id": "2077705351684878525",
+   "label": "GOAL_MISMATCH",
+   "reason": "チャート水準だが下落継続/売り/指数/米国株が主で+20%ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2077704368133132430",
+   "label": "GOAL_MISMATCH",
+   "reason": "チャート水準だが下落継続/売り/指数/米国株が主で+20%ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2077699019674169676",
+   "label": "DATA_FAIL",
+   "reason": "センチメント/SNS言及/インフルエンサー動向が入口で現有データ軸外（influx派生KPIは別枠#165/#168でhold）"
+  },
+  {
+   "id": "2077687192990921117",
+   "label": "GOAL_MISMATCH",
+   "reason": "チャート水準だが下落継続/売り/指数/米国株が主で+20%ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2077681652130803870",
+   "label": "GOAL_MISMATCH",
+   "reason": "為替・金利・JGB・マクロ指標で単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2077666375062143255",
+   "label": "NEARBY_REENTRY",
+   "reason": "テクニカル水準のロング=ブレイク/MA反発/リバーサル/ストップ高/出来高（FP-018/039/040/048/072/076/094等）"
+  },
+  {
+   "id": "2077609817703907479",
+   "label": "DATA_FAIL",
+   "reason": "センチメント/SNS言及/インフルエンサー動向が入口で現有データ軸外（influx派生KPIは別枠#165/#168でhold）"
+  },
+  {
+   "id": "2077573269071462557",
+   "label": "GOAL_MISMATCH",
+   "reason": "リスク管理・ポジション規律・サイジングでエントリー信号でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2077565175381827755",
+   "label": "DATA_FAIL",
+   "reason": "センチメント/SNS言及/インフルエンサー動向が入口で現有データ軸外（influx派生KPIは別枠#165/#168でhold）"
+  },
+  {
+   "id": "2077549239383818532",
+   "label": "GOAL_MISMATCH",
+   "reason": "チャート水準だが下落継続/売り/指数/米国株が主で+20%ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2077548666349625733",
+   "label": "GOAL_MISMATCH",
+   "reason": "チャート水準だが下落継続/売り/指数/米国株が主で+20%ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2077544852649353642",
+   "label": "DEFINITION_INCOMPLETE",
+   "reason": "PIT入口/対象銘柄が定義不能（UA・イベント/検証不能）"
+  },
+  {
+   "id": "2077515186748162073",
+   "label": "GOAL_MISMATCH",
+   "reason": "為替・金利・JGB・マクロ指標で単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2077514610509562346",
+   "label": "GOAL_MISMATCH",
+   "reason": "セクター・国・資産の相対ローテーション/分散（相対・指数・回避脚中心で単一株+20%入口でない・Gate2 FAIL）"
+  },
+  {
+   "id": "1977695443308945654",
+   "label": "DEFINITION_INCOMPLETE",
+   "reason": "PIT入口/対象銘柄が定義不能（F12・イベント/検証不能）"
+  },
+  {
+   "id": "1977693258223693886",
+   "label": "DEFINITION_INCOMPLETE",
+   "reason": "PIT入口/対象銘柄が定義不能（F17・価格パターン/検証不能）"
+  },
+  {
+   "id": "1977571363994194430",
+   "label": "GOAL_MISMATCH",
+   "reason": "暦アノマリー→指数タイミングで単一株イベントでない（Gate2 FAIL）"
+  },
+  {
+   "id": "1977354395525288322",
+   "label": "GOAL_MISMATCH",
+   "reason": "地政学マクロ→指数/原油/リスクオンオフで単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "1977159741454663700",
+   "label": "GOAL_MISMATCH",
+   "reason": "暦アノマリー→指数タイミングで単一株イベントでない（Gate2 FAIL）"
+  },
+  {
+   "id": "1976758503806320887",
+   "label": "GOAL_MISMATCH",
+   "reason": "暦アノマリー→指数タイミングで単一株イベントでない（Gate2 FAIL）"
+  },
+  {
+   "id": "1976753914197544984",
+   "label": "GOAL_MISMATCH",
+   "reason": "暦アノマリー→指数タイミングで単一株イベントでない（Gate2 FAIL）"
+  },
+  {
+   "id": "1976237471336927410",
+   "label": "NEARBY_REENTRY",
+   "reason": "上昇トレンド押し目買い=F03（検定済fail・FP-093 screening_batch_v2t/§7-G T4）"
+  },
+  {
+   "id": "1975683800790409676",
+   "label": "NEARBY_REENTRY",
+   "reason": "騙し割れ→狼狽売り→反発=価格リバーサル（FP-064/076/097）。原文は米国株・オプションフロー依存"
+  },
+  {
+   "id": "1975559625232818388",
+   "label": "GOAL_MISMATCH",
+   "reason": "米指数ETF長期投資で+20%/20bd単一株でない（Gate2 FAIL）"
+  },
+  {
+   "id": "1975529584033735008",
+   "label": "DEFINITION_INCOMPLETE",
+   "reason": "PIT入口/対象銘柄が定義不能（F06・検証不能/需給・ポジショニング）"
+  },
+  {
+   "id": "1975502457095774322",
+   "label": "NEARBY_REENTRY",
+   "reason": "騙し割れ→狼狽売り→反発=価格リバーサル（FP-064/076/097）。原文は米国株・オプションフロー依存"
+  },
+  {
+   "id": "1975488164048609542",
+   "label": "DEFINITION_INCOMPLETE",
+   "reason": "PIT入口/対象銘柄が定義不能（F06・検証不能/需給・ポジショニング）"
+  },
+  {
+   "id": "1975406138788307223",
+   "label": "NEARBY_REENTRY",
+   "reason": "騙し割れ→狼狽売り→反発=価格リバーサル（FP-064/076/097）。原文は米国株・オプションフロー依存"
+  },
+  {
+   "id": "1975353131325399328",
+   "label": "NEARBY_REENTRY",
+   "reason": "騙し割れ→狼狽売り→反発=価格リバーサル（FP-064/076/097）。原文は米国株・オプションフロー依存"
+  },
+  {
+   "id": "1975169955017687346",
+   "label": "NEARBY_REENTRY",
+   "reason": "上昇トレンド押し目買い=F03（検定済fail・FP-093 screening_batch_v2t/§7-G T4）"
+  },
+  {
+   "id": "1975165255941599703",
+   "label": "NEARBY_REENTRY",
+   "reason": "上昇トレンド押し目買い=F03（検定済fail・FP-093 screening_batch_v2t/§7-G T4）"
+  },
+  {
+   "id": "1975154124640727142",
+   "label": "NEARBY_REENTRY",
+   "reason": "騙し割れ→狼狽売り→反発=価格リバーサル（FP-064/076/097）。原文は米国株・オプションフロー依存"
+  },
+  {
+   "id": "1975149959847760020",
+   "label": "NEARBY_REENTRY",
+   "reason": "同業先行株→出遅れ株の追随買い=セクター内シンパシー（FP-071/037）"
+  },
+  {
+   "id": "1974794912647512212",
+   "label": "NEARBY_REENTRY",
+   "reason": "騙し割れ→狼狽売り→反発=価格リバーサル（FP-064/076/097）。原文は米国株・オプションフロー依存"
+  },
+  {
+   "id": "1974669410821681311",
+   "label": "NEARBY_REENTRY",
+   "reason": "上昇トレンド押し目買い=F03（検定済fail・FP-093 screening_batch_v2t/§7-G T4）"
+  },
+  {
+   "id": "1974448969452597653",
+   "label": "NEARBY_REENTRY",
+   "reason": "テクニカル水準のロング=ブレイク/MA反発/リバーサル/ストップ高/出来高（FP-018/039/040/048/072/076/094等）"
+  },
+  {
+   "id": "1974245658434355495",
+   "label": "GOAL_MISMATCH",
+   "reason": "米指数ETF長期投資で+20%/20bd単一株でない（Gate2 FAIL）"
+  },
+  {
+   "id": "1974047486013739289",
+   "label": "NEARBY_REENTRY",
+   "reason": "騙し割れ→狼狽売り→反発=価格リバーサル（FP-064/076/097）。原文は米国株・オプションフロー依存"
+  },
+  {
+   "id": "1974039531470180515",
+   "label": "NEARBY_REENTRY",
+   "reason": "上昇トレンド押し目買い=F03（検定済fail・FP-093 screening_batch_v2t/§7-G T4）"
+  },
+  {
+   "id": "1974038750381642189",
+   "label": "NEARBY_REENTRY",
+   "reason": "上昇トレンド押し目買い=F03（検定済fail・FP-093 screening_batch_v2t/§7-G T4）"
+  },
+  {
+   "id": "1973909140558000234",
+   "label": "GOAL_MISMATCH",
+   "reason": "チャート水準だが下落継続/売り/指数/米国株が主で+20%ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "1973897599959875947",
+   "label": "NEARBY_REENTRY",
+   "reason": "テクニカル水準のロング=ブレイク/MA反発/リバーサル/ストップ高/出来高（FP-018/039/040/048/072/076/094等）"
+  },
+  {
+   "id": "1973892359390892212",
+   "label": "NEARBY_REENTRY",
+   "reason": "上昇トレンド押し目買い=F03（検定済fail・FP-093 screening_batch_v2t/§7-G T4）"
+  },
+  {
+   "id": "1973891035777675578",
+   "label": "DEFINITION_INCOMPLETE",
+   "reason": "PIT入口/対象銘柄が定義不能（F03・ファンダメンタルズ/価格パターン）"
+  },
+  {
+   "id": "1973889907644133549",
+   "label": "NEARBY_REENTRY",
+   "reason": "急落・売られすぎからの反発=F04（FP-112）"
+  },
+  {
+   "id": "1973770999025033526",
+   "label": "GOAL_MISMATCH",
+   "reason": "暦アノマリー→指数タイミングで単一株イベントでない（Gate2 FAIL）"
+  },
+  {
+   "id": "1973359801968238739",
+   "label": "NEARBY_REENTRY",
+   "reason": "テクニカル水準のロング=ブレイク/MA反発/リバーサル/ストップ高/出来高（FP-018/039/040/048/072/076/094等）"
+  },
+  {
+   "id": "1973345395855204732",
+   "label": "GOAL_MISMATCH",
+   "reason": "大口ポジション解消まで下落継続/長期保有論で明確なロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "1973328144401834042",
+   "label": "GOAL_MISMATCH",
+   "reason": "地政学マクロ→指数/原油/リスクオンオフで単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "1973322714363601216",
+   "label": "NEARBY_REENTRY",
+   "reason": "騙し割れ→狼狽売り→反発=価格リバーサル（FP-064/076/097）。原文は米国株・オプションフロー依存"
+  },
+  {
+   "id": "1973213420641235374",
+   "label": "DEFINITION_INCOMPLETE",
+   "reason": "PIT入口/対象銘柄が定義不能（F04・ファンダメンタルズ/価格パターン）"
+  },
+  {
+   "id": "1973206613294195148",
+   "label": "GOAL_MISMATCH",
+   "reason": "暦アノマリー→指数タイミングで単一株イベントでない（Gate2 FAIL）"
+  },
+  {
+   "id": "2008098042608844942",
+   "label": "DEFINITION_INCOMPLETE",
+   "reason": "PIT入口/対象銘柄が定義不能（F18・価格パターン）"
+  },
+  {
+   "id": "2007245273664508026",
+   "label": "GOAL_MISMATCH",
+   "reason": "米指数ETF長期投資で+20%/20bd単一株でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2006929743653044265",
+   "label": "DEFINITION_INCOMPLETE",
+   "reason": "PIT入口/対象銘柄が定義不能（F17・価格パターン/検証不能）"
+  },
+  {
+   "id": "2006911183308419384",
+   "label": "GOAL_MISMATCH",
+   "reason": "地政学マクロ→指数/原油/リスクオンオフで単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2006907788455456955",
+   "label": "GOAL_MISMATCH",
+   "reason": "Fear&Greed等の指数センチメント逆張りで単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2006364726662779129",
+   "label": "NEARBY_REENTRY",
+   "reason": "テクニカル水準のロング=ブレイク/MA反発/リバーサル/ストップ高/出来高（FP-018/039/040/048/072/076/094等）"
+  },
+  {
+   "id": "2006155764923007210",
+   "label": "NEARBY_REENTRY",
+   "reason": "テクニカル水準のロング=ブレイク/MA反発/リバーサル/ストップ高/出来高（FP-018/039/040/048/072/076/094等）"
+  },
+  {
+   "id": "2005849114961949176",
+   "label": "NEARBY_REENTRY",
+   "reason": "テクニカル水準のロング=ブレイク/MA反発/リバーサル/ストップ高/出来高（FP-018/039/040/048/072/076/094等）"
+  },
+  {
+   "id": "2005792561232072854",
+   "label": "NEARBY_REENTRY",
+   "reason": "テクニカル水準のロング=ブレイク/MA反発/リバーサル/ストップ高/出来高（FP-018/039/040/048/072/076/094等）"
+  },
+  {
+   "id": "2005792105785090360",
+   "label": "NEARBY_REENTRY",
+   "reason": "テクニカル水準のロング=ブレイク/MA反発/リバーサル/ストップ高/出来高（FP-018/039/040/048/072/076/094等）"
+  },
+  {
+   "id": "2005776030267761086",
+   "label": "GOAL_MISMATCH",
+   "reason": "チャート水準だが下落継続/売り/指数/米国株が主で+20%ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2005769821615722899",
+   "label": "NEARBY_REENTRY",
+   "reason": "テクニカル水準のロング=ブレイク/MA反発/リバーサル/ストップ高/出来高（FP-018/039/040/048/072/076/094等）"
+  },
+  {
+   "id": "2004880099238429134",
+   "label": "GOAL_MISMATCH",
+   "reason": "暦アノマリー→指数タイミングで単一株イベントでない（Gate2 FAIL）"
+  },
+  {
+   "id": "2004391497031209283",
+   "label": "GOAL_MISMATCH",
+   "reason": "米指数ETF長期投資で+20%/20bd単一株でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2004335568793350251",
+   "label": "GOAL_MISMATCH",
+   "reason": "米指数ETF長期投資で+20%/20bd単一株でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2003997812305154331",
+   "label": "GOAL_MISMATCH",
+   "reason": "米指数ETF長期投資で+20%/20bd単一株でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2003996658359808357",
+   "label": "GOAL_MISMATCH",
+   "reason": "米指数ETF長期投資で+20%/20bd単一株でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2003994534548795756",
+   "label": "GOAL_MISMATCH",
+   "reason": "米指数ETF長期投資で+20%/20bd単一株でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2003991213821903129",
+   "label": "GOAL_MISMATCH",
+   "reason": "米指数ETF長期投資で+20%/20bd単一株でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2003971081087209583",
+   "label": "GOAL_MISMATCH",
+   "reason": "米指数ETF長期投資で+20%/20bd単一株でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2003970659886784972",
+   "label": "GOAL_MISMATCH",
+   "reason": "米指数ETF長期投資で+20%/20bd単一株でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2003965893299356048",
+   "label": "GOAL_MISMATCH",
+   "reason": "米指数ETF長期投資で+20%/20bd単一株でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2003805016382169431",
+   "label": "GOAL_MISMATCH",
+   "reason": "米指数ETF長期投資で+20%/20bd単一株でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2003801378184110324",
+   "label": "DEFINITION_INCOMPLETE",
+   "reason": "PIT入口/対象銘柄が定義不能（F20・セクター連動・ローテーション/ファンダメンタルズ）"
+  },
+  {
+   "id": "2003797679336456370",
+   "label": "GOAL_MISMATCH",
+   "reason": "米指数ETF長期投資で+20%/20bd単一株でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2002163127820095920",
+   "label": "GOAL_MISMATCH",
+   "reason": "米指数ETF長期投資で+20%/20bd単一株でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2002002192707039743",
+   "label": "GOAL_MISMATCH",
+   "reason": "米指数ETF長期投資で+20%/20bd単一株でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2001967699119988916",
+   "label": "GOAL_MISMATCH",
+   "reason": "米指数ETF長期投資で+20%/20bd単一株でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2001948413215322278",
+   "label": "GOAL_MISMATCH",
+   "reason": "米指数ETF長期投資で+20%/20bd単一株でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2001943179722186843",
+   "label": "GOAL_MISMATCH",
+   "reason": "米指数ETF長期投資で+20%/20bd単一株でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2001938446684967397",
+   "label": "GOAL_MISMATCH",
+   "reason": "米指数ETF長期投資で+20%/20bd単一株でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2001932982517666266",
+   "label": "GOAL_MISMATCH",
+   "reason": "米指数ETF長期投資で+20%/20bd単一株でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2001924084511428875",
+   "label": "GOAL_MISMATCH",
+   "reason": "米指数ETF長期投資で+20%/20bd単一株でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2001920146496196691",
+   "label": "GOAL_MISMATCH",
+   "reason": "米指数ETF長期投資で+20%/20bd単一株でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2001918411866255852",
+   "label": "GOAL_MISMATCH",
+   "reason": "米指数ETF長期投資で+20%/20bd単一株でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2001913600253006150",
+   "label": "GOAL_MISMATCH",
+   "reason": "米指数ETF長期投資で+20%/20bd単一株でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2001771747234976219",
+   "label": "DATA_FAIL",
+   "reason": "センチメント/SNS言及/インフルエンサー動向が入口で現有データ軸外（influx派生KPIは別枠#165/#168でhold）"
+  },
+  {
+   "id": "2001770776526229832",
+   "label": "GOAL_MISMATCH",
+   "reason": "暦アノマリー→指数タイミングで単一株イベントでない（Gate2 FAIL）"
+  },
+  {
+   "id": "2001584142547583012",
+   "label": "GOAL_MISMATCH",
+   "reason": "暦アノマリー→指数タイミングで単一株イベントでない（Gate2 FAIL）"
+  },
+  {
+   "id": "2001436344518582334",
+   "label": "NEARBY_REENTRY",
+   "reason": "決算・業績サプライズ/PEAD=F09（FP-114＋SUE/PEAD 29署名）"
+  },
+  {
+   "id": "2001397012692889915",
+   "label": "GOAL_MISMATCH",
+   "reason": "リスク管理・ポジション規律・サイジングでエントリー信号でない（Gate2 FAIL）"
+  },
+  {
+   "id": "1996737366460191203",
+   "label": "GOAL_MISMATCH",
+   "reason": "暦アノマリー→指数タイミングで単一株イベントでない（Gate2 FAIL）"
+  },
+  {
+   "id": "1996725883026194820",
+   "label": "GOAL_MISMATCH",
+   "reason": "暦アノマリー→指数タイミングで単一株イベントでない（Gate2 FAIL）"
+  },
+  {
+   "id": "2044885798676582768",
+   "label": "GOAL_MISMATCH",
+   "reason": "暦アノマリー→指数タイミングで単一株イベントでない（Gate2 FAIL）"
+  },
+  {
+   "id": "2044684175517925608",
+   "label": "GOAL_MISMATCH",
+   "reason": "暦アノマリー→指数タイミングで単一株イベントでない（Gate2 FAIL）"
+  },
+  {
+   "id": "2044679806504362244",
+   "label": "GOAL_MISMATCH",
+   "reason": "暦アノマリー→指数タイミングで単一株イベントでない（Gate2 FAIL）"
+  },
+  {
+   "id": "2044584304366473628",
+   "label": "GOAL_MISMATCH",
+   "reason": "暦アノマリー→指数タイミングで単一株イベントでない（Gate2 FAIL）"
+  },
+  {
+   "id": "2042301463616196857",
+   "label": "GOAL_MISMATCH",
+   "reason": "暦アノマリー→指数タイミングで単一株イベントでない（Gate2 FAIL）"
+  },
+  {
+   "id": "2042025037247738078",
+   "label": "GOAL_MISMATCH",
+   "reason": "暦アノマリー→指数タイミングで単一株イベントでない（Gate2 FAIL）"
+  },
+  {
+   "id": "2042017567934705896",
+   "label": "GOAL_MISMATCH",
+   "reason": "暦アノマリー→指数タイミングで単一株イベントでない（Gate2 FAIL）"
+  },
+  {
+   "id": "2042003507713339704",
+   "label": "GOAL_MISMATCH",
+   "reason": "チャート水準だが下落継続/売り/指数/米国株が主で+20%ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2041973424462180364",
+   "label": "GOAL_MISMATCH",
+   "reason": "暦アノマリー→指数タイミングで単一株イベントでない（Gate2 FAIL）"
+  },
+  {
+   "id": "2039945480550179125",
+   "label": "GOAL_MISMATCH",
+   "reason": "暦アノマリー→指数タイミングで単一株イベントでない（Gate2 FAIL）"
+  },
+  {
+   "id": "2039918140939985124",
+   "label": "GOAL_MISMATCH",
+   "reason": "暦アノマリー→指数タイミングで単一株イベントでない（Gate2 FAIL）"
+  },
+  {
+   "id": "2039864513911275813",
+   "label": "GOAL_MISMATCH",
+   "reason": "暦アノマリー→指数タイミングで単一株イベントでない（Gate2 FAIL）"
+  },
+  {
+   "id": "2038932746849202642",
+   "label": "GOAL_MISMATCH",
+   "reason": "地政学マクロ→指数/原油/リスクオンオフで単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2038923714298073574",
+   "label": "GOAL_MISMATCH",
+   "reason": "地政学マクロ→指数/原油/リスクオンオフで単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2038827045392904416",
+   "label": "DATA_FAIL",
+   "reason": "原油急騰・ホルムズ/紅海封鎖の地政学ヘッドラインが入口で現有データ軸外（海外data/コモディティ価格）"
+  },
+  {
+   "id": "2038765879052382681",
+   "label": "GOAL_MISMATCH",
+   "reason": "Fear&Greed等の指数センチメント逆張りで単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2038743055835234801",
+   "label": "DATA_FAIL",
+   "reason": "センチメント/SNS言及/インフルエンサー動向が入口で現有データ軸外（influx派生KPIは別枠#165/#168でhold）"
+  },
+  {
+   "id": "2038738529560436806",
+   "label": "GOAL_MISMATCH",
+   "reason": "地政学マクロ→指数/原油/リスクオンオフで単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2038736473890173234",
+   "label": "GOAL_MISMATCH",
+   "reason": "Fear&Greed等の指数センチメント逆張りで単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2038705224991531319",
+   "label": "GOAL_MISMATCH",
+   "reason": "Fear&Greed等の指数センチメント逆張りで単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2037263803570938201",
+   "label": "GOAL_MISMATCH",
+   "reason": "チャート水準だが下落継続/売り/指数/米国株が主で+20%ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2036040202712650189",
+   "label": "GOAL_MISMATCH",
+   "reason": "地政学マクロ→指数/原油/リスクオンオフで単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2077906483099173304",
+   "label": "GOAL_MISMATCH",
+   "reason": "レバレッジETFの商品構造・規制で単一株ロングでない（Gate2 FAIL）"
+  },
+  {
+   "id": "2077903506900754897",
+   "label": "GOAL_MISMATCH",
+   "reason": "レバレッジETFの商品構造・規制で単一株ロングでない（Gate2 FAIL）"
+  },
+  {
+   "id": "2077850817680576790",
+   "label": "GOAL_MISMATCH",
+   "reason": "大口ポジション解消まで下落継続/長期保有論で明確なロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2077845797983691180",
+   "label": "NEARBY_REENTRY",
+   "reason": "急落・売られすぎからの反発=F04（FP-112）"
+  },
+  {
+   "id": "2077745828010291629",
+   "label": "NEARBY_REENTRY",
+   "reason": "上昇トレンド押し目買い=F03（検定済fail・FP-093 screening_batch_v2t/§7-G T4）"
+  },
+  {
+   "id": "2077738371208909099",
+   "label": "GOAL_MISMATCH",
+   "reason": "暦アノマリー→指数タイミングで単一株イベントでない（Gate2 FAIL）"
+  },
+  {
+   "id": "2077727151215063091",
+   "label": "GOAL_MISMATCH",
+   "reason": "レバレッジETFの商品構造・規制で単一株ロングでない（Gate2 FAIL）"
+  },
+  {
+   "id": "2077722030867386436",
+   "label": "GOAL_MISMATCH",
+   "reason": "米指数ETF長期投資で+20%/20bd単一株でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2077721029989003317",
+   "label": "GOAL_MISMATCH",
+   "reason": "レバレッジETFの商品構造・規制で単一株ロングでない（Gate2 FAIL）"
+  },
+  {
+   "id": "2077713702732931181",
+   "label": "GOAL_MISMATCH",
+   "reason": "米指数ETF長期投資で+20%/20bd単一株でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2077706740825792958",
+   "label": "GOAL_MISMATCH",
+   "reason": "レバレッジETFの商品構造・規制で単一株ロングでない（Gate2 FAIL）"
+  },
+  {
+   "id": "2077691347012821430",
+   "label": "DEFINITION_INCOMPLETE",
+   "reason": "PIT入口/対象銘柄が定義不能（F21・リスク管理・exit/売買シグナル）"
+  },
+  {
+   "id": "2077578881528467599",
+   "label": "DEFINITION_INCOMPLETE",
+   "reason": "PIT入口/対象銘柄が定義不能（F19・検証不能）"
+  },
+  {
+   "id": "2077577834097455539",
+   "label": "NEARBY_REENTRY",
+   "reason": "急落・売られすぎからの反発=F04（FP-112）"
+  },
+  {
+   "id": "2077551637665808661",
+   "label": "GOAL_MISMATCH",
+   "reason": "Fear&Greed等の指数センチメント逆張りで単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2077547857926864906",
+   "label": "GOAL_MISMATCH",
+   "reason": "セクター・国・資産の相対ローテーション/分散（相対・指数・回避脚中心で単一株+20%入口でない・Gate2 FAIL）"
+  },
+  {
+   "id": "2077536176584761725",
+   "label": "GOAL_MISMATCH",
+   "reason": "セクター・国・資産の相対ローテーション/分散（相対・指数・回避脚中心で単一株+20%入口でない・Gate2 FAIL）"
+  },
+  {
+   "id": "2077382556098675189",
+   "label": "DEFINITION_INCOMPLETE",
+   "reason": "PIT入口/対象銘柄が定義不能（F08・価格パターン/検証不能）"
+  },
+  {
+   "id": "2077374166182076482",
+   "label": "DEFINITION_INCOMPLETE",
+   "reason": "PIT入口/対象銘柄が定義不能（F17・イベント/マクロ・クロスアセット）"
+  },
+  {
+   "id": "2077371431986626577",
+   "label": "GOAL_MISMATCH",
+   "reason": "暦アノマリー→指数タイミングで単一株イベントでない（Gate2 FAIL）"
+  },
+  {
+   "id": "2077341639425863707",
+   "label": "DEFINITION_INCOMPLETE",
+   "reason": "PIT入口/対象銘柄が定義不能（F05・センチメント・バブル警戒/リスク管理・exit）"
+  },
+  {
+   "id": "2077328044096962861",
+   "label": "NEARBY_REENTRY",
+   "reason": "上昇トレンド押し目買い=F03（検定済fail・FP-093 screening_batch_v2t/§7-G T4）"
+  },
+  {
+   "id": "2077320033752261009",
+   "label": "DEFINITION_INCOMPLETE",
+   "reason": "PIT入口/対象銘柄が定義不能（F04・センチメント・バブル警戒/価格パターン）"
+  },
+  {
+   "id": "2077254433587790140",
+   "label": "DEFINITION_INCOMPLETE",
+   "reason": "PIT入口/対象銘柄が定義不能（F17・センチメント・バブル警戒/マクロ・クロスアセット）"
+  },
+  {
+   "id": "1978959327835623763",
+   "label": "NEARBY_REENTRY",
+   "reason": "決算・業績サプライズ/PEAD=F09（FP-114＋SUE/PEAD 29署名）"
+  },
+  {
+   "id": "1978935559407178161",
+   "label": "NEARBY_REENTRY",
+   "reason": "決算・業績サプライズ/PEAD=F09（FP-114＋SUE/PEAD 29署名）"
+  },
+  {
+   "id": "1978922911445483779",
+   "label": "NEARBY_REENTRY",
+   "reason": "主導テーマ・セクター順張り=F07（FP-113）"
+  },
+  {
+   "id": "1978922468619489352",
+   "label": "GOAL_MISMATCH",
+   "reason": "未上場/非投資/海外イベントで日本上場単一株ロングでない（Gate2 FAIL）"
+  },
+  {
+   "id": "1978919491808477613",
+   "label": "GOAL_MISMATCH",
+   "reason": "セクター・国・資産の相対ローテーション/分散（相対・指数・回避脚中心で単一株+20%入口でない・Gate2 FAIL）"
+  },
+  {
+   "id": "1978797456101114082",
+   "label": "NEARBY_REENTRY",
+   "reason": "コーポレートイベント(TOB/M&A/提携/製品)=F10（FP-115）"
+  },
+  {
+   "id": "1978771617435238699",
+   "label": "NEARBY_REENTRY",
+   "reason": "コーポレートイベント(TOB/M&A/提携/製品)=F10（FP-115）"
+  },
+  {
+   "id": "1978748270500544950",
+   "label": "GOAL_MISMATCH",
+   "reason": "為替・金利・JGB・マクロ指標で単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "1978736506542960672",
+   "label": "NEARBY_REENTRY",
+   "reason": "国策・政策テーマ株=F11（FP-116）。政策ヘッドラインは現有データ軸外でもある"
+  },
+  {
+   "id": "1978721095516660178",
+   "label": "GOAL_MISMATCH",
+   "reason": "為替・金利・JGB・マクロ指標で単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "1978678337989173498",
+   "label": "GOAL_MISMATCH",
+   "reason": "地政学マクロ→指数/原油/リスクオンオフで単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "1978642515827056745",
+   "label": "NEARBY_REENTRY",
+   "reason": "国策・政策テーマ株=F11（FP-116）。政策ヘッドラインは現有データ軸外でもある"
+  },
+  {
+   "id": "1978640552850813241",
+   "label": "NEARBY_REENTRY",
+   "reason": "コーポレートイベント(TOB/M&A/提携/製品)=F10（FP-115）"
+  },
+  {
+   "id": "1978639851219222799",
+   "label": "GOAL_MISMATCH",
+   "reason": "為替・金利・JGB・マクロ指標で単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "1978622085350969812",
+   "label": "NEARBY_REENTRY",
+   "reason": "決算・業績サプライズ/PEAD=F09（FP-114＋SUE/PEAD 29署名）"
+  },
+  {
+   "id": "1978601375744618799",
+   "label": "GOAL_MISMATCH",
+   "reason": "地政学マクロ→指数/原油/リスクオンオフで単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "1978598126819962905",
+   "label": "NEARBY_REENTRY",
+   "reason": "コーポレートイベント(TOB/M&A/提携/製品)=F10（FP-115）"
+  },
+  {
+   "id": "1978578663005155695",
+   "label": "NEARBY_REENTRY",
+   "reason": "コーポレートイベント(TOB/M&A/提携/製品)=F10（FP-115）"
+  },
+  {
+   "id": "1978569270939259299",
+   "label": "NEARBY_REENTRY",
+   "reason": "国策・政策テーマ株=F11（FP-116）。政策ヘッドラインは現有データ軸外でもある"
+  },
+  {
+   "id": "1978568365913592175",
+   "label": "NEARBY_REENTRY",
+   "reason": "コーポレートイベント(TOB/M&A/提携/製品)=F10（FP-115）"
+  },
+  {
+   "id": "1978567881412452587",
+   "label": "NEARBY_REENTRY",
+   "reason": "決算・業績サプライズ/PEAD=F09（FP-114＋SUE/PEAD 29署名）"
+  },
+  {
+   "id": "1978554221201879054",
+   "label": "GOAL_MISMATCH",
+   "reason": "地政学マクロ→指数/原油/リスクオンオフで単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "1978552856421527791",
+   "label": "GOAL_MISMATCH",
+   "reason": "チャート水準だが下落継続/売り/指数/米国株が主で+20%ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "1978341665665351986",
+   "label": "NEARBY_REENTRY",
+   "reason": "コーポレートイベント(TOB/M&A/提携/製品)=F10（FP-115）"
+  },
+  {
+   "id": "2012313498982961453",
+   "label": "NEARBY_REENTRY",
+   "reason": "国策・政策テーマ株=F11（FP-116）。政策ヘッドラインは現有データ軸外でもある"
+  },
+  {
+   "id": "2012313307206885671",
+   "label": "GOAL_MISMATCH",
+   "reason": "セクター・国・資産の相対ローテーション/分散（相対・指数・回避脚中心で単一株+20%入口でない・Gate2 FAIL）"
+  },
+  {
+   "id": "2012270994459693145",
+   "label": "GOAL_MISMATCH",
+   "reason": "セクター・国・資産の相対ローテーション/分散（相対・指数・回避脚中心で単一株+20%入口でない・Gate2 FAIL）"
+  },
+  {
+   "id": "2012261668953489856",
+   "label": "NEARBY_REENTRY",
+   "reason": "テクニカル水準のロング=ブレイク/MA反発/リバーサル/ストップ高/出来高（FP-018/039/040/048/072/076/094等）"
+  },
+  {
+   "id": "2012261523989713173",
+   "label": "NEARBY_REENTRY",
+   "reason": "決算・業績サプライズ/PEAD=F09（FP-114＋SUE/PEAD 29署名）"
+  },
+  {
+   "id": "2012113316202901726",
+   "label": "NEARBY_REENTRY",
+   "reason": "上昇トレンド押し目買い=F03（検定済fail・FP-093 screening_batch_v2t/§7-G T4）"
+  },
+  {
+   "id": "2012113196992348309",
+   "label": "GOAL_MISMATCH",
+   "reason": "為替・金利・JGB・マクロ指標で単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2012112991257612463",
+   "label": "GOAL_MISMATCH",
+   "reason": "セクター・国・資産の相対ローテーション/分散（相対・指数・回避脚中心で単一株+20%入口でない・Gate2 FAIL）"
+  },
+  {
+   "id": "2012064010817192152",
+   "label": "GOAL_MISMATCH",
+   "reason": "為替・金利・JGB・マクロ指標で単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2012007126282224134",
+   "label": "NEARBY_REENTRY",
+   "reason": "国策・政策テーマ株=F11（FP-116）。政策ヘッドラインは現有データ軸外でもある"
+  },
+  {
+   "id": "2011980766025285656",
+   "label": "NEARBY_REENTRY",
+   "reason": "主導テーマ・セクター順張り=F07（FP-113）"
+  },
+  {
+   "id": "2011975761461461172",
+   "label": "NEARBY_REENTRY",
+   "reason": "決算・業績サプライズ/PEAD=F09（FP-114＋SUE/PEAD 29署名）"
+  },
+  {
+   "id": "2011972028556059073",
+   "label": "NEARBY_REENTRY",
+   "reason": "主導テーマ・セクター順張り=F07（FP-113）"
+  },
+  {
+   "id": "2011958568216641872",
+   "label": "NEARBY_REENTRY",
+   "reason": "主導テーマ・セクター順張り=F07（FP-113）"
+  },
+  {
+   "id": "2011918555458257332",
+   "label": "GOAL_MISMATCH",
+   "reason": "チャート水準だが下落継続/売り/指数/米国株が主で+20%ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2011917332604715239",
+   "label": "GOAL_MISMATCH",
+   "reason": "為替・金利・JGB・マクロ指標で単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2011916756617752868",
+   "label": "GOAL_MISMATCH",
+   "reason": "未上場/非投資/海外イベントで日本上場単一株ロングでない（Gate2 FAIL）"
+  },
+  {
+   "id": "2011914416569401829",
+   "label": "NEARBY_REENTRY",
+   "reason": "主導テーマ・セクター順張り=F07（FP-113）"
+  },
+  {
+   "id": "2011913788816310642",
+   "label": "GOAL_MISMATCH",
+   "reason": "セクター・国・資産の相対ローテーション/分散（相対・指数・回避脚中心で単一株+20%入口でない・Gate2 FAIL）"
+  },
+  {
+   "id": "2011905298823594401",
+   "label": "NEARBY_REENTRY",
+   "reason": "主導テーマ・セクター順張り=F07（FP-113）"
+  },
+  {
+   "id": "2011905116904046831",
+   "label": "NEARBY_REENTRY",
+   "reason": "コーポレートイベント(TOB/M&A/提携/製品)=F10（FP-115）"
+  },
+  {
+   "id": "2011904875203035501",
+   "label": "GOAL_MISMATCH",
+   "reason": "セクター・国・資産の相対ローテーション/分散（相対・指数・回避脚中心で単一株+20%入口でない・Gate2 FAIL）"
+  },
+  {
+   "id": "2011738664842457289",
+   "label": "NEARBY_REENTRY",
+   "reason": "国策・政策テーマ株=F11（FP-116）。政策ヘッドラインは現有データ軸外でもある"
+  },
+  {
+   "id": "2011725996362502481",
+   "label": "NEARBY_REENTRY",
+   "reason": "暗号資産/トークン化の制度・事業発表→関連日本株(SBI等)ロング=コーポレートイベント/テーマ長（FP-113/115）。検知はTDnet/ニュース依存"
+  },
+  {
+   "id": "2011692422477337022",
+   "label": "NEARBY_REENTRY",
+   "reason": "決算・業績サプライズ/PEAD=F09（FP-114＋SUE/PEAD 29署名）"
+  },
+  {
+   "id": "2011672715690910098",
+   "label": "NEARBY_REENTRY",
+   "reason": "決算・業績サプライズ/PEAD=F09（FP-114＋SUE/PEAD 29署名）"
+  },
+  {
+   "id": "2011672521415016879",
+   "label": "NEARBY_REENTRY",
+   "reason": "テクニカル水準のロング=ブレイク/MA反発/リバーサル/ストップ高/出来高（FP-018/039/040/048/072/076/094等）"
+  },
+  {
+   "id": "2011670415622709271",
+   "label": "NEARBY_REENTRY",
+   "reason": "テクニカル水準のロング=ブレイク/MA反発/リバーサル/ストップ高/出来高（FP-018/039/040/048/072/076/094等）"
+  },
+  {
+   "id": "2011668637443375615",
+   "label": "NEARBY_REENTRY",
+   "reason": "テクニカル水準のロング=ブレイク/MA反発/リバーサル/ストップ高/出来高（FP-018/039/040/048/072/076/094等）"
+  },
+  {
+   "id": "2011667199916982403",
+   "label": "NEARBY_REENTRY",
+   "reason": "テクニカル水準のロング=ブレイク/MA反発/リバーサル/ストップ高/出来高（FP-018/039/040/048/072/076/094等）"
+  },
+  {
+   "id": "2011664322590871862",
+   "label": "NEARBY_REENTRY",
+   "reason": "テクニカル水準のロング=ブレイク/MA反発/リバーサル/ストップ高/出来高（FP-018/039/040/048/072/076/094等）"
+  },
+  {
+   "id": "2011660704013828181",
+   "label": "GOAL_MISMATCH",
+   "reason": "セクター・国・資産の相対ローテーション/分散（相対・指数・回避脚中心で単一株+20%入口でない・Gate2 FAIL）"
+  },
+  {
+   "id": "2011659040749994034",
+   "label": "GOAL_MISMATCH",
+   "reason": "セクター・国・資産の相対ローテーション/分散（相対・指数・回避脚中心で単一株+20%入口でない・Gate2 FAIL）"
+  },
+  {
+   "id": "2011658340372467874",
+   "label": "GOAL_MISMATCH",
+   "reason": "セクター・国・資産の相対ローテーション/分散（相対・指数・回避脚中心で単一株+20%入口でない・Gate2 FAIL）"
+  },
+  {
+   "id": "2011629494856233408",
+   "label": "NEARBY_REENTRY",
+   "reason": "決算・業績サプライズ/PEAD=F09（FP-114＋SUE/PEAD 29署名）"
+  },
+  {
+   "id": "2011629034275553500",
+   "label": "NEARBY_REENTRY",
+   "reason": "主導テーマ・セクター順張り=F07（FP-113）"
+  },
+  {
+   "id": "2011618958961754356",
+   "label": "NEARBY_REENTRY",
+   "reason": "急落・売られすぎからの反発=F04（FP-112）"
+  },
+  {
+   "id": "2011612409186959498",
+   "label": "GOAL_MISMATCH",
+   "reason": "対象が金/銀/BTC/為替で日本単一株でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2011612075899175349",
+   "label": "GOAL_MISMATCH",
+   "reason": "対象が金/銀/BTC/為替で日本単一株でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2011611841940897977",
+   "label": "GOAL_MISMATCH",
+   "reason": "対象が金/銀/BTC/為替で日本単一株でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2011601203793445270",
+   "label": "NEARBY_REENTRY",
+   "reason": "コーポレートイベント(TOB/M&A/提携/製品)=F10（FP-115）"
+  },
+  {
+   "id": "2011580738773401999",
+   "label": "GOAL_MISMATCH",
+   "reason": "対象が金/銀/BTC/為替で日本単一株でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2011556633307201791",
+   "label": "NEARBY_REENTRY",
+   "reason": "国策・政策テーマ株=F11（FP-116）。政策ヘッドラインは現有データ軸外でもある"
+  },
+  {
+   "id": "2011552155535348024",
+   "label": "NEARBY_REENTRY",
+   "reason": "国策・政策テーマ株=F11（FP-116）。政策ヘッドラインは現有データ軸外でもある"
+  },
+  {
+   "id": "2044883296895853053",
+   "label": "GOAL_MISMATCH",
+   "reason": "チャート水準だが下落継続/売り/指数/米国株が主で+20%ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2044882766266061145",
+   "label": "GOAL_MISMATCH",
+   "reason": "地政学マクロ→指数/原油/リスクオンオフで単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2044882573340668367",
+   "label": "GOAL_MISMATCH",
+   "reason": "地政学マクロ→指数/原油/リスクオンオフで単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2044882492474478709",
+   "label": "DATA_FAIL",
+   "reason": "原油急騰・ホルムズ/紅海封鎖の地政学ヘッドラインが入口で現有データ軸外（海外data/コモディティ価格）"
+  },
+  {
+   "id": "2044871910010589664",
+   "label": "NEARBY_REENTRY",
+   "reason": "決算・業績サプライズ/PEAD=F09（FP-114＋SUE/PEAD 29署名）"
+  },
+  {
+   "id": "2044869961827697070",
+   "label": "GOAL_MISMATCH",
+   "reason": "チャート水準だが下落継続/売り/指数/米国株が主で+20%ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2044774251790831781",
+   "label": "DATA_FAIL",
+   "reason": "原油急騰・ホルムズ/紅海封鎖の地政学ヘッドラインが入口で現有データ軸外（海外data/コモディティ価格）"
+  },
+  {
+   "id": "2044763831176663350",
+   "label": "DATA_FAIL",
+   "reason": "原油急騰・ホルムズ/紅海封鎖の地政学ヘッドラインが入口で現有データ軸外（海外data/コモディティ価格）"
+  },
+  {
+   "id": "2044732150763929806",
+   "label": "NEARBY_REENTRY",
+   "reason": "国策・政策テーマ株=F11（FP-116）。政策ヘッドラインは現有データ軸外でもある"
+  },
+  {
+   "id": "2044697602235756854",
+   "label": "NEARBY_REENTRY",
+   "reason": "コーポレートイベント(TOB/M&A/提携/製品)=F10（FP-115）"
+  },
+  {
+   "id": "2044692621965328691",
+   "label": "NEARBY_REENTRY",
+   "reason": "国策・政策テーマ株=F11（FP-116）。政策ヘッドラインは現有データ軸外でもある"
+  },
+  {
+   "id": "2044672937832374281",
+   "label": "GOAL_MISMATCH",
+   "reason": "未上場/非投資/海外イベントで日本上場単一株ロングでない（Gate2 FAIL）"
+  },
+  {
+   "id": "2044665720588603878",
+   "label": "GOAL_MISMATCH",
+   "reason": "チャート水準だが下落継続/売り/指数/米国株が主で+20%ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2044590707378409612",
+   "label": "NEARBY_REENTRY",
+   "reason": "決算・業績サプライズ/PEAD=F09（FP-114＋SUE/PEAD 29署名）"
+  },
+  {
+   "id": "2044582654511878242",
+   "label": "GOAL_MISMATCH",
+   "reason": "未上場/非投資/海外イベントで日本上場単一株ロングでない（Gate2 FAIL）"
+  },
+  {
+   "id": "2044573743117386216",
+   "label": "NEARBY_REENTRY",
+   "reason": "決算・業績サプライズ/PEAD=F09（FP-114＋SUE/PEAD 29署名）"
+  },
+  {
+   "id": "2044528321405587897",
+   "label": "NEARBY_REENTRY",
+   "reason": "コーポレートイベント(TOB/M&A/提携/製品)=F10（FP-115）"
+  },
+  {
+   "id": "2044523561386389760",
+   "label": "NEARBY_REENTRY",
+   "reason": "国策・政策テーマ株=F11（FP-116）。政策ヘッドラインは現有データ軸外でもある"
+  },
+  {
+   "id": "2044522134232567990",
+   "label": "GOAL_MISMATCH",
+   "reason": "地政学マクロ→指数/原油/リスクオンオフで単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2044513906719396052",
+   "label": "GOAL_MISMATCH",
+   "reason": "地政学マクロ→指数/原油/リスクオンオフで単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2044510555659244024",
+   "label": "GOAL_MISMATCH",
+   "reason": "地政学マクロ→指数/原油/リスクオンオフで単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2044509989969297501",
+   "label": "GOAL_MISMATCH",
+   "reason": "チャート水準だが下落継続/売り/指数/米国株が主で+20%ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2044508750497911106",
+   "label": "GOAL_MISMATCH",
+   "reason": "チャート水準だが下落継続/売り/指数/米国株が主で+20%ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2044422741907095649",
+   "label": "NEARBY_REENTRY",
+   "reason": "主導テーマ・セクター順張り=F07（FP-113）"
+  },
+  {
+   "id": "2044287255972589924",
+   "label": "NEARBY_REENTRY",
+   "reason": "決算・業績サプライズ/PEAD=F09（FP-114＋SUE/PEAD 29署名）"
+  },
+  {
+   "id": "2044280356254429427",
+   "label": "DEFINITION_INCOMPLETE",
+   "reason": "PIT入口/対象銘柄が定義不能（F18・価格パターン）"
+  },
+  {
+   "id": "2044249417348530331",
+   "label": "GOAL_MISMATCH",
+   "reason": "半導体・高PER株の過熱→調整の下落/回避方向でロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2044230394703425849",
+   "label": "GOAL_MISMATCH",
+   "reason": "チャート水準だが下落継続/売り/指数/米国株が主で+20%ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2044230092445102497",
+   "label": "NEARBY_REENTRY",
+   "reason": "国策・政策テーマ株=F11（FP-116）。政策ヘッドラインは現有データ軸外でもある"
+  },
+  {
+   "id": "2044160940124582015",
+   "label": "GOAL_MISMATCH",
+   "reason": "セクター・国・資産の相対ローテーション/分散（相対・指数・回避脚中心で単一株+20%入口でない・Gate2 FAIL）"
+  },
+  {
+   "id": "2044159977070432454",
+   "label": "GOAL_MISMATCH",
+   "reason": "信用収縮→下落・回避方向でロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2044159746404733336",
+   "label": "NEARBY_REENTRY",
+   "reason": "決算・業績サプライズ/PEAD=F09（FP-114＋SUE/PEAD 29署名）"
+  },
+  {
+   "id": "2044159496927506943",
+   "label": "NEARBY_REENTRY",
+   "reason": "コーポレートイベント(TOB/M&A/提携/製品)=F10（FP-115）"
+  },
+  {
+   "id": "2044159379881234720",
+   "label": "GOAL_MISMATCH",
+   "reason": "地政学マクロ→指数/原油/リスクオンオフで単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2044159245449580951",
+   "label": "GOAL_MISMATCH",
+   "reason": "地政学マクロ→指数/原油/リスクオンオフで単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2044021101542711613",
+   "label": "NEARBY_REENTRY",
+   "reason": "テクニカル水準のロング=ブレイク/MA反発/リバーサル/ストップ高/出来高（FP-018/039/040/048/072/076/094等）"
+  },
+  {
+   "id": "2077938075997819138",
+   "label": "GOAL_MISMATCH",
+   "reason": "チャート水準だが下落継続/売り/指数/米国株が主で+20%ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2077937772476997856",
+   "label": "GOAL_MISMATCH",
+   "reason": "半導体・高PER株の過熱→調整の下落/回避方向でロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2077937543430172950",
+   "label": "GOAL_MISMATCH",
+   "reason": "半導体・高PER株の過熱→調整の下落/回避方向でロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2077937385875358081",
+   "label": "NEARBY_REENTRY",
+   "reason": "主導テーマ・セクター順張り=F07（FP-113）"
+  },
+  {
+   "id": "2077936542484693274",
+   "label": "GOAL_MISMATCH",
+   "reason": "チャート水準だが下落継続/売り/指数/米国株が主で+20%ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2077935937494155489",
+   "label": "GOAL_MISMATCH",
+   "reason": "チャート水準だが下落継続/売り/指数/米国株が主で+20%ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2077925503865139628",
+   "label": "NEARBY_REENTRY",
+   "reason": "決算・業績サプライズ/PEAD=F09（FP-114＋SUE/PEAD 29署名）"
+  },
+  {
+   "id": "2077914950853681376",
+   "label": "NEARBY_REENTRY",
+   "reason": "コーポレートイベント(TOB/M&A/提携/製品)=F10（FP-115）"
+  },
+  {
+   "id": "2077912585261953346",
+   "label": "GOAL_MISMATCH",
+   "reason": "チャート水準だが下落継続/売り/指数/米国株が主で+20%ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2077910694327103568",
+   "label": "DEFINITION_INCOMPLETE",
+   "reason": "PIT入口/対象銘柄が定義不能（F07・セクター連動・ローテーション/センチメント・バブル警戒）"
+  },
+  {
+   "id": "2077874261495353644",
+   "label": "NEARBY_REENTRY",
+   "reason": "急落・売られすぎからの反発=F04（FP-112）"
+  },
+  {
+   "id": "2077872546775810278",
+   "label": "NEARBY_REENTRY",
+   "reason": "国策・政策テーマ株=F11（FP-116）。政策ヘッドラインは現有データ軸外でもある"
+  },
+  {
+   "id": "2077869336891625551",
+   "label": "GOAL_MISMATCH",
+   "reason": "レバレッジETFの商品構造・規制で単一株ロングでない（Gate2 FAIL）"
+  },
+  {
+   "id": "2077865540933296625",
+   "label": "GOAL_MISMATCH",
+   "reason": "暦アノマリー→指数タイミングで単一株イベントでない（Gate2 FAIL）"
+  },
+  {
+   "id": "2077863104701169681",
+   "label": "GOAL_MISMATCH",
+   "reason": "チャート水準だが下落継続/売り/指数/米国株が主で+20%ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2077862894126162266",
+   "label": "NEARBY_REENTRY",
+   "reason": "コーポレートイベント(TOB/M&A/提携/製品)=F10（FP-115）"
+  },
+  {
+   "id": "2077861491500613987",
+   "label": "GOAL_MISMATCH",
+   "reason": "チャート水準だが下落継続/売り/指数/米国株が主で+20%ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2077859321644462303",
+   "label": "NEARBY_REENTRY",
+   "reason": "国策・政策テーマ株=F11（FP-116）。政策ヘッドラインは現有データ軸外でもある"
+  },
+  {
+   "id": "2077846480644407561",
+   "label": "GOAL_MISMATCH",
+   "reason": "半導体・高PER株の過熱→調整の下落/回避方向でロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2077846311316148708",
+   "label": "NEARBY_REENTRY",
+   "reason": "急落・売られすぎからの反発=F04（FP-112）"
+  },
+  {
+   "id": "2077790357845397528",
+   "label": "NEARBY_REENTRY",
+   "reason": "急落・売られすぎからの反発=F04（FP-112）"
+  },
+  {
+   "id": "2077781262442635683",
+   "label": "GOAL_MISMATCH",
+   "reason": "地政学マクロ→指数/原油/リスクオンオフで単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2077781160013566246",
+   "label": "DATA_FAIL",
+   "reason": "原油急騰・ホルムズ/紅海封鎖の地政学ヘッドラインが入口で現有データ軸外（海外data/コモディティ価格）"
+  },
+  {
+   "id": "2077676192141025508",
+   "label": "NEARBY_REENTRY",
+   "reason": "国策・政策テーマ株=F11（FP-116）。政策ヘッドラインは現有データ軸外でもある"
+  },
+  {
+   "id": "2077663552492720133",
+   "label": "NEARBY_REENTRY",
+   "reason": "国策・政策テーマ株=F11（FP-116）。政策ヘッドラインは現有データ軸外でもある"
+  },
+  {
+   "id": "2077663457521078536",
+   "label": "NEARBY_REENTRY",
+   "reason": "国策・政策テーマ株=F11（FP-116）。政策ヘッドラインは現有データ軸外でもある"
+  },
+  {
+   "id": "2077662245933470207",
+   "label": "NEARBY_REENTRY",
+   "reason": "国策・政策テーマ株=F11（FP-116）。政策ヘッドラインは現有データ軸外でもある"
+  },
+  {
+   "id": "2077661784903909464",
+   "label": "GOAL_MISMATCH",
+   "reason": "レバレッジETFの商品構造・規制で単一株ロングでない（Gate2 FAIL）"
+  },
+  {
+   "id": "2077656545060688154",
+   "label": "GOAL_MISMATCH",
+   "reason": "レバレッジETFの商品構造・規制で単一株ロングでない（Gate2 FAIL）"
+  },
+  {
+   "id": "2077653394383372607",
+   "label": "GOAL_MISMATCH",
+   "reason": "レバレッジETFの商品構造・規制で単一株ロングでない（Gate2 FAIL）"
+  },
+  {
+   "id": "2077647019972137387",
+   "label": "DEFINITION_INCOMPLETE",
+   "reason": "PIT入口/対象銘柄が定義不能（UA・検証不能）"
+  },
+  {
+   "id": "2077637611569758418",
+   "label": "DATA_FAIL",
+   "reason": "センチメント/SNS言及/インフルエンサー動向が入口で現有データ軸外（influx派生KPIは別枠#165/#168でhold）"
+  },
+  {
+   "id": "2077630351170785529",
+   "label": "GOAL_MISMATCH",
+   "reason": "レバレッジETFの商品構造・規制で単一株ロングでない（Gate2 FAIL）"
+  },
+  {
+   "id": "2077628087202894316",
+   "label": "NEARBY_REENTRY",
+   "reason": "決算・業績サプライズ/PEAD=F09（FP-114＋SUE/PEAD 29署名）"
+  },
+  {
+   "id": "2077627670112903471",
+   "label": "NEARBY_REENTRY",
+   "reason": "決算・業績サプライズ/PEAD=F09（FP-114＋SUE/PEAD 29署名）"
+  },
+  {
+   "id": "2077627441397514498",
+   "label": "NEARBY_REENTRY",
+   "reason": "決算・業績サプライズ/PEAD=F09（FP-114＋SUE/PEAD 29署名）"
+  },
+  {
+   "id": "2077626077149904930",
+   "label": "GOAL_MISMATCH",
+   "reason": "暦アノマリー→指数タイミングで単一株イベントでない（Gate2 FAIL）"
+  },
+  {
+   "id": "1978928514536738842",
+   "label": "GOAL_MISMATCH",
+   "reason": "信用収縮→下落・回避方向でロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "1978814187418841255",
+   "label": "GOAL_MISMATCH",
+   "reason": "対象が金/銀/BTC/為替で日本単一株でない（Gate2 FAIL）"
+  },
+  {
+   "id": "1978761755804467550",
+   "label": "GOAL_MISMATCH",
+   "reason": "為替・金利・JGB・マクロ指標で単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "1978664762641916029",
+   "label": "GOAL_MISMATCH",
+   "reason": "AI人員削減→利益率改善は米大型株が主対象で日本単一株でない（Gate2 FAIL）"
+  },
+  {
+   "id": "1978577396757586124",
+   "label": "GOAL_MISMATCH",
+   "reason": "為替・金利・JGB・マクロ指標で単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "1978461965325594680",
+   "label": "GOAL_MISMATCH",
+   "reason": "対象が金/銀/BTC/為替で日本単一株でない（Gate2 FAIL）"
+  },
+  {
+   "id": "1978426647712772125",
+   "label": "GOAL_MISMATCH",
+   "reason": "半導体・高PER株の過熱→調整の下落/回避方向でロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "1978219256329457951",
+   "label": "GOAL_MISMATCH",
+   "reason": "AI人員削減→利益率改善は米大型株が主対象で日本単一株でない（Gate2 FAIL）"
+  },
+  {
+   "id": "1978101083013575051",
+   "label": "DATA_FAIL",
+   "reason": "センチメント/SNS言及/インフルエンサー動向が入口で現有データ軸外（influx派生KPIは別枠#165/#168でhold）"
+  },
+  {
+   "id": "1977951848683520465",
+   "label": "GOAL_MISMATCH",
+   "reason": "対象が金/銀/BTC/為替で日本単一株でない（Gate2 FAIL）"
+  },
+  {
+   "id": "1977865519870124210",
+   "label": "GOAL_MISMATCH",
+   "reason": "為替・金利・JGB・マクロ指標で単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "1977725695993520622",
+   "label": "DEFINITION_INCOMPLETE",
+   "reason": "トークン化テーマの漠然とした期待で対象銘柄/PIT入口が特定不能"
+  },
+  {
+   "id": "1977722401631941077",
+   "label": "GOAL_MISMATCH",
+   "reason": "セクター・国・資産の相対ローテーション/分散（相対・指数・回避脚中心で単一株+20%入口でない・Gate2 FAIL）"
+  },
+  {
+   "id": "1977697528725524778",
+   "label": "GOAL_MISMATCH",
+   "reason": "セクター・国・資産の相対ローテーション/分散（相対・指数・回避脚中心で単一株+20%入口でない・Gate2 FAIL）"
+  },
+  {
+   "id": "1977679855828287846",
+   "label": "GOAL_MISMATCH",
+   "reason": "為替・金利・JGB・マクロ指標で単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "1977557467803598901",
+   "label": "GOAL_MISMATCH",
+   "reason": "為替・金利・JGB・マクロ指標で単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "1977556016066879936",
+   "label": "GOAL_MISMATCH",
+   "reason": "為替・金利・JGB・マクロ指標で単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "1977490931998916732",
+   "label": "GOAL_MISMATCH",
+   "reason": "為替・金利・JGB・マクロ指標で単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "1977314446944186506",
+   "label": "GOAL_MISMATCH",
+   "reason": "為替・金利・JGB・マクロ指標で単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "1977221994602283396",
+   "label": "GOAL_MISMATCH",
+   "reason": "AI人員削減→利益率改善は米大型株が主対象で日本単一株でない（Gate2 FAIL）"
+  },
+  {
+   "id": "1977126881922367711",
+   "label": "GOAL_MISMATCH",
+   "reason": "為替・金利・JGB・マクロ指標で単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "1977020032854245549",
+   "label": "GOAL_MISMATCH",
+   "reason": "セクター・国・資産の相対ローテーション/分散（相対・指数・回避脚中心で単一株+20%入口でない・Gate2 FAIL）"
+  },
+  {
+   "id": "1976975982969209343",
+   "label": "GOAL_MISMATCH",
+   "reason": "対象が金/銀/BTC/為替で日本単一株でない（Gate2 FAIL）"
+  },
+  {
+   "id": "1976934589483696515",
+   "label": "GOAL_MISMATCH",
+   "reason": "対象が金/銀/BTC/為替で日本単一株でない（Gate2 FAIL）"
+  },
+  {
+   "id": "1976870716508455373",
+   "label": "GOAL_MISMATCH",
+   "reason": "信用収縮→下落・回避方向でロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "1976819462604308713",
+   "label": "GOAL_MISMATCH",
+   "reason": "対象が金/銀/BTC/為替で日本単一株でない（Gate2 FAIL）"
+  },
+  {
+   "id": "1976774733468446939",
+   "label": "DATA_FAIL",
+   "reason": "センチメント/SNS言及/インフルエンサー動向が入口で現有データ軸外（influx派生KPIは別枠#165/#168でhold）"
+  },
+  {
+   "id": "1976756357912309848",
+   "label": "DATA_FAIL",
+   "reason": "センチメント/SNS言及/インフルエンサー動向が入口で現有データ軸外（influx派生KPIは別枠#165/#168でhold）"
+  },
+  {
+   "id": "1976627179170726278",
+   "label": "GOAL_MISMATCH",
+   "reason": "為替・金利・JGB・マクロ指標で単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "1976587099626164370",
+   "label": "GOAL_MISMATCH",
+   "reason": "対象が金/銀/BTC/為替で日本単一株でない（Gate2 FAIL）"
+  },
+  {
+   "id": "1976540818912547091",
+   "label": "GOAL_MISMATCH",
+   "reason": "半導体・高PER株の過熱→調整の下落/回避方向でロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "1976411562580889752",
+   "label": "GOAL_MISMATCH",
+   "reason": "為替・金利・JGB・マクロ指標で単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "1976293016731255034",
+   "label": "GOAL_MISMATCH",
+   "reason": "為替・金利・JGB・マクロ指標で単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "1976270757358616896",
+   "label": "GOAL_MISMATCH",
+   "reason": "信用収縮→下落・回避方向でロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "1976266718948491275",
+   "label": "GOAL_MISMATCH",
+   "reason": "対象が金/銀/BTC/為替で日本単一株でない（Gate2 FAIL）"
+  },
+  {
+   "id": "1976187156977840171",
+   "label": "GOAL_MISMATCH",
+   "reason": "対象が金/銀/BTC/為替で日本単一株でない（Gate2 FAIL）"
+  },
+  {
+   "id": "1976185926226198847",
+   "label": "NEARBY_REENTRY",
+   "reason": "コーポレートイベント(TOB/M&A/提携/製品)=F10（FP-115）"
+  },
+  {
+   "id": "2012284260296929473",
+   "label": "GOAL_MISMATCH",
+   "reason": "為替・金利・JGB・マクロ指標で単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2012184671921270945",
+   "label": "GOAL_MISMATCH",
+   "reason": "為替・金利・JGB・マクロ指標で単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2011998207728107989",
+   "label": "NEARBY_REENTRY",
+   "reason": "暗号資産/トークン化の制度・事業発表→関連日本株(SBI等)ロング=コーポレートイベント/テーマ長（FP-113/115）。検知はTDnet/ニュース依存"
+  },
+  {
+   "id": "2011935967503138967",
+   "label": "GOAL_MISMATCH",
+   "reason": "対象が金/銀/BTC/為替で日本単一株でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2011811292034875857",
+   "label": "GOAL_MISMATCH",
+   "reason": "為替・金利・JGB・マクロ指標で単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2011633153631482204",
+   "label": "GOAL_MISMATCH",
+   "reason": "対象が金/銀/BTC/為替で日本単一株でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2011448014297268593",
+   "label": "GOAL_MISMATCH",
+   "reason": "セクター・国・資産の相対ローテーション/分散（相対・指数・回避脚中心で単一株+20%入口でない・Gate2 FAIL）"
+  },
+  {
+   "id": "2011438931766915462",
+   "label": "GOAL_MISMATCH",
+   "reason": "AI人員削減→利益率改善は米大型株が主対象で日本単一株でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2011359633563410520",
+   "label": "GOAL_MISMATCH",
+   "reason": "対象が金/銀/BTC/為替で日本単一株でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2011085062721454368",
+   "label": "NEARBY_REENTRY",
+   "reason": "主導テーマ・セクター順張り=F07（FP-113）"
+  },
+  {
+   "id": "2011074798940737703",
+   "label": "NEARBY_REENTRY",
+   "reason": "主導テーマ・セクター順張り=F07（FP-113）"
+  },
+  {
+   "id": "2011054279336083714",
+   "label": "GOAL_MISMATCH",
+   "reason": "対象が金/銀/BTC/為替で日本単一株でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2010853735145325029",
+   "label": "GOAL_MISMATCH",
+   "reason": "半導体・高PER株の過熱→調整の下落/回避方向でロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2010844249148047835",
+   "label": "NEARBY_REENTRY",
+   "reason": "国策・政策テーマ株=F11（FP-116）。政策ヘッドラインは現有データ軸外でもある"
+  },
+  {
+   "id": "2010696526625198387",
+   "label": "DEFINITION_INCOMPLETE",
+   "reason": "PIT入口/対象銘柄が定義不能（UA・検証不能/需給・ポジショニング）"
+  },
+  {
+   "id": "2010674808569446458",
+   "label": "NEARBY_REENTRY",
+   "reason": "主導テーマ・セクター順張り=F07（FP-113）"
+  },
+  {
+   "id": "2010673450822889880",
+   "label": "GOAL_MISMATCH",
+   "reason": "半導体・高PER株の過熱→調整の下落/回避方向でロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2010607120098709581",
+   "label": "GOAL_MISMATCH",
+   "reason": "セクター・国・資産の相対ローテーション/分散（相対・指数・回避脚中心で単一株+20%入口でない・Gate2 FAIL）"
+  },
+  {
+   "id": "2010544289143799924",
+   "label": "GOAL_MISMATCH",
+   "reason": "対象が金/銀/BTC/為替で日本単一株でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2010518076413104491",
+   "label": "GOAL_MISMATCH",
+   "reason": "対象が金/銀/BTC/為替で日本単一株でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2010360794454851900",
+   "label": "GOAL_MISMATCH",
+   "reason": "為替・金利・JGB・マクロ指標で単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2010190999004536904",
+   "label": "NEARBY_REENTRY",
+   "reason": "主導テーマ・セクター順張り=F07（FP-113）"
+  },
+  {
+   "id": "2010163712557248710",
+   "label": "GOAL_MISMATCH",
+   "reason": "セクター・国・資産の相対ローテーション/分散（相対・指数・回避脚中心で単一株+20%入口でない・Gate2 FAIL）"
+  },
+  {
+   "id": "2010106255302603112",
+   "label": "GOAL_MISMATCH",
+   "reason": "為替・金利・JGB・マクロ指標で単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2009764321350562180",
+   "label": "GOAL_MISMATCH",
+   "reason": "対象が金/銀/BTC/為替で日本単一株でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2009644734374146310",
+   "label": "GOAL_MISMATCH",
+   "reason": "為替・金利・JGB・マクロ指標で単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2009635443625865642",
+   "label": "GOAL_MISMATCH",
+   "reason": "為替・金利・JGB・マクロ指標で単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2009254088354226371",
+   "label": "GOAL_MISMATCH",
+   "reason": "為替・金利・JGB・マクロ指標で単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2009210545501827230",
+   "label": "GOAL_MISMATCH",
+   "reason": "為替・金利・JGB・マクロ指標で単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2044893140642041872",
+   "label": "GOAL_MISMATCH",
+   "reason": "半導体・高PER株の過熱→調整の下落/回避方向でロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2044887276807954744",
+   "label": "GOAL_MISMATCH",
+   "reason": "信用収縮→下落・回避方向でロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2044772095885021403",
+   "label": "GOAL_MISMATCH",
+   "reason": "為替・金利・JGB・マクロ指標で単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2044523047332511769",
+   "label": "GOAL_MISMATCH",
+   "reason": "AI人員削減→利益率改善は米大型株が主対象で日本単一株でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2044516323615772862",
+   "label": "GOAL_MISMATCH",
+   "reason": "セクター・国・資産の相対ローテーション/分散（相対・指数・回避脚中心で単一株+20%入口でない・Gate2 FAIL）"
+  },
+  {
+   "id": "2044372395541336358",
+   "label": "GOAL_MISMATCH",
+   "reason": "セクター・国・資産の相対ローテーション/分散（相対・指数・回避脚中心で単一株+20%入口でない・Gate2 FAIL）"
+  },
+  {
+   "id": "2044174513383088350",
+   "label": "NEARBY_REENTRY",
+   "reason": "暗号資産/トークン化の制度・事業発表→関連日本株(SBI等)ロング=コーポレートイベント/テーマ長（FP-113/115）。検知はTDnet/ニュース依存"
+  },
+  {
+   "id": "2044055912546218157",
+   "label": "GOAL_MISMATCH",
+   "reason": "為替・金利・JGB・マクロ指標で単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2044032004187189293",
+   "label": "GOAL_MISMATCH",
+   "reason": "為替・金利・JGB・マクロ指標で単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2043811384480375262",
+   "label": "GOAL_MISMATCH",
+   "reason": "為替・金利・JGB・マクロ指標で単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2043808391324463563",
+   "label": "DEFINITION_INCOMPLETE",
+   "reason": "PIT入口/対象銘柄が定義不能（F16・マクロ・クロスアセット/検証不能）"
+  },
+  {
+   "id": "2043702884731376011",
+   "label": "GOAL_MISMATCH",
+   "reason": "為替・金利・JGB・マクロ指標で単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2043687036717310035",
+   "label": "DEFINITION_INCOMPLETE",
+   "reason": "PIT入口/対象銘柄が定義不能（F23・センチメント・バブル警戒/ファンダメンタルズ）"
+  },
+  {
+   "id": "2043646869516292560",
+   "label": "GOAL_MISMATCH",
+   "reason": "信用収縮→下落・回避方向でロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2043644079557550099",
+   "label": "GOAL_MISMATCH",
+   "reason": "対象が金/銀/BTC/為替で日本単一株でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2043458243109031957",
+   "label": "GOAL_MISMATCH",
+   "reason": "セクター・国・資産の相対ローテーション/分散（相対・指数・回避脚中心で単一株+20%入口でない・Gate2 FAIL）"
+  },
+  {
+   "id": "2043433621198135394",
+   "label": "DATA_FAIL",
+   "reason": "原油急騰・ホルムズ/紅海封鎖の地政学ヘッドラインが入口で現有データ軸外（海外data/コモディティ価格）"
+  },
+  {
+   "id": "2043291657291059231",
+   "label": "GOAL_MISMATCH",
+   "reason": "半導体・高PER株の過熱→調整の下落/回避方向でロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2043241063612305777",
+   "label": "GOAL_MISMATCH",
+   "reason": "為替・金利・JGB・マクロ指標で単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2043228638020292618",
+   "label": "GOAL_MISMATCH",
+   "reason": "セクター・国・資産の相対ローテーション/分散（相対・指数・回避脚中心で単一株+20%入口でない・Gate2 FAIL）"
+  },
+  {
+   "id": "2043154299233144974",
+   "label": "DATA_FAIL",
+   "reason": "原油急騰・ホルムズ/紅海封鎖の地政学ヘッドラインが入口で現有データ軸外（海外data/コモディティ価格）"
+  },
+  {
+   "id": "2043081268238364814",
+   "label": "GOAL_MISMATCH",
+   "reason": "信用収縮→下落・回避方向でロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2042978495400415405",
+   "label": "DATA_FAIL",
+   "reason": "原油急騰・ホルムズ/紅海封鎖の地政学ヘッドラインが入口で現有データ軸外（海外data/コモディティ価格）"
+  },
+  {
+   "id": "2042722492238958694",
+   "label": "DATA_FAIL",
+   "reason": "原油急騰・ホルムズ/紅海封鎖の地政学ヘッドラインが入口で現有データ軸外（海外data/コモディティ価格）"
+  },
+  {
+   "id": "2042608235669262774",
+   "label": "DATA_FAIL",
+   "reason": "原油急騰・ホルムズ/紅海封鎖の地政学ヘッドラインが入口で現有データ軸外（海外data/コモディティ価格）"
+  },
+  {
+   "id": "2042604718288179463",
+   "label": "NEARBY_REENTRY",
+   "reason": "主導テーマ・セクター順張り=F07（FP-113）"
+  },
+  {
+   "id": "2042601147622658199",
+   "label": "GOAL_MISMATCH",
+   "reason": "為替・金利・JGB・マクロ指標で単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2042369450062889302",
+   "label": "NEARBY_REENTRY",
+   "reason": "暗号資産/トークン化の制度・事業発表→関連日本株(SBI等)ロング=コーポレートイベント/テーマ長（FP-113/115）。検知はTDnet/ニュース依存"
+  },
+  {
+   "id": "2042254224394998191",
+   "label": "GOAL_MISMATCH",
+   "reason": "為替・金利・JGB・マクロ指標で単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2042207308227424334",
+   "label": "GOAL_MISMATCH",
+   "reason": "リスク管理・ポジション規律・サイジングでエントリー信号でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2042179018771071288",
+   "label": "GOAL_MISMATCH",
+   "reason": "為替・金利・JGB・マクロ指標で単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2042079073120436430",
+   "label": "NEARBY_REENTRY",
+   "reason": "コーポレートイベント(TOB/M&A/提携/製品)=F10（FP-115）"
+  },
+  {
+   "id": "2041993094858731993",
+   "label": "GOAL_MISMATCH",
+   "reason": "地政学マクロ→指数/原油/リスクオンオフで単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2041889646863647100",
+   "label": "DATA_FAIL",
+   "reason": "原油急騰・ホルムズ/紅海封鎖の地政学ヘッドラインが入口で現有データ軸外（海外data/コモディティ価格）"
+  },
+  {
+   "id": "2041873875517272428",
+   "label": "NEARBY_REENTRY",
+   "reason": "暗号資産/トークン化の制度・事業発表→関連日本株(SBI等)ロング=コーポレートイベント/テーマ長（FP-113/115）。検知はTDnet/ニュース依存"
+  },
+  {
+   "id": "2041653709168635907",
+   "label": "DATA_FAIL",
+   "reason": "原油急騰・ホルムズ/紅海封鎖の地政学ヘッドラインが入口で現有データ軸外（海外data/コモディティ価格）"
+  },
+  {
+   "id": "2077877394120319440",
+   "label": "GOAL_MISMATCH",
+   "reason": "半導体・高PER株の過熱→調整の下落/回避方向でロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2077859606148292722",
+   "label": "GOAL_MISMATCH",
+   "reason": "為替・金利・JGB・マクロ指標で単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2077767777264480520",
+   "label": "GOAL_MISMATCH",
+   "reason": "半導体・高PER株の過熱→調整の下落/回避方向でロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2077742166466822447",
+   "label": "DATA_FAIL",
+   "reason": "センチメント/SNS言及/インフルエンサー動向が入口で現有データ軸外（influx派生KPIは別枠#165/#168でhold）"
+  },
+  {
+   "id": "2077736523882270845",
+   "label": "NEARBY_REENTRY",
+   "reason": "国策・政策テーマ株=F11（FP-116）。政策ヘッドラインは現有データ軸外でもある"
+  },
+  {
+   "id": "2077551318965912039",
+   "label": "GOAL_MISMATCH",
+   "reason": "半導体・高PER株の過熱→調整の下落/回避方向でロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2077500213812777434",
+   "label": "DATA_FAIL",
+   "reason": "原油急騰・ホルムズ/紅海封鎖の地政学ヘッドラインが入口で現有データ軸外（海外data/コモディティ価格）"
+  },
+  {
+   "id": "2077376620562985294",
+   "label": "DATA_FAIL",
+   "reason": "原油急騰・ホルムズ/紅海封鎖の地政学ヘッドラインが入口で現有データ軸外（海外data/コモディティ価格）"
+  },
+  {
+   "id": "2077351170646200449",
+   "label": "DEFINITION_INCOMPLETE",
+   "reason": "PIT入口/対象銘柄が定義不能（F16・マクロ・クロスアセット/検証不能）"
+  },
+  {
+   "id": "2077207620843368644",
+   "label": "NEARBY_REENTRY",
+   "reason": "暗号資産/トークン化の制度・事業発表→関連日本株(SBI等)ロング=コーポレートイベント/テーマ長（FP-113/115）。検知はTDnet/ニュース依存"
+  },
+  {
+   "id": "2077182208750805014",
+   "label": "NEARBY_REENTRY",
+   "reason": "暗号資産/トークン化の制度・事業発表→関連日本株(SBI等)ロング=コーポレートイベント/テーマ長（FP-113/115）。検知はTDnet/ニュース依存"
+  },
+  {
+   "id": "2077153867851272674",
+   "label": "GOAL_MISMATCH",
+   "reason": "為替・金利・JGB・マクロ指標で単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2077031109439934822",
+   "label": "GOAL_MISMATCH",
+   "reason": "半導体・高PER株の過熱→調整の下落/回避方向でロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2077013830337741300",
+   "label": "DEFINITION_INCOMPLETE",
+   "reason": "PIT入口/対象銘柄が定義不能（F16・マクロ・クロスアセット/検証不能）"
+  },
+  {
+   "id": "2076962749775810598",
+   "label": "NEARBY_REENTRY",
+   "reason": "主導テーマ・セクター順張り=F07（FP-113）"
+  },
+  {
+   "id": "2076761082094612834",
+   "label": "GOAL_MISMATCH",
+   "reason": "半導体・高PER株の過熱→調整の下落/回避方向でロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2076757636075421867",
+   "label": "DEFINITION_INCOMPLETE",
+   "reason": "PIT入口/対象銘柄が定義不能（F16・センチメント・バブル警戒/マクロ・クロスアセット）"
+  },
+  {
+   "id": "2076675482184282298",
+   "label": "GOAL_MISMATCH",
+   "reason": "為替・金利・JGB・マクロ指標で単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2076673564389028204",
+   "label": "DEFINITION_INCOMPLETE",
+   "reason": "PIT入口/対象銘柄が定義不能（F22・イベント/検証不能）"
+  },
+  {
+   "id": "2076426755779490178",
+   "label": "GOAL_MISMATCH",
+   "reason": "リスク管理・ポジション規律・サイジングでエントリー信号でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2076246035975061705",
+   "label": "GOAL_MISMATCH",
+   "reason": "半導体・高PER株の過熱→調整の下落/回避方向でロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2076201185087029315",
+   "label": "GOAL_MISMATCH",
+   "reason": "対象が金/銀/BTC/為替で日本単一株でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2076158195899490749",
+   "label": "DATA_FAIL",
+   "reason": "原油急騰・ホルムズ/紅海封鎖の地政学ヘッドラインが入口で現有データ軸外（海外data/コモディティ価格）"
+  },
+  {
+   "id": "2076056560913326413",
+   "label": "GOAL_MISMATCH",
+   "reason": "AI人員削減→利益率改善は米大型株が主対象で日本単一株でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2076045052594500054",
+   "label": "DATA_FAIL",
+   "reason": "センチメント/SNS言及/インフルエンサー動向が入口で現有データ軸外（influx派生KPIは別枠#165/#168でhold）"
+  },
+  {
+   "id": "2075946178748006440",
+   "label": "GOAL_MISMATCH",
+   "reason": "セクター・国・資産の相対ローテーション/分散（相対・指数・回避脚中心で単一株+20%入口でない・Gate2 FAIL）"
+  },
+  {
+   "id": "2075929389712462308",
+   "label": "GOAL_MISMATCH",
+   "reason": "為替・金利・JGB・マクロ指標で単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2075913150894112996",
+   "label": "DATA_FAIL",
+   "reason": "原油急騰・ホルムズ/紅海封鎖の地政学ヘッドラインが入口で現有データ軸外（海外data/コモディティ価格）"
+  },
+  {
+   "id": "2075680079729057869",
+   "label": "GOAL_MISMATCH",
+   "reason": "為替・金利・JGB・マクロ指標で単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2075596296111718611",
+   "label": "GOAL_MISMATCH",
+   "reason": "為替・金利・JGB・マクロ指標で単一株ロング入口でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2075506554686898562",
+   "label": "GOAL_MISMATCH",
+   "reason": "リスク管理・ポジション規律・サイジングでエントリー信号でない（Gate2 FAIL）"
+  },
+  {
+   "id": "2075501810765451694",
+   "label": "NEARBY_REENTRY",
+   "reason": "暗号資産/トークン化の制度・事業発表→関連日本株(SBI等)ロング=コーポレートイベント/テーマ長（FP-113/115）。検知はTDnet/ニュース依存"
+  }
+ ]
+}

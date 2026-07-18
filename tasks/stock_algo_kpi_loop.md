@@ -665,6 +665,13 @@
 - **Batch 4完了✅（第41周クローズ・2026-07-18）**: 本番実行完了（シグナル生成は分離コンテナで一晩自走・screen+confirmは翌朝正引数で実行）。**結果: 全4セル発見段fail**（EV -0.02〜-0.33%・p 0.51〜0.66・BH/BY通過0・代表0→確認段なし・lift 1.22〜1.37は1超だがEV負=左裾重い）。台帳: screening 224→228・trials 109→**110**（メタ1行のみ=分母コスト最小）。catalog §7-AF✅・§8-5 F03行=検定済みfailに更新。教訓: ホスト側バックグラウンドジョブが3度killされた→長時間ジョブはnohup分離+マーカー方式が正（ハーネス背景ジョブは通知役に使わない）。再開スクリプトの引数ミス（--batch-id不存在）で1回空振り→CLIは実装のargparseを確認してから叩く
 - 旧データ注意: `output/research/tweets_{tomoyaasakura,biz_zatukora,kakatothecat}.json`（93件・切断英訳・candidate_scoreはアカウント一定で無効）は窓1に内包されるため収穫はmasters_20260717のみ使用。backup-20260717/に原本保全済み
 
+### 2026-07-18 第3ラウンド敵対レビュー: 「X投稿から他の仮説を検索する方法」→ Step0反証でX検索格下げ確定
+- **レビュー（A3=Fable別文脈/B3=Codex・異例の収束）**: ボトルネックはソース選定でなく「現有データ軸∩ゴール写像∩非近傍」の三重フィルタが構造的に狭いこと。検索するなら現有データ軸から逆引き（信用/空売り・指数入替・EDINET・決算フィールド）・§7-AE優先・週次定常化は時期尚早・Xはrecall不透明で§6完全性と非互換=永久に発見経路止まり
+- **ユーザー裁定3件**: 全指摘前提 / Step0反証→1本でも残ればB3パイロット（4軸×上限2000投稿）・0なら格下げ / fingerprint索引構築GO
+- **fingerprint索引✅**: `data/kpi_trials/trial_fingerprints.json`（116署名=trials93+回避5+見送り13+除外family5・再生成=`scripts/build_trial_fingerprints.py`・コミットab403b2）。今後の全収穫・全事前登録のdedupゲート共通資産
+- **Step0反証テスト✅（結論: ソース律速説は棄却）**: 558候補の三重フィルタ全数判定→**EXECUTABLE_NEW=0・UNLOCK_SOON=0**（GOAL_MISMATCH 298/NEARBY_REENTRY 176/DEFINITION_INCOMPLETE 48/DATA_FAIL 36・正本=`data/masters_harvest_20260717/step0_result.json`）。**事前ルールどおりX検索は「データ軸アンロック時（2026-09日証金・8月TDnet判断・指数カレンダー収集時）の単発・軸ターゲット検索」に格下げ確定**。単独のinfluencer採掘パイプラインは作らない
+- **含意**: 供給源の本命は変わらず「新データ軸」= §7-AE TOB実装（筆頭）→ 8月TDnet判断 → 9月日証金 → 10月インフル勝率
+
 ### Avoid Repeating
 - `WebFetch` で `https://jpx-jquants.com/pricing` と `https://jpx.gitbook.io/j-quants-ja/` を試したが、どちらもJavaScriptレンダリングのSPAで実体コンテンツが取得できず「/ja」のみ返ってきた。**同じURLへの再WebFetchは無意味**。
 - `mcp__firecrawl__firecrawl_scrape` も同ページで "Request failed while trying to scrape" のエラーで失敗した。原因未特定のまま同一呼び出しを繰り返さない。
