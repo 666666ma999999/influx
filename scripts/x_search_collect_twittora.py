@@ -1,23 +1,27 @@
 #!/usr/bin/env python3
-"""@twittora_ 向けバズ投稿収集 — X ログイン検索スクレイプ版（2026-07-19 新設）。
+"""@twittora_ 向けバズ投稿収集 — X ログイン検索スクレイプ版。
 
-背景: Grok x_search 版（grok_collect_twittora.py）が xAI クレジット枯渇で停止
-（2026-07-01 確定判断: X 検索収集の第一選択は influx Cookie 自動収集・Grok は次点）。
-本スクリプトはその方針の実装 — 既存部品（bookmarks_keyword_digest_collect_browser の
-DOM 収集・ログイン壁検知・fetch_bookmarks の Cookie 注入）を再利用した薄いアダプタ。
+2026-07-19 新設 → 同日 v2（精度改善 P1-P3・Fable5+Codex 敵対レビュー収束案）:
+  P1 本文カラ対策: スクロール毎に取り込み（仮想化対策）＋空本文は隔離し上位のみ個別ページ再取得
+     ＋完全性セルフチェック（空率/ja率/views被覆率を出力に記録・空率20%超で警告）
+  P2 指標の完全取得: カードの [role=group] aria-label から replies/reposts/likes/bookmarks/views を
+     **正確な生数値**で抽出（従来の「impressions は取れない」は誤った前提だった＝実機診断で確認）
+  P3 lang:ja 別窓: 日本語比重の高い5クエリを lang:ja + 低め閾値で追加収集（英語大手の top 独占対策）
+  既知課題: X が日本語原文を英訳して表示するケースあり（Accept-Language:ja でも再現・2026-07-19 実測）
+  → ja 判定はクエリ由来で行う。原文取得（Show original 相当）は次回改善
 
-出力契約は grok 版と同一: output/grok_twittora/grok-twittora-YYYY-MM-DD.jsonl + .md
-（impressions は検索 DOM から取れないため 0 固定・collector フィールドで区別）。
+背景: Grok x_search 版が xAI クレジット枯渇で停止（2026-07-01 確定判断: 第一選択は Cookie 自動収集）。
+出力契約: output/grok_twittora/grok-twittora-YYYY-MM-DD.jsonl + .md（grok 版と同系・collector で区別）。
 
 実行（xstock-vnc コンテナ内・DISPLAY 必須）:
-  docker exec -e DISPLAY=:99 xstock-vnc python3 /app/scripts/x_search_collect_twittora.py \
-      --since 2026-06-22 --per-query 12
+  docker exec -e DISPLAY=:99 xstock-vnc python3 /app/scripts/x_search_collect_twittora.py --days 7
 """
 from __future__ import annotations
 
 import argparse
 import json
 import random
+import re
 import sys
 import time
 from datetime import datetime, timedelta, timezone
@@ -28,12 +32,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import fetch_bookmarks  # Cookie loader（canonical）
-from bookmarks_keyword_digest_collect_browser import (  # DOM 部品を再利用
+from bookmarks_keyword_digest_collect_browser import (  # 基盤部品を再利用
     LoginWallError,
     _wait_for_new_cards,
     build_context_kwargs,
     is_login_wall_url,
-    scrape_search_results_from_dom,
 )
 from grok_collect_twittora import DEFAULT_MIN_LIKES, DEFAULT_QUERIES  # クエリ正本を共有
 
@@ -42,15 +45,104 @@ TWEET_CARD_SELECTOR = '[data-testid="tweet"]'
 MAX_SCROLLS = 5
 QUERY_PACING = (20.0, 40.0)  # クエリ間の待機（アカウント保護・秒）
 
+# P3: 日本語比重の高いクエリ（lang:ja 別窓で追加収集する5本）
+JA_SPLIT_QUERIES = [
+    "Claude Code 使い方",
+    "Claude Code tips",
+    "Claude hooks 自動化",
+    "AI コーディング ワークフロー",
+    "subagent 並列",
+]
 
-def build_buzz_search_url(q: str, since: str, until: str, min_likes: int) -> str:
-    """バズ検索 URL（f=top・min_faves・期間窓つき）。"""
-    query = f"{q} min_faves:{min_likes} since:{since} until:{until} -filter:nativeretweets"
-    return f"https://x.com/search?q={quote(query)}"  # f 省略 = top（高反応順）
+_STATUS_ID_RE = re.compile(r"/status/(\d+)")
+# aria-label 例: "1222 replies, 1855 reposts, 15717 likes, 1387 bookmarks, 1648921 views"
+_ARIA_METRIC_RE = re.compile(r"([\d,]+)\s+(replies|reply|reposts|repost|likes|like|bookmarks|bookmark|views|view)\b")
+_JA_RE = re.compile(r"[ぁ-んァ-ン一-龥]")
 
 
-def collect_query(page, q: str, since: str, until: str, min_likes: int, per_query: int) -> list[dict]:
-    url = build_buzz_search_url(q, since, until, min_likes)
+def build_buzz_search_url(q: str, since: str, until: str, min_likes: int, lang: str | None = None) -> str:
+    """バズ検索 URL（f=top 明示・min_faves・期間窓・任意 lang）。"""
+    parts = [q, f"min_faves:{min_likes}", f"since:{since}", f"until:{until}", "-filter:nativeretweets"]
+    if lang:
+        parts.append(f"lang:{lang}")
+    return f"https://x.com/search?q={quote(' '.join(parts))}&f=top"
+
+
+def parse_aria_metrics(aria: str | None) -> dict:
+    """[role=group] の aria-label から正確な指標を抽出（部分欠けにも耐える）。"""
+    out = {"replies": 0, "retweets": 0, "likes": 0, "bookmarks": 0, "impressions": 0}
+    if not aria:
+        return out
+    for num, kind in _ARIA_METRIC_RE.findall(aria):
+        v = int(num.replace(",", ""))
+        if kind.startswith("repl"):
+            out["replies"] = v
+        elif kind.startswith("repost"):
+            out["retweets"] = v
+        elif kind.startswith("like"):
+            out["likes"] = v
+        elif kind.startswith("bookmark"):
+            out["bookmarks"] = v
+        elif kind.startswith("view"):
+            out["impressions"] = v
+    return out
+
+
+def scrape_cards_rich(page) -> list[dict]:
+    """表示中カードから url/author/本文/正確指標を抽出（buzz 収集専用のリッチ版）。
+
+    digest 系の scrape_search_results_from_dom は likes 表示文字列のみの軽量契約のため
+    共有関数は変更せず、本スクリプト専用に aria ベースの正確抽出を持つ。
+    """
+    results = []
+    cards = page.locator(TWEET_CARD_SELECTOR)
+    for i in range(cards.count()):
+        try:
+            card = cards.nth(i)
+            url = ""
+            links = card.locator('a[href*="/status/"]')
+            if links.count():
+                href = links.first.get_attribute("href") or ""
+                if href.startswith("/"):
+                    href = f"https://x.com{href}"
+                url = href.split("?")[0]
+            m = _STATUS_ID_RE.search(url)
+            if not m:
+                continue
+            content = ""
+            tt = card.locator('[data-testid="tweetText"]')
+            if tt.count():
+                try:
+                    content = tt.first.inner_text(timeout=1500) or ""
+                except Exception:
+                    content = tt.first.text_content() or ""
+            dt_attr = ""
+            te = card.locator("time")
+            if te.count():
+                dt_attr = te.first.get_attribute("datetime") or ""
+            grp = card.locator('[role="group"]')
+            aria = grp.first.get_attribute("aria-label") if grp.count() else None
+            metrics = parse_aria_metrics(aria)
+            path = url.split("x.com/")[-1]
+            author = path.split("/")[0] if "/" in path else ""
+            results.append({
+                "id": m.group(1),
+                "url": url,
+                "author": author,
+                "display_name": "",
+                "content": content.strip(),
+                "posted_at": dt_attr[:10] if dt_attr else "",
+                **metrics,
+            })
+        except Exception:
+            continue  # カード単位 fail-soft
+    return results
+
+
+def collect_query(page, q: str, since: str, until: str, min_likes: int, per_query: int,
+                  lang: str | None = None) -> list[dict]:
+    """1クエリ収集。スクロール毎に取り込み・id マージ（仮想化による本文喪失の対策）。"""
+    url = build_buzz_search_url(q, since, until, min_likes, lang)
     page.goto(url, wait_until="domcontentloaded", timeout=45_000)
     time.sleep(random.uniform(3.0, 5.0))
     if is_login_wall_url(page.url):
@@ -59,35 +151,59 @@ def collect_query(page, q: str, since: str, until: str, min_likes: int, per_quer
         page.wait_for_selector(TWEET_CARD_SELECTOR, timeout=10_000)
     except Exception:
         return []  # 0件（正常系）
-    prev = 0
+    by_id: dict[str, dict] = {}
+
+    def ingest():
+        for c in scrape_cards_rich(page):
+            prev = by_id.get(c["id"])
+            # 既取得の本文を空で上書きしない（仮想化で後から空になるケース）
+            if prev and prev.get("content") and not c.get("content"):
+                continue
+            by_id[c["id"]] = c
+
+    ingest()
+    prev_count = 0
     for _ in range(MAX_SCROLLS):
-        cur = page.locator(TWEET_CARD_SELECTOR).count()
-        if cur >= per_query:
+        if len(by_id) >= per_query:
             break
+        cur = page.locator(TWEET_CARD_SELECTOR).count()
         page.evaluate("window.scrollBy(0, window.innerHeight * 2)")
         new = _wait_for_new_cards(page, cur)
-        if new <= prev and new <= cur:
+        ingest()
+        if new <= prev_count and new <= cur:
             break
-        prev = cur
-    rows = []
-    for c in scrape_search_results_from_dom(page):
-        if not c.get("id"):
-            continue
-        if c.get("likes", 0) < min_likes:
-            continue  # DOM 実測 likes で再検証
-        c["query"] = q
-        rows.append(c)
+        prev_count = cur
+    rows = [r for r in by_id.values() if r["likes"] >= min_likes]
+    for r in rows:
+        r["query"] = q + (f" lang:{lang}" if lang else "")
+    rows.sort(key=lambda r: r["likes"], reverse=True)
     return rows[:per_query]
+
+
+def refetch_content(page, url: str) -> str:
+    """空本文の個別ページ再取得（隔離行の救済・少数のみ）。"""
+    try:
+        page.goto(url, wait_until="domcontentloaded", timeout=30_000)
+        time.sleep(random.uniform(2.0, 4.0))
+        el = page.locator('[data-testid="tweetText"]')
+        if el.count():
+            return (el.first.inner_text(timeout=3000) or "").strip()
+    except Exception:
+        pass
+    return ""
 
 
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--queries", nargs="+", default=DEFAULT_QUERIES)
-    ap.add_argument("--since", default=None, help="YYYY-MM-DD（省略時 = --days から計算）")
-    ap.add_argument("--until", default=None, help="YYYY-MM-DD（省略時 = 今日）")
+    ap.add_argument("--since", default=None)
+    ap.add_argument("--until", default=None)
     ap.add_argument("--days", type=int, default=7)
     ap.add_argument("--min-likes", type=int, default=DEFAULT_MIN_LIKES)
+    ap.add_argument("--min-likes-ja", type=int, default=20, help="lang:ja 窓の閾値（日本語相場は低め）")
     ap.add_argument("--per-query", type=int, default=8)
+    ap.add_argument("--no-ja-split", action="store_true", help="lang:ja 別窓を無効化")
+    ap.add_argument("--refetch-cap", type=int, default=8, help="空本文の個別再取得の上限件数")
     ap.add_argument("--profile", default="x_profiles/maaaki")
     ap.add_argument("--output-dir", default="/app/output/grok_twittora")
     args = ap.parse_args()
@@ -96,9 +212,15 @@ def main() -> int:
     until = args.until or now.strftime("%Y-%m-%d")
     since = args.since or (now - timedelta(days=args.days)).strftime("%Y-%m-%d")
 
+    # タスク表: (query, min_likes, lang)
+    tasks: list[tuple[str, int, str | None]] = [(q, args.min_likes, None) for q in args.queries]
+    if not args.no_ja_split:
+        tasks += [(q, args.min_likes_ja, "ja") for q in JA_SPLIT_QUERIES if q in args.queries]
+
     cookies = fetch_bookmarks.load_cookies(args.profile)
-    print(f"=== X Search Collect (@twittora_・login DOM 版) ===")
-    print(f"queries: {len(args.queries)}, window: {since}..{until}, min_likes: {args.min_likes}")
+    print("=== X Search Collect (@twittora_・login DOM v2) ===")
+    print(f"tasks: {len(tasks)} (global {len(args.queries)} + ja {len(tasks)-len(args.queries)}), "
+          f"window: {since}..{until}, min_likes: {args.min_likes}/{args.min_likes_ja}(ja)")
 
     from playwright.sync_api import sync_playwright
 
@@ -107,28 +229,49 @@ def main() -> int:
     pw = browser = context = None
     try:
         pw = sync_playwright().start()
-        browser = pw.chromium.launch(
-            headless=False, args=["--disable-blink-features=AutomationControlled"]
-        )
+        browser = pw.chromium.launch(headless=False, args=["--disable-blink-features=AutomationControlled"])
         context = browser.new_context(**build_context_kwargs())
         context.add_cookies(cookies)
         page = context.new_page()
-        for i, q in enumerate(args.queries):
-            print(f"  → searching: {q!r}")
+        for i, (q, ml, lang) in enumerate(tasks):
+            label = f"{q!r}" + (f" [lang:{lang} min:{ml}]" if lang else "")
+            print(f"  → searching: {label}")
             try:
-                rows = collect_query(page, q, since, until, args.min_likes, args.per_query)
+                rows = collect_query(page, q, since, until, ml, args.per_query, lang)
             except LoginWallError as exc:
                 print(f"  ✗ {exc}", file=sys.stderr)
                 wall_errors += 1
                 break  # 壁が出たら即停止（アカウント保護）
-            except Exception as exc:  # goto タイムアウト等はクエリ単位 fail-soft（2026-07-19 修理）
-                print(f"  ✗ {q!r} 失敗（スキップ）: {type(exc).__name__}: {str(exc)[:80]}", file=sys.stderr)
+            except Exception as exc:
+                print(f"  ✗ {label} 失敗（スキップ）: {type(exc).__name__}: {str(exc)[:80]}", file=sys.stderr)
                 time.sleep(random.uniform(5.0, 10.0))
                 continue
             print(f"    got {len(rows)}")
             all_rows.extend(rows)
-            if i < len(args.queries) - 1:
+            if i < len(tasks) - 1:
                 time.sleep(random.uniform(*QUERY_PACING))
+
+        # id 横断 dedupe（likes の大きい記録を残す）
+        by_id: dict[str, dict] = {}
+        for r in all_rows:
+            prev = by_id.get(r["id"])
+            if prev is None or r["likes"] > prev["likes"] or (not prev.get("content") and r.get("content")):
+                if prev and prev.get("content") and not r.get("content"):
+                    r["content"] = prev["content"]
+                by_id[r["id"]] = r
+        deduped = list(by_id.values())
+
+        # P1: 空本文の隔離と救済（likes 上位のみ・cap つき）
+        empties = sorted((r for r in deduped if not r["content"]), key=lambda r: r["likes"], reverse=True)
+        refetched = 0
+        for r in empties[: args.refetch_cap]:
+            text = refetch_content(page, r["url"])
+            if text:
+                r["content"] = text
+                r["content_refetched"] = True
+                refetched += 1
+        if empties:
+            print(f"  空本文: {len(empties)} 件（個別再取得で {refetched} 件救済）")
     finally:
         for closer in (context, browser):
             try:
@@ -140,15 +283,7 @@ def main() -> int:
         except Exception:
             pass
 
-    # id 横断 dedupe
-    seen, deduped = set(), []
-    for r in all_rows:
-        if r["id"] in seen:
-            continue
-        seen.add(r["id"])
-        deduped.append(r)
     print(f"\nTotal: {len(all_rows)} fetched, {len(deduped)} unique")
-
     if not deduped:
         if wall_errors:
             print("ERROR: ログイン壁で停止。Cookie 更新（refresh-x-cookies）を確認", file=sys.stderr)
@@ -156,35 +291,51 @@ def main() -> int:
         print("0件（窓内に閾値超えなし）。空ファイルは書かない")
         return 0
 
+    # P1: 完全性セルフチェック
+    valid = [r for r in deduped if r["content"]]
+    quarantined = [r for r in deduped if not r["content"]]
+    # ja 判定はクエリ由来を優先（X が日本語原文を英訳表示するケースを実測 2026-07-19・原文取得は次回改善）
+    ja_count = sum(1 for r in valid if "lang:ja" in r.get("query", "") or _JA_RE.search(r["content"]))
+    views_cov = sum(1 for r in deduped if r["impressions"] > 0)
+    empty_rate = len(quarantined) / len(deduped)
+    print(f"  self-check: valid={len(valid)} quarantined={len(quarantined)} "
+          f"ja={ja_count} views_coverage={views_cov}/{len(deduped)}")
+    if empty_rate > 0.2:
+        print(f"WARNING: 空本文率 {empty_rate:.0%} が閾値20%超（DOM 抽出の劣化を疑う）", file=sys.stderr)
+
     captured = now.isoformat()
     for r in deduped:
-        r.setdefault("display_name", "")
-        r.setdefault("retweets", 0)
-        r.setdefault("replies", 0)
         r["captured_at"] = captured
-        r["collector"] = "x_search_dom"  # grok 版と区別（impressions=0 は未計測の意）
+        r["collector"] = "x_search_dom_v2"
+        if not r["content"]:
+            r["content_missing"] = True  # 隔離マーク（分析からは除外・URL 実在）
 
     today = now.date().isoformat()
     out_dir = Path(args.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     jsonl_path = out_dir / f"grok-twittora-{today}.jsonl"
     with open(jsonl_path, "w", encoding="utf-8") as f:
-        for r in deduped:
+        for r in sorted(deduped, key=lambda x: x["likes"], reverse=True):
             f.write(json.dumps(r, ensure_ascii=False) + "\n")
     md_path = out_dir / f"grok-twittora-{today}.md"
     lines = [
         "---",
         f"collected_at: {today}",
         f"entries: {len(deduped)}",
+        f"valid: {len(valid)}",
+        f"quarantined_empty: {len(quarantined)}",
+        f"ja_count: {ja_count}",
+        f"views_coverage: {views_cov}",
         f"window: {since}..{until}",
-        'source: "x_search_collect_twittora.py (login DOM・impressions未計測)"',
+        'source: "x_search_collect_twittora.py v2 (login DOM・aria正確指標)"',
         "---",
         "",
-        f"# バズ収集 {today}（ログイン検索版・{len(deduped)}件）",
+        f"# バズ収集 {today}（v2・{len(deduped)}件 / 有効{len(valid)}・ja{ja_count}）",
         "",
     ]
-    for r in sorted(deduped, key=lambda x: x.get("likes", 0), reverse=True):
-        lines.append(f"- **{r['likes']:,} likes** @{r['author']} ({r.get('posted_at','')}): {r['content'][:80]} … {r['url']}")
+    for r in sorted(valid, key=lambda x: x["likes"], reverse=True):
+        er = f" ER{r['likes']/r['impressions']*100:.1f}%" if r["impressions"] else ""
+        lines.append(f"- **{r['likes']:,}L** {r['impressions']:,}v{er} @{r['author']} ({r['posted_at']}): {r['content'][:70]} … {r['url']}")
     md_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     print(f"✓ {jsonl_path}\n✓ {md_path}")
     return 0
