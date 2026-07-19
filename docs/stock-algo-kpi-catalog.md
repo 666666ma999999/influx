@@ -2531,6 +2531,42 @@ universe(TOP500)・月初第1営業日算出・上位50・同値=平均順位・
 **台帳**: 2行（kpi_name= tob_candidate_score_v1 / tob_candidate_score_v2） — v1: **verdict=invalidated・invalidation_reason=specification_unit_mismatch**（✅追記済み2026-07-18・110→111行目）（既存台帳消費者の互換性のためverdict値は一般語・α非消費・歴史的分母算入） /
 v2: verdict=reference_observation（(i)完了後に追記・Codexレビュー提示のフィールドテンプレート準拠・artifacts hash付き・forward_status=prepared_not_active明記）。
 
+### §7-AG 事前登録（❄️凍結 2026-07-19・Codex R3 GO［NO-GO×2→GO］・実行はearnings_calendarフェッチ安定稼働+実装レビュー後・explicit_no_scheduleフィールド値は実schema確認後に追記hash凍結）: 決算跨ぎ回避オーバーレイの前向きシャドー観察
+
+**出自**: 第5R裁定③（2026-07-19）。新Standard軸=決算発表予定日API（前向き専用・遡及不可）による下方保護の非介入観察。
+
+**§7-E B1との整理（訂正済み）**: B1は過去開示間隔proxyによる「決算接近サブセット」入口フィルタで、n=16<20により自動degradingとなった。真の予定日との誤差量およびdegradingへの寄与は**未測定であり、proxy誤差を敗因とは断定しない**。本観察はestimandと介入点が異なる（B1=champion母集団の入口フィルタ「接近は増幅要因か」／本件=fins系7系統の入口不変のexitオーバーレイ「決算を跨がないことで左裾を抑えられるか」）。fingerprint上は近縁だが非介入観察のため選抜母集団に入らない。
+
+**性質**: 非介入シャドー観察（alpha_consumed=false・正式verdictなし・台帳1行）。**既走行13本の定義・執行・台帳は一切変更しない**。
+
+**対象（固定・実名列挙・新規fins系KPIの自動追加なし）**: sue_x_above200 / sue_beat / margin_expand_yoy / sales_beat / guidance_fy_strong / cfo_margin_improve / earnings_spillover（注: earnings_spilloverは同業他社決算起点＝「fins入力を使う7系統」としての包含。登録時にwatchlist/config hashを保存）。
+
+**シャドー規則（事前回避+保有中exitの複合・単一凍結）**:
+- E=次回決算発表予定日（下記PIT規則で確定）
+- **E=エントリー日**: エントリー回避と見なし shadow_return=0%・コスト0・状態=shadow_no_entry
+- **EがD+2〜20営業日後の窓内**: Eの直前営業日（J-Quants取引カレンダーで機械決定）の調整済み終値でクローズしたと見なす（entry価格=既存confirmed取引の実エントリー価格を再利用・往復コスト込み・調整係数は既存Canonical）。exit日が既存primary exit日以降ならオーバーレイ非適用（=実リターン）
+- **窓内にEなし（explicit_no_scheduleのみ）**: shadow=実リターン（primary=nostop・対照の事後差し替え禁止）
+- 価格欠損・取引停止: 代替価格探索禁止・exit_price_missing としてskip記録
+- 実取引がentry_missingならshadowも計算しない
+- -8%タッチ判定: shadow側=entry〜shadow exitの安値のみ／actual側=entry〜primary exit。+20%到達=§0定義（20営業日後終値）に一致
+
+**PITスナップショット規則**: 候補=snapshot_fetched_at ≤ シグナル確定時刻 かつ as_of_date ≤ target_signal_date のearnings_calendarファイルのみ→候補中の最大fetched_atを一意選択（同時刻複数は内容hash一致要求・不一致FATAL）。各シャドー行にsnapshot path/取得時刻/as-of/ファイルhashを保存。後日の予定日変更はシャドー計算を変更せず変更履歴ファイルにのみ記録。再計算時も当初snapshot hashを再使用（最新への差し替え禁止）。状態分類（判定は以下の優先順位で機械的に・黙った補正禁止）: (1) **snapshot_missing**=cutoffを満たすsnapshotが0件→skip (2) **snapshot_stale**=選択snapshotのas_of_dateがtarget_signal_dateの**5営業日超前**→skip (3) **code_not_found**=snapshot正常だが対象コード行なし→skip (4) **invalid_schedule**=日付parse不能・Eがシグナル日以前・同一コード複数行でE不一致→skip (5) **explicit_no_schedule**=対象コード行が存在しAPIの予定日未定を示す公式フィールド値（実schema確認後に値を追記凍結・確認までは本状態を発生させずskip側に倒す）→**これのみ「窓内Eなし」扱い**（shadow=実リターン） (6) **scheduled**=異常なく有効Eが一意。同一コード複数行でEが一致する場合は1行として扱う。
+
+**12ヶ月起草権ゲート（単一・機械的・変更/延長/指標選択の禁止）**:
+- **有効pair**=shadow_returnとactual_returnの両方が確定したpaired観測（skipは含めない・理由別件数と適用率を必須報告）。月次符号・累計・分位点・右裾喪失率は全て有効pairのみで計算
+- 観測単位=confirmedシグナルごとのpaired差（shadow_return − actual_primary_return[nostop]）・7系統プール
+- **最低標本（未達=ゲート不通過・延長禁止）**: 有効pairが1件以上ある月≥**9**／12ヶ月累計有効pair≥**30**／actual+20%到達件数=0なら右裾条件は評価不能として不通過
+- 通過条件（全て必須）: ①有効pair≥1の月のうち月次paired平均差>0の月が**75%以上** ②12ヶ月累計paired平均差>0 ③shadowの下位10%分位点（プール有効pair・補間なし下側実値）がactualより悪化しない ④右裾喪失率（actualで+20%到達した有効pairのうちshadowで+20%未満になる比率）**≤20%**
+- KPI別結果は診断のみ（KPI選抜・個別昇格に不使用）・有効pair0件月は分母外（月数と件数を報告）
+- 12ヶ月終了前の仕様変更・KPI別採否・執行変更・ゲート不通過後の期間延長再判定は禁止
+- 通過で得るのは「オーバーレイ込み定義を**新規事前登録として起草する権利**」のみ（自動昇格なし）。**観察に使った12ヶ月を将来の正式検定標本に再利用しない**
+
+**非介入の三層保証**: ①コード=daily_screen.pyの発火/watchlist/ledger/exit/表示を不変更・シャドー計算は既存ledger追記完了後のread-only別段・シャドー失敗は既存13本の実行/終了コード/ledgerに影響しない ②表示=シャドー情報をpaper watchlist売買判断欄に出さない ③運用=12ヶ月終了前にシャドー集計を根拠とするKPI停止・サイズ変更・裁量exitを禁止。シャドーファイルから実績ファイルへの逆書込み禁止・既存13本の正式判定母集団にshadow returnを混ぜない。
+
+**記録・証跡**（§7-AE-v2と同一の恒久規則を明記適用）: `data/monitoring/earnings_overlay/run_log.jsonl`（genesis prev_hash=64個の"0"・canonical JSON=UTF-8キー昇順separators(",",":")・row_hash=SHA256(canonical・row_hash除外)・append前に全chain再検証[各行の自己hash再計算+連結]不一致FATAL・flock+fsync）。月次CSV=`shadow_YYYYMM.csv` をtmp書込み→原子rename→hash記録。同月成功済みは全hash一致=no-op/不一致=FATAL。行内容=snapshot hash・watchlist hash・overlayコードhash・入力ledger hash・対象/適用/skip理由別件数・出力hash・失敗もstatus=failed記録。earnings_calendar欠測日はskip記録（FATALにしない）。
+
+**台帳**: 開始時1行 — kpi_name=earnings_avoidance_overlay_shadow_v1・verdict=reference_observation・alpha_consumed=false・historical_denominator_included=true・formal_judgment=false・forward_status=shadow_observation・prospective_start_date/fixed_window_start/end（開始日+12ヶ月・後日変更不可）・対象7KPI・仕様/コード/schema hash。
+
 ### §7-AF 第41周: ツイート由来ファクトリー第2バッチ batch_v2t（✅実行完了 2026-07-18・**全4セル発見段fail**・凍結2026-07-17・Codex R4 GO［NO-GO×3→GO］）
 
 **結果（2026-07-18実行・report=output/kpi_screening/batch_v2t/report.md）**: eligible 4/4（n=4160〜4951・38ヶ月）・**EV全セル負**（-0.02%〜-0.33%）・片側p=0.505〜0.661・**BH(q=0.10)通過0・BY通過0・代表候補0→確認段なし**。lift点推定は1.22〜1.37と1超（+20%到達率はベース比で高い）だがEV負＝左裾が重く平均では負ける形。台帳: screening_batches.jsonl 224→228行・trials.jsonl 109→110行（メタ1行のみ・**分母コストは最小の+1**）。Jaccard: k同一ペア0.90/0.97・k跨ぎ0.05。**F03「名人の押し目買い」は歴史データで正直に棄却**（テクニカル価格系の事前確率低の実績に整合）。凍結仕様・実装・ガード（sha照合/replay/二重append）は全て設計どおり機能した。
