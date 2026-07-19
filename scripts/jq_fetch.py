@@ -24,6 +24,21 @@
               〔公表日〕パラメータで市場全銘柄を1リクエストで取得。レスポンス自体にDiscDate（公表日）
               フィールドを含むため使用可能日はDiscDate+1営業日で確定できる）
 
+以下4種は 2026-07-19 追加（Standard契約済み・未取得エンドポイントの取得。日次ジョブには未組込・
+--only での個別実行専用）:
+    margin_alert     日々公表信用取引残高 -> data/jquants/margin_alert/YYYYMMDD.json.gz（営業日ごと。
+                      date単独指定で日々公表銘柄〔全銘柄ではない〕の当日分を1リクエストで取得）
+    short_ratio       業種別空売り比率     -> data/jquants/short_ratio/YYYYMMDD.json.gz（営業日ごと。
+                      date単独指定で33業種分を1リクエストで取得）
+    investor_types    投資部門別情報       -> data/jquants/investor_types/YYYYMMDD.json.gz（週次。
+                      ファイルキーはレスポンスの EnDate〔週末日〕。API自体は date 単独指定ではなく
+                      from/to の範囲クエリのみに対応し、from/to は PubDate〔公表日〕でフィルタされる
+                      〔実測で確認: 週末日そのものを指定しても0件、公表日を指定すればヒットする〕。
+                      年単位でチャンク取得し、レスポンスを EnDate ごとに分割して週次ファイルに保存する）
+    earnings_calendar 決算発表予定日      -> data/jquants/earnings_calendar/YYYYMMDD.json.gz（取得日
+                      スタンプ。直近データのみ提供され過去日を遡って取得できない前向き専用エンドポイント
+                      のため、対象営業日ではなく「取得を実行した日」をファイルキーとする）
+
 依存はすべて標準ライブラリ。pip install は一切不要。
 
 Usage:
@@ -383,6 +398,21 @@ def month_end_business_days_in_range(calendar_days: list[tuple[str, str]], start
     return [d for d in month_ends if start <= d <= end]
 
 
+def month_start_business_days_in_range(calendar_days: list[tuple[str, str]], start: str, end: str) -> list[str]:
+    """各月の最初の営業日を全カレンダーから導出し、[start, end] 内のものを日付昇順で返す。
+
+    month_end_business_days_in_range と対称の実装（§7-AE TOB候補スコアの「月初第1営業日算出」用）。
+    """
+    business_days = [d for d, h in calendar_days if h in BUSINESS_HOLDIV]
+    first_of_month: dict[str, str] = {}
+    for d in business_days:
+        ym = d[:6]
+        if ym not in first_of_month or d < first_of_month[ym]:
+            first_of_month[ym] = d
+    month_starts = sorted(first_of_month.values())
+    return [d for d in month_starts if start <= d <= end]
+
+
 def week_end_business_days_in_range(calendar_days: list[tuple[str, str]], start: str, end: str) -> list[str]:
     """各暦週（月曜起点のISO週）の最終営業日を全カレンダーから導出し、[start, end] 内のものを日付昇順で返す。
 
@@ -497,6 +527,143 @@ def run_daily_snapshot(
             print(f"進捗: {idx}/{total} ({pct:.1f}%)")
 
 
+# --- 追加4エンドポイント（2026-07-19・日次ジョブ未組込） --------------------
+
+
+def fetch_investor_types_year_chunk(y_start: str, y_end: str, api_key: str) -> dict:
+    """investor-types を from/to（PubDateの範囲）でチャンク取得する。
+
+    実測: 2023年通年（365日レンジ）で208件・pagination_keyなしで完結。10年分でも
+    年単位チャンクなら1リクエストあたりの負荷は軽微なため、年単位を基本粒度とする。
+    """
+    return fetch_paginated("/v2/equities/investor-types", {"from": y_start, "to": y_end}, api_key)
+
+
+def run_investor_types_backfill(start: str, end: str, api_key: str, run_id: str) -> None:
+    """investor-types を年単位でチャンク取得し、EnDate（週末日）ごとに分割して週次ファイル保存する。
+
+    investor-types は bars/margin/shortsale のような「date単独指定で当日スナップショット」
+    方式に対応しておらず、from/to の範囲クエリのみを受け付ける（かつ from/to は EnDate では
+    なく PubDate でフィルタされる）ため、既存の run_daily_snapshot はそのまま流用できない。
+    年単位でチャンク取得し、レスポンス中の EnDate を使って週次ファイルに分割保存する。
+
+    冪等性は「保存済みファイルは上書きしない」という週単位のチェックのみで担保する
+    （年単位でAPI呼び出し自体を省略する高速パスは意図的に持たない）。実測で
+    PubDate は EnDate の約2週間後になる（例: EnDate=2025-12-26/30 の週は
+    PubDateが2026年1月にずれ込み、2026年のクエリで初めて返る）ことを確認しており、
+    「年境界をまたいで週がずれ込む」ため、EnDateから逆算した期待週リストと実際に
+    APIが返す週集合が年チャンク単位では一致しない。この境界ズレを期待値側で
+    正しく補正するより、常に年単位でAPIを1回叩いて実データのEnDateで判定する方が
+    安全（10年分でも年10回程度のAPI呼び出しコストは軽微）。
+    """
+    path_key = "investor_types"
+    out_dir = DATA_ROOT / path_key
+
+    known_earliest: Optional[str] = None
+    start_year = int(start[:4])
+    end_year = int(end[:4])
+    for year in range(start_year, end_year + 1):
+        y_start = max(f"{year}0101", start)
+        y_end = min(f"{year}1231", end)
+        if y_start > y_end:
+            continue
+        ts = now_jst().isoformat()
+
+        if known_earliest and y_end < known_earliest:
+            print(f"WARN: [investor_types] {year}年 プラン制限範囲未満のためスキップ", file=sys.stderr)
+            append_log({
+                "run_id": run_id, "ts": ts, "kind": "investor_types", "date": str(year),
+                "status": "skipped_plan_limit", "count": None, "file": None, "error": None,
+            })
+            continue
+
+        try:
+            resp = fetch_investor_types_year_chunk(y_start, y_end, api_key)
+        except PlanLimitError as e:
+            if e.earliest_date is None:
+                print(f"WARN: [investor_types] {year}年 プラン制限だが開始日抽出失敗（{e}）。この年はスキップ", file=sys.stderr)
+                append_log({
+                    "run_id": run_id, "ts": ts, "kind": "investor_types", "date": str(year),
+                    "status": "skipped_plan_limit", "count": None, "file": None, "error": str(e),
+                })
+                continue
+            known_earliest = e.earliest_date
+            y_start = max(known_earliest, y_start)
+            if y_start > y_end:
+                append_log({
+                    "run_id": run_id, "ts": ts, "kind": "investor_types", "date": str(year),
+                    "status": "skipped_plan_limit", "count": None, "file": None, "error": str(e),
+                })
+                continue
+            print(
+                f"WARN: [investor_types] {year}年 プラン制限（{e}）。開始日を {known_earliest} に繰り上げてリトライ",
+                file=sys.stderr,
+            )
+            resp = fetch_investor_types_year_chunk(y_start, y_end, api_key)
+        except AuthError as e:
+            append_log({
+                "run_id": run_id, "ts": ts, "kind": "investor_types", "date": str(year),
+                "status": "auth_error", "count": None, "file": None, "error": str(e),
+            })
+            fatal_auth_error(e)
+            return  # pragma: no cover — fatal_auth_error は sys.exit(2) する
+        except RuntimeError as e:
+            print(f"WARN: [investor_types] {year}年 取得失敗（次回再実行で再取得されます）: {e}", file=sys.stderr)
+            append_log({
+                "run_id": run_id, "ts": ts, "kind": "investor_types", "date": str(year),
+                "status": "error", "count": None, "file": None, "error": str(e),
+            })
+            continue
+
+        by_week: dict[str, list] = {}
+        for rec in resp["data"]:
+            week_key = rec["EnDate"].replace("-", "")
+            by_week.setdefault(week_key, []).append(rec)
+
+        saved, skipped = 0, 0
+        for week_key, recs in sorted(by_week.items()):
+            week_path = out_dir / f"{week_key}.json.gz"
+            if week_path.exists():
+                skipped += 1
+                continue
+            write_json_gz(week_path, {"data": recs})
+            saved += 1
+        print(f"[investor_types] {year}年: {len(by_week)} 週分取得（新規保存 {saved}・既存スキップ {skipped}）")
+        append_log({
+            "run_id": run_id, "ts": ts, "kind": "investor_types", "date": str(year),
+            "status": "saved", "count": len(resp["data"]), "file": f"{path_key}/<週次分割・{saved}件保存>",
+            "error": None,
+        })
+
+
+def fetch_earnings_calendar(api_key: str, run_id: str) -> None:
+    """決算発表予定日を取得し、「取得を実行した日」スタンプの当日スナップショットとして保存する。
+
+    直近データのみ提供され過去日を遡っての取得はできない前向き専用エンドポイントのため、
+    対象営業日ではなく実行日をファイルキーとする（既存ならスキップ＝同日の再実行は無効）。
+    """
+    today_str = now_jst().strftime("%Y%m%d")
+    path = DATA_ROOT / "earnings_calendar" / f"{today_str}.json.gz"
+    if path.exists():
+        print(f"[earnings_calendar] 本日分は既に取得済みのためスキップ: {path}")
+        append_log({
+            "run_id": run_id, "ts": now_jst().isoformat(), "kind": "earnings_calendar", "date": today_str,
+            "status": "skipped_exists", "count": None, "file": None, "error": None,
+        })
+        return
+
+    resp = fetch_paginated("/v2/equities/earnings-calendar", {}, api_key)
+    count = len(resp["data"])
+    if count == 0:
+        print("WARN: [earnings_calendar] 空レスポンス", file=sys.stderr)
+    write_json_gz(path, resp)
+    print(f"[earnings_calendar] saved: {count} 件 -> {path.relative_to(PROJECT_ROOT)}")
+    append_log({
+        "run_id": run_id, "ts": now_jst().isoformat(), "kind": "earnings_calendar", "date": today_str,
+        "status": "saved", "count": count, "file": str(path.relative_to(PROJECT_ROOT)), "error": None,
+    })
+
+
 # --- --status ----------------------------------------------------------------
 
 
@@ -556,8 +723,15 @@ def main() -> int:
     parser.add_argument("--start", default=DEFAULT_START, help=f"取得開始日 YYYYMMDD（デフォルト {DEFAULT_START}）")
     parser.add_argument("--end", default=None, help="取得終了日 YYYYMMDD（デフォルト今日）")
     parser.add_argument(
-        "--only", choices=["calendar", "bars", "master", "topix", "fins", "margin", "shortsale"],
-        help="取得対象を1種類に限定（省略時は calendar→master→topix→bars→fins→margin→shortsale の順で全て）",
+        "--only", choices=[
+            "calendar", "bars", "master", "topix", "fins", "margin", "shortsale",
+            "margin_alert", "short_ratio", "investor_types", "earnings_calendar",
+        ],
+        help=(
+            "取得対象を1種類に限定（省略時は calendar→master→topix→bars→fins→margin→shortsale の"
+            "順で全て。margin_alert/short_ratio/investor_types/earnings_calendar は日次ジョブ未組込のため"
+            "--only での個別指定が必須）"
+        ),
     )
     parser.add_argument("--status", action="store_true", help="期待件数 vs 取得済み件数を表示して終了")
     args = parser.parse_args()
@@ -618,6 +792,21 @@ def main() -> int:
                     "shortsale", "shortsale", "/v2/markets/short-sale-report", dates, api_key, run_id,
                     param_name="disc_date",
                 )
+            elif target == "margin_alert":
+                calendar_days = load_calendar_days(api_key, run_id)
+                dates = business_days_in_range(calendar_days, start, end)
+                print(f"[margin_alert] 対象営業日 {len(dates)} 件（date単独指定で日々公表銘柄分を1リクエスト取得）")
+                run_daily_snapshot("margin_alert", "margin_alert", "/v2/markets/margin-alert", dates, api_key, run_id)
+            elif target == "short_ratio":
+                calendar_days = load_calendar_days(api_key, run_id)
+                dates = business_days_in_range(calendar_days, start, end)
+                print(f"[short_ratio] 対象営業日 {len(dates)} 件（date単独指定で33業種分を1リクエスト取得）")
+                run_daily_snapshot("short_ratio", "short_ratio", "/v2/markets/short-ratio", dates, api_key, run_id)
+            elif target == "investor_types":
+                print(f"[investor_types] 対象期間 {start}〜{end}（年単位チャンク取得・週次ファイル分割保存）")
+                run_investor_types_backfill(start, end, api_key, run_id)
+            elif target == "earnings_calendar":
+                fetch_earnings_calendar(api_key, run_id)
         except AuthError as e:
             append_log({
                 "run_id": run_id, "ts": now_jst().isoformat(), "kind": target, "date": None,
