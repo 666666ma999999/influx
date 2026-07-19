@@ -680,6 +680,12 @@
 - **Step0反証テスト✅（結論: ソース律速説は棄却）**: 558候補の三重フィルタ全数判定→**EXECUTABLE_NEW=0・UNLOCK_SOON=0**（GOAL_MISMATCH 298/NEARBY_REENTRY 176/DEFINITION_INCOMPLETE 48/DATA_FAIL 36・正本=`data/masters_harvest_20260717/step0_result.json`）。**事前ルールどおりX検索は「データ軸アンロック時（2026-09日証金・8月TDnet判断・指数カレンダー収集時）の単発・軸ターゲット検索」に格下げ確定**。単独のinfluencer採掘パイプラインは作らない
 - **含意**: 供給源の本命は変わらず「新データ軸」= §7-AE TOB実装（筆頭）→ 8月TDnet判断 → 9月日証金 → 10月インフル勝率
 
+### 2026-07-19 第4ラウンド敵対レビュー: 「勝てる仮説をもっと出す方法」→ イベント軸一点投資へ
+- **レビュー（A4=Fable別文脈/B4=Codex・強収束）**: 律速は仮説の量でなく「検出力予算×肥沃な機序タイプ」。未採掘はイベント系のみ（自社株買い決議=本命・指数入替=無料直交・月次売上/分割/PO/決算×空売り集中等のB4テーブル16領域）。テクニカル/季節/マイクロ構造=ゼロ弾断定。A4大型提案=online-FDR(alpha-investing)切替（現行FWERは候補増で検出力構造崩壊・スクリーニングはBH/BYなのに正式判定だけFWERは内部矛盾）
+- **ユーザー裁定5件（2026-07-19）**: ①R4-1〜6全部前提 ②TDnet「8月待ち」撤回→無料監査2本（A=EDINET自己株券proxyの+20%濃縮一次チェック[リターン開封=購入判断用の宣言済み下見・BL-2将来登録時に開封済みと明記義務] / B=仕様・件数監査[family n≥100見込み・PIT可・非近傍3本以上]）→両合格で即購入 ③指数入替カレンダー収集着手（BL-3） ④online-FDR切替を検討起案（→Codex敵対レビュー→ユーザー最終承認） ⑤10本=10独立family明記（目標再定義はせず・cockpitに注記済み・catalog条文化はFDR起案と同時に§6付記II改定内で）
+- **実行状態**: TDnet監査A+B=着手（アナリスト委譲） / 指数カレンダー収集=次タスク（設計→builder） / FDR起案=次タスク（team-lead起草→Codexレビュー）
+- decisions.md記録済み（2026-07-19エントリ）
+
 ### Avoid Repeating
 - `WebFetch` で `https://jpx-jquants.com/pricing` と `https://jpx.gitbook.io/j-quants-ja/` を試したが、どちらもJavaScriptレンダリングのSPAで実体コンテンツが取得できず「/ja」のみ返ってきた。**同じURLへの再WebFetchは無意味**。
 - `mcp__firecrawl__firecrawl_scrape` も同ページで "Request failed while trying to scrape" のエラーで失敗した。原因未特定のまま同一呼び出しを繰り返さない。
