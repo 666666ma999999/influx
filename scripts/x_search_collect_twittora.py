@@ -7,7 +7,8 @@
   P2 指標の完全取得: カードの [role=group] aria-label から replies/reposts/likes/bookmarks/views を
      **正確な生数値**で抽出（従来の「impressions は取れない」は誤った前提だった＝実機診断で確認）
   P3 lang:ja 別窓: 日本語比重の高い5クエリを lang:ja + 低め閾値で追加収集（英語大手の top 独占対策）
-  既知課題: X が日本語原文を英訳して表示するケースあり（Accept-Language:ja でも再現・2026-07-19 実測）
+  既知課題→解消: X が日本語原文を英訳して表示する件は、収集アカウントの表示言語を ja へ変更して解消
+  （2026-07-19 夜・検索3クエリ11/11件が日本語原文と実測。ja 判定のクエリ由来は保険として維持）
   → ja 判定はクエリ由来で行う。原文取得（Show original 相当）は次回改善
 
 背景: Grok x_search 版が xAI クレジット枯渇で停止（2026-07-01 確定判断: 第一選択は Cookie 自動収集）。
@@ -294,7 +295,7 @@ def main() -> int:
     # P1: 完全性セルフチェック
     valid = [r for r in deduped if r["content"]]
     quarantined = [r for r in deduped if not r["content"]]
-    # ja 判定はクエリ由来を優先（X が日本語原文を英訳表示するケースを実測 2026-07-19・原文取得は次回改善）
+    # ja 判定はクエリ由来を優先（英訳表示問題はアカウント表示言語 ja 化で解消済み 2026-07-19・本判定は保険で維持）
     ja_count = sum(1 for r in valid if "lang:ja" in r.get("query", "") or _JA_RE.search(r["content"]))
     views_cov = sum(1 for r in deduped if r["impressions"] > 0)
     empty_rate = len(quarantined) / len(deduped)
