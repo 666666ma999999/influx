@@ -121,20 +121,25 @@ REFERENCE_ALPHA = PRE_COHORT_ALPHA
 ALPHA_UNDEFINED_SYSTEMS: tuple[str, ...] = (
     "volshock_5x",
     "volshock_x_above200",
-    "volshock_x_above200_quiet",
     "shortcover_x_bear",
 )
 ALPHA_UNDEFINED_NOTE = (
-    "陣別alpha-spending導入(2026-07-13・catalog L1769-1774)より前に登録され、catalog上に"
-    "個別のforward-test α明記がない。SUEペア(同時期登録)にはcatalog L1112-1118の明示基準"
-    "(95%CI下限>0)があるためα=0.025を採用しているが、本系統には同水準の根拠となる明示基準が"
-    "catalog上に見当たらないため、正式なα確定まで本表ではα=N/A・power=N/Aとする"
-    "（参考として片側α=0.025を仮定した場合の感度は本レポート§4参照。正式な凍結ルールではない）"
+    "§6付記II（2026-07-16凍結）の正式判定対象列挙で明示的に『対象外（比較対照・α設定なし）』と"
+    "宣言されている3系統。旧版は『α未確定』と表現していたが、正確には対照であり正式判定を行わない"
+    "（正式なα確定待ちではない）。2026-07-21 §6付記III A-3の保守指示で分類の正本=§6付記IIに整合。"
+    "参考として片側α=0.025を仮定した場合の感度は本レポート§4参照（正式な凍結ルールではない）"
 )
 
 ALPHA_TABLE: dict[str, tuple[float, str]] = {
     "sue_x_above200": (PRE_COHORT_ALPHA, _PRE_COHORT_NOTE_SUE),
     "sue_beat": (PRE_COHORT_ALPHA, _PRE_COHORT_NOTE_SUE),
+    "volshock_x_above200_quiet": (
+        PRE_COHORT_ALPHA,
+        "§6付記II（2026-07-16凍結）正式判定対象列挙: チャンピオン=陣別導入前登録・"
+        "本項で事前確定（SUEペアと同時期登録の同水準0.025を適用）。"
+        "旧版は『catalog上に明記なし』としてα=N/A扱いだったが、付記II凍結により正本確定"
+        "（2026-07-21 §6付記III A-3の保守指示で整合）",
+    ),
     "sell_reg_trigger_rebound": (0.025 / 5, "第1陣5系統・catalog L1772: 0.025/5=α0.005"),
     "turnover_rank_surge": (0.025 / 5, "第1陣5系統・catalog L1772: 0.025/5=α0.005"),
     "margin_expand_yoy": (0.025 / 5, "第1陣5系統・catalog L1772: 0.025/5=α0.005"),
