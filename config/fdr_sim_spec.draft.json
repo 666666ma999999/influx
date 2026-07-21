@@ -1,12 +1,14 @@
 {
   "_meta": {
-    "status": "FROZEN_CANDIDATE - PENDING CODEX R3 GO (2026-07-21 R2修正版)",
+    "status": "FROZEN",
     "warning": "採否基準・全armパラメータの数値は本実行前に確定済み（smoke以外の結果未閲覧）。Codex R3 GOで凍結（status=FROZENへ遷移）・以後の変更は起案放棄と同義。本版は凍結審査R1（Codex・threadId 019f84eb・9ブロッカー+MINOR5）→凍結審査R2（残3ブロッカー+MINOR4）のNO-GOを受けteam-lead確定設計判断で全件修正済み（B1〜B9対応・R2-1〜R2-3対応はscripts/fdr_regime_sim.py冒頭docstring参照）。",
     "frozen_decisions": "①A1 cohort_size=3で凍結（陣形成の将来ルール未定というモデル化限界はレポートに明記。cohort_size∈{1,5}は感度として並走・gateはcohort_size=3のみ使用） ②A2 W0=q/2=0.05・q=0.10（LORD標準）・γ=Ramdas et al. 2017 LORD++の閉形式（B4確定・poly1.6簡略化は廃止・R2-2確定で正規化に解析的尾部積分を追加） ③A3 λ_s=0.5・γ系列はA2と同一のB4確定閉形式を流用（原論文でγ系列の別途指定なし） ④A4 n_families=4（n_families∈{2}を感度として並走・gateはn_families=4のみ使用） ⑤n_sim=5000・seed=20260721（B2確定・精度確保のため2000→5000へ増） ⑥gate1の同時信頼保証対象=4採用候補arm×22セル=88主張・臨界値z_{0.05/88}を実行時に厳密計算（R2-1確定・旧z=2.6383のハードコードは廃止）。",
     "purpose": "online-FDR切替起案v2 §6 工程1（5-arm統計体系比較シミュレーション仕様）のドラフト。工程2ハーネス骨格（scripts/fdr_regime_sim.py）の入力。",
     "source_doc": "docs/fdr-switch-proposal.md §6（行81-106）+ 冒頭R1レビュー要旨（行1-9）+ 凍結審査R1ブロッカー対応（B1〜B9・2026-07-21）+ 凍結審査R2ブロッカー対応（R2-1〜R2-3・MINOR4件・2026-07-21）",
     "created": "2026-07-21",
-    "excludes": "既走行13本の競走は一切含めない（forward-only新規登録のみ・グランドファザリング§3）。台帳(data/kpi_trials/*)・config/paper_watchlist.json・catalogは本specから一切参照しない（工程2指示: 台帳/config一切不干渉）"
+    "excludes": "既走行13本の競走は一切含めない（forward-only新規登録のみ・グランドファザリング§3）。台帳(data/kpi_trials/*)・config/paper_watchlist.json・catalogは本specから一切参照しない（工程2指示: 台帳/config一切不干渉）",
+    "frozen_at": "2026-07-21",
+    "freeze_record": "Codex凍結審査 R1(9blocker)→R2(3blocker)→R3(1blocker)→R4 GO（threadId 019f84eb・「specをFROZENへ遷移させ本実行(n_sim=5000)してよい」明言）。GO後の変更はstatus 2箇所のFROZEN化のみ（数値・arm・シナリオ・ゲート・コード変更なし）。"
   },
   "seed": 20260721,
   "n_sim": 5000,
@@ -111,7 +113,7 @@
     }
   },
   "acceptance_criteria": {
-    "status": "FROZEN_CANDIDATE - PENDING CODEX GO（R3-1修正版）",
+    "status": "FROZEN",
     "warning": "本基準は数値をシミュレーション本実行の前に確定した（2026-07-21・smoke出力以外の結果は未閲覧）。本実行後の変更・追加・緩和は事後調整であり禁止。Codex GO（R3-1修正版）をもって凍結（status=FROZEN、_metaと共にFROZENへ統一遷移）・実行後は--decideによる機械適用のみ。",
     "scenario_sets": {
       "evaluable": "lambda_per_year>0 の12シナリオ（p_true 3 × lambda {5,10} × n_eff_mode 2）。lambda=0の6シナリオは候補が到着せず縮退のため全ゲートの対象外（結果は参考掲載のみ）。gate2(優越性判定)はこの12シナリオのみを使用する。",
