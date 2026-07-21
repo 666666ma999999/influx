@@ -56,8 +56,12 @@ JA_SPLIT_QUERIES = [
 ]
 
 _STATUS_ID_RE = re.compile(r"/status/(\d+)")
-# aria-label 例: "1222 replies, 1855 reposts, 15717 likes, 1387 bookmarks, 1648921 views"
+# aria-label 例(EN): "1222 replies, 1855 reposts, 15717 likes, 1387 bookmarks, 1648921 views"
+# aria-label 例(JA): "110 件の返信、169 件のリポスト、2714 件のいいね、1081 件のブックマーク、221859 件の表示"
+# 2026-07-20 収集アカウントの表示言語を ja 化（原文取得対策）→ aria も日本語になるため両対応
 _ARIA_METRIC_RE = re.compile(r"([\d,]+)\s+(replies|reply|reposts|repost|likes|like|bookmarks|bookmark|views|view)\b")
+_ARIA_METRIC_JA_RE = re.compile(r"([\d,]+)\s*件の(返信|リポスト|いいね|ブックマーク|表示)")
+_JA_KIND = {"返信": "replies", "リポスト": "retweets", "いいね": "likes", "ブックマーク": "bookmarks", "表示": "impressions"}
 _JA_RE = re.compile(r"[ぁ-んァ-ン一-龥]")
 
 
@@ -86,6 +90,8 @@ def parse_aria_metrics(aria: str | None) -> dict:
             out["bookmarks"] = v
         elif kind.startswith("view"):
             out["impressions"] = v
+    for num, kind in _ARIA_METRIC_JA_RE.findall(aria):
+        out[_JA_KIND[kind]] = int(num.replace(",", ""))
     return out
 
 
@@ -131,7 +137,8 @@ def scrape_cards_rich(page) -> list[dict]:
                 "url": url,
                 "author": author,
                 "display_name": "",
-                "content": content.strip(),
+                # U+2028/U+2029 は json.dumps 素通し + splitlines() を割る → 無害化 (2026-07-21)
+                "content": content.replace("\u2028", " ").replace("\u2029", " ").strip(),
                 "posted_at": dt_attr[:10] if dt_attr else "",
                 **metrics,
             })

@@ -1,0 +1,22 @@
+{
+  "_comment": "x-buzz ライブ・バズトレーサーのウォッチリスト（2026-07-21 裁定1/7で新設）。lane: official=公式（新投稿を速報通知=T2）/ ja=日本語バズ常連 / en=英語バズ常連。出典=バズ256件レポートの頻出著者。編集は人間・AIどちらも可（追加は1行）",
+  "handles": [
+    {"handle": "ClaudeDevs", "lane": "official"},
+    {"handle": "claudeai", "lane": "official"},
+    {"handle": "AnthropicAI", "lane": "official"},
+    {"handle": "ClaudeCode_love", "lane": "ja"},
+    {"handle": "taiyaki_ai3", "lane": "ja"},
+    {"handle": "so_ainsight", "lane": "ja"},
+    {"handle": "1stegon_ai", "lane": "ja"},
+    {"handle": "idx2718", "lane": "ja"},
+    {"handle": "igz0", "lane": "ja"},
+    {"handle": "NickADobos", "lane": "en"},
+    {"handle": "theo", "lane": "en"},
+    {"handle": "om_patel5", "lane": "en"},
+    {"handle": "AlexFinn", "lane": "en"}
+  ],
+  "rising_likes_per_hour": 30,
+  "rising_likes_per_hour_ja": 15,
+  "max_posts_per_handle": 10,
+  "official_new_within_hours": 24
+}
