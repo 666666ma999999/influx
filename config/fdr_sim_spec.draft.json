@@ -95,7 +95,7 @@
       "n_families": 4,
       "n_families_note": "モデル化限界（凍結済みの単純化）: family分割の粒度・候補→family対応ルールはproposal.mdに明記がない。本skeletonは候補をn_families個に一様ランダム割当する単純化だが、n_families=4で凍結済み（_meta.frozen_decisions④・n_families∈{2}は感度として並走）。",
       "total_budget": 0.05,
-      "total_budget_note": "DRAFT: family間の層はFWER型（Bonferroni）のため、legacy FWER予算0.05（A1と同一の歴史的総予算）を採用。family内BHのq水準はtotal_budget/n_familiesとして自動導出される。",
+      "total_budget_note": "モデル化限界（凍結済みの単純化）: family間の層はFWER型（Bonferroni）のため、legacy FWER予算0.05（A1と同一の歴史的総予算）を採用。family内BHのq水準はtotal_budget/n_familiesとして自動導出される。",
       "within_family_procedure_note": "B5確定: 判定期間全体をfamily単位の一発バッチとし、判定期間終了時（2030-12-31）にfamily内BH(alpha_family)を1回だけ適用する（年次再発行を廃止。旧設計の(family,判定年)単位の年次再発行は--smoke自己検証でp_true=0世界のfamily内FWERを名目alpha_familyの約3倍(実測0.0397 vs 名目0.0125)に押し上げることが判明していたため、B5で一発バッチへ統一）。2028時点のメトリクスは別途『2028-12-31までの判定分への一発BH』reference変種（variant='a4_ref2028'・ゲート不使用・参考列）として独立に出力する（2030一発バッチの結果を2028で流用すると未来情報が混入するため）。",
       "n_families_sensitivity": [
         2,
@@ -111,8 +111,8 @@
     }
   },
   "acceptance_criteria": {
-    "status": "FROZEN_CANDIDATE - PENDING CODEX R2 GO",
-    "warning": "本基準は数値をシミュレーション本実行の前に確定した（2026-07-21・smoke出力以外の結果は未閲覧）。本実行後の変更・追加・緩和は事後調整であり禁止。Codex R2 GOをもって凍結（status=FROZEN）・実行後は--decideによる機械適用のみ。",
+    "status": "FROZEN_CANDIDATE - PENDING CODEX GO（R3-1修正版）",
+    "warning": "本基準は数値をシミュレーション本実行の前に確定した（2026-07-21・smoke出力以外の結果は未閲覧）。本実行後の変更・追加・緩和は事後調整であり禁止。Codex GO（R3-1修正版）をもって凍結（status=FROZEN、_metaと共にFROZENへ統一遷移）・実行後は--decideによる機械適用のみ。",
     "scenario_sets": {
       "evaluable": "lambda_per_year>0 の12シナリオ（p_true 3 × lambda {5,10} × n_eff_mode 2）。lambda=0の6シナリオは候補が到着せず縮退のため全ゲートの対象外（結果は参考掲載のみ）。gate2(優越性判定)はこの12シナリオのみを使用する。",
       "stress": "B9確定: stress_scenariosブロック参照。(p=0.10,lambda=10)×両n_eff_modeのストレス変種5種×2=10セル。gate1(FDR上限判定)の対象セルにのみ含める（evaluable12+stress10=22セル）。",

@@ -1,9 +1,12 @@
-"""scripts/fdr_regime_sim.py 凍結審査R2（残3ブロッカー+MINOR4）修正の契約テスト。
+"""scripts/fdr_regime_sim.py 凍結審査R2（残3ブロッカー+MINOR4）・凍結審査R3（残1ブロッカー+MINOR3）
+修正の契約テスト。
 
 - R2-1: gate1同時信頼係数（4採用候補arm×22セル=88主張・z_{0.05/88}の実行時厳密計算）
 - R2-2: LORD++閉形式γ系列の正規化（部分和+解析的尾部積分でΣγ_j≈1）
 - R2-3: --decideのfail-closed化（期待セル集合完全一致・n_sim一致・spec/コードSHA-256一致・
   spec status==FROZEN。1つでも不成立ならdecision.jsonを出力せずFATAL終了）
+- R3-1: summary.csvの完全性チェーン（本実行直後のSHA-256をmeta記録・--decideは現在の
+  summary.csvと突き合わせ不一致ならFATAL）+ meta検証にrun_mode=='full'・seed一致を追加
 
 台帳(data/kpi_trials/*)・config/paper_watchlist.json・カタログは一切参照しない
 （本テストは合成spec/合成summary CSVのみを使い、実specファイルへの書き込みは一切行わない）。
@@ -172,7 +175,8 @@ def _build_valid_summary_rows(winner: str = WINNER_ARM) -> list:
 class DecideFailClosedTestCase(unittest.TestCase):
     """--decideのfail-closed検証・共通ヘルパー。"""
 
-    def _run_decide_case(self, spec: dict, rows: list, meta_overrides: dict = None):
+    def _run_decide_case(self, spec: dict, rows: list, meta_overrides: dict = None,
+                          tamper_rows_after_meta: list = None):
         tmpdir = Path(self._tmp.name)
         spec_path = tmpdir / "spec.json"
         summary_path = tmpdir / "summary.csv"
@@ -190,11 +194,19 @@ class DecideFailClosedTestCase(unittest.TestCase):
             "code_sha256": fdr_regime_sim._sha256_file(code_path),
             "seed": spec["seed"],
             "n_sim": spec["n_sim"],
+            # R3-1確定: main()の本実行がsummary.csv書き出し直後に記録するのと同じ値
+            # （書き出し直後のファイル内容のSHA-256）をここでも記録する。
+            "summary_sha256": fdr_regime_sim._sha256_file(summary_path),
             "generated_at": "2026-07-21T00:00:00+00:00",
         }
         if meta_overrides:
             meta.update(meta_overrides)
         meta_path.write_text(json.dumps(meta, ensure_ascii=False), encoding="utf-8")
+
+        if tamper_rows_after_meta is not None:
+            # R3-1: meta.summary_sha256は「書き出し直後（改変前）」の内容を指したまま、
+            # summary.csvだけ後から書き換える（本実行後の事後改変・差し替えを模擬する）。
+            pd.DataFrame(tamper_rows_after_meta).to_csv(summary_path, index=False)
 
         args = argparse.Namespace(spec=str(spec_path), out_dir=str(tmpdir), summary_csv=str(summary_path))
         buf_out, buf_err = io.StringIO(), io.StringIO()
@@ -317,6 +329,65 @@ class TestDecideHappyPath(DecideFailClosedTestCase):
         # R2-3確定: SHA-256は切詰め禁止(常にフル64桁hex)
         for sha in result["input_files_sha256"].values():
             self.assertEqual(len(sha), 64)
+
+
+# ============================================================================
+# R3-1: summary.csvの完全性チェーン（凍結審査R3の唯一のブロッカー対応）
+# ============================================================================
+
+class TestDecideSummaryIntegrityChain(DecideFailClosedTestCase):
+    """R3-1確定: summary.csvの完全性チェーン検証（本実行直後のSHA-256記録 vs 現在ファイルの
+    再計算値の突き合わせ）+ meta検証拡張(run_mode/seed)の契約テスト。"""
+
+    def test_summary_cell_tamper_after_meta_is_fatal(self):
+        """(a) 本実行直後にメタへ記録されたSHA-256の後、summary.csvの数値セルを1つだけ
+        改変すると、再計算したSHA-256がmeta記録値と一致せずFATALになること
+        （decision.jsonは出力されない）。"""
+        spec = _build_valid_spec()
+        rows = _build_valid_summary_rows()
+        tampered_rows = [dict(r) for r in rows]
+        tampered_rows[0]["fdr_2030_mean"] = float(tampered_rows[0]["fdr_2030_mean"]) + 0.4321
+        rc, decision_path, err = self._run_decide_case(
+            spec, rows, tamper_rows_after_meta=tampered_rows)
+        self.assertEqual(rc, 1)
+        self.assertFalse(decision_path.exists())
+        self.assertIn("summary CSV SHA-256不一致", err)
+
+    def test_run_mode_smoke_is_fatal(self):
+        """(b) meta.run_mode='smoke'（--smoke実行由来のsummary.csv）からの--decideはFATALに
+        なること。"""
+        spec = _build_valid_spec()
+        rows = _build_valid_summary_rows()
+        rc, decision_path, err = self._run_decide_case(
+            spec, rows, meta_overrides={"run_mode": "smoke"})
+        self.assertEqual(rc, 1)
+        self.assertFalse(decision_path.exists())
+        self.assertIn("run_mode", err)
+
+    def test_seed_mismatch_is_fatal(self):
+        """(c) meta.seedがspec.seedと不一致ならFATALになること。"""
+        spec = _build_valid_spec()
+        rows = _build_valid_summary_rows()
+        rc, decision_path, err = self._run_decide_case(
+            spec, rows, meta_overrides={"seed": spec["seed"] + 1})
+        self.assertEqual(rc, 1)
+        self.assertFalse(decision_path.exists())
+        self.assertIn("seed不一致", err)
+
+    def test_valid_summary_and_meta_pass(self):
+        """(d) 正常系: 改変なしのsummary.csv・整合したmeta(summary_sha256/run_mode/seed全て
+        一致)ならdecision.jsonが出力されること（R3-1で追加した3チェックが偽陽性を出さない
+        ことの確認）。"""
+        spec = _build_valid_spec()
+        rows = _build_valid_summary_rows(winner=WINNER_ARM)
+        rc, decision_path, err = self._run_decide_case(spec, rows)
+        self.assertEqual(rc, 0, msg=f"stderr={err}")
+        self.assertTrue(decision_path.exists())
+        result = json.loads(decision_path.read_text(encoding="utf-8"))
+        self.assertEqual(result["final_arm"], WINNER_ARM)
+        self.assertEqual(len(result["meta"]["summary_sha256"]), 64)
+        self.assertEqual(result["meta"]["run_mode"], "full")
+        self.assertEqual(result["meta"]["seed"], spec["seed"])
 
 
 if __name__ == "__main__":

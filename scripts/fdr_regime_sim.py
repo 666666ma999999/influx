@@ -2,8 +2,9 @@
 """online-FDR切替起案v2 §6 工程2: 5-arm統計体系比較シミュレーション・ハーネス。
 
 **凍結審査R1（Codex・threadId 019f84eb）= NO-GO（9ブロッカー+MINOR5）を全件修正 → 凍結審査R2も
-NO-GO（残3ブロッカー+MINOR4）を全件修正した版（2026-07-21・team-lead確定設計判断に基づく）。
-凍結（Codex R3 GO）まで本実行は禁止。**
+NO-GO（残3ブロッカー+MINOR4）を全件修正 → 凍結審査R3もNO-GO（残1ブロッカー+MINOR3）を全件修正
+した版（2026-07-21・team-lead確定設計判断に基づく）。
+凍結（Codex GO）まで本実行は禁止。**
 台帳(data/kpi_trials/*)・config/paper_watchlist.json・カタログ(docs/stock-algo-kpi-catalog.md)は
 一切読み書きしない（工程2指示: 台帳/config一切不干渉）。出力は output/fdr_sim/ のみ（gitignore済み）。
 
@@ -56,12 +57,24 @@ NO-GO（残3ブロッカー+MINOR4）を全件修正した版（2026-07-21・tea
   acceptance_criteria.gate1_simultaneous_claimsを唯一の情報源とする。
 - R2-2: LORD++閉形式γ系列の正規化定数を「部分和(j<=200,000)＋解析的尾部積分」で計算する
   （旧実装は有限和のみでΣγ_j<1に留まり保守的すぎた）。尾部は置換u=sqrt(log x)による
-  不完全ガンマΓ(4,U)の閉形式で厳密に計算（_lord_pp_gamma_tail_integral参照）。
+  不完全ガンマΓ(4,U)の閉形式による保守的な解析的積分近似で評価する（Σγ≤1維持が統制上の
+  要件でありこれを保証する設計・_lord_pp_gamma_tail_integral参照）。
 - R2-3: --decideをfail-closed化。本実行時にspec全文SHA-256(切詰めなし)・seed・n_sim・
   コードファイルSHA-256をメタJSON(<summary>.meta.json)へ記録し、--decideはgate1/gate2の
   期待セル集合との完全一致・n_sim一致・spec/コードSHA-256一致・spec status==FROZENの
   4種を全て検証、1つでも不一致ならdecision.jsonを出力せずFATAL終了する
   （validate_summary_for_decide参照）。
+
+## R3-1対応の要点（凍結審査R3・2026-07-21 唯一のブロッカー対応。詳細はmain()/run_decide()の
+docstring参照）
+
+- R3-1: summary.csvの完全性チェーンを追加。本実行のsummary.csv書き出し直後に全文SHA-256を
+  計算しsummary.meta.jsonへsummary_sha256として記録する（R2-3確定のspec/コードSHA-256記録と
+  同一のメタJSONに統合）。--decideは現在のsummary.csvを再計算したSHA-256とmeta記録値を
+  突き合わせ、1バイトでも不一致ならdecision.jsonを出力せずFATAL終了する（summary.csvの
+  事後改変・差し替えを機械的に検知する完全性チェーン）。併せてmeta検証にmeta.run_mode=='full'
+  （--smoke結果からのdecideを拒否）・meta.seed==spec.seedの2項目を追加し、既存のn_sim一致・
+  spec/コードSHA-256一致・spec status==FROZENと合わせ、1つでも不一致なら全体をFATALとする。
 
 Usage:
     python3 scripts/fdr_regime_sim.py --spec config/fdr_sim_spec.draft.json --smoke
@@ -339,7 +352,8 @@ class LordPlusPlusGammaSeries:
     指定がないため、B4で確定した同一のgamma系列を流用する設計判断)。
 
     R2-2確定: 正規化定数Zは「部分和(j<=N_NORM=200,000項の直接和)＋解析的尾部積分
-    (_lord_pp_gamma_tail_integral・j>N_NORMの寄与を閉形式で厳密に計算)」で求める。
+    (_lord_pp_gamma_tail_integral・j>N_NORMの寄与を保守的な解析的積分近似で評価。
+    Σγ≤1維持が統制上の要件でありこれを保証する設計)」で求める。
     これによりΣ_{j=1}^∞ gamma_j ≈ 1 が(浮動小数点精度の範囲で)厳密に成立する
     （旧実装は有限和のみでΣγ_j<1だった＝R2-2ブロッカー対応）。__call__は任意のjに対し
     閉形式で値を返すため、旧実装にあった「n_max超のjで最後の値を据え置く」バグ
@@ -1274,10 +1288,15 @@ def validate_summary_for_decide(summary_df: pd.DataFrame, spec: dict) -> List[st
 
 
 def run_decide(args: argparse.Namespace) -> int:
-    """R2-3確定: fail-closed化。以下いずれか1つでも不成立ならdecision.jsonを出力せずFATAL終了する:
+    """R2-3確定/R3-1確定: fail-closed化。以下いずれか1つでも不成立ならdecision.jsonを出力せず
+    FATAL終了する:
     (a) gate1/gate2の期待セル集合との完全一致(欠損/重複/余剰/未知arm皆無)
     (b) meta.n_sim == spec.n_sim (c) meta.spec_sha256/code_sha256 == 実ファイルの再計算値
-    (d) spec._meta.status == 'FROZEN'（FROZEN_CANDIDATE等での--decideもFATAL・MINOR対応）。
+    (d) spec._meta.status == 'FROZEN'（FROZEN_CANDIDATE等での--decideもFATAL・MINOR対応）
+    (e) meta.summary_sha256 == 現在のsummary.csvの再計算値（R3-1確定: 完全性チェーン。
+        本実行直後に記録されたハッシュと現在のファイルが1バイトでも異なればFATAL）
+    (f) meta.run_mode == 'full'（R3-1確定: --smoke結果からの--decideを拒否）
+    (g) meta.seed == spec.seed（R3-1確定）。
     """
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -1308,6 +1327,30 @@ def run_decide(args: argparse.Namespace) -> int:
         errors.append(f"spec._meta.status='{status}' はFROZENではない"
                        "（MINOR対応: FROZEN以外でのdecideはFATAL）")
 
+    # R3-1確定(凍結審査R3ブロッカー対応): summary.csvの完全性チェーン検証。本実行直後に
+    # メタJSONへ記録されたSHA-256と、現在のsummary.csvの再計算値を突き合わせ、1バイトでも
+    # 改変・差し替えがあればFATAL（decision.json非生成）とする。
+    actual_summary_sha = _sha256_file(summary_path)
+    if meta.get("summary_sha256") != actual_summary_sha:
+        errors.append(
+            f"summary CSV SHA-256不一致: meta={meta.get('summary_sha256')!r} != "
+            f"実ファイル={actual_summary_sha!r}"
+            "（本実行直後に記録されたsummary.csvと現在のファイル内容が異なる="
+            "改変または差し替えの疑い。fail-closed: R3-1確定）"
+        )
+
+    # R3-1確定: meta検証を拡張し、run_mode=='full'・seedの2項目を追加する
+    # （n_sim一致・spec/コードSHA-256一致と併せ、1つでも不一致ならFATAL）。
+    if meta.get("run_mode") != "full":
+        errors.append(
+            f"meta.run_mode={meta.get('run_mode')!r} は'full'ではない"
+            "（--smoke実行由来のsummary.csvからの--decideはFATAL・R3-1確定）"
+        )
+
+    spec_seed = spec.get("seed")
+    if meta.get("seed") != spec_seed:
+        errors.append(f"seed不一致: meta.seed={meta.get('seed')!r} != spec.seed={spec_seed!r}")
+
     spec_n_sim = spec.get("n_sim")
     if meta.get("n_sim") != spec_n_sim:
         errors.append(f"n_sim不一致: meta.n_sim={meta.get('n_sim')!r} != spec.n_sim={spec_n_sim!r}")
@@ -1333,7 +1376,7 @@ def run_decide(args: argparse.Namespace) -> int:
 
     result = decide_from_summary(summary_df, spec, label_final=GATE_LABEL_FINAL)
     result["input_files_sha256"] = {
-        str(summary_path): hashlib.sha256(summary_path.read_bytes()).hexdigest(),
+        str(summary_path): actual_summary_sha,
         str(spec_path): actual_spec_sha,
         str(code_path): actual_code_sha,
     }
@@ -1439,8 +1482,14 @@ def main() -> int:
     out_path = out_dir / out_name
     summary_df.to_csv(out_path, index=False)
 
-    # R2-3確定: 本実行時にspec全文SHA-256(切詰めなし)・seed・n_sim・コードファイルSHA-256を
-    # 併走メタJSONへ必ず記録する（--decideのfail-closed検証がこのファイルを要求する）。
+    # R3-1確定(凍結審査R3ブロッカー対応): summary.csv書き出し直後に全文SHA-256を計算し、
+    # 完全性チェーンの起点とする（--decideが現在のsummary.csvと突き合わせて事後の改変・
+    # 差し替えを検知するための唯一の証跡）。
+    summary_sha256 = _sha256_file(out_path)
+
+    # R2-3確定: 本実行時にspec全文SHA-256(切詰めなし)・seed・n_sim・コードファイルSHA-256・
+    # （R3-1確定で追加）summary.csv全文SHA-256を併走メタJSONへ必ず記録する
+    # （--decideのfail-closed検証がこのファイルを要求する）。
     code_path = Path(__file__).resolve()
     meta = {
         "run_mode": "smoke" if args.smoke else "full",
@@ -1450,6 +1499,7 @@ def main() -> int:
         "code_sha256": _sha256_file(code_path),
         "seed": spec["seed"],
         "n_sim": n_sim,
+        "summary_sha256": summary_sha256,
         "generated_at": datetime.now(timezone.utc).isoformat(),
     }
     meta_path = _meta_path_for(out_path)
