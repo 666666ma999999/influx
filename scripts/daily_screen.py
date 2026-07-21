@@ -1725,6 +1725,20 @@ def main() -> int:
         print(f"[dry-run] 今あるキャッシュの最新営業日 {end_bd} のみで判定します（データ取得は行いません）")
     else:
         state = load_state()
+        # 決算発表予定日の日次スナップショット確保（2026-07-21 保守追加・§7-AG準備・
+        # 2026-07-13 保守変更ルール第2適用[前例=margin日次リフレッシュ]）:
+        # 前向き専用API（翌営業日分のみ提供・過去遡及不可）のため取り損ねた日は永久欠損になる。
+        # 「走査対象なし」early return でも必ず取得する位置に置き、失敗しても本番スクリーンは
+        # 止めない（§7-AG非介入保証と同型: このフェッチは13本の実行・終了コードに影響させない）。
+        try:
+            subprocess.run(
+                [sys.executable, str(Path(__file__).parent / "jq_fetch.py"),
+                 "--only", "earnings_calendar"],
+                check=False, timeout=120,
+            )
+        except Exception as e:  # noqa: BLE001 (非致死: 本番スクリーン継続を最優先)
+            print(f"WARN: earnings_calendar 日次取得に失敗（本処理は継続）: {e}", file=sys.stderr)
+
         start_bd, end_bd = compute_scan_range(state, all_bdays)
         if start_bd is None:
             print("走査すべき新規営業日がありません（既に最新まで処理済み）")
