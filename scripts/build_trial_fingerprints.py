@@ -631,6 +631,17 @@ CURATED_ENTRIES: list[dict[str, Any]] = [
         "ref": "catalog:2453-2464（rank_port_v1_composite v1棄却・コスト後月次超過-0.19%・NW t=-0.49・"
         "『この期間・TOP500・コスト条件では短期リバーサル買いが一貫して不利』・型転換トラックはv1で一旦停止）",
     },
+    {
+        "source": "avoidance",
+        "name": "増担保解除買い",
+        "family": "需給/信用",
+        "entry_condition": "増担保規制(TSEMrgnRegCls∈{3,4,5,6})の解除イベント後の買い（信用買残の実減少long_margin_declinedフィルタ込みでも母集団と同一・非弁別）",
+        "universe": "TOP500",
+        "period_tested": "2016-11〜2022-11（設計段階・EV非集計で見送り）",
+        "verdict": "avoid",
+        "keywords": _keywords_for("需給/信用", ["増担保", "規制解除", "制度イベント", "TSEMrgnRegCls", "日々公表"]),
+        "ref": "catalog §7-AH見送り（naive全解除20bd中央値-10.7%・信用買残の実減少は解除の約9割に該当し左裾を絞れず・機序clean な左裾成分なし・§8-6墓場②実証・trial非消費）",
+    },
     # --- source=misokuri: §8-2 突合で落ちた/降格したもの（再提案防止） ---
     {
         "source": "misokuri",
