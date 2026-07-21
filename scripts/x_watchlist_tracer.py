@@ -64,7 +64,10 @@ def load_recent_snapshots(days: int = 3) -> dict:
                 row = json.loads(line)
             except json.JSONDecodeError:
                 continue
-            by_id.setdefault(row.get("tweet_id", ""), []).append(row)
+            # dict 以外・必須キー欠落は履歴に採用しない (2026-07-21 Codex R1 W1)
+            if not isinstance(row, dict) or not row.get("tweet_id") or not row.get("scraped_at"):
+                continue
+            by_id.setdefault(row["tweet_id"], []).append(row)
     return by_id
 
 
@@ -136,7 +139,7 @@ def detect(rows: list[dict], history: dict, cfg: dict, lane: str) -> list[dict]:
                 age_h = (now - _dt.datetime.fromisoformat(r["posted_at"].replace("Z", "+00:00"))).total_seconds() / 3600
             except ValueError:
                 age_h = None
-            if age_h is not None and age_h <= new_win_h:
+            if age_h is not None and 0 <= age_h <= new_win_h:  # 未来時刻は時計ずれ (Codex R1 W2)
                 alerts.append({"reason": "official_new", "age_hours": round(age_h, 1), **_alert_base(r)})
                 continue
         # rising: 前回スナップショットとの差分速度
@@ -146,11 +149,14 @@ def detect(rows: list[dict], history: dict, cfg: dict, lane: str) -> list[dict]:
                 dt_h = (
                     _dt.datetime.fromisoformat(r["scraped_at"]) - _dt.datetime.fromisoformat(last["scraped_at"])
                 ).total_seconds() / 3600
-            except ValueError:
+            except (ValueError, TypeError):
                 continue
             if dt_h < 0.25:  # 15分未満の再計測は速度ノイズ
                 continue
-            dl = (r.get("likes") or 0) - (last.get("likes") or 0)
+            try:
+                dl = (r.get("likes") or 0) - (last.get("likes") or 0)
+            except TypeError:
+                continue  # 数値でない likes は速度計算に使わない (Codex R1 W1)
             lph = dl / dt_h
             if lph >= thr:
                 alerts.append({"reason": "rising", "likes_per_hour": round(lph, 1), **_alert_base(r)})

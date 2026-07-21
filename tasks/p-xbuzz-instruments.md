@@ -31,6 +31,15 @@ plan: 裁定の正本 = 本セッションの11裁定（採用1/5/6/7/10/11・�
 - [x] バックログ5件を x-buzz-rules §📥 へ登録
 - [ ] launchd load（ユーザー1行待ち: com.masa.xbuzz-tracer）
 
+## Decision Log（仕様差分の自己申告・rules/05）
+
+- interpreted: T5素材チェックは新STEPでなく既存STEP1停止点に同居（v2スキルの「工程を足さない」法との整合を優先）
+- interpreted: トレーサー頻度は1日3回から開始（「高頻度」の初期値・将来上げる）
+- interpreted: LEAD_NO_NUMBER は警告のみ（過去教訓「バズ品質の機械化は形式面のみ」）
+- deviation→修正済: CTA除去で share/empathy まで消し裁定超過→git復元し bookmark/save 系のみ除去
+- Codex 2R: 条件付きNG→OK（BOOKMARK_BAIT強化12/12・JSONL壊れ行/[]注入の実弾生存・境界ガード3点）
+- 見送り（理由つき）: 重複起動ロック/osascript argv化/exit(3)例外化/is_own URL正規化/テストスイート → バックログ
+
 ## Session Handoff
 
 - 2026-07-21 T1-T6 完了・全実弾検証済み。残=launchd load 1行（ユーザー）。
