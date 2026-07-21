@@ -1,7 +1,8 @@
 {
   "_meta": {
-    "status": "DRAFT - NOT FROZEN",
-    "warning": "本ファイルの全数値（arm パラメータ・グリッド・採否判定基準プレースホルダを含む）はDRAFTである。いかなる意思決定・正式判定にも使用しないこと。凍結はteam-lead + Codex敵対レビューが行う（docs/fdr-switch-proposal.md §6 手順1）。",
+    "status": "FROZEN_CANDIDATE - PENDING CODEX GO (2026-07-21)",
+    "warning": "採否基準・全armパラメータの数値は本実行前に確定済み（smoke以外の結果未閲覧）。Codex GOで凍結・以後の変更は起案放棄と同義。DRAFT注記付きパラメータは以下のfrozen_decisionsで確定値として宣言する。",
+    "frozen_decisions": "①A1 cohort_size=3で凍結（実績5,3,1,2,1の平均2.4の丸め・陣形成の将来ルール未定というモデル化限界はレポートに明記） ②A2 W0=q/2=0.05・reward=b0=q-W0=0.05（LORD標準）・γ=poly1.6正規化（原論文閉形式でない簡略化を明記） ③A3 λ_s=0.5 ④A4 n_families=4（実質独立ファミリー2〜4診断の上限） ⑤n_sim=2000・seed=20260721。これらの簡略化はいずれも5arm間で共通条件・同一乱数系列で適用されるため相対比較の公平性を損なわない、という設計判断。",
     "purpose": "online-FDR切替起案v2 §6 工程1（5-arm統計体系比較シミュレーション仕様）のドラフト。工程2ハーネス骨格（scripts/fdr_regime_sim.py）の入力。",
     "source_doc": "docs/fdr-switch-proposal.md §6（行81-106）+ 冒頭R1レビュー要旨（行1-9）",
     "created": "2026-07-21",
@@ -87,15 +88,20 @@
     }
   },
 
-  "acceptance_criteria_placeholder": {
-    "status": "DRAFT - NUMBERS NOT FROZEN",
-    "warning": "以下は工程1仕様凍結前のプレースホルダに過ぎない。実数値はteam-lead+Codex R1/R2審査を経て『実行前に』数値凍結する（proposal.md §6 手順1）。本skeletonの実行結果を見てここを埋めることは事後調整であり禁止。",
-    "example_criteria_not_frozen": [
-      "全シナリオで実現FDR（2028/2030いずれの時点も）がq=0.10を(モンテカルロ誤差内で)超過しないarmのみ採用候補とする",
-      "2030-12-31時点の平均累積真発見数がA1(現行FWER)比+X%以上（Xは未定）",
-      "FWER（1本以上偽発見が出るrunの割合、2030時点）がY以下（Yは未定・現行FWER予算0.05を参照値として検討）",
-      "初発見までの月数の中央値がA1比でZヶ月以上短縮（Zは未定）"
-    ]
+  "acceptance_criteria": {
+    "status": "FROZEN_CANDIDATE - PENDING CODEX GO",
+    "warning": "本基準はシミュレーション本実行の**前に**数値確定した（2026-07-21・smoke出力以外の結果は未閲覧）。本実行後の変更・追加・緩和は事後調整であり禁止。Codex GOをもって凍結・実行後は機械適用のみ。",
+    "scenario_sets": {
+      "evaluable": "lambda_per_year>0 の12シナリオ（p_true 3 × lambda {5,10} × n_eff_mode 2）。lambda=0の6シナリオは候補が到着せず縮退のため全ゲートの対象外（結果は参考掲載のみ）",
+      "fdr_estimable": "evaluable のうち fdr_2030_n_valid_runs >= 30 のシナリオ（発見が稀でFDR推定不能なセルを妥当性ゲートの分母から除外する事前宣言。除外セルは件数と共に必ず報告）"
+    },
+    "gate1_validity": "採用候補となるarmは、fdr_estimable の全シナリオで fdr_2030_mean <= 0.11（q=0.10 + モンテカルロ誤差バッファ0.01・事前固定）を満たすこと。fdr_2028_mean も参考掲載（ゲートには2030のみ使用）。FWERはゲートに使わず全シナリオ報告（FWER→FDRへの統制切替が本起案の趣旨であり、FDR型armのFWERが高いのは想定内として正直に開示する）",
+    "gate2_superiority": {
+      "primary": "evaluable の各シナリオで A1(現行FWER) との true_disc_2030_mean を比較。**A1_mean >= 0.05 のシナリオ**: challenger_mean >= 1.5 × A1_mean（+50%）で当該シナリオ勝ち。**A1_mean < 0.05 のシナリオ（A1縮退・比率が定義不能）**: challenger_mean >= A1_mean + 0.5（絶対マージン・事前宣言フォールバック）で勝ち",
+      "threshold": "evaluable 12シナリオ中 **8以上（2/3）で勝ち** かつ **全シナリオで challenger_mean >= 0.9 × A1_mean − 0.05**（どのシナリオでも実質的にA1より悪化しないno-regret下限・0.05は絶対誤差余裕）"
+    },
+    "gate3_selection": "gate1×gate2を両方通過したarmが複数ある場合: (1) evaluable 12シナリオの true_disc_2030_mean の総平均が最大のもの (2) 相対差5%以内の同率は調整可能パラメータ数が少ない順（事前宣言の複雑度順位: a5_fixed_batch_bh < a2_lord_async < a3_saffron_async < a4_family_hierarchical） (3) なお同率は同順位表の先頭。**通過armがゼロの場合=現行FWER維持で本起案を棄却**（それも正式な結論として記録）",
+    "secondary_report_only": "first_discovery_month・true_disc_2028・FWER・偽発見数は報告のみ（採否に不使用）"
   },
 
   "notes": [
