@@ -1,10 +1,10 @@
 {
   "_meta": {
-    "status": "FROZEN_CANDIDATE - PENDING CODEX R2 GO (2026-07-21 R1修正版)",
-    "warning": "採否基準・全armパラメータの数値は本実行前に確定済み（smoke以外の結果未閲覧）。Codex R2 GOで凍結（status=FROZENへ遷移）・以後の変更は起案放棄と同義。本版は凍結審査R1（Codex・threadId 019f84eb・9ブロッカー+MINOR5）のNO-GOを受けteam-lead確定設計判断で全件修正済み（B1〜B9対応はscripts/fdr_regime_sim.py冒頭docstring参照）。",
-    "frozen_decisions": "①A1 cohort_size=3で凍結（陣形成の将来ルール未定というモデル化限界はレポートに明記。cohort_size∈{1,5}は感度として並走・gateはcohort_size=3のみ使用） ②A2 W0=q/2=0.05・q=0.10（LORD標準）・γ=Ramdas et al. 2017 LORD++の閉形式（B4確定・poly1.6簡略化は廃止） ③A3 λ_s=0.5・γ系列はA2と同一のB4確定閉形式を流用（原論文でγ系列の別途指定なし） ④A4 n_families=4（n_families∈{2}を感度として並走・gateはn_families=4のみ使用） ⑤n_sim=5000・seed=20260721（B2確定・精度確保のため2000→5000へ増）。",
+    "status": "FROZEN_CANDIDATE - PENDING CODEX R3 GO (2026-07-21 R2修正版)",
+    "warning": "採否基準・全armパラメータの数値は本実行前に確定済み（smoke以外の結果未閲覧）。Codex R3 GOで凍結（status=FROZENへ遷移）・以後の変更は起案放棄と同義。本版は凍結審査R1（Codex・threadId 019f84eb・9ブロッカー+MINOR5）→凍結審査R2（残3ブロッカー+MINOR4）のNO-GOを受けteam-lead確定設計判断で全件修正済み（B1〜B9対応・R2-1〜R2-3対応はscripts/fdr_regime_sim.py冒頭docstring参照）。",
+    "frozen_decisions": "①A1 cohort_size=3で凍結（陣形成の将来ルール未定というモデル化限界はレポートに明記。cohort_size∈{1,5}は感度として並走・gateはcohort_size=3のみ使用） ②A2 W0=q/2=0.05・q=0.10（LORD標準）・γ=Ramdas et al. 2017 LORD++の閉形式（B4確定・poly1.6簡略化は廃止・R2-2確定で正規化に解析的尾部積分を追加） ③A3 λ_s=0.5・γ系列はA2と同一のB4確定閉形式を流用（原論文でγ系列の別途指定なし） ④A4 n_families=4（n_families∈{2}を感度として並走・gateはn_families=4のみ使用） ⑤n_sim=5000・seed=20260721（B2確定・精度確保のため2000→5000へ増） ⑥gate1の同時信頼保証対象=4採用候補arm×22セル=88主張・臨界値z_{0.05/88}を実行時に厳密計算（R2-1確定・旧z=2.6383のハードコードは廃止）。",
     "purpose": "online-FDR切替起案v2 §6 工程1（5-arm統計体系比較シミュレーション仕様）のドラフト。工程2ハーネス骨格（scripts/fdr_regime_sim.py）の入力。",
-    "source_doc": "docs/fdr-switch-proposal.md §6（行81-106）+ 冒頭R1レビュー要旨（行1-9）+ 凍結審査R1ブロッカー対応（B1〜B9・2026-07-21）",
+    "source_doc": "docs/fdr-switch-proposal.md §6（行81-106）+ 冒頭R1レビュー要旨（行1-9）+ 凍結審査R1ブロッカー対応（B1〜B9・2026-07-21）+ 凍結審査R2ブロッカー対応（R2-1〜R2-3・MINOR4件・2026-07-21）",
     "created": "2026-07-21",
     "excludes": "既走行13本の競走は一切含めない（forward-only新規登録のみ・グランドファザリング§3）。台帳(data/kpi_trials/*)・config/paper_watchlist.json・catalogは本specから一切参照しない（工程2指示: 台帳/config一切不干渉）"
   },
@@ -43,7 +43,7 @@
       2.0
     ],
     "distribution": "discrete_uniform",
-    "note": "真エッジ候補の月次EV(%)。proposal.md §6行93: EV_true ∈ {+0.5%,+1%,+2%}の離散一様。偽候補はEV_true=0固定（p_value ~ Uniform(0,1)を厳密に満たす）。"
+    "note": "真エッジ候補の月次EV(%)。proposal.md §6行93: EV_true ∈ {+0.5%,+1%,+2%}の離散一様。偽候補はEV_true=0固定（p_value ~ Uniform(0,1)だが、絶対0/1境界の数値ガードとしてscripts/fdr_regime_sim.pyのP_VALUE_EPS(=1e-15)でclamp[P_VALUE_EPS, 1-P_VALUE_EPS]する。厳密なUniform(0,1)ではなくこの数値ガード付き近似である点に注意）。"
   },
   "calibration": {
     "source": "output/kpi_maturity/report.md §3-4 + output/kpi_maturity/maturity.csv（2026-07-21実読・生成元scripts/kpi_maturity_power.py）",
@@ -63,7 +63,7 @@
       "start_cohort_index": 6,
       "start_cohort_index_note": "DRAFT前提: 既走行13本が陣1-5を消費済み（0.025+0.0125+0.00625+0.003125+0.0015625=0.0484375・catalog L1769-1774/L1772/L1773/L1972/L2069/L2218）。forward-only新規候補は陣b=6から半減系列 α_b = total_budget / 2^b を継続する前提（proposal.md §6『新規陣は総予算0.05内で半減継続』）。",
       "cohort_size": 3,
-      "cohort_size_note": "DRAFT・未確定・要team-lead/Codex確認: 実際の陣サイズは5,3,1,2,1件と可変（ad hoc registration wave単位）で、将来の陣形成ルールはproposal.md本文に明記がない。本skeletonは登録順を固定サイズ(=3、実績の単純平均に近い丸め値)でグルーピングする単純化を仮置きしている。陣形成規則そのものが本v2の未決事項の一つ。",
+      "cohort_size_note": "モデル化限界（凍結済みの単純化）: 実際の陣サイズは5,3,1,2,1件と可変（ad hoc registration wave単位）で、将来の陣形成ルールはproposal.md本文に明記がない。本skeletonは登録順を固定サイズ(=3、実績の単純平均に近い丸め値)でグルーピングする単純化を仮置きしている。陣形成規則そのものが本v2の未決事項の一つだが、cohort_size=3で凍結済み（_meta.frozen_decisions①・cohort_size∈{1,5}は感度として並走）。",
       "cohort_size_sensitivity": [
         1,
         3,
@@ -93,7 +93,7 @@
     "a4_family_hierarchical": {
       "label": "family階層: family間Bonferroni×family内BH",
       "n_families": 4,
-      "n_families_note": "DRAFT・未確定: family分割の粒度・候補→family対応ルールはproposal.mdに明記がない。本skeletonは候補をn_families個に一様ランダム割当する単純化。",
+      "n_families_note": "モデル化限界（凍結済みの単純化）: family分割の粒度・候補→family対応ルールはproposal.mdに明記がない。本skeletonは候補をn_families個に一様ランダム割当する単純化だが、n_families=4で凍結済み（_meta.frozen_decisions④・n_families∈{2}は感度として並走）。",
       "total_budget": 0.05,
       "total_budget_note": "DRAFT: family間の層はFWER型（Bonferroni）のため、legacy FWER予算0.05（A1と同一の歴史的総予算）を採用。family内BHのq水準はtotal_budget/n_familiesとして自動導出される。",
       "within_family_procedure_note": "B5確定: 判定期間全体をfamily単位の一発バッチとし、判定期間終了時（2030-12-31）にfamily内BH(alpha_family)を1回だけ適用する（年次再発行を廃止。旧設計の(family,判定年)単位の年次再発行は--smoke自己検証でp_true=0世界のfamily内FWERを名目alpha_familyの約3倍(実測0.0397 vs 名目0.0125)に押し上げることが判明していたため、B5で一発バッチへ統一）。2028時点のメトリクスは別途『2028-12-31までの判定分への一発BH』reference変種（variant='a4_ref2028'・ゲート不使用・参考列）として独立に出力する（2030一発バッチの結果を2028で流用すると未来情報が混入するため）。",
@@ -104,7 +104,7 @@
       "n_families_sensitivity_note": "MINOR確定: n_families∈{2,4}を事前固定で並走実行する（gateはn_families=4のみ使用・2は同一candidatesをfamily_raw%n_familiesで再割当したpaired比較の参考列としてvariant='a4_nfam2'で出力）。"
     },
     "a5_fixed_batch_bh": {
-      "label": "固定バッチBH（年次バッチ）",
+      "label": "固定バッチBH（期間全体固定バッチBH）",
       "q": 0.1,
       "q_note": "proposal.md §2 目標統制 FDR<=q=0.10 と同一水準。",
       "batch_note": "B5確定: 判定期間全体（sim_start_date〜2030-12-31）を1バッチとし、判定期間終了時に全判定分でBH(q)を1回だけ適用する（年次再発行を廃止。累積FDRが年次再発行では非統制になるというR1ブロッカー⑤への対応）。2028時点のメトリクスは別途『2028-12-31までの判定分への一発BH』reference変種（variant='a5_ref2028'・ゲート不使用・参考列）として独立に出力する。"
@@ -118,7 +118,9 @@
       "stress": "B9確定: stress_scenariosブロック参照。(p=0.10,lambda=10)×両n_eff_modeのストレス変種5種×2=10セル。gate1(FDR上限判定)の対象セルにのみ含める（evaluable12+stress10=22セル）。",
       "fdr_estimable_note": "B1確定によりfdr_estimable(発見あり run>=30によるセル除外)概念は廃止。FDP=V/max(R,1)を発見ゼロrunも含め全run単純平均するため、セル除外は不要になった。診断用にfdr_2030_n_disc_runs列（発見ありrun数）はsummary.csvに残す。"
     },
-    "gate1_validity": "B2確定式: 採用候補となるarmは、gate1対象セル(evaluable12+stress10=22セル)すべてでfdr_2030_mean + z*SE <= 0.10 を満たすこと（片側同時信頼上限・z=z_{0.05/12}=2.6383・12セル同時Bonferroni由来の値を事前固定・0.11バッファ方式は廃止）。z=2.6383という数値は12セルのBonferroni補正から導出されているが、B9でgate1対象セルが22に拡張された後もteam-lead確定のこの固定数値をそのまま流用する（対象セル数と補正数の不一致は既知の設計判断としてteam-leadに報告済み・再凍結審査R2の論点として残す）。fdr_2028_meanは参考掲載のみ（ゲートには2030のみ使用）。FWERはゲートに使わず全シナリオ報告。",
+    "gate1_simultaneous_claims": 88,
+    "gate1_simultaneous_claims_note": "R2-1確定（凍結審査R2ブロッカー①対応・2026-07-21）: gate1が同時に保証する主張数=4採用候補arm(a2/a3/a4/a5) × gate1セル22(evaluable12+stress10) = 88。旧B2確定値z=2.6383は12セル(1arm相当)のBonferroniから導出された値で、B9でgate1対象セルが22に拡張された後もarm数を考慮せず据え置かれていたため、対象セル数と補正数が不一致という設計不備があった（R1のNO-GO指摘・再凍結審査R2の論点）。本確定で「4arm×22セル=88」に同時信頼保証の対象を統一し、臨界値z_{0.05/88}はscripts/fdr_regime_sim.pyのgate1_z_critical()がstatistics.NormalDist().inv_cdf(1-0.05/88)により実行時に厳密計算する（ハードコード禁止・本フィールドgate1_simultaneous_claimsが唯一の情報源）。",
+    "gate1_validity": "B2/R2-1確定式: 採用候補となるarmは、gate1対象セル(evaluable12+stress10=22セル)すべてでfdr_2030_mean + z*SE <= 0.10 を満たすこと（片側同時信頼上限・z=z_{0.05/88}・88=gate1_simultaneous_claims=4採用候補arm×22セルの同時Bonferroni臨界値・実行時に厳密計算・0.11バッファ方式は廃止）。fdr_2028_meanは参考掲載のみ（ゲートには2030のみ使用）。FWERはゲートに使わず全シナリオ報告。",
     "gate2_superiority": {
       "primary": "B6確定（連続式・不連続フォールバック廃止）: evaluable 12シナリオそれぞれで、challenger_mean - A1_mean >= max(0.5, 0.5 × A1_mean) なら当該シナリオ勝ち。",
       "threshold": "evaluable 12シナリオ中 8以上（2/3）で勝ち かつ 全12シナリオでchallenger_mean >= 0.9 × A1_mean − 0.05（no-regret下限・B6確定）。"

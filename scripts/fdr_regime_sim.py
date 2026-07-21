@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """online-FDR切替起案v2 §6 工程2: 5-arm統計体系比較シミュレーション・ハーネス。
 
-**凍結審査R1（Codex・threadId 019f84eb）= NO-GO（9ブロッカー+MINOR5）を全件修正した版
-（2026-07-21・team-lead確定設計判断に基づく）。凍結（Codex R2 GO）まで本実行は禁止。**
+**凍結審査R1（Codex・threadId 019f84eb）= NO-GO（9ブロッカー+MINOR5）を全件修正 → 凍結審査R2も
+NO-GO（残3ブロッカー+MINOR4）を全件修正した版（2026-07-21・team-lead確定設計判断に基づく）。
+凍結（Codex R3 GO）まで本実行は禁止。**
 台帳(data/kpi_trials/*)・config/paper_watchlist.json・カタログ(docs/stock-algo-kpi-catalog.md)は
 一切読み書きしない（工程2指示: 台帳/config一切不干渉）。出力は output/fdr_sim/ のみ（gitignore済み）。
 
@@ -36,7 +37,7 @@
 ## B1-B9対応の要点（詳細は各クラス/関数のdocstring）
 
 - B1: FDP = V/max(R,1) を全run単純平均。発見ゼロrunをNaN除外しない。SE列を追加。
-- B2: gate1 = 対象セル全てで fdr_2030_mean + 2.6383*SE <= 0.10（片側同時信頼上限）。n_sim=5000。
+- B2: gate1 = 対象セル全てで fdr_2030_mean + z*SE <= 0.10（片側同時信頼上限）。n_sim=5000。
 - B3: AsyncSAFFRONArmはZrnic et al. 2018 Algorithm 3に1:1対応（docstring内対応表）。
 - B4: AsyncLORDArm はRamdas et al. 2017 LORD++の閉形式γ系列+Algorithm 1に忠実化。
 - B5: A4/A5は判定期間全体一発バッチ（年次再発行廃止）。2028は別途reference変種として出力。
@@ -46,6 +47,21 @@
 - B9: ストレスシナリオ5種をgate1対象に追加。
 - MINOR: p値をerfcで直接計算/γ系列のtailを正しく計算/A1 cohort_size・A4 n_families感度/
   n_eff_mode間のペア比較のためscenario seedをmode非依存化。
+
+## R2-1〜R2-3対応の要点（凍結審査R2・2026-07-21 team-lead確定設計判断。詳細は各関数docstring）
+
+- R2-1: gate1の同時信頼係数を「4採用候補arm×22セル=88主張」の同時Bonferroniに統一。
+  z_{0.05/88}をgate1_z_critical()でstatistics.NormalDist().inv_cdf(1-0.05/claims)により実行時に
+  厳密計算（旧確定値2.6383のハードコードを廃止）。claims=88はspec
+  acceptance_criteria.gate1_simultaneous_claimsを唯一の情報源とする。
+- R2-2: LORD++閉形式γ系列の正規化定数を「部分和(j<=200,000)＋解析的尾部積分」で計算する
+  （旧実装は有限和のみでΣγ_j<1に留まり保守的すぎた）。尾部は置換u=sqrt(log x)による
+  不完全ガンマΓ(4,U)の閉形式で厳密に計算（_lord_pp_gamma_tail_integral参照）。
+- R2-3: --decideをfail-closed化。本実行時にspec全文SHA-256(切詰めなし)・seed・n_sim・
+  コードファイルSHA-256をメタJSON(<summary>.meta.json)へ記録し、--decideはgate1/gate2の
+  期待セル集合との完全一致・n_sim一致・spec/コードSHA-256一致・spec status==FROZENの
+  4種を全て検証、1つでも不一致ならdecision.jsonを出力せずFATAL終了する
+  （validate_summary_for_decide参照）。
 
 Usage:
     python3 scripts/fdr_regime_sim.py --spec config/fdr_sim_spec.draft.json --smoke
@@ -60,13 +76,14 @@ import hashlib
 import itertools
 import json
 import math
+import statistics
 import sys
 import time
-from collections import defaultdict
+from collections import Counter, defaultdict
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
-from typing import Callable, Dict, List, NamedTuple, Optional, Tuple
+from typing import Callable, Dict, List, NamedTuple, Optional, Set, Tuple
 
 import numpy as np
 import pandas as pd
@@ -87,8 +104,12 @@ P_VALUE_EPS = 1e-15  # p値の絶対0/1境界に対する数値ガード（安�
 STRESS_SEED_NS = 900_001
 NULLCHECK_SEED_NS = 900_002
 
-# B2確定: gate1の片側同時信頼上限のBonferroni臨界値 z_{0.05/12}（12セル同時・事前固定）。
-GATE1_Z = 2.6383
+# R2-1確定(凍結審査R2ブロッカー①対応): gate1の片側同時信頼上限は「4採用候補arm×22セル=88主張」の
+# 同時Bonferroniに統一する。旧確定値2.6383（12セルBonferroニのハードコード）は廃止。
+# claims数(88)はspec.acceptance_criteria.gate1_simultaneous_claimsを唯一の情報源とし、
+# 臨界値z_{0.05/claims}はgate1_z_critical()でstatistics.NormalDist().inv_cdf(1-0.05/claims)により
+# 実行時に厳密計算する（ハードコード禁止）。
+GATE1_ALPHA_FWER = 0.05  # Bonferroni全体の片側family-wise alpha予算
 GATE1_FDR_TARGET = 0.10
 # B6確定: gate2連続式の定数
 GATE2_WIN_ABS_MARGIN = 0.5
@@ -112,6 +133,18 @@ def norm_sf(x: float) -> float:
     """標準正規分布の上側確率 1-Φ(x) を erfc で直接計算する（MINOR対応: 1-norm_cdf(x) は
     x が大きい右裾で桁落ちしうるため、数学的に同一かつ数値的に安定な erfc 表現に統一）。"""
     return 0.5 * math.erfc(x / math.sqrt(2.0))
+
+
+def gate1_z_critical(claims: int) -> float:
+    """R2-1確定(凍結審査R2ブロッカー①対応): gate1の片側同時信頼上限のBonferroni臨界値
+    z_{0.05/claims}を実行時に厳密計算する（旧確定値2.6383=z_{0.05/12}のハードコードを廃止）。
+
+    claims=4採用候補arm×gate1セル22=88（=保証対象の同時主張数。導出はspec
+    acceptance_criteria.gate1_simultaneous_claims_note参照）。
+    """
+    if claims <= 0:
+        raise ValueError(f"claimsは正の整数である必要があります: {claims}")
+    return statistics.NormalDist().inv_cdf(1.0 - GATE1_ALPHA_FWER / claims)
 
 
 def date_to_month_index(sim_start: date, d: date) -> float:
@@ -279,21 +312,47 @@ def _lord_pp_gamma_unnormalized(j: np.ndarray) -> np.ndarray:
     return log_term / denom
 
 
+def _lord_pp_gamma_tail_integral(n_start: float) -> float:
+    """R2-2確定(凍結審査R2ブロッカー②対応): j>n_startの解析的尾部積分値を返す
+    （旧実装は有限和(j<=200,000)のみで正規化しており、尾部を切り捨てた分だけ
+    Σγ_jが1未満に留まり、gamma値が名目より過大＝gate1のFDR統制が保守不足になる
+    設計不備があった）。
+
+    大きなxではlog(max(j,2))=log(j)なので、離散和Σ_{j=N+1}^∞ f(j) を連続近似
+    ∫_{N+0.5}^∞ f(x) dx（中点補正で境界をN+0.5とする）で近似する。
+    置換 u=sqrt(log x) （du = 1/(2*u*x) dx, dx = 2*u*x*du = 2*u*exp(u^2)*du）により:
+      ∫ log(x)/(x*exp(sqrt(log x))) dx = ∫ u^2/(exp(u^2)*exp(u)) * 2*u*exp(u^2) du
+                                        = 2 ∫ u^3 * exp(-u) du
+    U = sqrt(log(N+0.5)) を下限として、2∫_U^∞ u^3*e^{-u} du = 2*Γ(4,U)
+    （上側不完全ガンマ関数の整数次閉形式 Γ(n,U) = (n-1)!*e^{-U}*Σ_{k=0}^{n-1} U^k/k! ）
+      = 2*e^{-U}*(U^3 + 3*U^2 + 6*U + 6) 。
+    """
+    if n_start <= 0:
+        raise ValueError(f"n_startは正である必要があります: {n_start}")
+    u = math.sqrt(math.log(n_start + 0.5))
+    return 2.0 * math.exp(-u) * (u ** 3 + 3.0 * u ** 2 + 6.0 * u + 6.0)
+
+
 class LordPlusPlusGammaSeries:
     """B4確定: Ramdas et al. 2017 LORD++の閉形式gamma系列。旧DRAFT実装の多項式減衰(poly_decay)
     近似を廃止し、この閉形式に一本化(A2/A3で共通使用・A3固有のgamma系列は原論文でも特に
     指定がないため、B4で確定した同一のgamma系列を流用する設計判断)。
 
-    正規化定数Zは大きな直接和(N_NORM項)で数値的に近似する（この系列は解析的な総和公式を
-    持たないため）。__call__は任意のjに対し閉形式で値を返すため、旧実装にあった
-    「n_max超のjで最後の値を据え置く」バグ(MINOR対応)を持たない。
+    R2-2確定: 正規化定数Zは「部分和(j<=N_NORM=200,000項の直接和)＋解析的尾部積分
+    (_lord_pp_gamma_tail_integral・j>N_NORMの寄与を閉形式で厳密に計算)」で求める。
+    これによりΣ_{j=1}^∞ gamma_j ≈ 1 が(浮動小数点精度の範囲で)厳密に成立する
+    （旧実装は有限和のみでΣγ_j<1だった＝R2-2ブロッカー対応）。__call__は任意のjに対し
+    閉形式で値を返すため、旧実装にあった「n_max超のjで最後の値を据え置く」バグ
+    (MINOR対応・R1で既に修正済み)を持たない。
     """
 
     N_NORM = 200_000
 
     def __init__(self) -> None:
         j = np.arange(1, self.N_NORM + 1, dtype=float)
-        self._z = float(np.sum(_lord_pp_gamma_unnormalized(j)))
+        partial_sum = float(np.sum(_lord_pp_gamma_unnormalized(j)))
+        tail = _lord_pp_gamma_tail_integral(float(self.N_NORM))
+        self._z = partial_sum + tail
 
     def __call__(self, j: int) -> float:
         if j <= 0:
@@ -1009,19 +1068,23 @@ def selfcheck_b1_fdr_definition(null_df: pd.DataFrame, label_final: str) -> Tupl
 # B7確定: --decide（gate1/gate2/gate3の機械適用）
 # ============================================================================
 
-def decide_from_summary(summary_df: pd.DataFrame, label_final: str = GATE_LABEL_FINAL) -> dict:
+def decide_from_summary(summary_df: pd.DataFrame, spec: dict, label_final: str = GATE_LABEL_FINAL) -> dict:
     """summary_df(run_grid+run_stress_gridの結合結果)からgate1/gate2/gate3を機械適用する。
 
     gate1対象セル = variant=='main'かつ(scenario_kind=='grid'でlambda_per_year>0の12評価シナリオ
-                    union scenario_kind=='stress'の10セル) = 22セル。B2確定のz=2.6383を
-                    そのまま「対象セルすべて」に適用する(値の由来は12セルBonferroniだが、
-                    B9でgate1対象セルが22に拡張された後もteam-lead確定の固定数値2.6383を
-                    そのまま流用する設計判断・report内で明記)。
+                    union scenario_kind=='stress'の10セル) = 22セル。
+    R2-1確定: gate1のBonferroni臨界値は「4採用候補arm×22セル=88主張」の同時信頼に統一。
+                    claims=spec.acceptance_criteria.gate1_simultaneous_claimsを唯一の情報源とし、
+                    z=z_{0.05/claims}をgate1_z_critical()で実行時に厳密計算する
+                    （旧確定値2.6383のハードコードは廃止）。
     gate2対象セル = variant=='main'かつscenario_kind=='grid'でlambda_per_year>0の12評価シナリオのみ。
     """
     fdr_col = f"fdr_{label_final}_mean"
     se_col = f"fdr_{label_final}_se"
     disc_col = f"true_disc_{label_final}_mean"
+
+    claims = int(spec["acceptance_criteria"]["gate1_simultaneous_claims"])
+    gate1_z = gate1_z_critical(claims)
 
     main = summary_df[(summary_df["variant"] == "main") & (summary_df["scenario_kind"] == "grid")]
     evaluable = main[main["lambda_per_year"] > 0]
@@ -1029,7 +1092,7 @@ def decide_from_summary(summary_df: pd.DataFrame, label_final: str = GATE_LABEL_
     gate1_cells = pd.concat([evaluable, stress], ignore_index=True)
 
     result: dict = {
-        "gate1_z": GATE1_Z, "gate1_fdr_target": GATE1_FDR_TARGET,
+        "gate1_z": gate1_z, "gate1_claims": claims, "gate1_fdr_target": GATE1_FDR_TARGET,
         "gate1_n_target_cells_declared": "evaluable(12) + stress(10) = 22（B9でgate1対象を拡張）",
         "arms": {},
     }
@@ -1045,7 +1108,7 @@ def decide_from_summary(summary_df: pd.DataFrame, label_final: str = GATE_LABEL_
                 cell_pass = False
                 ucb = None
             else:
-                ucb = float(fdr_mean) + GATE1_Z * float(se)
+                ucb = float(fdr_mean) + gate1_z * float(se)
                 cell_pass = ucb <= GATE1_FDR_TARGET
             gate1_pass = gate1_pass and cell_pass
             cell_results.append({
@@ -1108,23 +1171,173 @@ def decide_from_summary(summary_df: pd.DataFrame, label_final: str = GATE_LABEL_
     return result
 
 
+def _sha256_file(path: Path) -> str:
+    """ファイル全文のSHA-256をhex文字列で返す（R2-3確定: 切詰め禁止・常にフル64桁）。"""
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _meta_path_for(summary_path: Path) -> Path:
+    """summary CSVパスから併走メタJSONのパスを導出する（例: summary.csv -> summary.meta.json）。
+    R2-3確定: 本実行時にmain()が書き出し、--decideが読んで一致検証する対の相手。"""
+    return summary_path.with_name(f"{summary_path.stem}.meta.json")
+
+
+def _expected_gate1_keys(spec: dict) -> Set[tuple]:
+    """R2-3確定: gate1対象22セル(evaluable12+stress10)の期待キー集合をspecから導出する
+    （ハードコード禁止・spec.grid/spec.stress_scenariosを唯一の情報源とする）。
+    キー形式: (scenario_kind, p_true, lambda_per_year, n_eff_mode, stress_id)。"""
+    p_list = [round(float(p), 6) for p in spec["grid"]["p_true"]]
+    lam_list = [round(float(lam), 6) for lam in spec["grid"]["lambda_per_year"] if lam > 0]
+    mode_list = list(spec["grid"]["n_eff_mode"])
+    grid_keys = {("grid", p, lam, mode, "") for p in p_list for lam in lam_list for mode in mode_list}
+
+    ss = spec["stress_scenarios"]
+    fixed_p = round(float(ss["fixed_p_true"]), 6)
+    fixed_lam = round(float(ss["fixed_lambda_per_year"]), 6)
+    stress_keys = {("stress", fixed_p, fixed_lam, mode, sid) for sid in STRESS_IDS for mode in mode_list}
+    return grid_keys | stress_keys
+
+
+def _expected_gate2_keys(spec: dict) -> Set[tuple]:
+    """R2-3確定: gate2対象12セル(evaluable12のみ)の期待キー集合。
+    キー形式: (p_true, lambda_per_year, n_eff_mode)。"""
+    p_list = [round(float(p), 6) for p in spec["grid"]["p_true"]]
+    lam_list = [round(float(lam), 6) for lam in spec["grid"]["lambda_per_year"] if lam > 0]
+    mode_list = list(spec["grid"]["n_eff_mode"])
+    return {(p, lam, mode) for p in p_list for lam in lam_list for mode in mode_list}
+
+
+def _gate1_actual_keys(summary_df: pd.DataFrame, arm: str) -> List[tuple]:
+    mask = (
+        (summary_df["variant"] == "main") & (summary_df["arm"] == arm)
+        & (((summary_df["scenario_kind"] == "grid") & (summary_df["lambda_per_year"] > 0))
+           | (summary_df["scenario_kind"] == "stress"))
+    )
+    sub = summary_df[mask]
+    stress_id = sub["stress_id"].fillna("") if "stress_id" in sub.columns else pd.Series([""] * len(sub))
+    return list(zip(sub["scenario_kind"], sub["p_true"].round(6), sub["lambda_per_year"].round(6),
+                     sub["n_eff_mode"], stress_id))
+
+
+def _gate2_actual_keys(summary_df: pd.DataFrame, arm: str) -> List[tuple]:
+    mask = ((summary_df["variant"] == "main") & (summary_df["arm"] == arm)
+            & (summary_df["scenario_kind"] == "grid") & (summary_df["lambda_per_year"] > 0))
+    sub = summary_df[mask]
+    return list(zip(sub["p_true"].round(6), sub["lambda_per_year"].round(6), sub["n_eff_mode"]))
+
+
+def _diff_key_set_errors(tag: str, keys: List[tuple], expected: Set[tuple]) -> List[str]:
+    """R2-3確定: 実測キー集合(keys、重複を許すリスト)と期待キー集合(expected)を比較し、
+    欠損/重複/余剰(未知含む)のいずれかがあればエラーメッセージを返す（空リスト=完全一致でpass）。"""
+    errors: List[str] = []
+    counts = Counter(keys)
+    dup = sorted(k for k, c in counts.items() if c > 1)
+    actual_set = set(keys)
+    missing = sorted(expected - actual_set)
+    extra = sorted(actual_set - expected)
+    if dup:
+        errors.append(f"{tag}: 重複セル検出 {dup}")
+    if missing:
+        errors.append(f"{tag}: 欠損セル検出 {missing}")
+    if extra:
+        errors.append(f"{tag}: 未知/余剰セル検出 {extra}")
+    return errors
+
+
+def validate_summary_for_decide(summary_df: pd.DataFrame, spec: dict) -> List[str]:
+    """R2-3確定(凍結審査R2ブロッカー③対応): --decideのfail-closed検証本体。
+    1件でも問題があればエラーメッセージのリストを返す（空リスト=全チェックpass）。
+    検証項目: (a)期待キー集合との完全一致 — gate1=各armにつき一意な22セル(主12+ストレス10)、
+    gate2=各armにつき一意な12セル(baseline含む) (b)未知armの混入なし。
+    n_sim一致・spec/コードSHA-256一致・spec status==FROZENはrun_decide側で検証する。
+    """
+    errors: List[str] = []
+    if summary_df.empty or "arm" not in summary_df.columns:
+        errors.append("summary_dfが空、またはarm列が存在しない")
+        return errors
+
+    expected_arms = set(ARM_ORDER)
+    main_scope = summary_df[(summary_df["variant"] == "main")
+                             & (summary_df["scenario_kind"].isin(["grid", "stress"]))]
+    unknown_arms = sorted(set(main_scope["arm"].unique()) - expected_arms)
+    if unknown_arms:
+        errors.append(f"未知のarmを検出: {unknown_arms}")
+
+    gate1_expected = _expected_gate1_keys(spec)
+    gate2_expected = _expected_gate2_keys(spec)
+
+    for arm in CANDIDATE_ARMS:
+        errors.extend(_diff_key_set_errors(f"gate1/{arm}", _gate1_actual_keys(summary_df, arm), gate1_expected))
+    for arm in CANDIDATE_ARMS + [BASELINE_ARM]:
+        errors.extend(_diff_key_set_errors(f"gate2/{arm}", _gate2_actual_keys(summary_df, arm), gate2_expected))
+    return errors
+
+
 def run_decide(args: argparse.Namespace) -> int:
+    """R2-3確定: fail-closed化。以下いずれか1つでも不成立ならdecision.jsonを出力せずFATAL終了する:
+    (a) gate1/gate2の期待セル集合との完全一致(欠損/重複/余剰/未知arm皆無)
+    (b) meta.n_sim == spec.n_sim (c) meta.spec_sha256/code_sha256 == 実ファイルの再計算値
+    (d) spec._meta.status == 'FROZEN'（FROZEN_CANDIDATE等での--decideもFATAL・MINOR対応）。
+    """
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     summary_path = Path(args.summary_csv) if args.summary_csv else out_dir / "summary.csv"
     if not summary_path.exists():
         print(f"[FATAL] --decide: summary CSVが見つかりません: {summary_path}", file=sys.stderr)
         return 1
-    summary_df = pd.read_csv(summary_path)
-    result = decide_from_summary(summary_df, label_final=GATE_LABEL_FINAL)
 
-    input_files = [summary_path]
-    spec_p = Path(args.spec)
-    if spec_p.exists():
-        input_files.append(spec_p)
+    spec_path = Path(args.spec)
+    if not spec_path.exists():
+        print(f"[FATAL] --decide: spec ({spec_path}) が見つかりません"
+              "（fail-closed: R2-3確定でspecはdecide時にも必須）", file=sys.stderr)
+        return 1
+    spec = json.loads(spec_path.read_text(encoding="utf-8"))
+
+    meta_path = _meta_path_for(summary_path)
+    if not meta_path.exists():
+        print(f"[FATAL] --decide: 併走メタJSON ({meta_path}) が見つかりません"
+              "（fail-closed: 本実行時のspec/codeハッシュ証跡が必須。main()の本実行で自動生成される）",
+              file=sys.stderr)
+        return 1
+    meta = json.loads(meta_path.read_text(encoding="utf-8"))
+
+    errors: List[str] = []
+
+    status = spec.get("_meta", {}).get("status", "")
+    if status != "FROZEN":
+        errors.append(f"spec._meta.status='{status}' はFROZENではない"
+                       "（MINOR対応: FROZEN以外でのdecideはFATAL）")
+
+    spec_n_sim = spec.get("n_sim")
+    if meta.get("n_sim") != spec_n_sim:
+        errors.append(f"n_sim不一致: meta.n_sim={meta.get('n_sim')!r} != spec.n_sim={spec_n_sim!r}")
+
+    actual_spec_sha = _sha256_file(spec_path)
+    if meta.get("spec_sha256") != actual_spec_sha:
+        errors.append(f"spec SHA-256不一致: meta={meta.get('spec_sha256')!r} != 実ファイル={actual_spec_sha!r}")
+
+    code_path = Path(__file__).resolve()
+    actual_code_sha = _sha256_file(code_path)
+    if meta.get("code_sha256") != actual_code_sha:
+        errors.append(f"コードSHA-256不一致: meta={meta.get('code_sha256')!r} != 実ファイル={actual_code_sha!r}")
+
+    summary_df = pd.read_csv(summary_path)
+    errors.extend(validate_summary_for_decide(summary_df, spec))
+
+    if errors:
+        print("[FATAL] --decide: fail-closed検証に失敗しました。decision.jsonは出力しません。",
+              file=sys.stderr)
+        for e in errors:
+            print(f"  - {e}", file=sys.stderr)
+        return 1
+
+    result = decide_from_summary(summary_df, spec, label_final=GATE_LABEL_FINAL)
     result["input_files_sha256"] = {
-        str(p): hashlib.sha256(p.read_bytes()).hexdigest()[:16] for p in input_files
+        str(summary_path): hashlib.sha256(summary_path.read_bytes()).hexdigest(),
+        str(spec_path): actual_spec_sha,
+        str(code_path): actual_code_sha,
     }
+    result["meta"] = meta
     result["generated_at"] = datetime.now(timezone.utc).isoformat()
 
     decision_path = out_dir / "decision.json"
@@ -1171,7 +1384,9 @@ def main() -> int:
                      help="smoke_n_sim（既定200程度）で全arm動作確認+ユニット的検証を実行")
     ap.add_argument("--n-sim", type=int, default=None, help="n_simを上書き（--smoke未指定時のみ有効・FROZEN時はFATAL）")
     ap.add_argument("--decide", action="store_true",
-                     help="B7確定: --summary-csvからgate1/gate2/gate3を機械適用しdecision.jsonを出力（specのstatusゲート非依存）")
+                     help="B7/R2-3確定: --summary-csvからgate1/gate2/gate3を機械適用しdecision.jsonを出力"
+                          "（fail-closed: spec status==FROZEN・meta(n_sim/spec/codeハッシュ)一致・"
+                          "期待セル集合完全一致を全て満たさない場合はFATALで出力しない）")
     ap.add_argument("--summary-csv", default=None, help="--decide時の入力summary CSVパス（既定: out-dir/summary.csv）")
     args = ap.parse_args()
 
@@ -1223,7 +1438,24 @@ def main() -> int:
 
     out_path = out_dir / out_name
     summary_df.to_csv(out_path, index=False)
-    print(f"[done] 実行時間={elapsed:.1f}秒 rows={len(records_df)} -> {out_path}", flush=True)
+
+    # R2-3確定: 本実行時にspec全文SHA-256(切詰めなし)・seed・n_sim・コードファイルSHA-256を
+    # 併走メタJSONへ必ず記録する（--decideのfail-closed検証がこのファイルを要求する）。
+    code_path = Path(__file__).resolve()
+    meta = {
+        "run_mode": "smoke" if args.smoke else "full",
+        "spec_path": str(spec_path.resolve()),
+        "spec_sha256": _sha256_file(spec_path),
+        "code_path": str(code_path),
+        "code_sha256": _sha256_file(code_path),
+        "seed": spec["seed"],
+        "n_sim": n_sim,
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+    }
+    meta_path = _meta_path_for(out_path)
+    meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
+    print(f"[done] 実行時間={elapsed:.1f}秒 rows={len(records_df)} -> {out_path} (meta -> {meta_path})",
+          flush=True)
 
     if not args.smoke:
         return 0
