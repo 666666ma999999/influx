@@ -637,30 +637,76 @@ def run_investor_types_backfill(start: str, end: str, api_key: str, run_id: str)
 
 
 def fetch_earnings_calendar(api_key: str, run_id: str) -> None:
-    """決算発表予定日を取得し、「取得を実行した日」スタンプの当日スナップショットとして保存する。
+    """決算発表予定日を取得し、当日スナップショット＋取得受領証跡（receipt）を保存する。
 
     直近データのみ提供され過去日を遡っての取得はできない前向き専用エンドポイントのため、
-    対象営業日ではなく実行日をファイルキーとする（既存ならスキップ＝同日の再実行は無効）。
-    """
-    today_str = now_jst().strftime("%Y%m%d")
-    path = DATA_ROOT / "earnings_calendar" / f"{today_str}.json.gz"
-    if path.exists():
-        print(f"[earnings_calendar] 本日分は既に取得済みのためスキップ: {path}")
-        append_log({
-            "run_id": run_id, "ts": now_jst().isoformat(), "kind": "earnings_calendar", "date": today_str,
-            "status": "skipped_exists", "count": None, "file": None, "error": None,
-        })
-        return
+    対象営業日ではなく実行日をファイルキーとする（スナップショットは既存なら上書きしない冪等契約）。
 
+    2026-07-21 拡張（§7-AG-v2 Codex R1 ブロッカー1/2対応の証拠収集）:
+    - APIフェッチ自体は毎回実行し、receipts.jsonl へ受領証跡を append する
+      （request開始/response完了時刻JST・返却Date集合・件数・payload sha256・snapshot書込有無・run_id）。
+      「営業日Xの朝フェッチが Date=X を返すか」＝可用時間帯の一次証跡（mtimeは証拠に使わない）。
+    - 同日複数回の取得は probes/YYYYMMDD-HHMMSS.json.gz に append-only で全量保存（60日で自己削除）。
+    """
+    import hashlib
+
+    ec_dir = DATA_ROOT / "earnings_calendar"
+    probes_dir = ec_dir / "probes"
+    probes_dir.mkdir(parents=True, exist_ok=True)
+    today_str = now_jst().strftime("%Y%m%d")
+    path = ec_dir / f"{today_str}.json.gz"
+
+    t0 = now_jst()
     resp = fetch_paginated("/v2/equities/earnings-calendar", {}, api_key)
+    t1 = now_jst()
     count = len(resp["data"])
+    payload_sha = hashlib.sha256(
+        json.dumps(resp, ensure_ascii=False, sort_keys=True).encode("utf-8")
+    ).hexdigest()
+    dates = sorted({r.get("Date") for r in resp["data"] if r.get("Date")})
+
+    probe_path = probes_dir / f"{t1.strftime('%Y%m%d-%H%M%S')}.json.gz"
+    write_json_gz(probe_path, resp)
+    # 60日超の probe を自己削除（追記型成果物の無制限増殖防止）
+    cutoff_ts = (now_jst() - datetime.timedelta(days=60)).timestamp()
+    for p in probes_dir.glob("*.json.gz"):
+        try:
+            if p.stat().st_mtime < cutoff_ts:
+                p.unlink()
+        except OSError:
+            pass
+
+    snapshot_written = False
+    if not path.exists():
+        write_json_gz(path, resp)
+        snapshot_written = True
+
+    receipt = {
+        "request_started_at": t0.isoformat(),
+        "response_completed_at": t1.isoformat(),
+        "dates": dates,
+        "count": count,
+        "payload_sha256": payload_sha,
+        "probe_file": str(probe_path.relative_to(PROJECT_ROOT)),
+        "snapshot_file": str(path.relative_to(PROJECT_ROOT)),
+        "snapshot_written": snapshot_written,
+        "run_id": run_id,
+    }
+    with (ec_dir / "receipts.jsonl").open("a", encoding="utf-8") as f:
+        f.write(json.dumps(receipt, ensure_ascii=False) + "\n")
+
     if count == 0:
         print("WARN: [earnings_calendar] 空レスポンス", file=sys.stderr)
-    write_json_gz(path, resp)
-    print(f"[earnings_calendar] saved: {count} 件 -> {path.relative_to(PROJECT_ROOT)}")
+    print(
+        f"[earnings_calendar] probe: Date={dates} {count}件 "
+        f"snapshot_written={snapshot_written} -> {probe_path.relative_to(PROJECT_ROOT)}"
+    )
     append_log({
         "run_id": run_id, "ts": now_jst().isoformat(), "kind": "earnings_calendar", "date": today_str,
-        "status": "saved", "count": count, "file": str(path.relative_to(PROJECT_ROOT)), "error": None,
+        "status": "saved" if snapshot_written else "skipped_exists",
+        "count": count,
+        "file": str(path.relative_to(PROJECT_ROOT)) if snapshot_written else None,
+        "error": None,
     })
 
 
