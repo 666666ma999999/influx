@@ -83,3 +83,11 @@ scripts/run_research.sh --phase report
 - 試行錯誤は `analysis/<topic>` worktree（`../influx-<topic>`）で隔離 → 確定だけ main へ昇格
 - 一度きりの探索スクリプトは `_tmp_<name>.py`（gitignore で追跡外）。`measure_*` 等の定常計測は無印 tracked
 - 実験出力は `output/`（gitignore 済）/ 学習データ `data/few_shot_examples.json` 等は tracked 正本
+
+## 実装完了ごとの同セッション commit（ユーザー恒久指示 2026-07-21）
+
+実装・文書の意味ある変更が終わったら、**同セッション内で意味単位の個別 add で commit まで行う**。
+この指示自体が恒久承認＝コミットの都度のユーザー確認は不要（rules/10 の ~/.claude 方式の influx 版）。
+push は従来どおりユーザーの `!` 実行または明示依頼時のみ。`git add -A`/`.` 禁止・無関係変更の混入禁止は
+従来どおり（git-safety-reference）。機械催促: Stop hook `~/.claude/hooks/stop-influx-loop-closing.sh`
+（未コミットの実装編集があると停止時に1回ブロックで催促。教訓クロージング3点自問も同 hook が担う）。
