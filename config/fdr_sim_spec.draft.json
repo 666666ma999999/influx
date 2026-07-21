@@ -1,37 +1,50 @@
 {
   "_meta": {
-    "status": "FROZEN_CANDIDATE - PENDING CODEX GO (2026-07-21)",
-    "warning": "採否基準・全armパラメータの数値は本実行前に確定済み（smoke以外の結果未閲覧）。Codex GOで凍結・以後の変更は起案放棄と同義。DRAFT注記付きパラメータは以下のfrozen_decisionsで確定値として宣言する。",
-    "frozen_decisions": "①A1 cohort_size=3で凍結（実績5,3,1,2,1の平均2.4の丸め・陣形成の将来ルール未定というモデル化限界はレポートに明記） ②A2 W0=q/2=0.05・reward=b0=q-W0=0.05（LORD標準）・γ=poly1.6正規化（原論文閉形式でない簡略化を明記） ③A3 λ_s=0.5 ④A4 n_families=4（実質独立ファミリー2〜4診断の上限） ⑤n_sim=2000・seed=20260721。これらの簡略化はいずれも5arm間で共通条件・同一乱数系列で適用されるため相対比較の公平性を損なわない、という設計判断。",
+    "status": "FROZEN_CANDIDATE - PENDING CODEX R2 GO (2026-07-21 R1修正版)",
+    "warning": "採否基準・全armパラメータの数値は本実行前に確定済み（smoke以外の結果未閲覧）。Codex R2 GOで凍結（status=FROZENへ遷移）・以後の変更は起案放棄と同義。本版は凍結審査R1（Codex・threadId 019f84eb・9ブロッカー+MINOR5）のNO-GOを受けteam-lead確定設計判断で全件修正済み（B1〜B9対応はscripts/fdr_regime_sim.py冒頭docstring参照）。",
+    "frozen_decisions": "①A1 cohort_size=3で凍結（陣形成の将来ルール未定というモデル化限界はレポートに明記。cohort_size∈{1,5}は感度として並走・gateはcohort_size=3のみ使用） ②A2 W0=q/2=0.05・q=0.10（LORD標準）・γ=Ramdas et al. 2017 LORD++の閉形式（B4確定・poly1.6簡略化は廃止） ③A3 λ_s=0.5・γ系列はA2と同一のB4確定閉形式を流用（原論文でγ系列の別途指定なし） ④A4 n_families=4（n_families∈{2}を感度として並走・gateはn_families=4のみ使用） ⑤n_sim=5000・seed=20260721（B2確定・精度確保のため2000→5000へ増）。",
     "purpose": "online-FDR切替起案v2 §6 工程1（5-arm統計体系比較シミュレーション仕様）のドラフト。工程2ハーネス骨格（scripts/fdr_regime_sim.py）の入力。",
-    "source_doc": "docs/fdr-switch-proposal.md §6（行81-106）+ 冒頭R1レビュー要旨（行1-9）",
+    "source_doc": "docs/fdr-switch-proposal.md §6（行81-106）+ 冒頭R1レビュー要旨（行1-9）+ 凍結審査R1ブロッカー対応（B1〜B9・2026-07-21）",
     "created": "2026-07-21",
     "excludes": "既走行13本の競走は一切含めない（forward-only新規登録のみ・グランドファザリング§3）。台帳(data/kpi_trials/*)・config/paper_watchlist.json・catalogは本specから一切参照しない（工程2指示: 台帳/config一切不干渉）"
   },
-
   "seed": 20260721,
-  "n_sim": 2000,
+  "n_sim": 5000,
   "smoke_n_sim": 200,
-
   "sim_start_date": "2026-08-01",
   "horizon_years": 6,
   "horizon_years_note": "登録を許す期間の長さ（年）。metric_datesの最遅日+judgment_delay_monthsを賄うのに不足する場合はスクリプト側で自動延長し警告を出す。",
-  "metric_dates": ["2028-12-31", "2030-12-31"],
+  "metric_dates": [
+    "2028-12-31",
+    "2030-12-31"
+  ],
   "judgment_delay_months": 12,
-
   "grid": {
-    "p_true": [0.05, 0.10, 0.20],
-    "lambda_per_year": [0, 5, 10],
-    "n_eff_mode": ["conservative", "optimistic"]
+    "p_true": [
+      0.05,
+      0.1,
+      0.2
+    ],
+    "lambda_per_year": [
+      0,
+      5,
+      10
+    ],
+    "n_eff_mode": [
+      "conservative",
+      "optimistic"
+    ]
   },
   "grid_note": "p_true×lambda_per_year×n_eff_mode = 3x3x2 = 18シナリオ。p_true/lambda_per_yearはP7(kpi_goal_probability.py)と同一系。n_eff_modeは楽観(イベントn外挿)/保守(月数n_eff=12)の2モードを横並び比較するための追加軸（proposal.md §6は明示していないが、本harnessの指示書『σとn_effのデフォルトは...2モード』に対応するため追加）。",
-
   "effect_model": {
-    "ev_true_pct_choices": [0.5, 1.0, 2.0],
+    "ev_true_pct_choices": [
+      0.5,
+      1.0,
+      2.0
+    ],
     "distribution": "discrete_uniform",
     "note": "真エッジ候補の月次EV(%)。proposal.md §6行93: EV_true ∈ {+0.5%,+1%,+2%}の離散一様。偽候補はEV_true=0固定（p_value ~ Uniform(0,1)を厳密に満たす）。"
   },
-
   "calibration": {
     "source": "output/kpi_maturity/report.md §3-4 + output/kpi_maturity/maturity.csv（2026-07-21実読・生成元scripts/kpi_maturity_power.py）",
     "n_eff_conservative": 12,
@@ -43,7 +56,6 @@
     "sigma_month": 0.0806,
     "sigma_month_note": "同11系統サブセットのsigma_month列（月次平均リターン系列σ・report.md §3脚注『月次集計で相関を粗く補正した下限側シナリオ』・保守n_effモード用）の中央値=8.06%（全17系統中央値=8.85%、レンジ5.07%〜13.99%）。"
   },
-
   "arms": {
     "a1_fwer_cohort_halving": {
       "label": "現行FWER: 陣別α半減（forward-only継続）",
@@ -51,26 +63,32 @@
       "start_cohort_index": 6,
       "start_cohort_index_note": "DRAFT前提: 既走行13本が陣1-5を消費済み（0.025+0.0125+0.00625+0.003125+0.0015625=0.0484375・catalog L1769-1774/L1772/L1773/L1972/L2069/L2218）。forward-only新規候補は陣b=6から半減系列 α_b = total_budget / 2^b を継続する前提（proposal.md §6『新規陣は総予算0.05内で半減継続』）。",
       "cohort_size": 3,
-      "cohort_size_note": "DRAFT・未確定・要team-lead/Codex確認: 実際の陣サイズは5,3,1,2,1件と可変（ad hoc registration wave単位）で、将来の陣形成ルールはproposal.md本文に明記がない。本skeletonは登録順を固定サイズ(=3、実績の単純平均に近い丸め値)でグルーピングする単純化を仮置きしている。陣形成規則そのものが本v2の未決事項の一つ。"
+      "cohort_size_note": "DRAFT・未確定・要team-lead/Codex確認: 実際の陣サイズは5,3,1,2,1件と可変（ad hoc registration wave単位）で、将来の陣形成ルールはproposal.md本文に明記がない。本skeletonは登録順を固定サイズ(=3、実績の単純平均に近い丸め値)でグルーピングする単純化を仮置きしている。陣形成規則そのものが本v2の未決事項の一つ。",
+      "cohort_size_sensitivity": [
+        1,
+        3,
+        5
+      ],
+      "cohort_size_sensitivity_note": "MINOR確定: cohort_size∈{1,3,5}を事前固定で並走実行する（gateはcohort_size=3のみ使用・1と5は同一candidatesを再利用したpaired比較の参考列としてsummary.csvにvariant='a1_cohort1'/'a1_cohort5'で出力）。"
     },
     "a2_lord_async": {
-      "label": "LORD++（非同期・Zrnic et al.型定式化のDRAFT簡略実装）",
+      "label": "LORD++（非同期・Zrnic et al. 2018型 async instantiation・B4確定で原論文Algorithm 1に忠実化）",
       "W0": 0.05,
-      "W0_note": "DRAFT: 本harness指示書『W0=q/2』・q=0.10(proposal.md §2 FDR目標)より0.05。",
-      "reward": 0.05,
-      "reward_note": "DRAFT: 発見1件あたりの資産還付額=W0と同値とする単純化（一般的なLORD初期実装の慣行）。",
-      "gamma_series": {"type": "poly_decay", "exponent": 1.6},
-      "gamma_series_note": "DRAFT: Ramdas et al. 2017 LORD++の実装で慣行的に用いられる多項式減衰系列 γ_j ∝ j^-1.6 を正規化して使用。原論文の厳密な閉形式（log項含む）はteam-lead/Codex確認後に確定する。",
-      "async_mechanism_note": "R1ブロッカー①対応: 候補iのα_iは『iの登録時点S_iまでに判定が確定した(E_j<=S_i)候補』のみを発見カウント対象とする非同期適格性フィルタを実装（Zrnic, Ramdas & Jordan 2018型の非同期online-FDRの核心的発想）。ただしwealthの更新式自体は閉形式(γ_kの直接和)を用いたrunning-balance近似であり、論文の厳密なclosed-formそのものではない。DRAFT skeletonの簡略化である旨、凍結前にteam-lead/Codexの確認を要する。"
+      "W0_note": "B4確定: W0=q/2=0.05（q=0.10・proposal.md §2 FDR目標）。",
+      "q": 0.1,
+      "q_note": "B4確定: FDR目標水準α(=q)=0.10。Algorithm 1のα_{t+1}=γ_{t+1}W0+γ_{t+1-r1}(α-W0)+Σ_{j>=2}γ_{t+1-rj}αにそのまま対応（旧DRAFTの'reward'定数は廃止し、W0とqの2値から式内で直接(q-W0)を計算する構成に変更）。",
+      "gamma_series_note": "B4確定: Ramdas et al. 2017 LORD++の閉形式 γ_j ∝ log(max(j,2))/(j*exp(sqrt(log(max(j,2)))))（正規化してΣγ_j=1）に忠実化。旧DRAFTの多項式減衰(poly1.6)簡略化は廃止（scripts/fdr_regime_sim.py LordPlusPlusGammaSeries参照）。",
+      "async_mechanism_note": "R1ブロッカー①対応（B4で再確認）: 候補iのα_iは『iの登録時点S_iまでに判定が確定した(decide_month<=S_i)候補』のみを発見カウント対象とする非同期適格性フィルタを実装（Zrnic, Ramdas & Jordan 2018 \"Asynchronous Online Testing of Multiple Hypotheses\" (arXiv:1812.05068) の async conflict set X_t^async={i:E_i>=t} を代入したAlgorithm 1の忠実実装。τ_j(=r_j)は当該論文eq.(4)の定義どおり『j番目の発見が登録カウント上いつ可視化されるか』をbisectで求める。詳細な式対応表はAsyncLORDArmのdocstring参照）。"
     },
     "a3_saffron_async": {
-      "label": "SAFFRON async（DRAFT簡略実装）",
+      "label": "SAFFRON async（B3確定: Zrnic, Ramdas & Jordan 2018 Algorithm 3に忠実化）",
       "W0": 0.05,
-      "reward": 0.05,
+      "q": 0.1,
+      "q_note": "B3確定: A2と同一のFDR目標水準α(=q)=0.10をAlgorithm 3のαとして使用。",
       "lambda_s": 0.5,
-      "lambda_s_note": "DRAFT: SAFFRON(Ramdas et al. 2018)の文献で慣用されるcandidate閾値。",
-      "gamma_series": {"type": "poly_decay", "exponent": 1.6},
-      "async_mechanism_note": "a2_lord_asyncと同一の非同期適格性フィルタ（E_j<=S_i）を適用。加えてSAFFRON固有の『candidate』判定（p_j<=lambda_s）も同フィルタで登録前確定済みのもののみを添字カウント対象とする。α_iはlambda_sで上限キャップする（DRAFT簡略化・原論文の正確な制約はteam-lead/Codex確認要）。"
+      "lambda_s_note": "SAFFRON(Ramdas et al. 2018)の文献で慣用されるcandidate閾値（frozen_decisions③で凍結）。",
+      "gamma_series_note": "B3確定: A2(LordPlusPlusGammaSeries・B4確定閉形式)と同一のγ系列を流用する設計判断（原論文Algorithm 3もLORD++のAlgorithm 1と同じ『非負非増加・Σγ=1』という要件のみを課し、SAFFRON固有の別系列は指定していないため）。",
+      "async_mechanism_note": "B3確定: Zrnic, Ramdas & Jordan 2018 (arXiv:1812.05068) p.9 Algorithm 3「The SAFFRON* algorithm for constant λ under general conflict sets」に、非同期conflict set X_t^async={i∈[t-1]:E_i>=t}を代入した忠実実装（一次資料をPDFから取得し数式画像を直接確認済み・幻覚防止のため）。候補指標C_i=1{P_i<=λ}・候補密度補正項C_{j+}=Σ_{i=r_j+1}^{t}C_i・1{i∉X_t}を含め、α_{t+1}=min{λ,(1-λ)[W0γ_{t+1-C0+}+(α-W0)γ_{t+1-r1-C1+}+Σ_{j>=2}αγ_{t+1-rj-Cj+}]}を実装。詳細な式対応表・唯一の解釈判断（非同期設定でi=t自身はE_t>tのため自ら未確定でeligibleになり得ない、という一貫した扱い）はAsyncSAFFRONArmのdocstring参照。"
     },
     "a4_family_hierarchical": {
       "label": "family階層: family間Bonferroni×family内BH",
@@ -78,37 +96,70 @@
       "n_families_note": "DRAFT・未確定: family分割の粒度・候補→family対応ルールはproposal.mdに明記がない。本skeletonは候補をn_families個に一様ランダム割当する単純化。",
       "total_budget": 0.05,
       "total_budget_note": "DRAFT: family間の層はFWER型（Bonferroni）のため、legacy FWER予算0.05（A1と同一の歴史的総予算）を採用。family内BHのq水準はtotal_budget/n_familiesとして自動導出される。",
-      "within_family_procedure_note": "family内は (family, 判定日の暦年) をバッチ単位とし、そのバッチが確定した時点で一度だけBH(alpha_family)を適用する一発バッチ方式（A5と同一機構をfamily単位に細分化）。当初案の『判定発生ごとの逐次再計算方式』はスクリプトの--smoke自己検証でp_true=0世界のfamily内FWERを名目alpha_familyの約3倍に押し上げること（繰り返しpeekingの結果でありコードのバグではない）が判明したため、A5と同じ一発バッチ機構に統一した（scripts/fdr_regime_sim.py内コメント参照）。"
+      "within_family_procedure_note": "B5確定: 判定期間全体をfamily単位の一発バッチとし、判定期間終了時（2030-12-31）にfamily内BH(alpha_family)を1回だけ適用する（年次再発行を廃止。旧設計の(family,判定年)単位の年次再発行は--smoke自己検証でp_true=0世界のfamily内FWERを名目alpha_familyの約3倍(実測0.0397 vs 名目0.0125)に押し上げることが判明していたため、B5で一発バッチへ統一）。2028時点のメトリクスは別途『2028-12-31までの判定分への一発BH』reference変種（variant='a4_ref2028'・ゲート不使用・参考列）として独立に出力する（2030一発バッチの結果を2028で流用すると未来情報が混入するため）。",
+      "n_families_sensitivity": [
+        2,
+        4
+      ],
+      "n_families_sensitivity_note": "MINOR確定: n_families∈{2,4}を事前固定で並走実行する（gateはn_families=4のみ使用・2は同一candidatesをfamily_raw%n_familiesで再割当したpaired比較の参考列としてvariant='a4_nfam2'で出力）。"
     },
     "a5_fixed_batch_bh": {
       "label": "固定バッチBH（年次バッチ）",
-      "q": 0.10,
+      "q": 0.1,
       "q_note": "proposal.md §2 目標統制 FDR<=q=0.10 と同一水準。",
-      "batch_note": "候補の判定日（登録+12ヶ月）が属する暦年ごとにグルーピングし、各年末に当年判定分をまとめてBH(q)を1回適用する（年をまたいだ持ち越し・調整は一切なし）。"
+      "batch_note": "B5確定: 判定期間全体（sim_start_date〜2030-12-31）を1バッチとし、判定期間終了時に全判定分でBH(q)を1回だけ適用する（年次再発行を廃止。累積FDRが年次再発行では非統制になるというR1ブロッカー⑤への対応）。2028時点のメトリクスは別途『2028-12-31までの判定分への一発BH』reference変種（variant='a5_ref2028'・ゲート不使用・参考列）として独立に出力する。"
     }
   },
-
   "acceptance_criteria": {
-    "status": "FROZEN_CANDIDATE - PENDING CODEX GO",
-    "warning": "本基準はシミュレーション本実行の**前に**数値確定した（2026-07-21・smoke出力以外の結果は未閲覧）。本実行後の変更・追加・緩和は事後調整であり禁止。Codex GOをもって凍結・実行後は機械適用のみ。",
+    "status": "FROZEN_CANDIDATE - PENDING CODEX R2 GO",
+    "warning": "本基準は数値をシミュレーション本実行の前に確定した（2026-07-21・smoke出力以外の結果は未閲覧）。本実行後の変更・追加・緩和は事後調整であり禁止。Codex R2 GOをもって凍結（status=FROZEN）・実行後は--decideによる機械適用のみ。",
     "scenario_sets": {
-      "evaluable": "lambda_per_year>0 の12シナリオ（p_true 3 × lambda {5,10} × n_eff_mode 2）。lambda=0の6シナリオは候補が到着せず縮退のため全ゲートの対象外（結果は参考掲載のみ）",
-      "fdr_estimable": "evaluable のうち fdr_2030_n_valid_runs >= 30 のシナリオ（発見が稀でFDR推定不能なセルを妥当性ゲートの分母から除外する事前宣言。除外セルは件数と共に必ず報告）"
+      "evaluable": "lambda_per_year>0 の12シナリオ（p_true 3 × lambda {5,10} × n_eff_mode 2）。lambda=0の6シナリオは候補が到着せず縮退のため全ゲートの対象外（結果は参考掲載のみ）。gate2(優越性判定)はこの12シナリオのみを使用する。",
+      "stress": "B9確定: stress_scenariosブロック参照。(p=0.10,lambda=10)×両n_eff_modeのストレス変種5種×2=10セル。gate1(FDR上限判定)の対象セルにのみ含める（evaluable12+stress10=22セル）。",
+      "fdr_estimable_note": "B1確定によりfdr_estimable(発見あり run>=30によるセル除外)概念は廃止。FDP=V/max(R,1)を発見ゼロrunも含め全run単純平均するため、セル除外は不要になった。診断用にfdr_2030_n_disc_runs列（発見ありrun数）はsummary.csvに残す。"
     },
-    "gate1_validity": "採用候補となるarmは、fdr_estimable の全シナリオで fdr_2030_mean <= 0.11（q=0.10 + モンテカルロ誤差バッファ0.01・事前固定）を満たすこと。fdr_2028_mean も参考掲載（ゲートには2030のみ使用）。FWERはゲートに使わず全シナリオ報告（FWER→FDRへの統制切替が本起案の趣旨であり、FDR型armのFWERが高いのは想定内として正直に開示する）",
+    "gate1_validity": "B2確定式: 採用候補となるarmは、gate1対象セル(evaluable12+stress10=22セル)すべてでfdr_2030_mean + z*SE <= 0.10 を満たすこと（片側同時信頼上限・z=z_{0.05/12}=2.6383・12セル同時Bonferroni由来の値を事前固定・0.11バッファ方式は廃止）。z=2.6383という数値は12セルのBonferroni補正から導出されているが、B9でgate1対象セルが22に拡張された後もteam-lead確定のこの固定数値をそのまま流用する（対象セル数と補正数の不一致は既知の設計判断としてteam-leadに報告済み・再凍結審査R2の論点として残す）。fdr_2028_meanは参考掲載のみ（ゲートには2030のみ使用）。FWERはゲートに使わず全シナリオ報告。",
     "gate2_superiority": {
-      "primary": "evaluable の各シナリオで A1(現行FWER) との true_disc_2030_mean を比較。**A1_mean >= 0.05 のシナリオ**: challenger_mean >= 1.5 × A1_mean（+50%）で当該シナリオ勝ち。**A1_mean < 0.05 のシナリオ（A1縮退・比率が定義不能）**: challenger_mean >= A1_mean + 0.5（絶対マージン・事前宣言フォールバック）で勝ち",
-      "threshold": "evaluable 12シナリオ中 **8以上（2/3）で勝ち** かつ **全シナリオで challenger_mean >= 0.9 × A1_mean − 0.05**（どのシナリオでも実質的にA1より悪化しないno-regret下限・0.05は絶対誤差余裕）"
+      "primary": "B6確定（連続式・不連続フォールバック廃止）: evaluable 12シナリオそれぞれで、challenger_mean - A1_mean >= max(0.5, 0.5 × A1_mean) なら当該シナリオ勝ち。",
+      "threshold": "evaluable 12シナリオ中 8以上（2/3）で勝ち かつ 全12シナリオでchallenger_mean >= 0.9 × A1_mean − 0.05（no-regret下限・B6確定）。"
     },
-    "gate3_selection": "gate1×gate2を両方通過したarmが複数ある場合: (1) evaluable 12シナリオの true_disc_2030_mean の総平均が最大のもの (2) 相対差5%以内の同率は調整可能パラメータ数が少ない順（事前宣言の複雑度順位: a5_fixed_batch_bh < a2_lord_async < a3_saffron_async < a4_family_hierarchical） (3) なお同率は同順位表の先頭。**通過armがゼロの場合=現行FWER維持で本起案を棄却**（それも正式な結論として記録）",
+    "gate3_selection": "gate1×gate2を両方通過したarmが複数ある場合: (1) evaluable 12シナリオのtrue_disc_2030_meanの総平均が最大のもの (2) 相対差5%以内の同率は調整可能パラメータ数が少ない順（事前宣言の複雑度順位: a5_fixed_batch_bh < a2_lord_async < a3_saffron_async < a4_family_hierarchical） (3) なお同率は同順位表の先頭。通過armがゼロの場合=現行FWER維持で本起案を棄却（それも正式な結論として記録）。B7確定: --decideモードがこの3ゲートを機械適用しoutput/fdr_sim/decision.jsonへ出力する。",
     "secondary_report_only": "first_discovery_month・true_disc_2028・FWER・偽発見数は報告のみ（採否に不使用）"
   },
-
   "notes": [
     "既走行13本の競走はforward-onlyのため本シミュレーションに一切含めない(proposal.md §3グランドファザリング/§6手順5)。",
     "sim_start_date=2026-08-01以降に新規登録される候補のみを対象とする。",
     "候補の到着過程は年あたりlambda_per_year本を月次一様(homogeneous Poisson過程・月次rate=lambda/12)で近似する。",
     "全乱数はseedから(scenario, run_id)ごとにnp.random.SeedSequenceで決定的に分岐する（再現性）。",
-    "本specはscripts/fdr_regime_sim.pyの--smokeで動作確認済み（smoke_n_simで小規模実行）。本実行(n_sim)は仕様凍結後にteam-leadが指示する。"
-  ]
+    "本specはscripts/fdr_regime_sim.pyの--smokeで動作確認済み（smoke_n_simで小規模実行）。本実行(n_sim)は仕様凍結後にteam-leadが指示する。",
+    "B1〜B9ブロッカー対応・MINOR5件の詳細はscripts/fdr_regime_sim.py冒頭docstringおよび各Armクラス/関数のdocstringを正本とする（本specは数値パラメータの単一情報源）。"
+  ],
+  "stress_scenarios": {
+    "note": "B9確定(2026-07-21 Codex R1対応⑨): (p_true=0.10, lambda_per_year=10)固定×両n_eff_modeで以下5変種を追加実行し、gate1(FDR上限判定)の対象セルに含める(evaluable12+stress10=22セル)。gate2(優越性判定)は主12評価シナリオのみを使用しstressセルは含めない。",
+    "fixed_p_true": 0.1,
+    "fixed_lambda_per_year": 10,
+    "s1_common_factor": {
+      "rho": 0.5,
+      "note": "月内候補のz値に共通因子ρ=0.5（sqrt(rho)*Z_common+sqrt(1-rho)*Z_indiv・分散1を保持）"
+    },
+    "s2_variable_delay": {
+      "delay_months_range": [
+        9,
+        15
+      ],
+      "note": "判定遅延~一様{9..15}ヶ月（登録順と判定順の逆転を許容）"
+    },
+    "s3_burst_arrivals": {
+      "burst_months_per_year": 2,
+      "note": "年間流入を各12ヶ月ブロックの2ヶ月(1,7月目)に集中させる（年間期待到着数はlambda_per_year一定）"
+    },
+    "s4_anticonservative_null": {
+      "beta_a": 0.9,
+      "beta_b": 1.0,
+      "note": "null候補のp値をBeta(0.9,1)から直接生成（軽微な反保守・Uniform(0,1)よりp=0近傍に偏る）"
+    },
+    "s5_effect_freq_inverse": {
+      "note": "EV_true=2%(ev_true_pct_choicesの最大値)の候補は、n_eff_modeに関わらず常に保守n_eff(calibration.n_eff_conservative)を使用する（効果量×頻度の逆相関を模擬）"
+    }
+  }
 }
