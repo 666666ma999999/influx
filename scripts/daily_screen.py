@@ -1863,6 +1863,17 @@ def main() -> int:
     scoreboard = paper_eval.compute_scoreboard(records)
     paper_eval.write_scoreboard_md(scoreboard, paper_eval.SCOREBOARD_PATH)
 
+    # レシピ棚を再生成（2026-07-22 保守追加・scoreboard更新直後に前向きnを反映）。
+    # 読み取り専用の結合レポート（output/recipe_shelf.md + vaultミラー生成のみ・台帳/state無干渉）。
+    # 非致死: 棚生成失敗は本番スクリーンの実行・終了コードに影響させない（§7-AG非介入と同型）。
+    try:
+        subprocess.run(
+            [sys.executable, str(Path(__file__).parent / "build_recipe_shelf.py")],
+            check=False, timeout=120,
+        )
+    except Exception as e:  # noqa: BLE001 (非致死: 本番スクリーン継続を最優先)
+        print(f"WARN: recipe_shelf 生成に失敗（本処理は継続）: {e}", file=sys.stderr)
+
     watchlist_by_name = {e["kpi_name"]: e for e in watchlist}
     recent_signals = update_recent_signals_cache(
         end_bd, watchlist_by_name, bday_index, all_bdays, regime_by_day, universe_cache,

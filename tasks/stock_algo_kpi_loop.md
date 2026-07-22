@@ -666,6 +666,7 @@
 - **第10R RRG（セクターローテーション4象限）**: 単独買いレシピ=不可（業種価格モメンタムの再パッケージ・sector_momentum_laggard n=2810/lift0.81近傍）。ユーザー指摘で過去データ記述診断は規律セーフと確認（記述集計は§6付記5項の"検定"に非該当・定義事前固定でcurve-fit回避）。→ 保留（守り部品としての受動記録から）。
 - **複利+6%/7日ルート診断（`scripts/kpi_touch_rate_diag.py`・記述的・台帳不算入・in-sample）**: ユーザー案「7bd+6%を3乗で月+20%」を実測 → **手堅い勝ちレシピ0本**。全体タッチ率31.9%だが約半数(50.3%)が終値前に垂れEV③(+6%指値)=-0.2%・最良でもPEAD-gap系+0.6%/週(holdout棄却済み)。「タッチ≠保持」の壁。
 - **🗂 レシピ棚 新設**（第11R 2AI一致設計・ユーザー承認・Codex実装）: `scripts/build_recipe_shelf.py`＋判断層正本`config/recipe_shelf_meta.json`→`output/recipe_shelf.md`＋vaultミラー`[[influx-recipe-shelf]]`。主軸=狙い(スナイプ+20%/複利+6%)×証拠段階(使える/有力/観察中/使わない)・family畳み込み・**ヘッドライン「実戦投入可0本」大書**・機械結合(maturity/paper_scoreboard/trials/fingerprints)で二重正本なし。cockpit先頭からリンク。honesty guard=promising/観察中を合格表示しない。
+- **棚の自動更新 配線済み（2026-07-22）**: `daily_screen.py` の scoreboard生成直後(L1865)に非致死subprocessで `build_recipe_shelf.py` を挿入（+11行・ledger書込L1849より後＝台帳ロジック無影響・失敗しても本番スクリーン継続・保守変更ルール範囲）。毎営業日07:32の本番ジョブで棚が前向きnを反映して自動再生成される。
 
 ### 2026-07-21 §7-AG 実schema確認 → 仕様ブロッカー発見（ユーザー裁定待ち）
 - **凍結時の宿題（explicit_no_scheduleフィールド実値確認）を実施した結果、より大きな不一致を発見**:
