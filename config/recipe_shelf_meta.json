@@ -1,0 +1,45 @@
+{
+  "_provenance": "レシピ棚(output/recipe_shelf.md)の分類の判断層＝唯一の手入力正本（data-provenance-first）。凍結済み config/paper_watchlist.json は触らずここに分離。tier/bet_profileは team-lead 裁定。数値（最早判定日・頻度・前向きn・verdict・family）は本ファイルに持たず、生成器 scripts/build_recipe_shelf.py が maturity.csv / paper ledger / trials.jsonl / trial_fingerprints.json から機械結合する（二重正本禁止）。2026-07-21第11R 2AI一致設計・ユーザー承認。",
+  "schema_version": 1,
+  "generated_shelf_path": "output/recipe_shelf.md",
+  "vault_mirror": "02_Ai/influx/influx-recipe-shelf.md",
+  "tier_labels": {
+    "usable": "✅ 使える（正式合格）",
+    "promising": "🌟 有力（過去関門を全通過）",
+    "observing": "🟡 観察中（本番試験走行）",
+    "dead": "🔴 使わない（負け確定＝資産）",
+    "control": "（対照・参照＝棚のレシピ数に数えない・別欄）"
+  },
+  "bet_profile_labels": {
+    "snipe": "スナイプ +20%/20日",
+    "compound": "複利 +6%/7日",
+    "overlay": "守り部品（単独では張らない）"
+  },
+  "tier_rule_note": "usable=前向き正式合格（現在0・trials.jsonl の正式合格verdict出現で自動反映）/ promising=§0運用開始ライン充足済みで観察中（watchlist role の promising・入場判定に対応）/ observing=前向き競走中だが promising 未達（§7-Q/§7-T 純観察系）/ dead=trials verdict∈{fail,confirm_fail,rejected,hoos_rejected,invalidated}＋fingerprints source∈{avoidance,misokuri,excluded_family} を family 単位で畳んで自動生成（本ファイルに列挙しない）/ control=比較対照・参照（棚のレシピ数に数えない）。",
+  "kpi_classification": {
+    "sue_x_above200":              {"tier": "promising", "bet_profile": "snipe", "family": "決算サプライズ(SUE)"},
+    "sue_beat":                    {"tier": "control",   "bet_profile": "snipe", "family": "決算サプライズ(SUE)", "control_reason": "SUE paired比較対照(素)・family=SUEに畳まれる"},
+    "guidance_fy_strong":          {"tier": "promising", "bet_profile": "snipe", "family": "ガイダンス強気"},
+    "cfo_margin_improve":          {"tier": "promising", "bet_profile": "snipe", "family": "CFOマージン改善"},
+    "sales_beat":                  {"tier": "promising", "bet_profile": "snipe", "family": "売上ビート"},
+    "earnings_spillover":          {"tier": "promising", "bet_profile": "snipe", "family": "決算波及(同業種)"},
+    "volshock_x_above200_quiet":   {"tier": "promising", "bet_profile": "snipe", "family": "出来高ショック", "display_note": "チャンピオン(above200×静→動)"},
+    "sell_reg_trigger_rebound":    {"tier": "observing", "bet_profile": "snipe", "family": "規制トリガー反発"},
+    "turnover_rank_surge":         {"tier": "observing", "bet_profile": "snipe", "family": "売買代金急増"},
+    "margin_expand_yoy":           {"tier": "observing", "bet_profile": "snipe", "family": "実績マージン改善"},
+    "raw_strev_entry":             {"tier": "observing", "bet_profile": "snipe", "family": "短期リバーサル(月末)"},
+    "gap_hold_close_strong":       {"tier": "observing", "bet_profile": "snipe", "family": "ギャップ持続"},
+    "engulf_reversal_day":         {"tier": "observing", "bet_profile": "snipe", "family": "攻守転換(包み足)"},
+    "three_up_ignition":           {"tier": "observing", "bet_profile": "snipe", "family": "連続陽線点火"},
+    "volshock_5x":                 {"tier": "control",   "bet_profile": "snipe", "family": "出来高ショック", "control_reason": "比較対照(α無し・§6付記II対象外)"},
+    "volshock_x_above200":         {"tier": "control",   "bet_profile": "snipe", "family": "出来高ショック", "control_reason": "比較対照(α無し)"},
+    "shortcover_x_bear":           {"tier": "control",   "bet_profile": "snipe", "family": "需給/信用", "control_reason": "比較対照(α無し)"},
+    "pead_gap8_vol3":              {"tier": "control",   "bet_profile": "snipe", "family": "決算サプライズ(PEAD)", "control_reason": "参照・holdoutで棄却済み(reference)"},
+    "sh_dip_reentry":              {"tier": "dead",      "bet_profile": "snipe", "family": "S高押し目", "dead_reason": "前向きholdout観察で棄却(hoos_rejected)"}
+  },
+  "overlay_candidates": {
+    "earnings_avoidance_overlay_shadow_v1": {"tier": "observing", "bet_profile": "overlay", "family": "決算跨ぎ回避(§7-AG)", "note": "非介入シャドー観察・稼働開始待ち（earnings_calendar朝receipt検証後）。単独では張らない部品棚に表示・採用ゼロ"}
+  },
+  "compound_column_note": "複利 +6%/7日 列は 2026-07-22 タッチ率診断(output/kpi_touch67/・記述的・合否判定なし・in-sample)の結論を反映: **手堅い勝ちレシピ0本**。全体でタッチ率31.9%だが約半分(50.3%)が終値前に垂れ、+6%指値エグジットのEVは全体-0.2%・最良でもPEAD-gap系+0.6%/週(holdout棄却済み)。正式レシピ0本。tier=usableには決して入れない。",
+  "compound_column_cell_text": "診断済: 手堅い勝ち0本（タッチ率31.9%だが+6%指値EV≈0・約半数が垂れる）"
+}
