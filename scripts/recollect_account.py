@@ -68,12 +68,11 @@ def main() -> int:
     res = collector.collect(url, max_scrolls=args.max_scrolls,
                             group_name=f"recollect:{acc}", stop_after_empty=args.stop_after_empty)
 
-    # 本人発のみ（リポスト等で別 username が混じった場合は除外）
+    # from:<account> 検索は本人の投稿のみを返すため、username での除外はしない。
+    # （表示名に "@" を含むアカウントは collector の username 抽出が誤るため gate しない。
+    #  混入した引用元カード等は account=acc とみなす＝from: の著者保証を信頼する。2026-07-24 修正）
     posts = []
     for t in res.tweets:
-        u = (t.get("username") or "").lstrip("@").lower()
-        if u and u != acc.lower():
-            continue
         date = iso_to_ymd(t.get("posted_at") or t.get("collected_at"))
         text = (t.get("text") or "").replace("\n", " ").strip()
         if date and text:
