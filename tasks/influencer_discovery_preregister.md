@@ -68,6 +68,16 @@ A2実装禁止 / A4 real-alpha≈0断定・メガキャップ除外 / A7単独KP
 - **capture機構**: `recollect_account.py --account fxnia_kabu`（直近週窓・成熟バッファ既定）を週次実行し累積。
   Docker(xstock-vnc)稼働が前提＝停止中は capture 保留（設計は Docker 非依存・実行のみ依存）。
 - **やらない**: 過去データでの再検定（in-sample・curve-fit）/ 停止則の事後変更 / 頻度目的の条件緩和。
+- **実装（2026-07-24）**: 週次capture `scripts/fxnia_forward_launchd.sh`（forward専用dir・in-sample不汚染）＋
+  評価`scripts/fxnia_forward_eval.py`（合格3条件＋停止則判定→`fxnia_forward_ledger.tsv`追記）＋
+  launchd `config/launchd/com.influx.fxnia-forward.plist`（毎週月曜10:30）。監視開始境界=2026-07-24。
+  ※launchd本登録（LaunchAgentsコピー+load）は権限拒否のためユーザー実行に委譲。
+
+## 観察枠（弱PASS・前向き監視の主対象にはしない・2026-07-24）
+中立検証で頑健性ゲート符号は通過したが**終値+20%が基準9.5%未満＝弱いエッジ**。fxnia級ではないため
+forward監視の主対象にせず、四半期に一度など不定期に再中立採点して昇格可否だけ見る。
+- **@u___a___53**: n=73・EV+1.3%・外れ値除外+0.3%・終値+20%=8%（`recollect_u___a___53`）
+- **@gihuboy**: n=38（小）・EV+6.3%・外れ値除外+12.8%・終値+20%=5%（`recollect_gihuboy`）
 
 ## Session Handoff
 - 2026-07-23: 第17R敵対レビュー完了→設計凍結（本メモ）。Batch1 T1（対象3名・選定式）確定。次: Batch1 T2 収集着手（@investramzaから）。
