@@ -11,7 +11,7 @@ echo "=== widen batch start $(date -u +%H:%M:%S) accounts=[$ACCOUNTS] ===" >> "$
 for acc in $ACCOUNTS; do
   echo "--- collect @$acc $(date -u +%H:%M:%S) ---" >> "$LOG"
   PYTHONPYCACHEPREFIX=/tmp/pc DISPLAY=:99 python3 -u /app/scripts/recollect_account.py \
-    --account "$acc" --since 2025-08-01 --until 2026-07-24 --max-scrolls 200 >> "$LOG" 2>&1
+    --account "$acc" --since 2025-08-01 --until 2026-06-15 --max-scrolls 200 >> "$LOG" 2>&1
   echo "--- done @$acc, sleep ${PACING}s ---" >> "$LOG"
   sleep "$PACING"
 done

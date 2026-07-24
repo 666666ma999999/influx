@@ -52,12 +52,16 @@ def main() -> int:
     args = ap.parse_args()
 
     acc = args.account.lstrip("@")
+    # 成熟バッファ: 20営業日先のリターンが確定していない直近投稿は採点不能なので、
+    # until 未指定なら「35暦日前」を既定にする（高頻度アカウントが最新順検索で直近だけ
+    # 集めて全censoredになるのを防ぐ・2026-07-24 kazzn_blog実測で判明）。
+    from datetime import datetime as _dt, timedelta as _td
+    until = args.until or (_dt.now() - _td(days=35)).strftime("%Y-%m-%d")
     # min_faves なし＝完全な分母。窓は任意。
     parts = [f"from:{acc}"]
     if args.since:
         parts.append(f"since:{args.since}")
-    if args.until:
-        parts.append(f"until:{args.until}")
+    parts.append(f"until:{until}")
     query = " ".join(parts)
     url = f"https://x.com/search?q={quote(query)}&src=typed_query&f=live"
 
