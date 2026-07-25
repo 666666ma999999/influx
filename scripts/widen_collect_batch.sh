@@ -5,8 +5,9 @@
 set -u
 LOG=/app/output/recollect_logs/widen.log
 PACING=90
-# 高価値順（急騰事前的中の実績がある未検証者を先に。中立収集なので採点はバイアスなし）
-ACCOUNTS="kazzn_blog noatake1127 tkmr_kato drdebuneko u___a___53 kabumoto_kabu purazumakoi gihuboy"
+# 対象は環境変数 ACCOUNTS で上書き可（既定=第17R拡張バッチの8人・完了済み）。
+# 例: ACCOUNTS="kabudev_gc bahbi_76" bash /app/scripts/widen_collect_batch.sh
+ACCOUNTS="${ACCOUNTS:-kazzn_blog noatake1127 tkmr_kato drdebuneko u___a___53 kabumoto_kabu purazumakoi gihuboy}"
 echo "=== widen batch start $(date -u +%H:%M:%S) accounts=[$ACCOUNTS] ===" >> "$LOG"
 for acc in $ACCOUNTS; do
   echo "--- collect @$acc $(date -u +%H:%M:%S) ---" >> "$LOG"
