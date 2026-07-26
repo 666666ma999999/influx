@@ -203,3 +203,49 @@ Tier2 着手時に Tier1 から引き継げるもの: Canonical CSV スキーマ
 | 失敗時の継続 | 不正ティッカー混在で `error=1 / unchanged=1`（残りを処理して続行） |
 | 取引日の正しさ | 全行が平日・主要休場日を含まない（§6） |
 | 日本株パイプラインへの影響 | `data/jquants/` は未変更（git status で確認） |
+
+---
+
+## 追記: データ源の利用条件 一次確認（2026-07-26・メイン実施）
+
+> サブエージェント委譲が stall したため統括役が直接実施。はしご（WebFetch → firecrawl → 他）を実行。
+
+### 1. Stooq — **取得不能（規約本文に到達できず）**
+- `https://stooq.com/db/h/` を WebFetch → **本文が空**（JavaScript ボット検証ゲートと整合）。
+- `firecrawl_search` → **ツール実行失敗**。
+- ⇒ **利用条件は「未確認」**。ゲートが有料化誘導かDDoS対策かも**未確認**。
+  本プロジェクトは**チャレンジを迂回しない**方針のため、Stooq 経路は当面**使用不可**として扱う。
+
+### 2. Yahoo Finance — **❌ 規約が自動アクセスを明示的に禁止（一次情報で確認）**
+出所: Yahoo Terms of Service（https://legal.yahoo.com/us/en/yahoo/terms/otos/index.html ・2026-07-26 取得）
+- **§2(d)(ix)**: サービスから *"access or collect data … using any automated means, devices, programs,
+  algorithms or methodologies, including … robots, spiders, scrapers, data mining tools …
+  **for any purpose without our express, prior permission**"* を禁止。
+- **§2(d)(x)**: 取得データで競合するデータベース／データフィード等を作ることを禁止。
+- **§2(e)**: 商用目的での利用・提供インターフェース以外の代替アクセスを禁止。
+- ⇒ **現行実装（`query1.finance.yahoo.com` の chart API を自動取得）は Yahoo の規約に反する。**
+  非公式エンドポイントであることに加え、**規約上の明確な禁止事項に該当**する。
+
+### 3. 正規の無料代替 — Alpha Vantage（一次情報で確認）
+出所: https://www.alphavantage.co/support/ （2026-07-26 取得）
+- **無料枠 = 1日25リクエスト**・**APIキー必須（無料で取得可）**。
+- 日次株価（`TIME_SERIES_DAILY` / `DAILY_ADJUSTED`）は**無料枠の対象**（リアルタイム/15分遅延は有料）。
+- 個人利用の明示的禁止は見当たらないが、**市場データのライセンス順守**を求める記載あり。
+- 制約の意味: **1日25銘柄が上限**＝96銘柄の種リストを埋めるのに**約4日**（算出: 96÷25=3.84日・確度=概算）。
+  日次更新には全く足りないが、**Tier1（記述分析用の歴史データを一度揃える）用途なら成立**する。
+- その他候補（Tiingo / Nasdaq Data Link 等）は**今回未確認＝要一次確認**。
+
+### 4. 推奨（是正措置）
+| 選択肢 | 評価 |
+|---|---|
+| **Yahoo のまま運用** | ❌ **非推奨**。規約違反が一次情報で確定。アクセス遮断リスクだけでなく規約上の問題。 |
+| **Alpha Vantage（無料枠・APIキー）へ乗り換え** | ✅ **推奨**。正規の無料枠・キー取得は無料。実装は `us_price_fetch.py` に provider を1つ足すだけ（既に stooq/yahoo の2実装がある構造なので**小変更**）。ただし**キー取得はユーザー操作**（AIはアカウント作成をしない）。 |
+| **US Tier1 を停止** | 日本株で正式合格1本が出るまで米国株を凍結する選択。工数ゼロ。 |
+
+### 5. 現時点の措置（2026-07-26）
+- **既取得データ（AAPL/MSFT/SPY 計30,092行）は追加取得を停止**し、`data/us/prices/` は gitignore のまま
+  （再配布しない）。既存ファイルの削除はユーザー判断に委ねる。
+- `us_price_fetch.py` の**既定 provider を `yahoo` のまま自動実行しない**運用とする
+  （＝定常ジョブ・launchd への登録は行わない）。
+- 次アクション（ユーザー操作が必要）: Alpha Vantage の無料APIキーを取得 → 環境変数に設定 →
+  provider 追加実装（小変更）。**キー取得までは US Tier1 は停止**。
