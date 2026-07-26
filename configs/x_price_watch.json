@@ -1,0 +1,48 @@
+{
+  "_comment": "X値上がり検出ツールのクエリbattery正本。id/q/min_favesは凍結（時系列比較のため編集禁止・追加は新idでappend）。lang:ja -filter:nativeretweets とsince/until 1日窓は収集側が付与する。",
+  "version": 1,
+  "generated_at": "2026-07-26",
+  "collect": {
+    "max_scrolls": 15,
+    "cap_posts": 200,
+    "query_pacing_sec": [20.0, 40.0],
+    "goto_wait_sec": [3.0, 5.0]
+  },
+  "alert": {
+    "baseline_days": 14,
+    "min_baseline_days": 7,
+    "z_threshold": 3.0
+  },
+  "queries": [
+    {"id": "gen1-neage-generic", "q": "値上げ", "min_faves": 100, "lane": "generic"},
+    {"id": "gen1-neagari-generic", "q": "値上がり", "min_faves": 100, "lane": "generic"},
+    {"id": "gen1-kotou-generic", "q": "高騰", "min_faves": 100, "lane": "generic"},
+    {"id": "gen1-shinausu-generic", "q": "品薄", "min_faves": 100, "lane": "generic"},
+    {"id": "gen1-pureba-generic", "q": "プレ値", "min_faves": 100, "lane": "generic"},
+    {"id": "gen1-tenbai-kakaku", "q": "転売 価格", "min_faves": 100, "lane": "generic"},
+    {"id": "gen1-memori-kotou", "q": "(メモリ OR DRAM) (高騰 OR 値上がり)", "min_faves": 10, "lane": "semiconductor"},
+    {"id": "gen1-ddr5-price", "q": "DDR5 (高騰 OR 値上げ OR 品薄)", "min_faves": 0, "lane": "semiconductor"},
+    {"id": "gen1-ssd-price", "q": "SSD (高騰 OR 値上がり OR 品薄)", "min_faves": 10, "lane": "semiconductor"},
+    {"id": "gen1-gurabo-price", "q": "(グラボ OR GPU) (高騰 OR 品薄 OR 値上がり)", "min_faves": 10, "lane": "semiconductor"},
+    {"id": "gen1-hdd-price", "q": "(HDD OR ハードディスク) (高騰 OR 品薄 OR 値上がり)", "min_faves": 0, "lane": "semiconductor"},
+    {"id": "gen1-cpu-price", "q": "CPU (値上がり OR 高騰 OR 品薄)", "min_faves": 10, "lane": "semiconductor"},
+    {"id": "gen1-kaden-neage", "q": "家電 (値上げ OR 値上がり)", "min_faves": 10, "lane": "appliance"},
+    {"id": "gen1-aircon-shinausu", "q": "(エアコン OR 冷蔵庫) (品薄 OR 値上げ)", "min_faves": 0, "lane": "appliance"},
+    {"id": "gen1-game-console", "q": "(Switch OR PS5) (品薄 OR 転売 OR プレ値)", "min_faves": 10, "lane": "game"},
+    {"id": "gen1-game-puremia", "q": "ゲーム (プレ値 OR プレミア価格)", "min_faves": 0, "lane": "game"},
+    {"id": "gen1-toreka-kotou", "q": "(トレカ OR カード) (高騰 OR 相場)", "min_faves": 10, "lane": "hobby"},
+    {"id": "gen1-pokeka-price", "q": "ポケカ (高騰 OR 相場 OR 品薄)", "min_faves": 10, "lane": "hobby"},
+    {"id": "gen1-figure-puremia", "q": "(フィギュア OR プラモ) (プレ値 OR 高騰 OR 品薄)", "min_faves": 0, "lane": "hobby"},
+    {"id": "gen1-douka-kotou", "q": "銅 (高騰 OR 価格上昇)", "min_faves": 0, "lane": "metal"},
+    {"id": "gen1-kinkakaku", "q": "金価格 (高騰 OR 最高値)", "min_faves": 10, "lane": "metal"},
+    {"id": "gen1-rare-metal", "q": "(レアメタル OR レアアース) (高騰 OR 価格)", "min_faves": 0, "lane": "metal"},
+    {"id": "gen1-kuruma-price", "q": "(新車 OR 中古車) (値上がり OR 納期)", "min_faves": 10, "lane": "vehicle"},
+    {"id": "gen1-bike-price", "q": "バイク (値上がり OR 高騰)", "min_faves": 0, "lane": "vehicle"},
+    {"id": "gen1-kome-price", "q": "米 (値上がり OR 高騰)", "min_faves": 10, "lane": "food"},
+    {"id": "gen1-coffee-cacao", "q": "(コーヒー豆 OR カカオ) (高騰 OR 値上げ)", "min_faves": 0, "lane": "food"},
+    {"id": "gen1-shokuhin-neage", "q": "食品 値上げ", "min_faves": 10, "lane": "food"},
+    {"id": "gen1-denki-gas", "q": "(電気代 OR ガス代) (値上げ OR 高騰)", "min_faves": 10, "lane": "utility"},
+    {"id": "gen1-kenzai", "q": "(木材 OR 建材 OR 鉄骨) (高騰 OR 値上げ)", "min_faves": 0, "lane": "material"},
+    {"id": "gen1-kaiun-unchin", "q": "(海運 OR 運賃) (高騰 OR 上昇)", "min_faves": 0, "lane": "material"}
+  ]
+}
