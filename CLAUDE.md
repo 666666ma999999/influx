@@ -37,6 +37,9 @@ docker compose run xstock python scripts/classify_tweets.py --input output/tweet
 # アカウント状態確認
 docker compose run xstock python scripts/check_inactive_accounts.py
 
+# X値上がり検出（日次・launchd com.influx.price-watch 22:10。手動は runner 経由）
+bash scripts/xprice_watch_run.sh   # 収集30クエリ→zスコア判定→検知時Mac通知。台帳 data/x_price_watch/
+
 # Grok リサーチパイプライン（.envrc 自動読み込み + docker exec ラッパー）
 scripts/run_research.sh --phase evaluate
 scripts/run_research.sh --phase report
