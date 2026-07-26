@@ -43,6 +43,13 @@ DEFAULT_QUERIES = [
     "Anthropic Claude API",
     "AI エージェント 開発",
     "subagent 並列",
+    # gen2追加 2026-07-26（本人実ブックマーク182件クラスタリング由来・x_keywords_result_gen2.md）
+    "Fable オーケストレーション",  # 3語→2語緩和 2026-07-26 実走0件のため（元: "Fable ループ オーケストレーション"）。c-a8503f59: Fable/Claude Codeのオーケストレーション・トークン節約運用（既存10本は"Fable"を含まない新シグナル）
+    "Claude Code 新機能 アップデート",  # c-119763bf: リリース速報・アップデート系（既存は使い方/tipsのみで新機能速報を拾えていない）
+    "Claude Skills Routines",  # c-119763bf: Skills/Routinesという新公式用語（既存のMCP検索と重複しない）
+    "Obsidian 第二の脳 Claude",  # c-0d17bd8e: Obsidian×AI知識管理（既存10本に完全な空白領域）
+    "NotebookLM Codex 文字起こし",  # c-49c1862f: Claude以外のAIツール（非エンジニア向け画像/動画/文字起こし）
+    "Opus Fable Codex 使い分け",  # proposals: モデル使い分け・メタプロンプト（既存"Cursor vs Claude"はIDE比較でモデル比較とは別軸）
 ]
 
 DEFAULT_MIN_LIKES = 50

@@ -14,6 +14,10 @@
 背景: Grok x_search 版が xAI クレジット枯渇で停止（2026-07-01 確定判断: 第一選択は Cookie 自動収集）。
 出力契約: output/grok_twittora/grok-twittora-YYYY-MM-DD.jsonl + .md（grok 版と同系・collector で区別）。
 
+2026-07-26 T11/Critical2 item10: 本スクリプトの metrics_missing は値そのものを 0 初期化のまま残す
+（ソート・self-check の安全のため null にしない）。教師データ（training_data/schema.md）へ手動転記する
+際は metrics_missing に載ったフィールドを null に変換すること（0 のまま持ち込むと反応ゼロと誤認される）。
+
 実行（xstock-vnc コンテナ内・DISPLAY 必須）:
   docker exec -e DISPLAY=:99 xstock-vnc python3 /app/scripts/x_search_collect_twittora.py --days 7
 """
@@ -46,13 +50,23 @@ TWEET_CARD_SELECTOR = '[data-testid="tweet"]'
 MAX_SCROLLS = 5
 QUERY_PACING = (20.0, 40.0)  # クエリ間の待機（アカウント保護・秒）
 
-# P3: 日本語比重の高いクエリ（lang:ja 別窓で追加収集する5本）
+# P3: 日本語比重の高いクエリ（lang:ja 別窓で追加収集する）
+# 2026-07-26: gen2追加6本（grok_collect_twittora.py DEFAULT_QUERIES）を実読し、日本語主体の3本を追加。
+#   採用: "Claude Code 新機能 アップデート"（既存の"Claude Code 使い方/tips"と同型）、
+#         "Obsidian 第二の脳 Claude"（"第二の脳"は完全な和製慣用句）、
+#         "Fable オーケストレーション"（"AI コーディング ワークフロー"と同型＝英語ツール名+和語カタカナ概念）
+#   非採用: "Claude Skills Routines"（日本語ゼロ）、
+#          "NotebookLM Codex 文字起こし" / "Opus Fable Codex 使い分け"
+#          （英語固有名詞が主体で末尾に和語1語＝非採用だった旧"MCP server 自作"等と同型）
 JA_SPLIT_QUERIES = [
     "Claude Code 使い方",
     "Claude Code tips",
     "Claude hooks 自動化",
     "AI コーディング ワークフロー",
     "subagent 並列",
+    "Claude Code 新機能 アップデート",
+    "Obsidian 第二の脳 Claude",
+    "Fable オーケストレーション",
 ]
 
 _STATUS_ID_RE = re.compile(r"/status/(\d+)")
@@ -74,24 +88,40 @@ def build_buzz_search_url(q: str, since: str, until: str, min_likes: int, lang: 
 
 
 def parse_aria_metrics(aria: str | None) -> dict:
-    """[role=group] の aria-label から正確な指標を抽出（部分欠けにも耐える）。"""
+    """[role=group] の aria-label から正確な指標を抽出（部分欠けにも耐える）。
+
+    2026-07-26 T11: aria から検出できなかった指標は従来どおり0のまま返しつつ、
+    `metrics_missing` に欠損フィールド名を積む（実測ゼロと計測不能の事後区別）。
+    0値そのものの意味・ソート・self-checkのロジックは変更しない（実測で欠損は稀）。
+    """
     out = {"replies": 0, "retweets": 0, "likes": 0, "bookmarks": 0, "impressions": 0}
+    all_keys = ("replies", "retweets", "likes", "bookmarks", "impressions")
+    found: set[str] = set()
     if not aria:
+        out["metrics_missing"] = list(all_keys)
         return out
     for num, kind in _ARIA_METRIC_RE.findall(aria):
         v = int(num.replace(",", ""))
         if kind.startswith("repl"):
             out["replies"] = v
+            found.add("replies")
         elif kind.startswith("repost"):
             out["retweets"] = v
+            found.add("retweets")
         elif kind.startswith("like"):
             out["likes"] = v
+            found.add("likes")
         elif kind.startswith("bookmark"):
             out["bookmarks"] = v
+            found.add("bookmarks")
         elif kind.startswith("view"):
             out["impressions"] = v
+            found.add("impressions")
     for num, kind in _ARIA_METRIC_JA_RE.findall(aria):
-        out[_JA_KIND[kind]] = int(num.replace(",", ""))
+        key = _JA_KIND[kind]
+        out[key] = int(num.replace(",", ""))
+        found.add(key)
+    out["metrics_missing"] = [k for k in all_keys if k not in found]
     return out
 
 
@@ -188,6 +218,28 @@ def collect_query(page, q: str, since: str, until: str, min_likes: int, per_quer
     return rows[:per_query]
 
 
+def append_runlog(out_dir: Path, run_at: str, queries: int, rows: int, quarantined: int,
+                   wall_errors: int, outcome: str) -> None:
+    """毎実行の結果を1行追記（0件 early-return を含む全経路）。
+
+    「0件実行」と「未実行」を事後区別するための実行証跡（2026-07-26 T10・原観測の不変化）。
+    outcome: "ok"（正常書き込み） / "empty"（0件・窓内に閾値超えなし） / "login_wall"（0件で壁停止）
+             / "partial_wall"（壁で停止したが途中まで収集できた行がある・"ok"と区別）
+             / "crash"（cookieロード失敗・playwright起動失敗等の未捕捉クラッシュ）
+    """
+    runlog_path = out_dir / "collect_runlog.jsonl"
+    entry = {
+        "run_at": run_at,
+        "queries": queries,
+        "rows": rows,
+        "quarantined": quarantined,
+        "wall_errors": wall_errors,
+        "outcome": outcome,
+    }
+    with open(runlog_path, "a", encoding="utf-8") as f:
+        f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+
+
 def refetch_content(page, url: str) -> str:
     """空本文の個別ページ再取得（隔離行の救済・少数のみ）。"""
     try:
@@ -225,78 +277,94 @@ def main() -> int:
     if not args.no_ja_split:
         tasks += [(q, args.min_likes_ja, "ja") for q in JA_SPLIT_QUERIES if q in args.queries]
 
-    cookies = fetch_bookmarks.load_cookies(args.profile)
-    print("=== X Search Collect (@twittora_・login DOM v2) ===")
-    print(f"tasks: {len(tasks)} (global {len(args.queries)} + ja {len(tasks)-len(args.queries)}), "
-          f"window: {since}..{until}, min_likes: {args.min_likes}/{args.min_likes_ja}(ja)")
-
-    from playwright.sync_api import sync_playwright
+    # out_dir/run_at はcookieロード・playwright起動より前に確定させる（Critical2 item9・
+    # そこで未捕捉クラッシュしても runlog を書けるようにするため）。
+    out_dir = Path(args.output_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    run_at = now.isoformat()
 
     all_rows: list[dict] = []
     wall_errors = 0
+    deduped: list[dict] = []
     pw = browser = context = None
     try:
-        pw = sync_playwright().start()
-        browser = pw.chromium.launch(headless=False, args=["--disable-blink-features=AutomationControlled"])
-        context = browser.new_context(**build_context_kwargs())
-        context.add_cookies(cookies)
-        page = context.new_page()
-        for i, (q, ml, lang) in enumerate(tasks):
-            label = f"{q!r}" + (f" [lang:{lang} min:{ml}]" if lang else "")
-            print(f"  → searching: {label}")
-            try:
-                rows = collect_query(page, q, since, until, ml, args.per_query, lang)
-            except LoginWallError as exc:
-                print(f"  ✗ {exc}", file=sys.stderr)
-                wall_errors += 1
-                break  # 壁が出たら即停止（アカウント保護）
-            except Exception as exc:
-                print(f"  ✗ {label} 失敗（スキップ）: {type(exc).__name__}: {str(exc)[:80]}", file=sys.stderr)
-                time.sleep(random.uniform(5.0, 10.0))
-                continue
-            print(f"    got {len(rows)}")
-            all_rows.extend(rows)
-            if i < len(tasks) - 1:
-                time.sleep(random.uniform(*QUERY_PACING))
+        cookies = fetch_bookmarks.load_cookies(args.profile)
+        print("=== X Search Collect (@twittora_・login DOM v2) ===")
+        print(f"tasks: {len(tasks)} (global {len(args.queries)} + ja {len(tasks)-len(args.queries)}), "
+              f"window: {since}..{until}, min_likes: {args.min_likes}/{args.min_likes_ja}(ja)")
 
-        # id 横断 dedupe（likes の大きい記録を残す）
-        by_id: dict[str, dict] = {}
-        for r in all_rows:
-            prev = by_id.get(r["id"])
-            if prev is None or r["likes"] > prev["likes"] or (not prev.get("content") and r.get("content")):
-                if prev and prev.get("content") and not r.get("content"):
-                    r["content"] = prev["content"]
-                by_id[r["id"]] = r
-        deduped = list(by_id.values())
+        from playwright.sync_api import sync_playwright
 
-        # P1: 空本文の隔離と救済（likes 上位のみ・cap つき）
-        empties = sorted((r for r in deduped if not r["content"]), key=lambda r: r["likes"], reverse=True)
-        refetched = 0
-        for r in empties[: args.refetch_cap]:
-            text = refetch_content(page, r["url"])
-            if text:
-                r["content"] = text
-                r["content_refetched"] = True
-                refetched += 1
-        if empties:
-            print(f"  空本文: {len(empties)} 件（個別再取得で {refetched} 件救済）")
-    finally:
-        for closer in (context, browser):
+        try:
+            pw = sync_playwright().start()
+            browser = pw.chromium.launch(headless=False, args=["--disable-blink-features=AutomationControlled"])
+            context = browser.new_context(**build_context_kwargs())
+            context.add_cookies(cookies)
+            page = context.new_page()
+            for i, (q, ml, lang) in enumerate(tasks):
+                label = f"{q!r}" + (f" [lang:{lang} min:{ml}]" if lang else "")
+                print(f"  → searching: {label}")
+                try:
+                    rows = collect_query(page, q, since, until, ml, args.per_query, lang)
+                except LoginWallError as exc:
+                    print(f"  ✗ {exc}", file=sys.stderr)
+                    wall_errors += 1
+                    break  # 壁が出たら即停止（アカウント保護）
+                except Exception as exc:
+                    print(f"  ✗ {label} 失敗（スキップ）: {type(exc).__name__}: {str(exc)[:80]}", file=sys.stderr)
+                    time.sleep(random.uniform(5.0, 10.0))
+                    continue
+                print(f"    got {len(rows)}")
+                all_rows.extend(rows)
+                if i < len(tasks) - 1:
+                    time.sleep(random.uniform(*QUERY_PACING))
+
+            # id 横断 dedupe（likes の大きい記録を残す）
+            by_id: dict[str, dict] = {}
+            for r in all_rows:
+                prev = by_id.get(r["id"])
+                if prev is None or r["likes"] > prev["likes"] or (not prev.get("content") and r.get("content")):
+                    if prev and prev.get("content") and not r.get("content"):
+                        r["content"] = prev["content"]
+                    by_id[r["id"]] = r
+            deduped = list(by_id.values())
+
+            # P1: 空本文の隔離と救済（likes 上位のみ・cap つき）
+            empties = sorted((r for r in deduped if not r["content"]), key=lambda r: r["likes"], reverse=True)
+            refetched = 0
+            for r in empties[: args.refetch_cap]:
+                text = refetch_content(page, r["url"])
+                if text:
+                    r["content"] = text
+                    r["content_refetched"] = True
+                    refetched += 1
+            if empties:
+                print(f"  空本文: {len(empties)} 件（個別再取得で {refetched} 件救済）")
+        finally:
+            for closer in (context, browser):
+                try:
+                    closer and closer.close()
+                except Exception:
+                    pass
             try:
-                closer and closer.close()
+                pw and pw.stop()
             except Exception:
                 pass
-        try:
-            pw and pw.stop()
-        except Exception:
-            pass
+    except Exception as exc:
+        # Critical2 item9: cookieロード失敗・playwright起動失敗等の未捕捉クラッシュも
+        # runlog に残す（「未実行」と区別する。個別クエリの失敗は上のtry/exceptで既に処理済み）。
+        print(f"ERROR: 予期しないクラッシュ: {type(exc).__name__}: {str(exc)[:200]}", file=sys.stderr)
+        append_runlog(out_dir, run_at, len(tasks), 0, 0, wall_errors, "crash")
+        return 1
 
     print(f"\nTotal: {len(all_rows)} fetched, {len(deduped)} unique")
     if not deduped:
         if wall_errors:
             print("ERROR: ログイン壁で停止。Cookie 更新（refresh-x-cookies）を確認", file=sys.stderr)
+            append_runlog(out_dir, run_at, len(tasks), 0, 0, wall_errors, "login_wall")
             return 1
         print("0件（窓内に閾値超えなし）。空ファイルは書かない")
+        append_runlog(out_dir, run_at, len(tasks), 0, 0, wall_errors, "empty")
         return 0
 
     # P1: 完全性セルフチェック
@@ -319,13 +387,24 @@ def main() -> int:
             r["content_missing"] = True  # 隔離マーク（分析からは除外・URL 実在）
 
     today = now.date().isoformat()
-    out_dir = Path(args.output_dir)
-    out_dir.mkdir(parents=True, exist_ok=True)
     jsonl_path = out_dir / f"grok-twittora-{today}.jsonl"
+    if jsonl_path.exists():
+        # 同日再実行での原観測消失を防ぐ（T10）。拡張子 .jsonl.bak は
+        # vault 側 glob `grok-twittora-*.jsonl` にヒットしないため下流の二重読みなし。
+        stamp = now.strftime("%H%M")
+        backup_path = out_dir / f"grok-twittora-{today}.pre-{stamp}.jsonl.bak"
+        jsonl_path.rename(backup_path)
+        print(f"  既存ファイルを退避: {backup_path.name}（同日再実行で原観測を保持）")
     with open(jsonl_path, "w", encoding="utf-8") as f:
         for r in sorted(deduped, key=lambda x: x["likes"], reverse=True):
             f.write(json.dumps(r, ensure_ascii=False) + "\n")
     md_path = out_dir / f"grok-twittora-{today}.md"
+    if md_path.exists():
+        # jsonl と同じ退避規則（T10フォロー・Critical2 item7）。拡張子 .md.bak は
+        # `grok-twittora-*.md` 系 glob（現状は下流に実在しないが将来分の予防的措置）にヒットしない。
+        md_backup_path = out_dir / f"grok-twittora-{today}.pre-{now.strftime('%H%M')}.md.bak"
+        md_path.rename(md_backup_path)
+        print(f"  既存ファイルを退避: {md_backup_path.name}（同日再実行で原観測を保持）")
     lines = [
         "---",
         f"collected_at: {today}",
@@ -346,6 +425,9 @@ def main() -> int:
         lines.append(f"- **{r['likes']:,}L** {r['impressions']:,}v{er} @{r['author']} ({r['posted_at']}): {r['content'][:70]} … {r['url']}")
     md_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     print(f"✓ {jsonl_path}\n✓ {md_path}")
+    # Critical2 item9: 壁が出た後でも一部行を収集できたケースは"ok"と区別する（途中まで正常・途中から壁）
+    final_outcome = "partial_wall" if wall_errors else "ok"
+    append_runlog(out_dir, run_at, len(tasks), len(deduped), len(quarantined), wall_errors, final_outcome)
     return 0
 
 

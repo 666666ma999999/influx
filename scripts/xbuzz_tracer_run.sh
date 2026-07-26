@@ -12,6 +12,16 @@ before=0
 $TRACER_CMD
 rc=$?
 
+# 全ハンドル取得0件（rc!=0。x_watchlist_tracer.py の唯一の非0終了条件）は
+# 一時的なDNS/ネットワーク障害の可能性があるため、5分待って1回だけ再試行してから失敗確定
+# （2026-07-25 実測: 全13ハンドル ERR_NAME_NOT_RESOLVED で rows=0・exit 1）
+if [ "$rc" -ne 0 ]; then
+  echo "全ハンドル取得失敗(rc=$rc)。5分待って1回だけ再試行..."
+  sleep 300
+  $TRACER_CMD
+  rc=$?
+fi
+
 after=0
 [ -f "$ALERTS" ] && after=$(wc -l < "$ALERTS" | tr -d ' ')
 
