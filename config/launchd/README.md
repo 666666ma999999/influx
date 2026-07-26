@@ -7,6 +7,7 @@
 | `com.influx.jsf-archive.plist` | **稼働中**（`launchctl list`に登録あり） | 月〜金 12:30/19:30 JST（計10回/週） | `scripts/jsf_daily_archive.py`（日証金の日次アーカイブ蓄積。§7-I I3で言及の日次データ収集元） |
 | `com.influx.paper-screen.plist` | **稼働中**（`launchctl list`に登録あり） | 月〜金 7:30 JST | `scripts/daily_screen.py`（毎朝スクリーニング・ペーパートレード観察） |
 | `com.influx.research-weekly.plist` | **意図的に未インストール**（`launchctl list`に登録なし。実測確認済み） | 土曜 9:00 JST（設定のみ・未有効化） | `scripts/research_weekly_launchd.sh`（インフルエンサー週次サイクル: `docs/influencer-winrate-spec.md` §8のwinrate_worklist→抽出→ingest→score一式を無人実行する想定） |
+| `com.influx.price-watch.plist` | **稼働中**（2026-07-26 登録） | 毎日 22:10 JST | `scripts/xprice_watch_run.sh`（X値上がり検出: 固定30クエリ日次収集→zスコア判定→検知時Mac通知。台帳 `data/x_price_watch/ledger.jsonl`） |
 
 ## `com.influx.research-weekly` が未インストールである理由
 
