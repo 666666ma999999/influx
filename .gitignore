@@ -70,6 +70,10 @@ data/jquants/
 # EDINET APIキャッシュ（再生成可・軽量メタデータのみだがAPI再取得で復元できるためコミット不要）
 data/edinet/
 
+# 米国株 Tier1 価格キャッシュ（再生成可・提供元の再配布可否が未確認のためコミットしない）
+# data/us/receipts.jsonl は取得証跡なので追跡対象のまま残す（軽量・append-only）
+data/us/prices/
+
 # ペーパートレード日次レポート（daily_screen/paper_evalが毎日再生成）
 output/paper_today.md
 output/paper_scoreboard.md
