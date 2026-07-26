@@ -8,6 +8,14 @@ set -u
 
 MAX_WAIT_SEC=${MAX_WAIT_SEC:-300}
 INTERVAL_SEC=${INTERVAL_SEC:-30}
+
+# 2026-07-26 ユーザー許可: daemon 未起動なら Docker Desktop をバックグラウンド起動してから待つ
+# （-g=前面に出さない・-a=アプリ名指定。起動失敗しても従来どおり待機ループ→タイムアウト exit 1）
+if ! docker info >/dev/null 2>&1; then
+  echo "Docker daemon 未起動 → Docker Desktop をバックグラウンド起動 (open -ga Docker)"
+  open -ga Docker 2>/dev/null || true
+fi
+
 waited=0
 until docker info >/dev/null 2>&1; do
   if [ "$waited" -ge "$MAX_WAIT_SEC" ]; then
