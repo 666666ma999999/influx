@@ -19,6 +19,13 @@ until docker info >/dev/null 2>&1; do
   waited=$((waited + INTERVAL_SEC))
 done
 
+# 2026-07-26: daemonは生きているがコンテナが停止しているケースを即失敗で可視化
+# （前例= make_article cron_metrics_snapshot.sh の xstock-vnc 稼働チェック）
+if ! docker ps --format '{{.Names}}' | grep -q '^xstock-vnc$'; then
+  echo "ERROR: xstock-vnc コンテナが稼働していない（influx で docker compose -f docker-compose.vnc.yml up -d）" >&2
+  exit 1
+fi
+
 docker exec -e DISPLAY=:99 xstock-vnc python3 /app/scripts/x_search_collect_twittora.py --days 7
 rc=$?
 TODAY=$(date +%Y-%m-%d)
