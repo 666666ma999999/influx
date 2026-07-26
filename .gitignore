@@ -95,3 +95,7 @@ data/paper_trades/recent_signals_cache.json
 # 台帳自体は再生成不能）。output/*/配下のためこの否定行は意図の記録のみ(上記2026-07-11監査の
 # 注意と同じ理由でgit仕様上は無効)・実際の追跡はgit add -fで行う。
 !output/bookmarks/keywords_ledger.jsonl
+
+# TDnet インデックス raw（再取得可・第三者API由来のため再配布しない）
+# data/tdnet/receipts.jsonl は取得証跡なので追跡対象のまま残す
+data/tdnet/index/
