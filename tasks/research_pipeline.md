@@ -93,3 +93,44 @@ docker compose -f docker-compose.vnc.yml run --rm -e XAI_API_KEY="$XAI_API_KEY" 
 - `extensions/tier1_collection/grok_discoverer/research_store.py`
 - `extensions/tier1_collection/grok_discoverer/research_scorecard.py`
 - `scripts/research_influencers.py`
+
+---
+
+## 2026-07-26 打ち止め再検証（X検索精度・最小実行版）— 確定知見
+
+> 出所: plan `~/.claude/plans/kind-questing-scone.md`（敵対レビュー2系統で縮小承認）。
+> スクリプト: `scripts/_tmp_c0_censoring.py` / `_tmp_a_lite.py` / `_tmp_c_lite.py`（使い捨て・untracked・
+> 全数値は Codex 独立再計算で照合済み、onset 窓の暦日バグ1件を検出→修正済み）。
+> 標本注記: uncovered=188投稿/150アカ（新規144人）は急騰銘柄の事前窓収集＝条件付き標本。
+> 記述的トリアージであり PASS 認定には使わない。corpus=57アカ/1,538投稿（20251001〜20260717）。
+
+### 結論: 打ち止め維持を支持（偽陽性説を確定・見逃し説は起点近傍で不支持）
+
+1. **偽陽性説の確定（A-lite）**: 散弾（1投稿3銘柄以上）除外＋スパム指紋（テンプレ語彙6アカ・
+   数学装飾文字4アカ）適用後、uncovered 150アカの pass_episodes（独立episode≥2）遷移は
+   PASS→FAIL 10 / PASS→PASS 3 / FAIL→FAIL 137。**散弾群の before PASS 10アカは after 0 に全滅**。
+   生存3アカは手読みで全て非予測（製錬所訪問回想/優待報告/利確事後報告）＝
+   **クリーン後の実質的な事前コール者はゼロ**。「当てた」ように見えた主体は散弾水増しで説明できる。
+2. **見逃し説は起点近傍で不支持（C-lite・完全観測 episode 限定 primary）**: 真の起点 t0
+   （120営業日最安値翌日・episode_start より中央値117日前）直前の窓では corpus 言及がほぼ無い:
+   **origin_10bd = 0/208 episode、origin_21bd = 2/190**（current 窓は 28/307）。
+   起点で仕込みを語る発信者は手元コーパスに存在しない。
+3. **onset 窓（t0〜episode_start 前日）は 37/199 episode・新規8銘柄**を拾うが、手読みでは
+   大半がニュース転載・結果報告・列挙スレ・目標株価テンプレ（nikkeisignal 等）で、真の事前テーゼは
+   drdebuneko のエンプラス（6941）ピア・キャッチアップ等ごく少数。窓長 exposure 差の注記あり。
+4. **副産物（次プラン候補・恒久実装するなら）**:
+   - スレッド型散弾（1投稿1-2銘柄×同日多数）が per-post 指標をすり抜ける: 同日 distinct codes≥5 が
+     uncovered 29アカ / corpus 20アカ。per-day 指標の併用が必要
+   - NFKC バグ実在確認: 数学装飾数字（𝟒𝟓𝟖𝟔等）が direct_codes を素通り（uncovered に4アカ）。
+     採点器の恒久修正は「NFKC 前 styled 判定→フラグ」方式が敵対レビュー推奨
+   - corpus の codes/post は direct のみ最大2だが社名解決込み最大4（散弾閾値の前提訂正）
+5. **recall は本検証の対象外**（手元データは発見済み投稿のみ。未発見アカ・未取得投稿は測れない）。
+   検索網の拡張（57アカ制約）を再検討する場合は盲検 recall 監査を別途事前登録すること。
+
+### 次アクション裁定待ち
+
+- 推奨: **打ち止め維持**（発掘レーンの供給は FDR / 急騰前兆モデル優先を継続）
+- 代替1: 採点器の防御的恒久修正のみ実施（NFKC styled フラグ・per-day 散弾指標・遷移表方式。
+  ゲート定義は変えない小玉）
+- 代替2: onset 帯の標的新規収集（起点〜急騰間の発信者を狙う。ただし本検証で発信自体が僅少と
+  実測されたため期待値低）
