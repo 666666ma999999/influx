@@ -43,6 +43,12 @@
     {"id": "gen1-shokuhin-neage", "q": "食品 値上げ", "min_faves": 10, "lane": "food"},
     {"id": "gen1-denki-gas", "q": "(電気代 OR ガス代) (値上げ OR 高騰)", "min_faves": 10, "lane": "utility"},
     {"id": "gen1-kenzai", "q": "(木材 OR 建材 OR 鉄骨) (高騰 OR 値上げ)", "min_faves": 0, "lane": "material"},
-    {"id": "gen1-kaiun-unchin", "q": "(海運 OR 運賃) (高騰 OR 上昇)", "min_faves": 0, "lane": "material"}
+    {"id": "gen1-kaiun-unchin", "q": "(海運 OR 運賃) (高騰 OR 上昇)", "min_faves": 0, "lane": "material"},
+    {"id": "gen2-nouki-chien", "q": "納期 (遅延 OR 未定 OR 長期化)", "min_faves": 10, "lane": "shortage"},
+    {"id": "gen2-nyuka-mitei", "q": "(入荷未定 OR 在庫切れ)", "min_faves": 100, "lane": "shortage"},
+    {"id": "gen2-kounyu-seigen", "q": "(購入制限 OR おひとり様 OR 抽選販売)", "min_faves": 50, "lane": "shortage"},
+    {"id": "gen2-shukka-teishi", "q": "(出荷停止 OR 供給停止 OR 生産停止)", "min_faves": 50, "lane": "shortage"},
+    {"id": "gen2-koujou-jiko", "q": "工場 (火災 OR 爆発 OR 操業停止)", "min_faves": 50, "lane": "shortage"},
+    {"id": "gen2-yushutsu-kisei", "q": "(輸出規制 OR 輸出制限 OR 禁輸)", "min_faves": 50, "lane": "shortage"}
   ]
 }

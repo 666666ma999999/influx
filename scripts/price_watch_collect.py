@@ -185,11 +185,12 @@ def main() -> int:
             return 1
     day = args.date or target_utc_day()
     run_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
-    # クエリ凍結の実効化: battery指紋を全行へ記録し、alert側は同一指紋の日だけを
-    # ベースラインに使う（config誤編集で異条件の時系列が混ざるのを機械的に防ぐ）
-    battery_sha = hashlib.sha256(json.dumps(
-        [[e["id"], e["q"], e.get("min_faves", 0)] for e in config["queries"]],
-        ensure_ascii=False).encode()).hexdigest()[:12]
+    # クエリ凍結の実効化: クエリ単位の指紋を各行へ記録し、alert側は同一指紋の日だけを
+    # ベースラインに使う（config誤編集の混入防止。全体単位でなくクエリ単位にするのは、
+    # 新クエリの追加が既存クエリのベースラインをリセットしないため・2026-07-27修正）
+    def query_sha(entry: dict) -> str:
+        raw = f"{entry['id']}|{entry['q']}|{entry.get('min_faves', 0)}"
+        return hashlib.sha256(raw.encode()).hexdigest()[:12]
 
     log_identity(args.profile)
     cookies = fetch_bookmarks.load_cookies(str(args.profile))
@@ -212,7 +213,7 @@ def main() -> int:
                 "query_id": entry["id"],
                 "lane": entry.get("lane", ""),
                 "config_version": config["version"],
-                "battery_sha": battery_sha,
+                "query_sha": query_sha(entry),
                 "run_at": run_at,
             }
             try:

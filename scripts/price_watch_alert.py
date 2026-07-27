@@ -6,7 +6,7 @@ zスコア >= z_threshold（既定3.0）でアラートを出す。
 
 規約:
 - ベースラインの仕様は「**直近 baseline_days 暦日ぶんのエントリのうち clean 行のみ**」
-  （clean = status==ok かつ censored==false かつ battery_sha が対象日と同一）。
+  （clean = status==ok かつ censored==false かつ query_sha が対象日と同一）。
   欠測や打ち切りがあると実効ベースラインは baseline_days より少なくなる（仕様として宣言）。
 - 同日に複数回実行された日は「最後の clean 行」を優先採用（無ければ最終行）。
 - ベースライン日数 < min_baseline_days（既定7）はウォームアップ扱い＝判定スキップ。
@@ -82,7 +82,7 @@ def judge_query(history: list[dict], target_date: str, alert_cfg: dict) -> dict:
         by_date[d]["count"]
         for d in baseline_dates[-alert_cfg["baseline_days"]:]
         if is_clean(by_date[d])
-        and by_date[d].get("battery_sha") == target.get("battery_sha")  # クエリ凍結の実効化
+        and by_date[d].get("query_sha") == target.get("query_sha")  # クエリ凍結の実効化（クエリ単位）
     ]
     result = {"count": target["count"], "n_baseline": len(baseline),
               "baseline_mean": round(mean(baseline), 2) if baseline else None,
