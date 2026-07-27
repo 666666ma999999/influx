@@ -9,7 +9,7 @@
 2. [x] 実走で data/x_price_watch/ledger.jsonl へ全クエリ行 append（30/30 ok・censored 0・count 0-34）
 3. [x] price_watch_alert.py --selftest 5/5 PASS（spike/flat/warmup/censored/sigma0）
 4. [x] ランナー手動1回成功（rc=0）＋通知経路単発テスト OK
-5. [~] launchd 登録 — **plist 配置済みだが launchctl load は権限denyのためユーザー実行待ち**（下記）
+5. [x] launchd 登録 — ユーザー `!` 実行で load 完了（`launchctl list` = `- 0 com.influx.price-watch`・2026-07-26 22:53頃）
 6. [x] 同セッション commit
 
 ## 運用メモ
