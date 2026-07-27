@@ -18,6 +18,21 @@
 （ソート・self-check の安全のため null にしない）。教師データ（training_data/schema.md）へ手動転記する
 際は metrics_missing に載ったフィールドを null に変換すること（0 のまま持ち込むと反応ゼロと誤認される）。
 
+2026-07-26 Fix1-4（実データ調査で確定した空本文37/95の実体=X Articles投稿への対応・syndication救済）:
+  Fix1 空本文の救済フォールバック: DOM個別再取得(cap8)後もなお空の行に syndication API
+    （normalize_master_posts.fetch_syndication 再利用・無認証）を試行。payload.article が
+    あれば title+preview_text を content にし content_source="x_article" を必ず立てる
+    （通常ツイート本文と区別・下流の教師データ汚染防止）。article でなく text が返れば
+    content_source="syndication" で通常本文を復元。cap50・リクエスト間隔1秒（アカウントリスクなし）
+  Fix2 完全性セルフチェック: empty_rate の分母を「content_source が x_article/syndication
+    でない=説明のつかない空」に変更（X Articles 普及で20%閾値が恒久アラーム化し、本物の DOM
+    回帰が埋もれる問題を解消）
+  Fix3 inner_text() は未描画時に例外を投げず空文字を返すことがある → 空文字のときも
+    text_content() へフォールバックするよう対応
+  Fix4 DOM由来の本文（翻訳・タイムライン切断済みの可能性）に normalize_master_posts.
+    build_norm_fields の判定を適用し、原文と異なれば syndication 原文で置換
+    （元文は content_preview に退避・content_normalized=True）
+
 実行（xstock-vnc コンテナ内・DISPLAY 必須）:
   docker exec -e DISPLAY=:99 xstock-vnc python3 /app/scripts/x_search_collect_twittora.py --days 7
 """
@@ -44,6 +59,7 @@ from bookmarks_keyword_digest_collect_browser import (  # 基盤部品を再利�
     is_login_wall_url,
 )
 from grok_collect_twittora import DEFAULT_MIN_LIKES, DEFAULT_QUERIES  # クエリ正本を共有
+import normalize_master_posts  # syndication救済・翻訳/切断正規化を再利用（2026-07-26 Fix1/4）
 
 JST = timezone(timedelta(hours=9))
 TWEET_CARD_SELECTOR = '[data-testid="tweet"]'
@@ -152,7 +168,17 @@ def scrape_cards_rich(page) -> list[dict]:
                 try:
                     content = tt.first.inner_text(timeout=1500) or ""
                 except Exception:
-                    content = tt.first.text_content() or ""
+                    content = ""
+                if not content:
+                    # Fix3(2026-07-26): inner_text() は未描画時（仮想化スクロール中）に
+                    # 例外を投げず "" を返すことがある → 空文字でも text_content() へ再フォールバック
+                    try:
+                        content = tt.first.text_content(timeout=1500) or ""
+                    except Exception:
+                        # Critical(2026-07-26 validator指摘): ここが無保護だとカード単位
+                        # fail-soft(:195)に落ちてカード全体が消える（Fix3以前より後退）。
+                        # 例外時は空文字のまま＝従来どおり隔離扱いに戻す。
+                        content = ""
             dt_attr = ""
             te = card.locator("time")
             if te.count():
@@ -253,6 +279,64 @@ def refetch_content(page, url: str) -> str:
     return ""
 
 
+def apply_syndication_pass(rows: list[dict], empty_cap: int) -> dict:
+    """syndication API のみで空本文の救済と DOM本文の翻訳/切断正規化を行う（ブラウザ不要）。
+
+    normalize_master_posts.fetch_syndication / build_norm_fields を再利用する
+    （ロジック複製を避ける・ライブ収集の後段にも遡及適用にも同じ関数を流用できる設計）。
+
+    - 空本文行（likes降順・empty_cap 件まで）: payload.article があれば title+preview_text
+      を content にし content_source="x_article"（X Articles・本文が物理的に無いツイート）。
+      article でなく text が返れば content_source="syndication" で通常本文を復元。
+    - 非空行のうち content_source 未設定（＝DOM由来）のもの: build_norm_fields で
+      翻訳/切断を判定し、該当すれば syndication 原文を採用（元文は content_preview に退避）。
+    """
+    stats = {"rescued_article": 0, "rescued_text": 0, "normalized": 0, "unchanged": 0, "failed": 0}
+    empties = sorted((r for r in rows if not r.get("content")), key=lambda r: r.get("likes", 0), reverse=True)
+    dom_valid = [r for r in rows if r.get("content") and not r.get("content_source")]
+    targets = empties[:empty_cap] + dom_valid
+
+    for r in targets:
+        status, payload = normalize_master_posts.fetch_syndication(r["id"])
+        time.sleep(1.0)  # syndication は無認証だが節度を保つ
+        # Critical(2026-07-26 validator指摘): fetch_syndication は JSON妥当な非dict
+        # （配列等）を "ok" で素通しすることを実証済み。dict保証をここで強制する
+        # （payload.get 呼び出しで例外化 → 呼び出し元 :420 まで伝播し収集全損する不具合の根治）。
+        if status != "ok" or not isinstance(payload, dict):
+            if not r.get("content"):
+                r["rescue_attempted"] = True  # 試みたが失敗＝説明のつく空（cap超過とは区別）
+            stats["failed"] += 1
+            continue
+        if not r.get("content"):
+            article = payload.get("article")
+            if isinstance(article, dict) and (article.get("title") or article.get("preview_text")):
+                title = article.get("title") or ""
+                preview = article.get("preview_text") or ""
+                r["content"] = f"{title}\n\n{preview}".strip()
+                r["content_source"] = "x_article"
+                stats["rescued_article"] += 1
+            else:
+                text = (payload.get("text") or "").strip()
+                if text:
+                    r["content"] = text
+                    r["content_source"] = "syndication"
+                    stats["rescued_text"] += 1
+                else:
+                    r["rescue_attempted"] = True  # 試みたが article/text とも空＝説明のつく空
+                    stats["unchanged"] += 1
+            continue
+        fields = normalize_master_posts.build_norm_fields({"text": r["content"]}, status, payload)
+        if fields["text_was_translated"] or fields["text_was_truncated"]:
+            r["content_preview"] = r["content"]
+            r["content"] = fields["norm_text"]
+            r["content_normalized"] = True
+            r["norm_lang"] = fields["norm_lang"]
+            stats["normalized"] += 1
+        else:
+            stats["unchanged"] += 1
+    return stats
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--queries", nargs="+", default=DEFAULT_QUERIES)
@@ -264,6 +348,8 @@ def main() -> int:
     ap.add_argument("--per-query", type=int, default=8)
     ap.add_argument("--no-ja-split", action="store_true", help="lang:ja 別窓を無効化")
     ap.add_argument("--refetch-cap", type=int, default=8, help="空本文の個別再取得の上限件数")
+    ap.add_argument("--syndication-cap", type=int, default=50,
+                    help="syndication API での空本文救済の上限件数（無認証・refetch-capとは別枠）")
     ap.add_argument("--profile", default="x_profiles/maaaki")
     ap.add_argument("--output-dir", default="/app/output/grok_twittora")
     args = ap.parse_args()
@@ -340,6 +426,19 @@ def main() -> int:
                     refetched += 1
             if empties:
                 print(f"  空本文: {len(empties)} 件（個別再取得で {refetched} 件救済）")
+
+            # Fix1/Fix4(2026-07-26): syndication API（無認証・cap は refetch-cap と別枠）で
+            # DOM再取得後もなお空の行を救済（X Articles対応）し、DOM由来の本文の翻訳/切断も正規化
+            try:
+                syn_stats = apply_syndication_pass(deduped, args.syndication_cap)
+                print(f"  syndication: article救済={syn_stats['rescued_article']} "
+                      f"本文救済={syn_stats['rescued_text']} 正規化={syn_stats['normalized']} "
+                      f"変化なし={syn_stats['unchanged']} 失敗={syn_stats['failed']}")
+            except Exception as exc:
+                # Critical(2026-07-26 validator指摘): ここで捕捉しないと外側:434のcrash経路に
+                # 落ち、この回の収集行(deduped)が1行も書き出されず全損する。fail-soft継続。
+                print(f"  ⚠ syndication救済ステップで例外（収集結果はそのまま書き出す）: "
+                      f"{type(exc).__name__}: {str(exc)[:120]}", file=sys.stderr)
         finally:
             for closer in (context, browser):
                 try:
@@ -373,11 +472,20 @@ def main() -> int:
     # ja 判定はクエリ由来を優先（英訳表示問題はアカウント表示言語 ja 化で解消済み 2026-07-19・本判定は保険で維持）
     ja_count = sum(1 for r in valid if "lang:ja" in r.get("query", "") or _JA_RE.search(r["content"]))
     views_cov = sum(1 for r in deduped if r["impressions"] > 0)
-    empty_rate = len(quarantined) / len(deduped)
-    print(f"  self-check: valid={len(valid)} quarantined={len(quarantined)} "
-          f"ja={ja_count} views_coverage={views_cov}/{len(deduped)}")
+    # Fix2改(2026-07-26 validator指摘対応): quarantined行はcontent_sourceを持ち得ない
+    # （非空になった時点でquarantinedから外れるため）ので旧ロジックは unexplained==quarantined
+    # の恒等式でdeadだった（区別が効かない）。rescue_attempted（apply_syndication_pass が
+    # 救済を試みたが syndication 側も空/失敗＝個別ツイートの削除・非公開等で説明がつく）で
+    # 区別し、「試みてすらいない」行（cap超過等）だけを本物の DOM 抽出劣化の疑いとして扱う。
+    unexplained = [r for r in quarantined if not r.get("rescue_attempted")]
+    rescue_failed_count = sum(1 for r in quarantined if r.get("rescue_attempted"))
+    x_article_count = sum(1 for r in deduped if r.get("content_source") == "x_article")
+    empty_rate = len(unexplained) / len(deduped)
+    print(f"  self-check: valid={len(valid)} quarantined={len(quarantined)} unexplained={len(unexplained)} "
+          f"rescue_failed={rescue_failed_count} x_article={x_article_count} ja={ja_count} "
+          f"views_coverage={views_cov}/{len(deduped)}")
     if empty_rate > 0.2:
-        print(f"WARNING: 空本文率 {empty_rate:.0%} が閾値20%超（DOM 抽出の劣化を疑う）", file=sys.stderr)
+        print(f"WARNING: 説明のつかない空本文率 {empty_rate:.0%} が閾値20%超（DOM 抽出の劣化を疑う）", file=sys.stderr)
 
     captured = now.isoformat()
     for r in deduped:
