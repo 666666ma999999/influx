@@ -215,3 +215,17 @@ docker compose -f docker-compose.vnc.yml run --rm -e XAI_API_KEY="$XAI_API_KEY" 
 - **確定知見**: 「セクター大相場×13週/52週低い」の出遅れスクリーンで浮く銘柄は**全件、遅れる構造的理由があった**
   （5713の教訓の再現・n=4/4）。5チェック関門は誤認を全件検出＝関門側の実効性は実戦確認。
   エッジは screen では作れず、「新規の実物価格変曲を市場より早く観測した瞬間」（price_watch の本線）にのみ発生しうる。
+
+### 2026-07-27 追補3: 部品④（eBay 実物価格の自動監視）接続完了 — pokeca-invest 流用
+
+- 実装先: `~/Desktop/biz/pokeca-invest`（scripts/hw-sold-weekly.ts + data/hw-sold/queries.json・commit は pokeca 側）
+- 方式: ハードウェア8クエリ（DDR5/DDR4/RTX50xx/4090/SSD/Ryzen9）の **active 出品 ask 中央値**を週次台帳化
+  （タイトル適合 regex・外れ値除去・battery_sha 凍結指紋・newly-listed 順固定）
+- **重要実測: eBay の sold(落札済み)一覧は 2026-07 時点でログイン/認証壁**（"Sign in"/"Please verify yourself"）
+  ＝無認証の sold 自動取得は不可。sold の正路はセラーの Terapeak 手動。
+  ※副作用: pokeca 既存の PSA10 sold 系パイプラインも同壁で現在壊れている可能性が高い（pokeca 側の課題として申し送り）
+- 初回実測（2026-07-27・7/8 ok）: DDR5 32GB kit $863.53・DDR5 64GB $803・RTX5090 $4,101・Ryzen9 9950X $677
+  （DDR5 はチップスポット $50.8×16≒$813 と整合＝計測器として妥当）
+- 週次運用（手動1行・実行場所 pokeca-invest）:
+  `docker compose run --rm -v "$PWD/src/data:/app/src/data" scraper bash scripts/run-psa10-ebay.sh scripts/hw-sold-weekly.ts`
+- 3点照合: 業界卸値（TrendForce 週次・最先行）→ X 投稿件数（influx price_watch・+5週）→ eBay ask（本レーン・小売末端）
