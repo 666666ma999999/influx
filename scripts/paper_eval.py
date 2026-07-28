@@ -495,23 +495,44 @@ def compute_scoreboard(records: list[dict]) -> dict[str, dict]:
     for s in by_kpi.values():
         s["p_reach20"] = (s["n_reach20"] / s["n_closed"]) if s["n_closed"] else None
         s["ev_net"] = (s["sum_ret_net"] / s["n_closed"]) if s["n_closed"] else None
+        # 早期決済バイアス（2026-07-29 追加）: 時間切れ決済が1件も無い段階では、
+        # closed に入れるのは -8% 損切りに掛かった負けだけ（勝ちは20営業日まで open のまま）。
+        # ＝ P(+20%)/EV は構造的に下振れし、読むと必ず「全KPIが大負け」に見える。
+        s["early_exit_biased"] = bool(s["n_closed"]) and s["n_time_exit"] == 0
     return by_kpi
 
 
 def write_scoreboard_md(scoreboard: dict[str, dict], path: Path) -> None:
+    biased = sorted(k for k, s in scoreboard.items() if s.get("early_exit_biased"))
     lines = [
         "# ペーパートレード 累計成績（scripts/paper_eval.py 自動生成）",
         "",
         f"最終更新: {jq_fetch.now_jst().isoformat()}",
         "",
+    ]
+    if biased:
+        lines += [
+            "> ## ⚠️ この表の P(+20%)/EV はまだ読んではいけない（早期決済バイアス）",
+            ">",
+            f"> **時間切れ決済が0件のKPIが {len(biased)}本**あります"
+            f"（{', '.join(biased[:6])}{' ほか' if len(biased) > 6 else ''}）。",
+            "> この段階で `closed` に入るのは **-8%損切りに掛かった負けだけ**で、勝っている建玉は"
+            "20営業日の満期まで `open` のまま残ります。",
+            "> ＝ P(+20%) と EV は**構造的に下振れ**し、必ず「全KPIが大負け」に見えます。",
+            "> **最初のまともな読み取りは、各KPIで時間切れ決済が出てから**（＝最古シグナルの"
+            "エントリーから20営業日後）。それまでは『稼働中』件数と損切り件数だけを見ること。",
+            "",
+        ]
+    lines += [
         "| KPI | 稼働中(pending/open) | entry_missing | 確定n | P(+20%) | EV(net) | 損切り決済 | 時間切れ決済 |",
         "|---|---|---|---|---|---|---|---|",
     ]
     for kpi in sorted(scoreboard):
         s = scoreboard[kpi]
         active = f"{s['n_pending_entry']}/{s['n_open']}"
-        p20 = f"{s['p_reach20']:.1%}" if s["p_reach20"] is not None else "-"
-        ev = f"{s['ev_net']:+.2%}" if s["ev_net"] is not None else "-"
+        mark = " ⚠️未成熟" if s.get("early_exit_biased") else ""
+        p20 = f"{s['p_reach20']:.1%}{mark}" if s["p_reach20"] is not None else "-"
+        ev = f"{s['ev_net']:+.2%}{mark}" if s["ev_net"] is not None else "-"
         lines.append(
             f"| {kpi} | {active} | {s['n_entry_missing']} | {s['n_closed']} | {p20} | {ev} "
             f"| {s['n_stop_loss']} | {s['n_time_exit']} |"
@@ -522,6 +543,8 @@ def write_scoreboard_md(scoreboard: dict[str, dict], path: Path) -> None:
         "ret_gross>=+20%判定・ROUND_TRIP_COST控除後のret_net平均）。稼働中件数はまだ結果が出ていない"
         "ため参考情報。config/paper_watchlist.json の in_sample/holdout_observation と比較する際は"
         "サンプルサイズが極小である前向き記録の性質上、統計的な合否判定にはまだ使えない点に注意。"
+        " **⚠️未成熟** が付いた行は時間切れ決済0件＝上記の早期決済バイアスが掛かっている（負けだけが"
+        "先に確定する期間）。"
     )
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
