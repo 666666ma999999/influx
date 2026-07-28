@@ -273,14 +273,26 @@ def main() -> int:
                      and r.get("value")]
             if cands:
                 four_w = (parsed["value"] / cands[-1]["value"] - 1) * 100
+            # サイト側が週次%を出さない系列（田中貴金属・BDI個別ページ等）は自前履歴から算出する
+            # （P0-②・2026-07-28。これが無いと weekly が永久に None で発火経路が4週累積だけになる）。
+            # 自前履歴依存なので four_week と同じく status==ok の時のみ判定に使う
+            if parsed.get("weekly_pct") is None:
+                wk_cands = [r for d, r in by_date.items()
+                            if d and 5 <= (target_dt - datetime.strptime(d, "%Y-%m-%d")).days <= 9
+                            and r.get("value")]
+                if wk_cands:
+                    row["weekly_pct"] = round((parsed["value"] / wk_cands[-1]["value"] - 1) * 100, 2)
+                    row["weekly_src"] = "self"  # サイト提供値と自前計算値を混同しないための出所印
             # 閾値は系列側で上書き可（既定は全系列共通）。電力のように平常時の変動が大きい
             # 系列に一律+5%を当てると常時発火して使い物にならないため（JEPX実測: 週次変化の
             # 平均絶対値13.9%・+5%だと41%の日で発火）。上書き値は series.alert に根拠つきで置く
             th = {**alert_cfg, **s.get("alert", {})}
             trigger = []
-            # weekly はサイト側の値で自前履歴と独立なので suspect_jump でも判定する（A-3）
-            if parsed.get("weekly_pct") is not None and parsed["weekly_pct"] >= th["weekly_pct"]:
-                trigger.append(f"weekly {parsed['weekly_pct']:+.1f}%")
+            # weekly はサイト側の値なら自前履歴と独立なので suspect_jump でも判定する（A-3）。
+            # 自前算出（weekly_src=self）は履歴依存なので four_week と同じく ok の時のみ
+            wk, wk_self = row.get("weekly_pct"), row.get("weekly_src") == "self"
+            if wk is not None and wk >= th["weekly_pct"] and (not wk_self or row["status"] == "ok"):
+                trigger.append(f"weekly {wk:+.1f}%" + ("(自前)" if wk_self else ""))
             # 4週累積は自前履歴に依存するため ok の時のみ
             if row["status"] == "ok" and four_w is not None and four_w >= th["four_week_pct"]:
                 trigger.append(f"4週累積 {four_w:+.1f}%")

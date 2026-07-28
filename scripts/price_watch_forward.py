@@ -132,6 +132,13 @@ def record_firings(alerts: list, fire_date: str) -> int:
                  for k, n in WINDOWS_BD.items()}
     topix = load_topix()
 
+    # 同一日に同じ銘柄を複数系列で二重記録しない（P0-①・2026-07-28）。
+    # 例: wti と brent は別系列だが受益銘柄は同じ 1605/1662 で、同日に両方鳴ると
+    # 1銘柄が2観測として数えられ、目標 n>=100 の分母と勝率が水増しされる。
+    # 先に鳴った系列に帰属させ、後続系列では skipped_dup に落として理由を残す。
+    seen_codes = {s["code"] for e in read_log() if e.get("type") == "firing"
+                  and e.get("fire_date") == fire_date for s in e.get("stocks", [])}
+
     n = 0
     for series, row, triggers in alerts:
         # 帰属プロトコルv2: 受益カードの sign=+ かつ confirmed/provisional を全件記録
@@ -144,15 +151,20 @@ def record_firings(alerts: list, fire_date: str) -> int:
         else:
             code_tiers = [(to_code5(c), "confirmed")
                           for c in CODE_RE.findall(series.get("stocks", ""))]
-        stocks = []
+        stocks, skipped_dup = [], []
         for c5, tier in code_tiers:
+            if c5 in seen_codes:
+                skipped_dup.append(c5)
+                continue
             px = close_of(c5, base_day)
             if px is not None:
                 stocks.append({"code": c5, "entry_close": px, "tier": tier})
+                seen_codes.add(c5)
         append({
             "type": "firing", "spec_version": SPEC_VERSION,
             "fire_date": fire_date, "series_id": series["id"], "series_jp": series["jp"],
-            "triggers": triggers,
+            "driver": series.get("driver", series["id"]),
+            "triggers": triggers, "skipped_dup": skipped_dup,
             "commodity": {"value": row.get("value"), "weekly_pct": row.get("weekly_pct"),
                           "four_week_pct": row.get("four_week_pct")},
             "base_day": base_day, "topix_entry": topix.get(base_day),
@@ -160,7 +172,8 @@ def record_firings(alerts: list, fire_date: str) -> int:
             "recorded_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         })
         n += 1
-        print(f"[forward] 記録: {series['jp']}（{'/'.join(triggers)}）銘柄{len(stocks)}件 "
+        dup_txt = f" 二重排除{len(skipped_dup)}件" if skipped_dup else ""
+        print(f"[forward] 記録: {series['jp']}（{'/'.join(triggers)}）銘柄{len(stocks)}件{dup_txt} "
               f"基準={base_day} 評価予定={eval_days['w8']}/{eval_days['w15']}")
     return n
 

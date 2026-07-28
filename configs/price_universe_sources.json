@@ -2,127 +2,715 @@
   "_comment": "B2B価格週次チェッカーの対象系列（docs/price-watch-universe.md の機械取得可能サブセット）。TE=tradingeconomics.com/commodity/<slug>（存在しないスラッグも200を返すため行スコープ+ラベル一致で判定）。閾値超えのみ表出力。",
   "_protocol": "受益カード v2（2026-07-28 2AI一致設計・docs/price-watch-universe.md §0b が正本）: beneficiaries は銘柄カードの配列。btype=受益3類型(1:素材製造販売 2:権益・在庫 3:運賃・処理料 4:代替品受益)。tier=confirmed(E1/E2証拠あり)/provisional(型合格・証拠未取得=表示に(仮))/rejected(理由必須・買いシグナル禁止)。sign=+のみ買い方向。verified から12ヶ月超で STALE 表示。rejected も理由つきで残す=再提案ループ防止。TOP1000圏外は関門Bで機械照合済(2026-07-28)。",
   "version": 2,
-  "alert": { "weekly_pct": 5.0, "four_week_pct": 10.0 },
+  "alert": {
+    "weekly_pct": 5.0,
+    "four_week_pct": 10.0
+  },
   "series": [
-    { "id": "copper", "label": "Copper", "type": "te", "slug": "copper", "jp": "銅", "beneficiaries": [
-      { "code": "5713", "btype": 1, "sign": "+", "tier": "confirmed", "evidence": "E2:金属事業が利益柱・銅権益+製錬(3班検証)", "verified": "2026-07-28" },
-      { "code": "5711", "btype": 2, "sign": "+", "tier": "provisional", "evidence": "製錬はTC/RC支配的・銅価の純感応度E1/E2未確認", "verified": "2026-07-28" },
-      { "code": "5714", "btype": 2, "sign": "+", "tier": "provisional", "evidence": "製錬・貴金属副産物あり・純感応度E1/E2未確認", "verified": "2026-07-28" }
-    ] },
-    { "id": "aluminum", "label": "Aluminum", "type": "te", "slug": "aluminum", "jp": "アルミ", "beneficiaries": [
-      { "code": "5703", "tier": "rejected", "reason": "圧延ロールマージン型・地金はコスト側=符号未確定(mixed)" },
-      { "code": "5741", "tier": "rejected", "reason": "同上(圧延マージン型)" }
-    ] },
-    { "id": "nickel", "label": "Nickel", "type": "te", "slug": "nickel", "jp": "ニッケル", "beneficiaries": [
-      { "code": "5713", "btype": 1, "sign": "+", "tier": "confirmed", "evidence": "E2:電気ニッケル生産(金属事業)", "verified": "2026-07-28" },
-      { "code": "5541", "tier": "rejected", "reason": "TOP1000圏外(TOPIX Small 2・関門B機械照合 2026-07-28)" }
-    ] },
-    { "id": "zinc", "label": "Zinc", "type": "te", "slug": "zinc", "jp": "亜鉛", "beneficiaries": [
-      { "code": "5706", "btype": 2, "sign": "+", "tier": "provisional", "evidence": "亜鉛製錬あり・ただし利益実態は銅箔数量型の比重大=E2未確認", "verified": "2026-07-28" },
-      { "code": "5707", "tier": "rejected", "reason": "TOP1000圏外(TOPIX Small 2・関門B機械照合 2026-07-28)" }
-    ] },
-    { "id": "iron-ore", "label": "Iron Ore", "type": "te", "slug": "iron-ore", "jp": "鉄鉱石", "note": "単独買いシグナル禁止=HRCスプレッド分母(TOP1000に鉱山受益者なし・商社権益のみ)", "beneficiaries": [
-      { "code": "8031", "btype": 2, "sign": "+", "tier": "confirmed", "evidence": "E1:資源セグメントの価格感応度を決算開示(鉄鉱石権益)", "verified": "2026-07-28" },
-      { "code": "8058", "btype": 2, "sign": "+", "tier": "confirmed", "evidence": "E1:資源権益の価格感応度を決算開示", "verified": "2026-07-28" }
-    ] },
-    { "id": "gold-int", "label": "Gold", "type": "te", "slug": "gold", "jp": "金(国際)", "beneficiaries": [
-      { "code": "5713", "btype": 1, "sign": "+", "tier": "confirmed", "evidence": "E2:菱刈金鉱山+製錬副産金(金属事業)", "verified": "2026-07-28" },
-      { "code": "7456", "btype": 3, "sign": "+", "tier": "confirmed", "evidence": "E2:主業=貴金属リサイクル(回収型)", "verified": "2026-07-28" },
-      { "code": "5857", "btype": 3, "sign": "+", "tier": "confirmed", "evidence": "E2:主業=貴金属精錬リサイクル", "verified": "2026-07-28" }
-    ] },
-    { "id": "silver", "label": "Silver", "type": "te", "slug": "silver", "jp": "銀", "beneficiaries": [
-      { "code": "5713", "btype": 1, "sign": "+", "tier": "confirmed", "evidence": "E2:製錬副産銀(金属事業)", "verified": "2026-07-28" },
-      { "code": "5706", "btype": 2, "sign": "+", "tier": "provisional", "evidence": "副産銀・純感応度E1/E2未確認", "verified": "2026-07-28" },
-      { "code": "5714", "btype": 2, "sign": "+", "tier": "provisional", "evidence": "副産銀・純感応度E1/E2未確認", "verified": "2026-07-28" }
-    ] },
-    { "id": "platinum", "label": "Platinum", "type": "te", "slug": "platinum", "jp": "プラチナ", "beneficiaries": [
-      { "code": "5857", "btype": 3, "sign": "+", "tier": "confirmed", "evidence": "E2:主業=貴金属精錬リサイクル", "verified": "2026-07-28" },
-      { "code": "5714", "btype": 2, "sign": "+", "tier": "provisional", "evidence": "PGMリサイクルあり・純感応度E1/E2未確認", "verified": "2026-07-28" }
-    ] },
-    { "id": "uranium", "label": "Uranium", "type": "te", "slug": "uranium", "jp": "ウラン", "beneficiaries": [
-      { "code": "2768", "btype": 2, "sign": "+", "tier": "provisional", "evidence": "ウラン権益報道あり・E1/E2未確認", "verified": "2026-07-28" },
-      { "code": "8001", "btype": 2, "sign": "+", "tier": "provisional", "evidence": "ウラン関連持分・E1/E2未確認", "verified": "2026-07-28" }
-    ] },
-    { "id": "wti", "label": "Crude Oil", "type": "te", "slug": "crude-oil", "jp": "原油WTI", "beneficiaries": [
-      { "code": "1605", "btype": 2, "sign": "+", "tier": "confirmed", "evidence": "E1:油価感応度を決算資料で開示", "verified": "2026-07-28" },
-      { "code": "1662", "btype": 2, "sign": "+", "tier": "confirmed", "evidence": "E2:油ガス生産が主業", "verified": "2026-07-28" }
-    ] },
-    { "id": "brent", "label": "Brent", "type": "te", "slug": "brent-crude-oil", "jp": "原油Brent", "beneficiaries": [
-      { "code": "1605", "btype": 2, "sign": "+", "tier": "confirmed", "evidence": "E1:油価感応度を決算資料で開示", "verified": "2026-07-28" },
-      { "code": "1662", "btype": 2, "sign": "+", "tier": "confirmed", "evidence": "E2:油ガス生産が主業", "verified": "2026-07-28" }
-    ] },
-    { "id": "coal", "label": "Coal", "type": "te", "slug": "coal", "jp": "一般炭", "beneficiaries": [
-      { "code": "8053", "btype": 2, "sign": "+", "tier": "confirmed", "evidence": "E1:豪州石炭権益・資源セグメント開示", "verified": "2026-07-28" },
-      { "code": "5019", "btype": 2, "sign": "+", "tier": "provisional", "evidence": "豪州炭鉱保有(推測:一般炭中心)・E2未確認", "verified": "2026-07-28" },
-      { "code": "1518", "tier": "rejected", "reason": "石炭事業を2024/3期で終了=陳腐化の実例(出所:日経・3班検証 2026-07-28)" }
-    ] },
-    { "id": "coking-coal", "label": "Coking Coal", "type": "te", "slug": "coking-coal", "jp": "原料炭", "note": "単独買いシグナル禁止=HRCスプレッド分母(高炉勢にはコスト)", "beneficiaries": [
-      { "code": "8058", "btype": 2, "sign": "+", "tier": "confirmed", "evidence": "E1:原料炭権益の価格感応度を決算開示", "verified": "2026-07-28" },
-      { "code": "8053", "btype": 2, "sign": "+", "tier": "confirmed", "evidence": "E1:資源権益の価格感応度を決算開示", "verified": "2026-07-28" }
-    ] },
-    { "id": "naphtha", "label": "Naphtha", "type": "te", "slug": "naphtha", "jp": "ナフサ", "note": "スプレッド分母のみ・単独買いシグナル禁止", "beneficiaries": [
-      { "code": "5020", "tier": "rejected", "reason": "元売の製品だが対原油スプレッド型=単独符号を確定できない(mixed)" },
-      { "code": "5019", "tier": "rejected", "reason": "同上(mixed)" }
-    ] },
-    { "id": "urea", "label": "Urea", "type": "te", "slug": "urea", "jp": "尿素", "beneficiaries": [
-      { "code": "4031", "tier": "rejected", "reason": "TOP1000圏外(関門B機械照合 2026-07-28)" },
-      { "code": "4025", "tier": "rejected", "reason": "TOP1000圏外(TOPIX Small 2・関門B機械照合 2026-07-28)" }
-    ] },
-    { "id": "methanol", "label": "Methanol", "type": "te", "slug": "methanol", "jp": "メタノール", "beneficiaries": [
-      { "code": "4182", "btype": 2, "sign": "+", "tier": "confirmed", "evidence": "E2:サウジ/ブルネイのメタノール事業持分", "verified": "2026-07-28" }
-    ] },
-    { "id": "pvc", "label": "Polyvinyl", "type": "te", "slug": "polyvinyl", "jp": "塩ビ", "beneficiaries": [
-      { "code": "4063", "btype": 1, "sign": "+", "tier": "confirmed", "evidence": "E2:塩ビ世界大手(米シンテック)が利益柱", "verified": "2026-07-28" },
-      { "code": "4042", "btype": 1, "sign": "+", "tier": "confirmed", "evidence": "E2:クロルアルカリ(塩ビ・苛性ソーダ)事業", "verified": "2026-07-28" }
-    ] },
-    { "id": "lumber", "label": "Lumber", "type": "te", "slug": "lumber", "jp": "木材", "beneficiaries": [
-      { "code": "1911", "tier": "rejected", "reason": "木材流通は受益だが住宅事業のコスト増と相殺=符号未確定(mixed)" },
-      { "code": "7898", "tier": "rejected", "reason": "TOP1000圏外(関門B機械照合 2026-07-28)" }
-    ] },
-    { "id": "rubber", "label": "Rubber", "type": "te", "slug": "rubber", "jp": "天然ゴム", "note": "ゴム製品5社は全社買い手=上昇は減益の逆シグナル専用", "beneficiaries": [] },
-    { "id": "gold-tanaka", "label": "金(田中貴金属店頭)", "type": "tanaka", "jp": "金(国内小売)", "beneficiaries": [
-      { "code": "5713", "btype": 1, "sign": "+", "tier": "confirmed", "evidence": "E2:菱刈金鉱山+製錬副産金", "verified": "2026-07-28" },
-      { "code": "7456", "btype": 3, "sign": "+", "tier": "confirmed", "evidence": "E2:主業=貴金属リサイクル", "verified": "2026-07-28" },
-      { "code": "5857", "btype": 3, "sign": "+", "tier": "confirmed", "evidence": "E2:主業=貴金属精錬リサイクル", "verified": "2026-07-28" }
-    ] },
-    { "id": "scfi", "label": "SCFI Comprehensive", "type": "scfi", "jp": "コンテナ運賃SCFI", "beneficiaries": [
-      { "code": "9101", "btype": 3, "sign": "+", "tier": "confirmed", "evidence": "E2:コンテナ船(ONE持分)が利益柱・運賃=売値", "verified": "2026-07-28" },
-      { "code": "9104", "btype": 3, "sign": "+", "tier": "confirmed", "evidence": "E2:コンテナ船(ONE持分)が利益柱", "verified": "2026-07-28" },
-      { "code": "9107", "btype": 3, "sign": "+", "tier": "confirmed", "evidence": "E2:コンテナ船(ONE持分)が利益柱", "verified": "2026-07-28" }
-    ] },
-    { "id": "bdi", "label": "Baltic", "type": "te", "slug": "baltic", "jp": "ばら積み運賃BDI", "beneficiaries": [
-      { "code": "9101", "btype": 3, "sign": "+", "tier": "confirmed", "evidence": "E2:ばら積み船隊・運賃=売値", "verified": "2026-07-28" },
-      { "code": "9104", "btype": 3, "sign": "+", "tier": "confirmed", "evidence": "E2:ばら積み船隊・運賃=売値", "verified": "2026-07-28" },
-      { "code": "9110", "btype": 3, "sign": "+", "tier": "confirmed", "evidence": "E2:主業=ばら積み海運", "verified": "2026-07-28" }
-    ] },
-    { "id": "cocoa", "label": "Cocoa", "type": "te", "slug": "cocoa", "jp": "カカオ", "beneficiaries": [
-      { "code": "2607", "btype": 4, "sign": "+", "tier": "confirmed", "evidence": "E1:会社開示でカカオ双方向感応(高騰→代替油脂CBE需要増)", "verified": "2026-07-28" }
-    ] },
-    { "id": "scrap-steel", "label": "Scrap Steel", "type": "te", "slug": "scrap-steel", "jp": "鉄スクラップ", "note": "電炉勢は製品-スクラップのスプレッド型＝スクラップ単独の上昇はコスト。純受益はリサイクル側のみ", "beneficiaries": [
-      { "code": "9247", "btype": 3, "sign": "+", "tier": "confirmed", "evidence": "E2:金属リサイクルの販売単価に直入り(センターピン台帳)", "verified": "2026-07-28" },
-      { "code": "5423", "tier": "rejected", "reason": "電炉スプレッド型・スクラップ単独↑は原料コスト増(sign−)" },
-      { "code": "5410", "tier": "rejected", "reason": "同上(棒鋼−スクラップのスプレッドが利益源)" },
-      { "code": "5440", "tier": "rejected", "reason": "同上(鉄筋−スクラップのスプレッド)" },
-      { "code": "5445", "tier": "rejected", "reason": "同上(ねじ節鉄筋−スクラップのスプレッド)" },
-      { "code": "5461", "tier": "rejected", "reason": "同上(厚板−スクラップのスプレッド)" },
-      { "code": "5444", "tier": "rejected", "reason": "利益の大半が米国電炉・TEは国際指標で実現価格と乖離" }
-    ] },
-    { "id": "jepx", "label": "JEPX System Price", "type": "jepx", "jp": "卸電力JEPX",
-      "alert": { "weekly_pct": 30.0, "four_week_pct": 50.0 },
+    {
+      "id": "copper",
+      "label": "Copper",
+      "type": "te",
+      "slug": "copper",
+      "jp": "銅",
+      "beneficiaries": [
+        {
+          "code": "5713",
+          "btype": 1,
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "E2:金属事業が利益柱・銅権益+製錬(3班検証)",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "5711",
+          "btype": 2,
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "製錬はTC/RC支配的・銅価の純感応度E1/E2未確認",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "5714",
+          "btype": 2,
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "製錬・貴金属副産物あり・純感応度E1/E2未確認",
+          "verified": "2026-07-28"
+        }
+      ]
+    },
+    {
+      "id": "aluminum",
+      "label": "Aluminum",
+      "type": "te",
+      "slug": "aluminum",
+      "jp": "アルミ",
+      "beneficiaries": [
+        {
+          "code": "5703",
+          "tier": "rejected",
+          "reason": "圧延ロールマージン型・地金はコスト側=符号未確定(mixed)"
+        },
+        {
+          "code": "5741",
+          "tier": "rejected",
+          "reason": "同上(圧延マージン型)"
+        }
+      ]
+    },
+    {
+      "id": "nickel",
+      "label": "Nickel",
+      "type": "te",
+      "slug": "nickel",
+      "jp": "ニッケル",
+      "beneficiaries": [
+        {
+          "code": "5713",
+          "btype": 1,
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "E2:電気ニッケル生産(金属事業)",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "5541",
+          "tier": "rejected",
+          "reason": "TOP1000圏外(TOPIX Small 2・関門B機械照合 2026-07-28)"
+        }
+      ]
+    },
+    {
+      "id": "zinc",
+      "label": "Zinc",
+      "type": "te",
+      "slug": "zinc",
+      "jp": "亜鉛",
+      "beneficiaries": [
+        {
+          "code": "5706",
+          "btype": 2,
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "亜鉛製錬あり・ただし利益実態は銅箔数量型の比重大=E2未確認",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "5707",
+          "tier": "rejected",
+          "reason": "TOP1000圏外(TOPIX Small 2・関門B機械照合 2026-07-28)"
+        }
+      ]
+    },
+    {
+      "id": "iron-ore",
+      "label": "Iron Ore",
+      "type": "te",
+      "slug": "iron-ore",
+      "jp": "鉄鉱石",
+      "note": "単独買いシグナル禁止=HRCスプレッド分母(TOP1000に鉱山受益者なし・商社権益のみ)",
+      "beneficiaries": [
+        {
+          "code": "8031",
+          "btype": 2,
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "E1:資源セグメントの価格感応度を決算開示(鉄鉱石権益)",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "8058",
+          "btype": 2,
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "E1:資源権益の価格感応度を決算開示",
+          "verified": "2026-07-28"
+        }
+      ],
+      "driver": "steel-raw"
+    },
+    {
+      "id": "gold-int",
+      "label": "Gold",
+      "type": "te",
+      "slug": "gold",
+      "jp": "金(国際)",
+      "beneficiaries": [
+        {
+          "code": "5713",
+          "btype": 1,
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "E2:菱刈金鉱山+製錬副産金(金属事業)",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "7456",
+          "btype": 3,
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "E2:主業=貴金属リサイクル(回収型)",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "5857",
+          "btype": 3,
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "E2:主業=貴金属精錬リサイクル",
+          "verified": "2026-07-28"
+        }
+      ],
+      "driver": "gold"
+    },
+    {
+      "id": "silver",
+      "label": "Silver",
+      "type": "te",
+      "slug": "silver",
+      "jp": "銀",
+      "beneficiaries": [
+        {
+          "code": "5713",
+          "btype": 1,
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "E2:製錬副産銀(金属事業)",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "5706",
+          "btype": 2,
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "副産銀・純感応度E1/E2未確認",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "5714",
+          "btype": 2,
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "副産銀・純感応度E1/E2未確認",
+          "verified": "2026-07-28"
+        }
+      ]
+    },
+    {
+      "id": "platinum",
+      "label": "Platinum",
+      "type": "te",
+      "slug": "platinum",
+      "jp": "プラチナ",
+      "beneficiaries": [
+        {
+          "code": "5857",
+          "btype": 3,
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "E2:主業=貴金属精錬リサイクル",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "5714",
+          "btype": 2,
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "PGMリサイクルあり・純感応度E1/E2未確認",
+          "verified": "2026-07-28"
+        }
+      ]
+    },
+    {
+      "id": "uranium",
+      "label": "Uranium",
+      "type": "te",
+      "slug": "uranium",
+      "jp": "ウラン",
+      "beneficiaries": [
+        {
+          "code": "2768",
+          "btype": 2,
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "ウラン権益報道あり・E1/E2未確認",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "8001",
+          "btype": 2,
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "ウラン関連持分・E1/E2未確認",
+          "verified": "2026-07-28"
+        }
+      ]
+    },
+    {
+      "id": "wti",
+      "label": "Crude Oil",
+      "type": "te",
+      "slug": "crude-oil",
+      "jp": "原油WTI",
+      "beneficiaries": [
+        {
+          "code": "1605",
+          "btype": 2,
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "E1:油価感応度を決算資料で開示",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "1662",
+          "btype": 2,
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "E2:油ガス生産が主業",
+          "verified": "2026-07-28"
+        }
+      ],
+      "driver": "crude-oil"
+    },
+    {
+      "id": "brent",
+      "label": "Brent",
+      "type": "te",
+      "slug": "brent-crude-oil",
+      "jp": "原油Brent",
+      "beneficiaries": [
+        {
+          "code": "1605",
+          "btype": 2,
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "E1:油価感応度を決算資料で開示",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "1662",
+          "btype": 2,
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "E2:油ガス生産が主業",
+          "verified": "2026-07-28"
+        }
+      ],
+      "driver": "crude-oil"
+    },
+    {
+      "id": "coal",
+      "label": "Coal",
+      "type": "te",
+      "slug": "coal",
+      "jp": "一般炭",
+      "beneficiaries": [
+        {
+          "code": "8053",
+          "btype": 2,
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "E1:豪州石炭権益・資源セグメント開示",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "5019",
+          "btype": 2,
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "豪州炭鉱保有(推測:一般炭中心)・E2未確認",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "1518",
+          "tier": "rejected",
+          "reason": "石炭事業を2024/3期で終了=陳腐化の実例(出所:日経・3班検証 2026-07-28)"
+        }
+      ]
+    },
+    {
+      "id": "coking-coal",
+      "label": "Coking Coal",
+      "type": "te",
+      "slug": "coking-coal",
+      "jp": "原料炭",
+      "note": "単独買いシグナル禁止=HRCスプレッド分母(高炉勢にはコスト)",
+      "beneficiaries": [
+        {
+          "code": "8058",
+          "btype": 2,
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "E1:原料炭権益の価格感応度を決算開示",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "8053",
+          "btype": 2,
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "E1:資源権益の価格感応度を決算開示",
+          "verified": "2026-07-28"
+        }
+      ],
+      "driver": "steel-raw"
+    },
+    {
+      "id": "naphtha",
+      "label": "Naphtha",
+      "type": "te",
+      "slug": "naphtha",
+      "jp": "ナフサ",
+      "note": "スプレッド分母のみ・単独買いシグナル禁止",
+      "beneficiaries": [
+        {
+          "code": "5020",
+          "tier": "rejected",
+          "reason": "元売の製品だが対原油スプレッド型=単独符号を確定できない(mixed)"
+        },
+        {
+          "code": "5019",
+          "tier": "rejected",
+          "reason": "同上(mixed)"
+        }
+      ]
+    },
+    {
+      "id": "urea",
+      "label": "Urea",
+      "type": "te",
+      "slug": "urea",
+      "jp": "尿素",
+      "beneficiaries": [
+        {
+          "code": "4031",
+          "tier": "rejected",
+          "reason": "TOP1000圏外(関門B機械照合 2026-07-28)"
+        },
+        {
+          "code": "4025",
+          "tier": "rejected",
+          "reason": "TOP1000圏外(TOPIX Small 2・関門B機械照合 2026-07-28)"
+        }
+      ]
+    },
+    {
+      "id": "methanol",
+      "label": "Methanol",
+      "type": "te",
+      "slug": "methanol",
+      "jp": "メタノール",
+      "beneficiaries": [
+        {
+          "code": "4182",
+          "btype": 2,
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "E2:サウジ/ブルネイのメタノール事業持分",
+          "verified": "2026-07-28"
+        }
+      ]
+    },
+    {
+      "id": "pvc",
+      "label": "Polyvinyl",
+      "type": "te",
+      "slug": "polyvinyl",
+      "jp": "塩ビ",
+      "beneficiaries": [
+        {
+          "code": "4063",
+          "btype": 1,
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "E2:塩ビ世界大手(米シンテック)が利益柱",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "4042",
+          "btype": 1,
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "E2:クロルアルカリ(塩ビ・苛性ソーダ)事業",
+          "verified": "2026-07-28"
+        }
+      ]
+    },
+    {
+      "id": "lumber",
+      "label": "Lumber",
+      "type": "te",
+      "slug": "lumber",
+      "jp": "木材",
+      "beneficiaries": [
+        {
+          "code": "1911",
+          "tier": "rejected",
+          "reason": "木材流通は受益だが住宅事業のコスト増と相殺=符号未確定(mixed)"
+        },
+        {
+          "code": "7898",
+          "tier": "rejected",
+          "reason": "TOP1000圏外(関門B機械照合 2026-07-28)"
+        }
+      ]
+    },
+    {
+      "id": "rubber",
+      "label": "Rubber",
+      "type": "te",
+      "slug": "rubber",
+      "jp": "天然ゴム",
+      "note": "ゴム製品5社は全社買い手=上昇は減益の逆シグナル専用",
+      "beneficiaries": []
+    },
+    {
+      "id": "gold-tanaka",
+      "label": "金(田中貴金属店頭)",
+      "type": "tanaka",
+      "jp": "金(国内小売)",
+      "beneficiaries": [
+        {
+          "code": "5713",
+          "btype": 1,
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "E2:菱刈金鉱山+製錬副産金",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "7456",
+          "btype": 3,
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "E2:主業=貴金属リサイクル",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "5857",
+          "btype": 3,
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "E2:主業=貴金属精錬リサイクル",
+          "verified": "2026-07-28"
+        }
+      ],
+      "driver": "gold"
+    },
+    {
+      "id": "scfi",
+      "label": "SCFI Comprehensive",
+      "type": "scfi",
+      "jp": "コンテナ運賃SCFI",
+      "beneficiaries": [
+        {
+          "code": "9101",
+          "btype": 3,
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "E2:コンテナ船(ONE持分)が利益柱・運賃=売値",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "9104",
+          "btype": 3,
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "E2:コンテナ船(ONE持分)が利益柱",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "9107",
+          "btype": 3,
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "E2:コンテナ船(ONE持分)が利益柱",
+          "verified": "2026-07-28"
+        }
+      ],
+      "driver": "freight-container"
+    },
+    {
+      "id": "bdi",
+      "label": "Baltic",
+      "type": "te",
+      "slug": "baltic",
+      "jp": "ばら積み運賃BDI",
+      "beneficiaries": [
+        {
+          "code": "9101",
+          "btype": 3,
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "E2:ばら積み船隊・運賃=売値",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "9104",
+          "btype": 3,
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "E2:ばら積み船隊・運賃=売値",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "9110",
+          "btype": 3,
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "E2:主業=ばら積み海運",
+          "verified": "2026-07-28"
+        }
+      ],
+      "driver": "freight-dry"
+    },
+    {
+      "id": "cocoa",
+      "label": "Cocoa",
+      "type": "te",
+      "slug": "cocoa",
+      "jp": "カカオ",
+      "beneficiaries": [
+        {
+          "code": "2607",
+          "btype": 4,
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "E1:会社開示でカカオ双方向感応(高騰→代替油脂CBE需要増)",
+          "verified": "2026-07-28"
+        }
+      ]
+    },
+    {
+      "id": "scrap-steel",
+      "label": "Scrap Steel",
+      "type": "te",
+      "slug": "scrap-steel",
+      "jp": "鉄スクラップ",
+      "note": "電炉勢は製品-スクラップのスプレッド型＝スクラップ単独の上昇はコスト。純受益はリサイクル側のみ",
+      "beneficiaries": [
+        {
+          "code": "9247",
+          "btype": 3,
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "E2:金属リサイクルの販売単価に直入り(センターピン台帳)",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "5423",
+          "tier": "rejected",
+          "reason": "電炉スプレッド型・スクラップ単独↑は原料コスト増(sign−)"
+        },
+        {
+          "code": "5410",
+          "tier": "rejected",
+          "reason": "同上(棒鋼−スクラップのスプレッドが利益源)"
+        },
+        {
+          "code": "5440",
+          "tier": "rejected",
+          "reason": "同上(鉄筋−スクラップのスプレッド)"
+        },
+        {
+          "code": "5445",
+          "tier": "rejected",
+          "reason": "同上(ねじ節鉄筋−スクラップのスプレッド)"
+        },
+        {
+          "code": "5461",
+          "tier": "rejected",
+          "reason": "同上(厚板−スクラップのスプレッド)"
+        },
+        {
+          "code": "5444",
+          "tier": "rejected",
+          "reason": "利益の大半が米国電炉・TEは国際指標で実現価格と乖離"
+        }
+      ]
+    },
+    {
+      "id": "jepx",
+      "label": "JEPX System Price",
+      "type": "jepx",
+      "jp": "卸電力JEPX",
+      "alert": {
+        "weekly_pct": 30.0,
+        "four_week_pct": 50.0
+      },
       "note": "閾値上書きの根拠(2026-07-28実測・120日): 週次変化の平均絶対値13.9%・+5%だと41%の日で発火し無意味。+30%は7%の日=平常変動の約2倍",
       "beneficiaries": [
-      { "code": "9513", "btype": 3, "sign": "+", "tier": "confirmed", "evidence": "E2:卸電気専業・燃料はパススルーで水力/卸売がJEPX高の純受益", "verified": "2026-07-28" },
-      { "code": "9503", "btype": 3, "sign": "+", "tier": "provisional", "evidence": "原発7基で限界費用が低くJEPX高が卸売収入増(E1/E2未確認)", "verified": "2026-07-28" },
-      { "code": "9508", "btype": 3, "sign": "+", "tier": "provisional", "evidence": "原発4基稼働で限界費用が低い(E1/E2未確認)", "verified": "2026-07-28" },
-      { "code": "9502", "tier": "rejected", "reason": "小売調達は−・JERA持分は+でmixed=純方向を確定できない" },
-      { "code": "9504", "tier": "rejected", "reason": "石炭火力依存・燃調ラグで電力高はコスト側(sign−)" },
-      { "code": "9505", "tier": "rejected", "reason": "同上(燃調ラグ・sign−)" },
-      { "code": "9506", "tier": "rejected", "reason": "同上(燃調ラグ・sign−)" },
-      { "code": "9507", "tier": "rejected", "reason": "同上(燃調ラグ・sign−)" },
-      { "code": "9511", "tier": "rejected", "reason": "同上(燃調ラグ・sign−)" },
-      { "code": "9501", "tier": "rejected", "reason": "センターピンは柏崎刈羽の再稼働event・JEPXではない" },
-      { "code": "9509", "tier": "rejected", "reason": "センターピンは泊原発の再稼働event・JEPXではない" },
-      { "code": "3778", "tier": "rejected", "reason": "DC電力費が原価の中核=電力高は減益(sign−)" }
-    ] }
+        {
+          "code": "9513",
+          "btype": 3,
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "E2:卸電気専業・燃料はパススルーで水力/卸売がJEPX高の純受益",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "9503",
+          "btype": 3,
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "原発7基で限界費用が低くJEPX高が卸売収入増(E1/E2未確認)",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "9508",
+          "btype": 3,
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "原発4基稼働で限界費用が低い(E1/E2未確認)",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "9502",
+          "tier": "rejected",
+          "reason": "小売調達は−・JERA持分は+でmixed=純方向を確定できない"
+        },
+        {
+          "code": "9504",
+          "tier": "rejected",
+          "reason": "石炭火力依存・燃調ラグで電力高はコスト側(sign−)"
+        },
+        {
+          "code": "9505",
+          "tier": "rejected",
+          "reason": "同上(燃調ラグ・sign−)"
+        },
+        {
+          "code": "9506",
+          "tier": "rejected",
+          "reason": "同上(燃調ラグ・sign−)"
+        },
+        {
+          "code": "9507",
+          "tier": "rejected",
+          "reason": "同上(燃調ラグ・sign−)"
+        },
+        {
+          "code": "9511",
+          "tier": "rejected",
+          "reason": "同上(燃調ラグ・sign−)"
+        },
+        {
+          "code": "9501",
+          "tier": "rejected",
+          "reason": "センターピンは柏崎刈羽の再稼働event・JEPXではない"
+        },
+        {
+          "code": "9509",
+          "tier": "rejected",
+          "reason": "センターピンは泊原発の再稼働event・JEPXではない"
+        },
+        {
+          "code": "3778",
+          "tier": "rejected",
+          "reason": "DC電力費が原価の中核=電力高は減益(sign−)"
+        }
+      ]
+    }
   ]
 }
