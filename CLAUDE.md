@@ -40,10 +40,13 @@ docker compose run xstock python scripts/check_inactive_accounts.py
 # X値上がり検出（日次・launchd com.influx.price-watch 22:10。手動は runner 経由）
 bash scripts/xprice_watch_run.sh   # 収集36クエリ→zスコア判定→検知時Mac通知。台帳 data/x_price_watch/
 
-# B2B価格週次チェッカー + 商品名発見器（値上がりレーンの拡張・docs/price-watch-universe.md）
-docker compose run --rm xstock python scripts/price_universe_check.py   # 20系列の週次価格・閾値超え表示
+# B2B価格チェッカー（33系列・launchd com.influx.price-universe 毎週月8:30。手動は runner 経由）
+bash scripts/price_universe_run.sh   # Docker待機→33系列取得→発火/取得低下をMac通知
+docker compose run --rm xstock python scripts/price_universe_check.py   # 素の実行（通知なし）
 docker exec -e DISPLAY=:99 xstock-vnc python3 /app/scripts/price_watch_discover.py  # 新商品名の候補キュー生成
 docker compose run --rm xstock python scripts/price_watch_forward.py --eval          # 発火の前向き記録を評価（8/15週後）
+# 銘柄→センターピン（利益を動かす中心の価格）の全977社台帳: data/center_pin/center_pin.jsonl
+# 帰属ルール（誤帰属の防ぎ方）と系列の罠は docs/price-watch-universe.md §0a/§0b が正本
 
 # Grok リサーチパイプライン（.envrc 自動読み込み + docker exec ラッパー）
 scripts/run_research.sh --phase evaluate
