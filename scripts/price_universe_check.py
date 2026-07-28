@@ -105,6 +105,24 @@ def parse_tanaka(html: str) -> dict | None:
             "weekly_pct": None, "monthly_pct": None, "src_date": src_date, "layout": "tanaka"}
 
 
+def parse_scfi(payload: dict) -> dict | None:
+    """SCFI総合指数（en.sse.net.cn の週次JSON API・2026-07-28 実測スキーマ）。
+
+    dataItemTypeName=="SCFI_T" が総合指数行。前週比%（percentage）が API 側で直接提供される
+    ため weekly_pct にそのまま渡せる（TE と違い自前履歴に依存しない）。src_date=指数の公表日
+    （週次金曜のため当日一致は要求しない）。
+    """
+    for line in (payload.get("data") or {}).get("lineDataList", []):
+        if line.get("dataItemTypeName") == "SCFI_T" and line.get("currentContent") is not None:
+            pct = line.get("percentage")
+            return {"value": float(line["currentContent"]), "day_pct": None,
+                    "weekly_pct": float(pct) if pct is not None else None,
+                    "monthly_pct": None,
+                    "src_date": (payload.get("data") or {}).get("currentDate", ""),
+                    "layout": "scfi_json"}
+    return None
+
+
 def load_history() -> dict[str, list[dict]]:
     hist: dict[str, list[dict]] = {}
     if LEDGER_PATH.exists():
@@ -142,6 +160,8 @@ def main() -> int:
                 if parsed is None:
                     parsed = parse_te(fetch(f"https://tradingeconomics.com/commodity/{s['slug']}"),
                                       s["slug"], s["label"])
+            elif s["type"] == "scfi":
+                parsed = parse_scfi(json.loads(fetch("https://en.sse.net.cn/currentIndex?indexName=scfi")))
             else:
                 parsed = parse_tanaka(fetch("https://gold.tanaka.co.jp/commodity/souba/"))
             if parsed is None or parsed["value"] is None:

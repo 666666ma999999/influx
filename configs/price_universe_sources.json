@@ -7,7 +7,7 @@
     { "id": "aluminum", "label": "Aluminum", "type": "te", "slug": "aluminum", "jp": "アルミ", "stocks": "5703/5741" },
     { "id": "nickel", "label": "Nickel", "type": "te", "slug": "nickel", "jp": "ニッケル", "stocks": "5713/5541" },
     { "id": "zinc", "label": "Zinc", "type": "te", "slug": "zinc", "jp": "亜鉛", "stocks": "5706/5707" },
-    { "id": "iron-ore", "label": "Iron Ore", "type": "te", "slug": "iron-ore", "jp": "鉄鉱石", "stocks": "8031/8058" },
+    { "id": "iron-ore", "label": "Iron Ore", "type": "te", "slug": "iron-ore", "jp": "鉄鉱石", "stocks": "8031/8058(商社権益のみ・単独買いシグナル禁止=HRCスプレッド分母)" },
     { "id": "gold-int", "label": "Gold", "type": "te", "slug": "gold", "jp": "金(国際)", "stocks": "5713/7456/5857" },
     { "id": "silver", "label": "Silver", "type": "te", "slug": "silver", "jp": "銀", "stocks": "5706/5713/5714" },
     { "id": "platinum", "label": "Platinum", "type": "te", "slug": "platinum", "jp": "プラチナ", "stocks": "5714/5857" },
@@ -15,13 +15,16 @@
     { "id": "wti", "label": "Crude Oil", "type": "te", "slug": "crude-oil", "jp": "原油WTI", "stocks": "1605/1662" },
     { "id": "brent", "label": "Brent", "type": "te", "slug": "brent-crude-oil", "jp": "原油Brent", "stocks": "1605/1662" },
     { "id": "coal", "label": "Coal", "type": "te", "slug": "coal", "jp": "一般炭", "stocks": "1518/8053" },
-    { "id": "coking-coal", "label": "Coking Coal", "type": "te", "slug": "coking-coal", "jp": "原料炭", "stocks": "8058/8053" },
+    { "id": "coking-coal", "label": "Coking Coal", "type": "te", "slug": "coking-coal", "jp": "原料炭", "stocks": "8058/8053(商社権益のみ・単独買いシグナル禁止=HRCスプレッド分母)" },
     { "id": "naphtha", "label": "Naphtha", "type": "te", "slug": "naphtha", "jp": "ナフサ", "stocks": "5020/5019" },
     { "id": "urea", "label": "Urea", "type": "te", "slug": "urea", "jp": "尿素", "stocks": "4031/4025" },
     { "id": "methanol", "label": "Methanol", "type": "te", "slug": "methanol", "jp": "メタノール", "stocks": "4182" },
     { "id": "pvc", "label": "Polyvinyl", "type": "te", "slug": "polyvinyl", "jp": "塩ビ", "stocks": "4063/4042" },
     { "id": "lumber", "label": "Lumber", "type": "te", "slug": "lumber", "jp": "木材", "stocks": "1911/7898" },
-    { "id": "rubber", "label": "Rubber", "type": "te", "slug": "rubber", "jp": "天然ゴム", "stocks": "(受益なし=コスト圧迫シグナル)" },
-    { "id": "gold-tanaka", "label": "金(田中貴金属店頭)", "type": "tanaka", "jp": "金(国内小売)", "stocks": "5713/7456/5857" }
+    { "id": "rubber", "label": "Rubber", "type": "te", "slug": "rubber", "jp": "天然ゴム", "stocks": "(受益なし・ゴム製品5社は全社買い手=上昇は減益の逆シグナル)" },
+    { "id": "gold-tanaka", "label": "金(田中貴金属店頭)", "type": "tanaka", "jp": "金(国内小売)", "stocks": "5713/7456/5857" },
+    { "id": "scfi", "label": "SCFI Comprehensive", "type": "scfi", "jp": "コンテナ運賃SCFI", "stocks": "9101/9104/9107" },
+    { "id": "bdi", "label": "Baltic", "type": "te", "slug": "baltic", "jp": "ばら積み運賃BDI", "stocks": "9101/9104/9110" },
+    { "id": "cocoa", "label": "Cocoa", "type": "te", "slug": "cocoa", "jp": "カカオ", "stocks": "2607" }
   ]
 }
