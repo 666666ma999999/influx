@@ -128,22 +128,25 @@ def parse_jepx(today: str) -> dict | None:
 
     公開CSV https://www.jepx.jp/market/excel/spot_YYYY.csv（Shift-JIS・1日48コマ）。
     value=48コマ揃った直近日の平均（円/kWh）、weekly_pct=直近7日平均÷その前7日平均。
-    年初は当年CSVだけでは14日に満たないため前年CSVも連結する。
     列は名前でアンカーする（位置固定は禁止・TE列ズレ事故と同じ轍を踏まないため）。
+
+    **YYYY は暦年でなく年度（4月始まり）**（2026-07-28 実測: spot_2025.csv = 2025/04/01〜2026/03/31・
+    spot_2027.csv は404）。暦年で組むと1〜3月に存在しないファイルを取りにいって系列ごと落ちる。
+    年度替わり直後（4月上旬）は当年度分が14日に満たないため前年度CSVも連結する。
     """
     import csv as _csv
     import io as _io
     from statistics import mean as _mean
 
-    year = int(today[:4])
+    fy = int(today[:4]) if int(today[5:7]) >= 4 else int(today[:4]) - 1  # 年度（4月始まり）
     daily: dict[str, list[float]] = {}
-    for y in (year, year - 1):
+    for y in (fy, fy - 1):
         try:
             raw = requests.get(f"https://www.jepx.jp/market/excel/spot_{y}.csv",
                                headers={"User-Agent": UA}, timeout=60)
             raw.raise_for_status()
-        except Exception:  # noqa: BLE001  前年分は存在しない/不要なこともある
-            if y == year:
+        except Exception:  # noqa: BLE001  前年度分は存在しない/不要なこともある
+            if y == fy:
                 raise
             continue
         rows = list(_csv.reader(_io.StringIO(raw.content.decode("shift_jis", errors="replace"))))
