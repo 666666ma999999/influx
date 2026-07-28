@@ -201,6 +201,12 @@ def main() -> int:
         print(f"\n🚨 閾値超え {len(alerts)} 系列:")
         for s, row, trigger in alerts:
             print(f"  {s['jp']}（{'/'.join(trigger)}）→ 受益: {s['stocks']}")
+        # 前向き記録（レビューC-1対応: 発火を将来検定できる形で残す）
+        try:
+            import price_watch_forward as fwd
+            fwd.record_firings(alerts, today)
+        except Exception as exc:  # noqa: BLE001  記録失敗で本処理を落とさない
+            print(f"[forward] WARN: 前向き記録に失敗: {str(exc)[:100]}")
     else:
         print("閾値超えなし（4週累積は履歴4本蓄積後から判定）")
     return 0 if ok > 0 else 1

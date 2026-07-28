@@ -203,6 +203,20 @@
 - LLM精製段は ANTHROPIC_API_KEY 実キー設定時のみ（現状プレースホルダ=スキップ）
 - 初回実測（7/27分・64投稿）: 「ナプキン」（8/1値上げ）「プライム」（Amazonプライム値上げ）を正しく検出
 
+## 前向き記録（2026-07-28 稼働・レビューC-1対応）
+
+発火が print されるだけで記録が残らず、土台仮説（実物価格→株が8〜15週遅行・n=2）を将来検定
+できない状態だったため、発火を自動で台帳化する。**観察記録であり trials.jsonl（正式αレーン）
+には登録しない**（監視トリガーを正式レシピと同列に数えるとα粒度が壊れるため）。
+
+- 台帳: `data/price_watch/forward_log.jsonl`（type= preregistration / firing / x_firing / evaluation）
+- 凍結条件 v1: entry=発火日時点の直近営業日 AdjC（look-aheadなし）/ 窓=40営業日(≒8週)・75営業日(≒15週)
+  / 指標=銘柄リターン − TOPIXリターン（超過リターン）/ hit=超過>0 / 対象=当該系列の受益銘柄**全件**（後知恵の選別禁止）
+- 記録は自動: `price_universe_check.py` の発火時（銘柄つき）・`price_watch_alert.py` の X 発火時（銘柄なしのイベントのみ）
+- 評価: `docker compose run --rm xstock python scripts/price_watch_forward.py --eval`（期日到来分のみ・冪等）
+- 状況: 同スクリプト `--status`（のべ銘柄観測数・暫定勝率・評価待ち件数）
+- **判定の門**: のべ n≥100 かつ独立エピソード複数まで勝率を結論に使わない（暫定値は参考表示のみ）
+
 ## 2026-07-28 敵対レビュー（Opus5×3レンズ+交差検証 / Codex）で確定した運用上の罠
 
 1. **TEは一覧と個別でページの列構成が違う**（一覧 /commodities = %Chg/Weekly/Monthly/YTD/YoY の5%セル、

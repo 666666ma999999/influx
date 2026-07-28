@@ -186,6 +186,18 @@ def main() -> int:
             for a in new_alerts:
                 fh.write(json.dumps(a, ensure_ascii=False) + "\n")
         print(f"\n🚨 アラート {len(alerts)} 件（新規追記 {len(new_alerts)} 件）→ {out}")
+        # 前向き記録（X側は銘柄が特定できないため発火イベントのみ・C-1対応）
+        try:
+            sys.path.insert(0, str(APP / "scripts"))
+            import price_watch_forward as fwd
+            for a in new_alerts:
+                fwd.append({"type": "x_firing", "spec_version": fwd.SPEC_VERSION,
+                            "fire_date": a["date"], "query_id": a["query_id"],
+                            "lane": a.get("lane", ""), "count": a.get("count"),
+                            "z": a.get("z"), "verdict": a.get("verdict"),
+                            "note": "銘柄未特定（Xレーンは候補生成）"})
+        except Exception as exc:  # noqa: BLE001
+            print(f"[forward] WARN: X発火の記録に失敗: {str(exc)[:80]}")
     else:
         print("\nアラートなし")
     return 0
