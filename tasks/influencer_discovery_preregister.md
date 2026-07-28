@@ -143,3 +143,7 @@ forward監視の主対象にせず、四半期に一度など不定期に再中�
   goto_finance cissan_9984 tesuta001 yurumazu 2okutameo tapazou29 kanpo_blog haru_tachibana8
   heihachiro888 uehara_sato4（search・25スクロール・rolling14日窓）。月+10人上限・bot徴候で即停止。
 - ③（対照読み言語化）は未着手。素材=fxnia(強)+gihuboy/u___a___53(弱) vs FAIL3人。
+- 訂正（2026-07-28 ユーザー指摘→実測）: 第23Rの「実在庫43人」はレビュアーA概算（corpus57−14）。
+  名簿2本の和集合を実測すると **65人（corpus57∪config37）− 処理済み31（採点14+観察17）= 残り38人**。
+  うちランダム英数名・テスト垢・非株系（FX/ポイ活/米国ETF情報系）が10人前後混在＝実質25〜30人。
+  月+10上限の段階追加なら約4ヶ月で全量が前向き観察に入る。
