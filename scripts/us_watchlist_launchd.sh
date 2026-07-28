@@ -57,5 +57,7 @@ capture_group() {
 capture_group us_forward search 40 $ACCOUNTS_US
 capture_group jp_forward profile 80 $ACCOUNTS_JP
 capture_group jp_forward search 25 $ACCOUNTS_JP_SEARCH
+# fxnia新旧YouTubeチャンネルの動画タイトル台帳（第23R③(b)・公式RSS・軽量）
+python3 "$PROJECT_ROOT/scripts/nia_youtube_rss.py" || echo "警告: nia-rss 失敗" >&2
 docker compose -f docker-compose.vnc.yml down
 echo "[us-watchlist] $RUN_DAY 完了 (us+jp)"
