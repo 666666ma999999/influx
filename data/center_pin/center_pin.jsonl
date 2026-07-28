@@ -1,0 +1,977 @@
+{"code": "1301", "name": "極洋", "s33": "水産・農林業", "pin": "原料魚価（マグロ等の仕入価格）", "pin_type": "commodity", "sign": "-", "series": "豊洲市場統計（マグロ）", "watch": "manual", "note": "水産商事と加工が主体で、魚価上昇は仕入原価で転嫁が遅れる"}
+{"code": "1332", "name": "ニッスイ", "s33": "水産・農林業", "pin": "原料魚価（サーモン・すり身）", "pin_type": "commodity", "sign": "-", "series": "Nasdaq Salmon Index・豊洲市場統計", "watch": "manual", "note": "利益柱の食品加工では魚価は仕入原価側で、養殖の受益を上回る"}
+{"code": "1333", "name": "Ｕｍｉｏｓ", "s33": "水産・農林業", "pin": "原料魚価（水産物仕入価格）", "pin_type": "commodity", "sign": "-", "series": "豊洲市場統計・Nasdaq Salmon Index", "watch": "manual", "note": "旧マルハニチロ。加工と水産商事が主で魚価は原価側。推測"}
+{"code": "1377", "name": "サカタのタネ", "s33": "水産・農林業", "pin": "野菜種子の販売単価（品種プレミアム）", "pin_type": "price_set", "sign": "+", "series": "none", "watch": "none", "note": "独自品種のブランド力で値決め可能。海外比率が高く円安も追風"}
+{"code": "1414", "name": "ショーボンドホールディングス", "s33": "建設業", "pin": "インフラ補修工事の受注高", "pin_type": "volume", "sign": "+", "series": "建設工事受注動態統計", "watch": "manual", "note": "橋梁補修の受注量が利益を決め資材の原価比率は低い"}
+{"code": "1417", "name": "ミライト・ワン", "s33": "建設業", "pin": "通信キャリアの設備投資額", "pin_type": "volume", "sign": "+", "series": "NTT/KDDI 設備投資計画", "watch": "manual", "note": "NTT等キャリアのcapexが受注量と利益を決める"}
+{"code": "1419", "name": "タマホーム", "s33": "建設業", "pin": "住宅販売単価−木材/建材仕入", "pin_type": "spread", "sign": "+", "series": "lumber（木材先物）", "watch": "auto", "note": "ローコスト戸建で坪単価改定と資材コストの差が粗利を決める"}
+{"code": "1515", "name": "日鉄鉱業", "s33": "鉱業", "pin": "銅価格（チリ自社鉱山）＋石灰石数量", "pin_type": "commodity", "sign": "+", "series": "TE copper", "watch": "auto", "note": "石灰石が数量の柱だが利益変動は自社銅鉱山の銅価が主・推測"}
+{"code": "1518", "name": "三井松島ホールディングス", "s33": "その他製品", "pin": "一般炭価格", "pin_type": "commodity", "sign": "+", "series": "TE Coal(一般炭)", "watch": "auto", "note": "豪州炭鉱権益の販売単価が石炭価格に直結し利益の主柱"}
+{"code": "1605", "name": "ＩＮＰＥＸ", "s33": "鉱業", "pin": "原油・LNG価格", "pin_type": "commodity", "sign": "+", "series": "TE brent / TE crude oil", "watch": "auto", "note": "権益保有で売上単価が原油LNG連動。3〜6ヶ月ラグの純受益"}
+{"code": "1662", "name": "石油資源開発", "s33": "鉱業", "pin": "原油・天然ガス価格", "pin_type": "commodity", "sign": "+", "series": "TE crude oil / TE brent", "watch": "auto", "note": "自社E&Pで売上単価が原油ガス連動。国内ガスも権益型"}
+{"code": "1663", "name": "Ｋ＆Ｏエナジーグループ", "s33": "鉱業", "pin": "ヨウ素・自社生産天然ガス価格", "pin_type": "commodity", "sign": "+", "series": "none", "watch": "none", "note": "自社ガス田とヨウ素が売上単価。ガス小売は原料費調整で中立・推測"}
+{"code": "167A", "name": "リョーサン菱洋ホールディングス", "s33": "卸売業", "pin": "半導体・電子部品の取扱数量", "pin_type": "volume", "sign": "+", "series": "WSTS 世界半導体出荷", "watch": "manual", "note": "半導体商社の統合会社、仕入売価は連動し取扱数量とマージンが主"}
+{"code": "1719", "name": "安藤・間", "s33": "建設業", "pin": "建設資材・労務費（鋼材/生コン）", "pin_type": "commodity", "sign": "-", "series": "建設物価調査会 建設資材物価指数", "watch": "manual", "note": "固定価格請負で資材労務費は原価、上昇が工事採算を直撃"}
+{"code": "1720", "name": "東急建設", "s33": "建設業", "pin": "建設資材・労務費（鋼材/生コン）", "pin_type": "commodity", "sign": "-", "series": "建設物価調査会 建設資材物価指数", "watch": "manual", "note": "固定価格請負で資材労務費が原価、渋谷案件の採算が変動源"}
+{"code": "1721", "name": "コムシスホールディングス", "s33": "建設業", "pin": "通信キャリアの設備投資額", "pin_type": "volume", "sign": "+", "series": "NTT/KDDI 設備投資計画", "watch": "manual", "note": "NTT向け通信インフラ工事の受注量が利益の中心"}
+{"code": "1766", "name": "東建コーポレーション", "s33": "建設業", "pin": "賃貸住宅の受注棟数・入居率", "pin_type": "volume", "sign": "+", "series": "自社月次入居率開示", "watch": "manual", "note": "アパート建築請負の棟数と一括借上の入居率が利益の中心"}
+{"code": "1801", "name": "大成建設", "s33": "建設業", "pin": "建設資材・労務費（鋼材/生コン）", "pin_type": "commodity", "sign": "-", "series": "建設物価調査会 建設資材物価指数", "watch": "manual", "note": "国内建築の固定価格請負で資材労務費高が採算を直撃した"}
+{"code": "1802", "name": "大林組", "s33": "建設業", "pin": "建設資材・労務費（鋼材/生コン）", "pin_type": "commodity", "sign": "-", "series": "建設物価調査会 建設資材物価指数", "watch": "manual", "note": "国内建築の請負採算が中心、資材労務費は原価側に入る"}
+{"code": "1803", "name": "清水建設", "s33": "建設業", "pin": "建設資材・労務費（鋼材/生コン）", "pin_type": "commodity", "sign": "-", "series": "建設物価調査会 建設資材物価指数", "watch": "manual", "note": "建築請負の採算悪化が利益変動の主因で資材労務費が原価"}
+{"code": "1808", "name": "長谷工コーポレーション", "s33": "建設業", "pin": "マンション建設の資材・労務費", "pin_type": "commodity", "sign": "-", "series": "建設物価調査会 建設資材物価指数", "watch": "manual", "note": "マンション施工請負が柱、資材労務費高が完工利益率を圧迫"}
+{"code": "1812", "name": "鹿島建設", "s33": "建設業", "pin": "建設資材・労務費（鋼材/生コン）", "pin_type": "commodity", "sign": "-", "series": "建設物価調査会 建設資材物価指数", "watch": "manual", "note": "国内建築が最大で資材労務費は原価、北米開発益が副変動"}
+{"code": "1820", "name": "西松建設", "s33": "建設業", "pin": "建設資材・労務費（鋼材/生コン）", "pin_type": "commodity", "sign": "-", "series": "建設物価調査会 建設資材物価指数", "watch": "manual", "note": "土木建築の固定価格請負で資材労務費上昇が採算を削る"}
+{"code": "1833", "name": "奥村組", "s33": "建設業", "pin": "建設資材・労務費（鋼材/生コン）", "pin_type": "commodity", "sign": "-", "series": "建設物価調査会 建設資材物価指数", "watch": "manual", "note": "土木建築の固定価格請負で資材労務費上昇が採算を削る"}
+{"code": "1835", "name": "東鉄工業", "s33": "建設業", "pin": "JR東日本の設備投資額", "pin_type": "volume", "sign": "+", "series": "JR東日本 設備投資計画", "watch": "manual", "note": "JR東の軌道・土木発注量が受注と利益を決める中心"}
+{"code": "1852", "name": "淺沼組", "s33": "建設業", "pin": "建設資材・労務費（鋼材/生コン）", "pin_type": "commodity", "sign": "-", "series": "建設物価調査会 建設資材物価指数", "watch": "manual", "note": "中堅ゼネコンで固定価格請負、資材労務費高が採算を直撃"}
+{"code": "1860", "name": "戸田建設", "s33": "建設業", "pin": "建設資材・労務費（鋼材/生コン）", "pin_type": "commodity", "sign": "-", "series": "建設物価調査会 建設資材物価指数", "watch": "manual", "note": "建築請負主体で資材労務費が原価、洋上風力は将来変数"}
+{"code": "1861", "name": "熊谷組", "s33": "建設業", "pin": "建設資材・労務費（鋼材/生コン）", "pin_type": "commodity", "sign": "-", "series": "建設物価調査会 建設資材物価指数", "watch": "manual", "note": "建築請負の採算が中心で資材労務費は原価側に入る"}
+{"code": "1870", "name": "矢作建設工業", "s33": "建設業", "pin": "建設資材・労務費（鋼材/生コン）", "pin_type": "commodity", "sign": "-", "series": "建設物価調査会 建設資材物価指数", "watch": "manual", "note": "名古屋圏ゼネコン、固定価格請負で資材労務費が採算を左右"}
+{"code": "1878", "name": "大東建託", "s33": "不動産業", "pin": "賃貸住宅の入居率・受注棟数", "pin_type": "volume", "sign": "+", "series": "自社月次入居率/住宅着工統計", "watch": "manual", "note": "建築請負棟数と一括借上の入居率が利益を動かす中心"}
+{"code": "1882", "name": "東亜道路工業", "s33": "建設業", "pin": "ストレートアスファルト価格（原油連動）", "pin_type": "commodity", "sign": "-", "series": "brent（原油）", "watch": "auto", "note": "合材原料のアスファルトは原油連動の仕入コストで原価直撃"}
+{"code": "1885", "name": "東亜建設工業", "s33": "建設業", "pin": "港湾・洋上風力工事の受注高", "pin_type": "volume", "sign": "+", "series": "建設工事受注動態統計", "watch": "manual", "note": "海洋土木の受注量が利益の中心で資材比率は相対的に低い"}
+{"code": "1893", "name": "五洋建設", "s33": "建設業", "pin": "港湾・洋上風力工事の受注高", "pin_type": "volume", "sign": "+", "series": "建設工事受注動態統計", "watch": "manual", "note": "海洋土木と洋上風力の受注量が利益を決める中心変数"}
+{"code": "1898", "name": "世紀東急工業", "s33": "建設業", "pin": "ストレートアスファルト価格（原油連動）", "pin_type": "commodity", "sign": "-", "series": "brent（原油）", "watch": "auto", "note": "舗装用合材の原料アスファルトが原価の中心で原油に連動"}
+{"code": "1911", "name": "住友林業", "s33": "建設業", "pin": "米国新築住宅の販売戸数", "pin_type": "volume", "sign": "+", "series": "US Census 新築住宅着工・販売", "watch": "manual", "note": "利益の過半が米国戸建事業で販売戸数が中心、木材は仕入側"}
+{"code": "1925", "name": "大和ハウス工業", "s33": "建設業", "pin": "事業施設・商業施設の開発売却価格", "pin_type": "asset", "sign": "+", "series": "不動産研究所 期待利回り", "watch": "manual", "note": "利益柱の事業施設・商業施設は開発売却価格と賃料に直結。推測"}
+{"code": "1926", "name": "ライト工業", "s33": "建設業", "pin": "地盤改良・防災土木の受注高", "pin_type": "volume", "sign": "+", "series": "建設工事受注動態統計", "watch": "manual", "note": "法面・地盤改良の公共工事受注量が利益を動かす中心"}
+{"code": "1928", "name": "積水ハウス", "s33": "建設業", "pin": "住宅の請負・分譲戸数（日米）", "pin_type": "volume", "sign": "+", "series": "住宅着工統計/US新築住宅販売", "watch": "manual", "note": "国内請負戸数と米国戸建の販売戸数が利益を動かす中心"}
+{"code": "1934", "name": "ユアテック", "s33": "建設業", "pin": "東北電力の設備投資額", "pin_type": "volume", "sign": "+", "series": "東北電力 設備投資計画", "watch": "manual", "note": "東北電力向け配電工事と再エネ工事の受注量が中心"}
+{"code": "1941", "name": "中電工", "s33": "建設業", "pin": "中国電力の設備投資・工場建設", "pin_type": "volume", "sign": "+", "series": "建設工事受注動態統計", "watch": "manual", "note": "中国電力向け電気工事と民間設備投資の受注量が中心"}
+{"code": "1942", "name": "関電工", "s33": "建設業", "pin": "電力・データセンターの設備投資", "pin_type": "volume", "sign": "+", "series": "建設工事受注動態統計", "watch": "manual", "note": "電力設備とDC建設の電気工事受注量が利益の中心"}
+{"code": "1944", "name": "きんでん", "s33": "建設業", "pin": "関西圏の工場・電力設備投資", "pin_type": "volume", "sign": "+", "series": "建設工事受注動態統計", "watch": "manual", "note": "半導体工場や電力設備の電気工事受注量で利益が動く"}
+{"code": "1950", "name": "日本電設工業", "s33": "建設業", "pin": "JR東日本の電気設備投資", "pin_type": "volume", "sign": "+", "series": "JR東日本 設備投資計画", "watch": "manual", "note": "JR東向け電気工事の発注量が受注と利益を決める"}
+{"code": "1951", "name": "エクシオグループ", "s33": "建設業", "pin": "通信キャリアの設備投資額", "pin_type": "volume", "sign": "+", "series": "NTT 設備投資計画", "watch": "manual", "note": "NTT向け通信土木・電気工事の受注量が利益の柱"}
+{"code": "1952", "name": "新日本空調", "s33": "建設業", "pin": "半導体工場・DCの空調設備投資", "pin_type": "volume", "sign": "+", "series": "建設工事受注動態統計", "watch": "manual", "note": "産業空調・クリーンルームの受注量が利益を動かす中心"}
+{"code": "1959", "name": "クラフティア", "s33": "建設業", "pin": "九州の半導体・DC設備投資", "pin_type": "volume", "sign": "+", "series": "建設工事受注動態統計", "watch": "manual", "note": "旧九電工。九州の工場DC建設と電力工事の受注量が中心"}
+{"code": "1961", "name": "三機工業", "s33": "建設業", "pin": "建築設備・産業空調の受注高", "pin_type": "volume", "sign": "+", "series": "建設工事受注動態統計", "watch": "manual", "note": "ビル設備と産業空調の受注量が利益の中心変数になる"}
+{"code": "1963", "name": "日揮ホールディングス", "s33": "建設業", "pin": "LNG等大型EPCの受注高", "pin_type": "volume", "sign": "+", "series": "自社受注残高開示", "watch": "manual", "note": "大型EPCの受注量と工事採算が中心、原油高は1ホップ先"}
+{"code": "1968", "name": "太平電業", "s33": "建設業", "pin": "発電所の定期点検・改修工事量", "pin_type": "volume", "sign": "+", "series": "電力各社 補修工事発注", "watch": "manual", "note": "火力原発の保全工事量が中心で再稼働工事が増加要因"}
+{"code": "1969", "name": "高砂熱学工業", "s33": "建設業", "pin": "半導体工場・DCの空調設備投資", "pin_type": "volume", "sign": "+", "series": "建設工事受注動態統計", "watch": "manual", "note": "クリーンルーム空調の受注量が利益を動かす中心"}
+{"code": "1975", "name": "朝日工業社", "s33": "建設業", "pin": "建築空調設備工事の受注高", "pin_type": "volume", "sign": "+", "series": "建設工事受注動態統計", "watch": "manual", "note": "空調設備工事の受注量と工事採算が利益の中心になる"}
+{"code": "1979", "name": "大氣社", "s33": "建設業", "pin": "自動車メーカーの塗装設備投資", "pin_type": "volume", "sign": "+", "series": "自社受注高開示", "watch": "manual", "note": "自動車塗装プラントと産業空調の受注量が利益を動かす"}
+{"code": "1980", "name": "ダイダン", "s33": "建設業", "pin": "建築設備工事の受注高", "pin_type": "volume", "sign": "+", "series": "建設工事受注動態統計", "watch": "manual", "note": "電気空調衛生の設備工事受注量が利益の中心変数"}
+{"code": "2001", "name": "ニップン", "s33": "食料品", "pin": "自社製品の値上げ浸透", "pin_type": "price_set", "sign": "+", "series": "農水省 政府小麦売渡価格", "watch": "manual", "note": "小麦は売渡価格で転嫁、製品値上げと加工食品が利益源"}
+{"code": "2002", "name": "日清製粉グループ本社", "s33": "食料品", "pin": "自社製品の値上げ浸透", "pin_type": "price_set", "sign": "+", "series": "農水省 政府小麦売渡価格", "watch": "manual", "note": "輸入小麦は売渡価格で転嫁され中立、製品値上げが利益源"}
+{"code": "2109", "name": "ＤＭ三井製糖", "s33": "食料品", "pin": "精製糖の販売価格改定", "pin_type": "price_set", "sign": "+", "series": "農畜産業振興機構 精製糖価格", "watch": "manual", "note": "粗糖高は糖価調整制度で緩和、売価改定と数量が利益中心"}
+{"code": "2121", "name": "ＭＩＸＩ", "s33": "情報･通信業", "pin": "モンスト等の課金数量", "pin_type": "volume", "sign": "+", "series": "App Storeセールスランキング", "watch": "manual", "note": "アプリ課金数量が利益の中心で公営競技の投票額も数量型"}
+{"code": "2124", "name": "ジェイエイシーリクルートメント", "s33": "サービス業", "pin": "ハイクラス転職の成約件数", "pin_type": "volume", "sign": "na", "series": "厚労省 有効求人倍率", "watch": "manual", "note": "紹介手数料は成約ごと一括で、求人市場の件数が利益を決める"}
+{"code": "2127", "name": "日本Ｍ＆Ａセンターホールディングス", "s33": "サービス業", "pin": "M&A成約件数", "pin_type": "volume", "sign": "na", "series": "none", "watch": "none", "note": "報酬は成約ごと一括計上で、成約件数の増減がそのまま利益"}
+{"code": "2146", "name": "ＵＴグループ", "s33": "サービス業", "pin": "製造派遣の稼働技術者数", "pin_type": "volume", "sign": "+", "series": "経産省 鉱工業生産指数・SEAJ販売高", "watch": "manual", "note": "半導体や製造現場の人員需要で、稼働人数が増えると増益"}
+{"code": "2154", "name": "オープンアップグループ", "s33": "サービス業", "pin": "稼働技術者数×請求単価", "pin_type": "volume", "sign": "na", "series": "none", "watch": "none", "note": "技術者派遣の在籍・稼働人数の拡大が利益の中心変数"}
+{"code": "2157", "name": "コシダカホールディングス", "s33": "サービス業", "pin": "カラオケ店の来店客数・室料単価", "pin_type": "volume", "sign": "na", "series": "none", "watch": "none", "note": "まねきねこの客数と単価。固定費レバレッジが大きい"}
+{"code": "2168", "name": "パソナグループ", "s33": "サービス業", "pin": "BPO・派遣の稼働人数", "pin_type": "volume", "sign": "na", "series": "none", "watch": "none", "note": "公共BPO受託と派遣の稼働人数が主で、単価より数量型"}
+{"code": "2175", "name": "エス・エム・エス", "s33": "サービス業", "pin": "介護・看護の人材紹介成約数", "pin_type": "volume", "sign": "na", "series": "厚労省 職業紹介状況（介護関係職種）", "watch": "manual", "note": "介護職の求人数と成約件数が主収益。介護報酬改定も効く"}
+{"code": "2181", "name": "パーソルホールディングス", "s33": "サービス業", "pin": "派遣料金と支払時給のスプレッド", "pin_type": "spread", "sign": "+", "series": "リクルート三大都市圏派遣時給・日銀CSPI", "watch": "manual", "note": "派遣は請求単価と支払時給の差が利益で、賃上げは原価側に効く"}
+{"code": "2201", "name": "森永製菓", "s33": "食料品", "pin": "自社製品の値上げ浸透", "pin_type": "price_set", "sign": "+", "series": "日銀CGPI 菓子", "watch": "manual", "note": "カカオと乳原料は全てコスト、菓子の値上げ浸透が利益を決める"}
+{"code": "2206", "name": "江崎グリコ", "s33": "食料品", "pin": "自社製品の値上げ浸透", "pin_type": "price_set", "sign": "+", "series": "日銀CGPI 菓子", "watch": "manual", "note": "カカオ乳の高騰はコスト側、菓子とアイスの値上げ浸透が中心"}
+{"code": "2212", "name": "山崎製パン", "s33": "食料品", "pin": "パン・菓子の値上げ浸透", "pin_type": "price_set", "sign": "+", "series": "総務省CPI パン", "watch": "manual", "note": "小麦と油脂はコスト、量販向け値上げの浸透度が利益を左右"}
+{"code": "2220", "name": "亀田製菓", "s33": "食料品", "pin": "国産うるち米（加工用米）価格", "pin_type": "commodity", "sign": "-", "series": "農水省 米の相対取引価格", "watch": "manual", "note": "米菓の主原料である米の買い手で、米価高騰が直接コスト増"}
+{"code": "2222", "name": "寿スピリッツ", "s33": "食料品", "pin": "観光土産の販売数量（訪日客・国内旅行）", "pin_type": "volume", "sign": "+", "series": "JNTO 訪日外客数", "watch": "manual", "note": "観光地土産が主力で人流量に直結、原料高は転嫁済み"}
+{"code": "2229", "name": "カルビー", "s33": "食料品", "pin": "自社製品の値上げ浸透", "pin_type": "price_set", "sign": "+", "series": "日銀CGPI 菓子", "watch": "manual", "note": "馬鈴薯と植物油はコスト、スナックの値上げ浸透が利益の中心"}
+{"code": "2264", "name": "森永乳業", "s33": "食料品", "pin": "乳製品の値上げ浸透", "pin_type": "price_set", "sign": "+", "series": "Jミルク 生乳取引価格", "watch": "manual", "note": "生乳価格は買い手側コスト、値上げ転嫁の速度が利益を決める"}
+{"code": "2267", "name": "ヤクルト本社", "s33": "食料品", "pin": "海外ヤクルトの1日販売本数", "pin_type": "volume", "sign": "+", "series": "ヤクルト 月次販売本数", "watch": "manual", "note": "中国と米州の販売本数が利益変動の主因、原料影響は小さい"}
+{"code": "2269", "name": "明治ホールディングス", "s33": "食料品", "pin": "食品（乳・菓子）の値上げ浸透", "pin_type": "price_set", "sign": "+", "series": "日銀CGPI 乳製品", "watch": "manual", "note": "利益最大は食品セグメント、生乳とカカオはコスト側"}
+{"code": "2270", "name": "雪印メグミルク", "s33": "食料品", "pin": "乳製品の値上げ浸透", "pin_type": "price_set", "sign": "+", "series": "Jミルク 生乳取引価格", "watch": "manual", "note": "生乳価格はコスト側、飲用乳と乳製品の値上げ転嫁が利益中心"}
+{"code": "2281", "name": "プリマハム", "s33": "食料品", "pin": "豚肉相場（原料コスト）", "pin_type": "commodity", "sign": "-", "series": "農畜産業振興機構 豚枝肉価格", "watch": "manual", "note": "加工品主体で豚肉は原料、相場高は転嫁遅行で減益・推測"}
+{"code": "2282", "name": "日本ハム", "s33": "食料品", "pin": "国産豚・鶏の枝肉相場", "pin_type": "commodity", "sign": "+", "series": "農水省 食肉流通統計 枝肉価格", "watch": "manual", "note": "食肉事業が利益の大半、自社生産があり相場高で増益"}
+{"code": "2292", "name": "Ｓ　Ｆｏｏｄｓ", "s33": "食料品", "pin": "国産牛枝肉相場", "pin_type": "commodity", "sign": "+", "series": "農畜産業振興機構 牛枝肉価格", "watch": "manual", "note": "食肉卸が主力で枝肉相場が売上単価と在庫評価に直結"}
+{"code": "2296", "name": "伊藤ハム米久ホールディングス", "s33": "食料品", "pin": "輸入豚・牛の食肉相場", "pin_type": "commodity", "sign": "mixed", "series": "農畜産業振興機構 輸入食肉価格", "watch": "manual", "note": "食肉卸と加工の両建てで相場の純方向が定まらない・推測"}
+{"code": "2317", "name": "システナ", "s33": "情報･通信業", "pin": "SE稼働率・受注量", "pin_type": "volume", "sign": "+", "series": "日銀CSPI 受託開発ソフトウェア", "watch": "manual", "note": "人月受託と機器販売が主体で稼働人数が利益を決める"}
+{"code": "2326", "name": "デジタルアーツ", "s33": "情報･通信業", "pin": "フィルタリングのライセンス数", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "学校企業の契約ライセンス数が積み上がり価格は据置き"}
+{"code": "2327", "name": "日鉄ソリューションズ", "s33": "情報･通信業", "pin": "SE稼働率・受注残", "pin_type": "volume", "sign": "+", "series": "日銀CSPI 受託開発ソフトウェア", "watch": "manual", "note": "人月受託が主体で稼働人数と受注量が利益を決める"}
+{"code": "2331", "name": "ＡＬＳＯＫ", "s33": "サービス業", "pin": "警備契約件数・常駐人員稼働", "pin_type": "volume", "sign": "na", "series": "none", "watch": "none", "note": "機械警備のストック契約数と常駐警備の受注数量が利益源"}
+{"code": "2337", "name": "いちご", "s33": "不動産業", "pin": "中小不動産の売却価格・キャップレート", "pin_type": "asset", "sign": "+", "series": "不動産研究所 期待利回り", "watch": "manual", "note": "再生不動産の売却益が利益の柱で不動産価格に直結"}
+{"code": "2353", "name": "日本駐車場開発", "s33": "不動産業", "pin": "駐車場稼働率・スキー場来場者数", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "駐車場の稼働率とレジャー施設の来場者数が利益を動かす"}
+{"code": "2371", "name": "カカクコム", "s33": "サービス業", "pin": "食べログ・価格.comの送客数", "pin_type": "volume", "sign": "na", "series": "none", "watch": "none", "note": "課金は送客と広告の数量連動で、掲載商品の価格自体は無関係"}
+{"code": "2379", "name": "ディップ", "s33": "サービス業", "pin": "アルバイト求人の掲載件数", "pin_type": "volume", "sign": "na", "series": "厚労省 有効求人倍率（パート）", "watch": "manual", "note": "求人広告は掲載課金で、バイト求人数の増減が直接利益"}
+{"code": "2384", "name": "ＳＢＳホールディングス", "s33": "陸運業", "pin": "3PL受託物量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "3PL受託の物量が利益の中心、物流不動産の売却益が上乗せ"}
+{"code": "2413", "name": "エムスリー", "s33": "サービス業", "pin": "製薬のMR代替プロモーション予算", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "医師会員向け広告の出稿量が主収益で、薬価は間接影響にとどまる"}
+{"code": "2432", "name": "ディー・エヌ・エー", "s33": "情報･通信業", "pin": "ゲーム課金・IPロイヤリティ数量", "pin_type": "volume", "sign": "+", "series": "App Storeセールスランキング", "watch": "manual", "note": "ポケカアプリ等のロイヤリティ数量が利益の中心で価格でない"}
+{"code": "2433", "name": "博報堂ＤＹホールディングス", "s33": "サービス業", "pin": "国内広告費（特にネット広告）", "pin_type": "volume", "sign": "+", "series": "電通 日本の広告費・日銀CSPI広告", "watch": "manual", "note": "取扱高連動の手数料収入で、広告出稿の数量が利益を動かす"}
+{"code": "2492", "name": "インフォマート", "s33": "サービス業", "pin": "課金企業ID数（BtoB SaaS）", "pin_type": "volume", "sign": "na", "series": "none", "watch": "none", "note": "受発注・請求書の利用企業数が積み上がるストック課金"}
+{"code": "2501", "name": "サッポロホールディングス", "s33": "食料品", "pin": "ビール類の値上げ浸透", "pin_type": "price_set", "sign": "+", "series": "日銀CGPI 飲料", "watch": "manual", "note": "不動産切離し後は酒類が主体、値上げと数量が利益中心・推測"}
+{"code": "2502", "name": "アサヒグループホールディングス", "s33": "食料品", "pin": "ビール類の値上げ浸透", "pin_type": "price_set", "sign": "+", "series": "日銀CGPI 飲料", "watch": "manual", "note": "国内酒類と欧州豪州の単価改善が利益中心、麦芽等はコスト"}
+{"code": "2503", "name": "キリンホールディングス", "s33": "食料品", "pin": "酒類・飲料の値上げ浸透", "pin_type": "price_set", "sign": "+", "series": "日銀CGPI 飲料", "watch": "manual", "note": "国内ビールと豪ライオンの値上げが主因、協和キリンは別軸"}
+{"code": "2531", "name": "宝ホールディングス", "s33": "食料品", "pin": "海外日本食材卸の販売数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "利益最大は海外の日本食材卸、日本食需要の数量が中心・推測"}
+{"code": "2579", "name": "コカ・コーラ　ボトラーズジャパンホールディングス", "s33": "食料品", "pin": "飲料の値上げ浸透", "pin_type": "price_set", "sign": "+", "series": "日銀CGPI 清涼飲料", "watch": "manual", "note": "砂糖とPET樹脂はコスト、値上げ浸透と販売数量が利益を決める"}
+{"code": "2585", "name": "ライフドリンク　カンパニー", "s33": "食料品", "pin": "低価格PB飲料の販売数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "低価格PBの生産販売数量が利益の中心、PET樹脂はコスト"}
+{"code": "2587", "name": "サントリービバレッジ＆フード", "s33": "食料品", "pin": "飲料の値上げ浸透", "pin_type": "price_set", "sign": "+", "series": "日銀CGPI 清涼飲料", "watch": "manual", "note": "国内外の飲料値上げが利益の中心、原材料と物流費はコスト"}
+{"code": "2590", "name": "ダイドーグループホールディングス", "s33": "食料品", "pin": "自販機飲料の値上げ浸透", "pin_type": "price_set", "sign": "+", "series": "日銀CGPI 清涼飲料", "watch": "manual", "note": "国内自販機が利益の柱、値上げ浸透と1台当り本数が中心"}
+{"code": "2593", "name": "伊藤園", "s33": "食料品", "pin": "茶飲料の値上げ浸透", "pin_type": "price_set", "sign": "+", "series": "農水省 荒茶価格", "watch": "manual", "note": "荒茶高騰は買い手側コスト、製品値上げの浸透が利益を決める"}
+{"code": "2602", "name": "日清オイリオグループ", "s33": "食料品", "pin": "搾油スプレッド（大豆菜種と食用油）", "pin_type": "spread", "sign": "+", "series": "CBOT大豆・ICE菜種と国内食用油価格", "watch": "manual", "note": "原料安と売価維持でスプレッド拡大が増益の主因"}
+{"code": "2607", "name": "不二製油", "s33": "食料品", "pin": "カカオ豆相場・加工マージン", "pin_type": "spread", "sign": "+", "series": "cocoa（ICEココア先物）", "watch": "auto", "note": "業務用チョコの川上でカカオ高が加工マージン拡大に直結"}
+{"code": "2659", "name": "サンエー", "s33": "小売業", "pin": "既存店売上・沖縄観光客数", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "沖縄の食品スーパーで既存店売上と観光需要が利益源"}
+{"code": "2664", "name": "カワチ薬品", "s33": "小売業", "pin": "既存店売上・客数", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "郊外型ドラッグで既存店売上が利益、仕入は原価側"}
+{"code": "2670", "name": "エービーシー・マート", "s33": "小売業", "pin": "既存店売上・客単価", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "靴小売は既存店売上が利益源、ドル建て仕入で円安は原価増"}
+{"code": "2678", "name": "アスクル", "s33": "小売業", "pin": "取扱高・粗利率", "pin_type": "volume", "sign": "+", "series": "四半期売上(IR)", "watch": "manual", "note": "BtoB通販は取扱高と物流効率が利益、商材市況は転嫁側"}
+{"code": "2681", "name": "ゲオホールディングス", "s33": "小売業", "pin": "中古品（古着・トレカ・ゲーム機）相場", "pin_type": "commodity", "sign": "+", "series": "駿河屋・スニダン買取相場", "watch": "manual", "note": "リユースは中古相場が売価と在庫評価に直結、台帳の受益3社"}
+{"code": "2685", "name": "アンドエスティＨＤ", "s33": "小売業", "pin": "既存店売上・客単価", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "SPAアパレルは既存店売上が利益源、円安は仕入原価増"}
+{"code": "268A", "name": "リガク・ホールディングス", "s33": "精密機器", "pin": "X線分析装置の受注数量（半導体・材料研究投資）", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "半導体・電池向け分析装置の受注数量型。市況は間接的"}
+{"code": "2695", "name": "くら寿司", "s33": "小売業", "pin": "既存店売上・客数", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "既存店客数が利益、コメ・水産高は原価側の逆風"}
+{"code": "2726", "name": "パルグループホールディングス", "s33": "小売業", "pin": "既存店売上・客単価", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "アパレル・雑貨は既存店売上が利益源、仕入は原価側"}
+{"code": "2730", "name": "エディオン", "s33": "小売業", "pin": "既存店売上（夏季エアコン需要）", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "家電量販は既存店売上と猛暑の白物需要で利益が動く"}
+{"code": "2733", "name": "あらた", "s33": "卸売業", "pin": "日用品・化粧品の出荷数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "日用品卸で粗利率は数%、取扱数量と物流効率が利益を決める"}
+{"code": "2749", "name": "ＪＰホールディングス", "s33": "サービス業", "pin": "運営園数・園児充足率", "pin_type": "volume", "sign": "na", "series": "none", "watch": "none", "note": "保育所の定員充足と施設数が中心。公定価格改定が利益率を規定"}
+{"code": "2752", "name": "フジオフードグループ本社", "s33": "小売業", "pin": "既存店売上・客数", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "定食業態の客数が利益、コメ・食材は原価側の逆風"}
+{"code": "2760", "name": "東京エレクトロン　デバイス", "s33": "卸売業", "pin": "半導体デバイス出荷数量", "pin_type": "volume", "sign": "+", "series": "WSTS 世界半導体出荷", "watch": "manual", "note": "半導体商社で価格は転嫁、データセンター向け数量が利益を動かす"}
+{"code": "2767", "name": "円谷フィールズホールディングス", "s33": "卸売業", "pin": "パチンコ・パチスロ機の販売台数", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "遊技機の販売台数が最大の変動要因、ウルトラマンIPは補完的な収益"}
+{"code": "2768", "name": "双日", "s33": "卸売業", "pin": "一般炭価格", "pin_type": "commodity", "sign": "+", "series": "TE coal", "watch": "auto", "note": "豪州一般炭権益が利益の振れ幅で最大、他は自動車・化学の数量要因"}
+{"code": "2784", "name": "アルフレッサ　ホールディングス", "s33": "卸売業", "pin": "薬価(引き下げ改定)", "pin_type": "event", "sign": "+", "series": "厚労省 薬価改定率", "watch": "manual", "note": "薬価改定が売価と薬価差益を規定、卸マージンは制度側で決まる"}
+{"code": "2791", "name": "大黒天物産", "s33": "小売業", "pin": "既存店売上・客数", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "ディスカウントSMは客数と回転が利益、仕入は原価側"}
+{"code": "2801", "name": "キッコーマン", "s33": "食料品", "pin": "北米醤油・食品卸の値上げ浸透", "pin_type": "price_set", "sign": "+", "series": "none", "watch": "none", "note": "営業利益の約7割が海外、北米の値上げと数量が中心"}
+{"code": "2802", "name": "味の素", "s33": "食料品", "pin": "自社製品の値上げ浸透", "pin_type": "price_set", "sign": "+", "series": "日銀CGPI 食料品", "watch": "manual", "note": "利益額最大は調味料食品の値上げ、変動主因はABF半導体材料"}
+{"code": "2809", "name": "キユーピー", "s33": "食料品", "pin": "鶏卵相場（M玉）", "pin_type": "commodity", "sign": "-", "series": "JA全農たまご 鶏卵相場", "watch": "manual", "note": "マヨネーズ主原料の卵の買い手で、卵価上昇は直接コスト増"}
+{"code": "2810", "name": "ハウス食品グループ本社", "s33": "食料品", "pin": "自社製品の値上げ浸透", "pin_type": "price_set", "sign": "+", "series": "日銀CGPI 調味料", "watch": "manual", "note": "ルウと海外豆腐の値上げが利益中心、香辛料等はコスト"}
+{"code": "2811", "name": "カゴメ", "s33": "食料品", "pin": "加工用トマト（ペースト）国際相場", "pin_type": "commodity", "sign": "+", "series": "USDA カリフォルニア加工用トマト価格", "watch": "manual", "note": "米Ingomar連結で相場が売価側に入り下落が減益要因・推測"}
+{"code": "2815", "name": "アリアケジャパン", "s33": "食料品", "pin": "天然調味料の販売数量（外食・食品向け）", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "外食加工食品向けエキスの数量が中心、鶏骨等はコスト・推測"}
+{"code": "285A", "name": "キオクシアホールディングス", "s33": "電気機器", "pin": "NAND価格", "pin_type": "commodity", "sign": "+", "series": "TrendForce NAND契約価格(四半期)・価格.com SSD", "watch": "manual", "note": "NAND価格が売上単価そのもの・電気機器で唯一の素直な受益"}
+{"code": "2871", "name": "ニチレイ", "s33": "食料品", "pin": "冷凍食品・低温物流の値上げ浸透", "pin_type": "price_set", "sign": "+", "series": "日銀CSPI 倉庫・貨物輸送", "watch": "manual", "note": "加工食品と低温物流が利益の柱、保管配送料金の改定が効く"}
+{"code": "2874", "name": "横浜冷凍", "s33": "卸売業", "pin": "冷蔵倉庫の保管残高(庫腹稼働)", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "倉庫の保管残高と水産卸の数量が主、電力費は逆方向のコスト要因"}
+{"code": "2875", "name": "東洋水産", "s33": "食料品", "pin": "北米即席麺の値上げ浸透", "pin_type": "price_set", "sign": "+", "series": "none", "watch": "none", "note": "海外即席麺が営業利益の約半分、米国の値上げと数量が中心"}
+{"code": "2897", "name": "日清食品ホールディングス", "s33": "食料品", "pin": "即席麺の値上げ浸透", "pin_type": "price_set", "sign": "+", "series": "日銀CGPI 即席めん", "watch": "manual", "note": "国内と米州の値上げ浸透が利益中心、小麦と油脂はコスト"}
+{"code": "2914", "name": "日本たばこ産業", "s33": "食料品", "pin": "海外たばこの価格改定（値上げ浸透）", "pin_type": "price_set", "sign": "+", "series": "none", "watch": "none", "note": "調整後営業利益の7割が海外たばこ、価格改定が増益の主因"}
+{"code": "2918", "name": "わらべや日洋ホールディングス", "s33": "食料品", "pin": "セブン向け中食の製造数量（日販）", "pin_type": "volume", "sign": "+", "series": "セブンイレブン 既存店日販", "watch": "manual", "note": "セブン向け弁当製造が売上の大半で日販に直結"}
+{"code": "2931", "name": "ユーグレナ", "s33": "食料品", "pin": "ヘルスケア通販の販売数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "利益源はヘルスケア通販の数量、バイオ燃料は投資段階・推測"}
+{"code": "3002", "name": "グンゼ", "s33": "繊維製品", "pin": "機能フィルム・アパレルの販売数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "利益柱は包装用フィルムの数量。原料樹脂・綿は買い手・推測"}
+{"code": "3003", "name": "ヒューリック", "s33": "不動産業", "pin": "東京都心の不動産価格・賃料", "pin_type": "asset", "sign": "+", "series": "不動産研究所 期待利回り", "watch": "manual", "note": "都心保有ビルの賃料と物件売却益が利益の中心"}
+{"code": "3028", "name": "アルペン", "s33": "小売業", "pin": "既存店売上・客単価", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "スポーツ用品小売は既存店売上が利益源、仕入は原価側"}
+{"code": "3034", "name": "クオールホールディングス", "s33": "小売業", "pin": "薬価・調剤報酬改定（引き下げ構造）", "pin_type": "event", "sign": "+", "series": "厚労省 薬価改定率", "watch": "manual", "note": "調剤薬局は薬価差益と技術料が源泉、改定で恒常的に圧縮"}
+{"code": "3036", "name": "アルコニックス", "s33": "卸売業", "pin": "非鉄価格(アルミ・銅LME)", "pin_type": "commodity", "sign": "+", "series": "TE aluminum", "watch": "auto", "note": "非鉄商社で売上単価と在庫評価にLME価格が直接入る、製造業も併営"}
+{"code": "3038", "name": "神戸物産", "s33": "卸売業", "pin": "USD/JPY為替", "pin_type": "fx", "sign": "-", "series": "USD/JPY", "watch": "manual", "note": "輸入食材の仕入原価が円安で膨らみ業務スーパーの粗利率を圧迫する"}
+{"code": "3046", "name": "ジンズホールディングス", "s33": "小売業", "pin": "既存店売上・客数", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "眼鏡SPAは既存店売上が利益源、レンズ仕入は原価側"}
+{"code": "3048", "name": "ビックカメラ", "s33": "小売業", "pin": "既存店売上・免税売上", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "家電量販は既存店とインバウンド免税が利益変動の中心"}
+{"code": "3050", "name": "ＤＣＭホールディングス", "s33": "小売業", "pin": "既存店売上・客数", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "HCは既存店売上とPB比率が利益、木材建材は原価側"}
+{"code": "3064", "name": "ＭｏｎｏｔａＲＯ", "s33": "小売業", "pin": "売上成長率（口座数×購買頻度）", "pin_type": "volume", "sign": "+", "series": "月次売上速報(IR)", "watch": "manual", "note": "間接資材ECは数量成長が利益、商材市況は転嫁側で中立"}
+{"code": "3076", "name": "あい　ホールディングス", "s33": "卸売業", "pin": "防犯・セキュリティ機器の出荷数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "セキュリティ機器とカード機器の販売数量が主、価格要因は小さい"}
+{"code": "3086", "name": "Ｊ．フロント　リテイリング", "s33": "小売業", "pin": "百貨店の免税・高額品売上", "pin_type": "volume", "sign": "+", "series": "JNTO訪日外客数・百貨店協会免税売上", "watch": "manual", "note": "大丸松坂屋の免税と高額品が利益源、訪日客数に連動"}
+{"code": "3087", "name": "ドトール・日レスホールディングス", "s33": "小売業", "pin": "アラビカコーヒー生豆価格", "pin_type": "commodity", "sign": "-", "series": "Barchart KC・ICO指標価格", "watch": "manual", "note": "焙煎卸と店舗で生豆が原価の中心、高騰は値上げ遅行で減益"}
+{"code": "3088", "name": "マツキヨココカラ＆カンパニー", "s33": "小売業", "pin": "既存店売上・インバウンド化粧品", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "都市型店の客数と化粧品売上が利益の中心、仕入は転嫁側"}
+{"code": "3091", "name": "ブロンコビリー", "s33": "小売業", "pin": "輸入牛肉（豪州・米国）価格", "pin_type": "commodity", "sign": "-", "series": "貿易統計 牛肉輸入単価・alic", "watch": "manual", "note": "ステーキ専業で牛肉が原価の中心、相場高は採算悪化"}
+{"code": "3092", "name": "ＺＯＺＯ", "s33": "小売業", "pin": "商品取扱高GMV", "pin_type": "volume", "sign": "+", "series": "四半期GMV(IR)", "watch": "manual", "note": "受託手数料はGMV比例、商品市況はP/Lに入らない"}
+{"code": "3097", "name": "物語コーポレーション", "s33": "小売業", "pin": "既存店売上・新規出店数", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "焼肉きんぐの出店と客数が利益、牛肉は原価側の逆風"}
+{"code": "3099", "name": "三越伊勢丹ホールディングス", "s33": "小売業", "pin": "百貨店の免税・高額品売上", "pin_type": "volume", "sign": "+", "series": "JNTO訪日外客数・百貨店協会免税売上", "watch": "manual", "note": "伊勢丹新宿の高額品と免税が利益の大半、訪日客数に連動"}
+{"code": "3101", "name": "東洋紡", "s33": "化学", "scale": "TOPIX Small 1", "pin": "フィルムの売価-原料スプレッド", "pin_type": "spread", "sign": "+", "series": "TE naphtha(分母のみ)", "watch": "manual", "note": "フィルムの売価-原料スプレッド改善が利益回復の中心・推測"}
+{"code": "3105", "name": "日清紡ホールディングス", "s33": "電気機器", "pin": "自動車生産台数(ブレーキ摩擦材)", "pin_type": "volume", "sign": "+", "series": "自工会 四輪車生産台数(月次)", "watch": "manual", "note": "利益柱はブレーキと無線通信で数量型・商品価格は原価側。推測"}
+{"code": "3106", "name": "倉敷紡績", "s33": "繊維製品", "pin": "化成品の値上げ浸透（対原料樹脂）", "pin_type": "price_set", "sign": "+", "series": "none", "watch": "none", "note": "利益柱は化成品と不動産賃貸。綿花は買い手側・推測"}
+{"code": "3107", "name": "ダイワボウホールディングス", "s33": "卸売業", "pin": "法人PC出荷台数", "pin_type": "volume", "sign": "+", "series": "MM総研 国内PC出荷", "watch": "manual", "note": "PC・IT機器卸が主、Windows更新期の法人PC出荷台数で業績が動く"}
+{"code": "3110", "name": "日東紡績", "s33": "ガラス･土石製品", "pin": "電子材料用ガラスクロスの数量（AI基板需要）", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "特殊ガラスクロスがAIサーバ基板向けで伸びる数量型"}
+{"code": "3116", "name": "トヨタ紡織", "s33": "輸送用機器", "pin": "トヨタ世界生産台数", "pin_type": "volume", "sign": "na", "series": "トヨタ世界生産台数", "watch": "manual", "note": "トヨタ向けシートが主力で同社の生産台数に売上が連動する"}
+{"code": "3132", "name": "マクニカホールディングス", "s33": "卸売業", "pin": "半導体デバイス出荷数量", "pin_type": "volume", "sign": "+", "series": "WSTS 世界半導体出荷", "watch": "manual", "note": "半導体商社で仕入売価は連動、利益は取扱数量とデバイス需要で動く"}
+{"code": "3148", "name": "クリエイトＳＤホールディングス", "s33": "小売業", "pin": "既存店売上・調剤処方箋枚数", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "神奈川地盤の物販＋調剤で既存店売上が利益を決める"}
+{"code": "3167", "name": "ＴＯＫＡＩホールディングス", "s33": "卸売業", "pin": "LPガス・通信の契約件数", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "LPG原料は転嫁されストック顧客件数が主因、ガス価格の直効は小さい"}
+{"code": "3182", "name": "オイシックス・ラ・大地", "s33": "小売業", "pin": "定期会員数・出荷単価", "pin_type": "volume", "sign": "+", "series": "四半期会員数(IR)", "watch": "manual", "note": "食品サブスクは会員数が利益源、青果仕入は原価側"}
+{"code": "3186", "name": "ネクステージ", "s33": "小売業", "pin": "中古車小売相場（オークション相場）", "pin_type": "commodity", "sign": "+", "series": "USS月次AA統計・グーネット流通", "watch": "manual", "note": "中古車の販売単価と在庫評価に直結、台帳の受益3社の1つ"}
+{"code": "3191", "name": "ジョイフル本田", "s33": "小売業", "pin": "既存店売上・プロ需要", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "大型HCは既存店売上が利益源、木材建材は原価側"}
+{"code": "3197", "name": "すかいらーくホールディングス", "s33": "小売業", "pin": "既存店売上・客数", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "食材と人件費は原価側、客数回復が利益を動かす"}
+{"code": "3201", "name": "日本毛織", "s33": "繊維製品", "pin": "学販衣料の受注数量＋商業施設の賃料収入", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "アパレル数量と不動産賃貸が利益の柱。羊毛は買い手・推測"}
+{"code": "3222", "name": "ユナイテッド・スーパーマーケット・ホールディングス", "s33": "小売業", "pin": "既存店売上・客単価", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "首都圏SMは既存店売上と生鮮粗利が利益、仕入は原価側"}
+{"code": "3231", "name": "野村不動産ホールディングス", "s33": "不動産業", "pin": "首都圏マンション価格・都心賃料", "pin_type": "asset", "sign": "+", "series": "不動産経済研究所 マンション市場", "watch": "manual", "note": "住宅分譲の販売価格と都市開発の賃料・売却益が柱"}
+{"code": "3288", "name": "オープンハウスグループ", "s33": "不動産業", "pin": "都心部の土地・戸建分譲価格", "pin_type": "asset", "sign": "+", "series": "地価公示/不動産価格指数", "watch": "manual", "note": "都心狭小戸建の販売価格と土地在庫評価が利益を動かす"}
+{"code": "3289", "name": "東急不動産ホールディングス", "s33": "不動産業", "pin": "都心オフィス・商業の賃料と売却価格", "pin_type": "asset", "sign": "+", "series": "三鬼商事オフィスマーケット月次", "watch": "manual", "note": "都市開発の賃料収入と物件売却益が利益の柱になる"}
+{"code": "3291", "name": "飯田グループホールディングス", "s33": "不動産業", "pin": "建売分譲価格−木材/土地仕入", "pin_type": "spread", "sign": "+", "series": "lumber（木材先物）", "watch": "auto", "note": "ウッドショックで粗利が激変、販売価格と木材仕入の差が中心"}
+{"code": "3349", "name": "コスモス薬品", "s33": "小売業", "pin": "既存店売上・客数", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "食品ディスカウント型で客数が利益源、仕入は転嫁側"}
+{"code": "3360", "name": "シップヘルスケアホールディングス", "s33": "卸売業", "pin": "病院設備投資の受注高", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "病院新築・改修のトータルパック受注が主、価格でなく案件数量が効く"}
+{"code": "3382", "name": "セブン＆アイ・ホールディングス", "s33": "小売業", "pin": "国内コンビニの日販・既存店売上", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "利益寄与最大は国内CVS、日販と既存店売上で営業利益が動く"}
+{"code": "3387", "name": "クリエイト・レストランツ・ホールディングス", "s33": "小売業", "pin": "既存店売上・客数", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "商業施設内飲食で人流に連動する客数が利益を動かす"}
+{"code": "3391", "name": "ツルハホールディングス", "s33": "小売業", "pin": "既存店売上・客数", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "物販中心で既存店売上が利益を決める、商材市況は原価側"}
+{"code": "3395", "name": "サンマルクホールディングス", "s33": "小売業", "pin": "既存店売上・客数", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "ベーカリーカフェの客数が利益、小麦・コーヒーは原価側"}
+{"code": "3397", "name": "トリドールホールディングス", "s33": "小売業", "pin": "既存店売上・客数", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "丸亀の客数が主因、小麦は政府売渡価格でコスト側"}
+{"code": "3401", "name": "帝人", "s33": "繊維製品", "pin": "アラミド繊維の需給・値上げ浸透", "pin_type": "price_set", "sign": "+", "series": "none", "watch": "none", "note": "利益変動の中心はアラミドの値上げと数量。炭素繊維は不振・推測"}
+{"code": "3402", "name": "東レ", "s33": "繊維製品", "pin": "製品値上げ−原燃料（ナフサ）スプレッド", "pin_type": "spread", "sign": "+", "series": "TE naphtha（分母のみauto）", "watch": "manual", "note": "原燃料は買い手。値上げ浸透と原料安の値差が利益を動かす"}
+{"code": "3405", "name": "クラレ", "s33": "化学", "scale": "TOPIX Mid400", "pin": "EVOH/PVA樹脂の値決め・値上げ浸透", "pin_type": "price_set", "sign": "+", "series": "none", "watch": "none", "note": "EVOH/PVA等の高シェア製品の値決め力が利益の中心"}
+{"code": "3407", "name": "旭化成", "s33": "化学", "scale": "TOPIX Large70", "pin": "住宅(ヘーベルハウス)引渡棟数", "pin_type": "volume", "sign": "+", "series": "住宅着工統計(国交省)", "watch": "manual", "note": "ヘーベルハウス住宅が営業利益の最大柱・引渡棟数が中心"}
+{"code": "3431", "name": "宮地エンジニアリンググループ", "s33": "金属製品", "pin": "橋梁の受注高（公共インフラ予算）", "pin_type": "volume", "sign": "+", "series": "国交省 建設工事受注動態統計(月次)", "watch": "manual", "note": "鋼材は買い手。固定価格請負なので鋼材↑は減益要因"}
+{"code": "3433", "name": "トーカロ", "s33": "金属製品", "pin": "半導体装置向け溶射加工の数量", "pin_type": "volume", "sign": "+", "series": "SEAJ 日本製半導体製造装置販売高(月次)", "watch": "manual", "note": "半導体設備投資に連動する加工数量型。材料市況は間接"}
+{"code": "3436", "name": "ＳＵＭＣＯ", "s33": "金属製品", "pin": "300mmシリコンウエハ価格・出荷面積", "pin_type": "commodity", "sign": "+", "series": "none", "watch": "none", "note": "ウエハ価格が売上単価に直結だが無料の公開系列がない"}
+{"code": "3445", "name": "ＲＳ　Ｔｅｃｈｎｏｌｏｇｉｅｓ", "s33": "金属製品", "pin": "再生シリコンウエハの数量（半導体稼働率）", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "ウエハ再生の数量型。プライムウエハ市況にも一部感応"}
+{"code": "3465", "name": "ケイアイスター不動産", "s33": "不動産業", "pin": "建売分譲価格−土地/建材仕入", "pin_type": "spread", "sign": "+", "series": "lumber（木材先物）", "watch": "auto", "note": "北関東の建売分譲で販売価格と仕入コストの差が粗利を決める"}
+{"code": "3498", "name": "霞ヶ関キャピタル", "s33": "不動産業", "pin": "ホテル・物流施設の売却価格", "pin_type": "asset", "sign": "+", "series": "不動産研究所 期待利回り", "watch": "manual", "note": "開発物件の売却益が柱でキャップレート低下が増益要因"}
+{"code": "3543", "name": "コメダホールディングス", "s33": "卸売業", "pin": "既存店売上・店舗数", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "FC本部で加盟店への卸と店舗数が主、豆や小麦は逆方向のコスト"}
+{"code": "3549", "name": "クスリのアオキホールディングス", "s33": "小売業", "pin": "既存店売上・新規出店数", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "食品併設の集客と出店ペースが利益源、仕入は原価側"}
+{"code": "3563", "name": "ＦＯＯＤ　＆　ＬＩＦＥ　ＣＯＭＰＡＮＩＥＳ", "s33": "小売業", "pin": "既存店売上・客数", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "スシローの客数が利益、水産とコメ高は原価側の逆風"}
+{"code": "3569", "name": "セーレン", "s33": "繊維製品", "pin": "自動車生産台数（車両内装材の数量）", "pin_type": "volume", "sign": "+", "series": "自工会 自動車生産台数(月次)", "watch": "manual", "note": "利益柱は車両資材の数量。原糸・染料は買い手側"}
+{"code": "3591", "name": "ワコールホールディングス", "s33": "繊維製品", "pin": "国内既存店売上・客単価", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "インナー小売の数量と単価が中心。綿花は買い手側"}
+{"code": "3608", "name": "ＴＳＩホールディングス", "s33": "繊維製品", "pin": "既存店・EC売上（客数・客単価）", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "アパレル小売の数量と単価が中心。綿花・生地はコスト側"}
+{"code": "3612", "name": "ワールド", "s33": "繊維製品", "pin": "既存店・EC売上（客数・客単価）", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "ブランド小売の既存店売上が中心。素材と外注はコスト側"}
+{"code": "3626", "name": "ＴＩＳ", "s33": "情報･通信業", "pin": "SE稼働率・受注量", "pin_type": "volume", "sign": "+", "series": "日銀CSPI 受託開発ソフトウェア", "watch": "manual", "note": "人月ベースの受託開発で稼働率と要員数が利益を決める"}
+{"code": "3635", "name": "コーエーテクモホールディングス", "s33": "情報･通信業", "pin": "ゲーム販売本数・課金数量", "pin_type": "volume", "sign": "+", "series": "App Storeセールスランキング", "watch": "manual", "note": "自社IPの販売本数が利益の中心で運用資産の評価益が上乗せ"}
+{"code": "3636", "name": "三菱総合研究所", "s33": "情報･通信業", "pin": "官公庁受託の受注量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "政府予算に紐づく受託件数が中心で単価は入札で決まる"}
+{"code": "3659", "name": "ネクソン", "s33": "情報･通信業", "pin": "オンラインゲーム課金数量", "pin_type": "volume", "sign": "+", "series": "App Storeセールスランキング", "watch": "manual", "note": "韓国中国の課金数量が中心でウォン元の円換算も振れ要因"}
+{"code": "3660", "name": "アイスタイル", "s33": "情報･通信業", "pin": "化粧品メーカーの広告出稿量", "pin_type": "volume", "sign": "+", "series": "日銀CSPI インターネット広告", "watch": "manual", "note": "アットコスメの広告数量と店舗販売、訪日客数も効く"}
+{"code": "3661", "name": "エムアップホールディングス", "s33": "情報･通信業", "pin": "ファンクラブ会員数・EC販売数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "アーティストの会員数とグッズ販売数量が利益の中心"}
+{"code": "3668", "name": "コロプラ", "s33": "情報･通信業", "pin": "スマホゲーム課金数量", "pin_type": "volume", "sign": "+", "series": "App Storeセールスランキング", "watch": "manual", "note": "既存タイトルの課金数量が利益の中心で価格要素はない"}
+{"code": "3673", "name": "ブロードリーフ", "s33": "情報･通信業", "pin": "整備業向けSaaS契約数", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "自動車整備工場の契約数とクラウド移行の進捗が中心"}
+{"code": "3697", "name": "ＳＨＩＦＴ", "s33": "情報･通信業", "pin": "テスト要員の稼働人数", "pin_type": "volume", "sign": "+", "series": "日銀CSPI 受託開発ソフトウェア", "watch": "manual", "note": "採用した人員の稼働数が売上で単価改定は補助的にとどまる"}
+{"code": "3762", "name": "テクマトリックス", "s33": "情報･通信業", "pin": "セキュリティ商材の販売数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "海外製品の仕入販売が主体で円安は仕入原価側の逆風"}
+{"code": "3765", "name": "ガンホー・オンライン・エンターテイメント", "s33": "情報･通信業", "pin": "パズドラ等の課金数量", "pin_type": "volume", "sign": "+", "series": "App Storeセールスランキング", "watch": "manual", "note": "既存タイトルの課金数量が利益の中心で価格要素はない"}
+{"code": "3769", "name": "ＧＭＯペイメントゲートウェイ", "s33": "情報･通信業", "pin": "決済取扱高(GMV)", "pin_type": "volume", "sign": "+", "series": "経産省 キャッシュレス決済額", "watch": "manual", "note": "料率×取扱高が収益で加盟店の決済数量が利益を決める"}
+{"code": "3774", "name": "インターネットイニシアティブ", "s33": "情報･通信業", "pin": "法人ネットワーク・MVNO契約数", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "回線とクラウドの契約数量が中心で電力費は原価側の逆風"}
+{"code": "3778", "name": "さくらインターネット", "s33": "情報･通信業", "pin": "電力調達価格(JEPX・燃調)", "pin_type": "commodity", "sign": "-", "series": "JEPXスポット価格", "watch": "manual", "note": "DC電力費が原価の中核で高騰時に実際に減益、GPU受注は数量側"}
+{"code": "3844", "name": "コムチュア", "s33": "情報･通信業", "pin": "クラウドSIの稼働人数", "pin_type": "volume", "sign": "+", "series": "日銀CSPI 受託開発ソフトウェア", "watch": "manual", "note": "人月受託で技術者の稼働数と受注量が利益を決める"}
+{"code": "3861", "name": "王子ホールディングス", "s33": "パルプ・紙", "pin": "パルプ市況（自社パルプ・海外植林）", "pin_type": "commodity", "sign": "+", "series": "none", "watch": "none", "note": "資源部門でパルプが売上単価。国内紙は値上げ浸透型・推測"}
+{"code": "3863", "name": "日本製紙", "s33": "パルプ・紙", "pin": "紙・板紙の値上げ浸透（対チップ・燃料）", "pin_type": "price_set", "sign": "+", "series": "none", "watch": "none", "note": "需要減の中で値上げが利益の中心。チップ・古紙は買い手"}
+{"code": "3865", "name": "北越コーポレーション", "s33": "パルプ・紙", "pin": "パルプ市況（市販パルプの外販）", "pin_type": "commodity", "sign": "+", "series": "none", "watch": "none", "note": "自社パルプの外販比率が高くパルプ高が売上単価に入る"}
+{"code": "3880", "name": "大王製紙", "s33": "パルプ・紙", "pin": "家庭紙・板紙の値上げ浸透", "pin_type": "price_set", "sign": "+", "series": "none", "watch": "none", "note": "パルプ・古紙は買い手。値上げとコストの差が利益を動かす"}
+{"code": "3923", "name": "ラクス", "s33": "情報･通信業", "pin": "SaaS課金アカウント数", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "楽楽精算の契約社数の積み上げが利益で値上げは補助的"}
+{"code": "3941", "name": "レンゴー", "s33": "パルプ・紙", "pin": "古紙価格（段ボール原料コスト）", "pin_type": "commodity", "sign": "-", "series": "古紙価格(古紙再生促進センター月次)", "watch": "manual", "note": "古紙は買い手。値上がりはコストで転嫁ラグ分が減益"}
+{"code": "3962", "name": "チェンジホールディングス", "s33": "情報･通信業", "pin": "ふるさと納税の寄付総額", "pin_type": "volume", "sign": "+", "series": "総務省 ふるさと納税受入額", "watch": "manual", "note": "手数料率×寄付額が収益で制度改正が最大のリスク要因"}
+{"code": "3993", "name": "ＰＫＳＨＡ　Ｔｅｃｈｎｏｌｏｇｙ", "s33": "情報･通信業", "pin": "AI SaaS・受託の契約数", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "AI SaaSの契約数とアルゴリズム受託の受注量が中心"}
+{"code": "3994", "name": "マネーフォワード", "s33": "情報･通信業", "pin": "SaaS課金顧客数(ARR)", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "課金顧客数の純増が中心で価格改定より数量が支配的"}
+{"code": "4004", "name": "レゾナック・ホールディングス", "s33": "化学", "scale": "TOPIX Mid400", "pin": "半導体後工程材料の出荷数量", "pin_type": "volume", "sign": "+", "series": "WSTS半導体売上", "watch": "manual", "note": "石化分離後は半導体後工程材料の出荷数量が利益の中心"}
+{"code": "4005", "name": "住友化学", "s33": "化学", "scale": "TOPIX Mid400", "pin": "石化スプレッド(ナフサ-エチレン/ラビグ精製)", "pin_type": "spread", "sign": "+", "series": "TE naphtha(分母のみ)", "watch": "manual", "note": "ラビグ含む石化スプレッドの振れが損益を最も動かす"}
+{"code": "4008", "name": "住友精化", "s33": "化学", "scale": "TOPIX Small 1", "pin": "半導体向け高純度ガスの出荷数量", "pin_type": "volume", "sign": "+", "series": "WSTS半導体売上", "watch": "manual", "note": "半導体向け高純度ガスとSAPの数量が利益の中心・推測"}
+{"code": "4021", "name": "日産化学", "s33": "化学", "scale": "TOPIX Mid400", "pin": "自社農薬・半導体材料の販売数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "独自農薬と半導体材料の販売数量が高採算利益の中心"}
+{"code": "4023", "name": "クレハ", "s33": "化学", "scale": "TOPIX Small 1", "pin": "掘削向けPGA・LiB向けPVDFの数量", "pin_type": "volume", "sign": "+", "series": "Baker Hughes リグ稼働数", "watch": "manual", "note": "掘削向けPGAとLiB向けPVDFの数量が利益を大きく動かす"}
+{"code": "4028", "name": "石原産業", "s33": "化学", "scale": "TOPIX Small 1", "pin": "酸化チタン(TiO2)価格", "pin_type": "commodity", "sign": "+", "series": "日銀CGPI 酸化チタン", "watch": "manual", "note": "酸化チタンの市況が売価に直結・農薬は安定収益"}
+{"code": "4041", "name": "日本曹達", "s33": "化学", "scale": "TOPIX Small 1", "pin": "自社開発農薬の販売数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "自社開発農薬の販売数量が利益の大半・化学品は補完"}
+{"code": "4042", "name": "東ソー", "s33": "化学", "scale": "TOPIX Mid400", "pin": "塩ビ・苛性ソーダ価格", "pin_type": "commodity", "sign": "+", "series": "TE polyvinyl", "watch": "auto", "note": "クロルアルカリが利益柱・塩ビと苛性ソーダが売価に直結"}
+{"code": "4043", "name": "トクヤマ", "s33": "化学", "scale": "TOPIX Mid400", "pin": "苛性ソーダ・塩ビ価格", "pin_type": "commodity", "sign": "+", "series": "TE polyvinyl", "watch": "auto", "note": "化成品(苛性ソーダ・塩ビ)が利益の振れ幅を支配、電子材料は数量"}
+{"code": "4044", "name": "セントラル硝子", "s33": "化学", "scale": "TOPIX Small 1", "pin": "半導体向けフッ素系ガスの出荷数量", "pin_type": "volume", "sign": "+", "series": "WSTS半導体売上", "watch": "manual", "note": "半導体向けフッ素系ガスなど化学品の数量が利益の中心"}
+{"code": "4045", "name": "東亞合成", "s33": "化学", "scale": "TOPIX Mid400", "pin": "アクリル酸-プロピレンスプレッド", "pin_type": "spread", "sign": "+", "series": "TE naphtha(分母のみ)", "watch": "manual", "note": "アクリル酸系の対プロピレンスプレッドが利益の中心・推測"}
+{"code": "4046", "name": "大阪ソーダ", "s33": "化学", "scale": "TOPIX Small 1", "pin": "医薬用分離精製材(シリカゲル担体)の数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "医薬分離精製用シリカ等の機能化学品の数量が利益の中心"}
+{"code": "4047", "name": "関東電化工業", "s33": "化学", "scale": "TOPIX Small 1", "pin": "半導体特殊ガス(NF3/WF6)の出荷数量", "pin_type": "volume", "sign": "+", "series": "SEMI/WSTS半導体売上", "watch": "manual", "note": "NF3等の半導体特殊ガスの出荷数量が利益の中心"}
+{"code": "4061", "name": "デンカ", "s33": "化学", "scale": "TOPIX Mid400", "pin": "電子材料(球状シリカ等)の出荷数量", "pin_type": "volume", "sign": "+", "series": "WSTS半導体売上", "watch": "manual", "note": "球状シリカ等の電子材料が利益柱・半導体向け数量が中心"}
+{"code": "4062", "name": "イビデン", "s33": "電気機器", "pin": "ICパッケージ基板の出荷数量(サーバ/PC)", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "顧客CPUの基板発注量が利益を決める・銅箔や金はコスト側"}
+{"code": "4063", "name": "信越化学工業", "s33": "化学", "scale": "TOPIX Core30", "pin": "塩ビ(PVC)価格", "pin_type": "commodity", "sign": "+", "series": "TE polyvinyl", "watch": "auto", "note": "米シンテックの塩ビが利益柱・PVC市況が売価に直結"}
+{"code": "4071", "name": "プラスアルファ・コンサルティング", "s33": "情報･通信業", "pin": "SaaS契約社数(タレントパレット)", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "契約社数の純増が利益の中心で価格改定は補助的"}
+{"code": "4078", "name": "堺化学工業", "s33": "化学", "scale": "TOPIX Small 1", "pin": "MLCC向け電子材料(チタン酸バリウム)の数量", "pin_type": "volume", "sign": "+", "series": "MLCC出荷(JEITA受動部品)", "watch": "manual", "note": "MLCC向けチタン酸バリウム等電子材料の数量が中心・推測"}
+{"code": "4091", "name": "日本酸素ホールディングス", "s33": "化学", "scale": "TOPIX Mid400", "pin": "産業ガスの値上げ浸透(電力転嫁)", "pin_type": "price_set", "sign": "+", "series": "日銀CGPI 圧縮ガス・液化ガス", "watch": "manual", "note": "産業ガスは寡占で値決め型・電力コスト転嫁の浸透が利益を決める"}
+{"code": "4095", "name": "日本パーカライジング", "s33": "化学", "scale": "TOPIX Small 1", "pin": "自動車生産台数(表面処理数量)", "pin_type": "volume", "sign": "+", "series": "自動車生産台数(自工会)", "watch": "manual", "note": "金属表面処理薬剤は自動車生産台数で処理数量が決まる"}
+{"code": "4109", "name": "ステラ　ケミファ", "s33": "化学", "scale": "TOPIX Small 1", "pin": "高純度フッ酸(半導体洗浄)の出荷数量", "pin_type": "volume", "sign": "+", "series": "WSTS半導体売上", "watch": "manual", "note": "半導体洗浄用高純度フッ酸の出荷数量が利益の中心"}
+{"code": "4114", "name": "日本触媒", "s33": "化学", "scale": "TOPIX Mid400", "pin": "アクリル酸/SAP-プロピレンスプレッド", "pin_type": "spread", "sign": "+", "series": "TE naphtha(分母のみ)", "watch": "manual", "note": "SAP・アクリル酸の対プロピレンスプレッドが利益の中心"}
+{"code": "4118", "name": "カネカ", "s33": "化学", "scale": "TOPIX Mid400", "pin": "塩ビ・苛性ソーダ市況", "pin_type": "commodity", "sign": "+", "series": "TE polyvinyl", "watch": "auto", "note": "塩ビ・化成品が最大の変動要因だが医療/食品で感応度は希薄・推測"}
+{"code": "4151", "name": "協和キリン", "s33": "医薬品", "pin": "クリースビータ海外売上数量", "pin_type": "volume", "sign": "na", "series": "none", "watch": "none", "note": "クリースビータ等の海外売上数量が利益の中心を占める"}
+{"code": "417A", "name": "ブルーゾーンホールディングス", "s33": "小売業", "pin": "既存店売上・客単価", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "埼玉地盤の食品スーパー、既存店売上と客単価が利益源"}
+{"code": "4180", "name": "Ａｐｐｉｅｒ　Ｇｒｏｕｐ", "s33": "情報･通信業", "pin": "広告主のデジタル出稿量", "pin_type": "volume", "sign": "+", "series": "日銀CSPI インターネット広告", "watch": "manual", "note": "広告運用額に連動し外貨建て収益で為替も振れ要因、推測"}
+{"code": "4182", "name": "三菱瓦斯化学", "s33": "化学", "scale": "TOPIX Mid400", "pin": "メタノール価格", "pin_type": "commodity", "sign": "+", "series": "TE methanol", "watch": "auto", "note": "サウジ/ブルネイのメタノール持分益が利益の振れを支配"}
+{"code": "4183", "name": "三井化学", "s33": "化学", "scale": "TOPIX Mid400", "pin": "基盤素材の対ナフサスプレッド", "pin_type": "spread", "sign": "+", "series": "TE naphtha(分母のみ)", "watch": "manual", "note": "基盤素材の対ナフサスプレッドが損益の振れを最も動かす"}
+{"code": "4186", "name": "東京応化工業", "s33": "化学", "scale": "TOPIX Mid400", "pin": "フォトレジストの出荷数量", "pin_type": "volume", "sign": "+", "series": "SEMI/WSTS半導体売上", "watch": "manual", "note": "フォトレジストが利益柱・半導体前工程の出荷数量が中心"}
+{"code": "4187", "name": "大阪有機化学工業", "s33": "化学", "scale": "TOPIX Small 1", "pin": "電子材料用アクリルモノマーの数量", "pin_type": "volume", "sign": "+", "series": "WSTS半導体売上", "watch": "manual", "note": "電子材料用アクリルモノマーの数量が利益の中心"}
+{"code": "4188", "name": "三菱ケミカルグループ", "s33": "化学", "scale": "TOPIX Large70", "pin": "MMA(メタクリル酸メチル)市況", "pin_type": "commodity", "sign": "+", "series": "none", "watch": "none", "note": "世界首位のMMA市況が利益の振れを支配・産業ガスは安定収益"}
+{"code": "4189", "name": "ＫＨネオケム", "s33": "化学", "scale": "TOPIX Small 1", "pin": "冷凍機油用エステルの出荷数量(空調生産)", "pin_type": "volume", "sign": "+", "series": "エアコン出荷(JRAIA)", "watch": "manual", "note": "冷凍機油エステルが利益柱・空調機生産の数量に連動"}
+{"code": "4194", "name": "ビジョナル", "s33": "情報･通信業", "pin": "中途採用の成約数(求人数)", "pin_type": "volume", "sign": "+", "series": "厚労省 有効求人倍率", "watch": "manual", "note": "ビズリーチの採用成約数量が利益で採用市況の数量に連動"}
+{"code": "4202", "name": "ダイセル", "s33": "化学", "scale": "TOPIX Mid400", "pin": "アセテートトウの値決め・数量", "pin_type": "price_set", "sign": "+", "series": "none", "watch": "none", "note": "アセテートトウは寡占で値決め力・たばこ需要が数量を規定"}
+{"code": "4203", "name": "住友ベークライト", "s33": "化学", "scale": "TOPIX Mid400", "pin": "半導体封止材の出荷数量", "pin_type": "volume", "sign": "+", "series": "WSTS半導体売上", "watch": "manual", "note": "半導体封止材が利益柱・後工程の出荷数量が中心"}
+{"code": "4204", "name": "積水化学工業", "s33": "化学", "scale": "TOPIX Mid400", "pin": "合わせガラス中間膜・電子材料の数量", "pin_type": "volume", "sign": "+", "series": "自動車生産台数(自工会)", "watch": "manual", "note": "高機能プラの中間膜・電子材料が利益柱・自動車生産に連動"}
+{"code": "4205", "name": "日本ゼオン", "s33": "化学", "scale": "TOPIX Mid400", "pin": "高機能材料(COP・光学フィルム)の数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "高機能材料(COP・光学フィルム)の数量が利益の中心・推測"}
+{"code": "4206", "name": "アイカ工業", "s33": "化学", "scale": "TOPIX Mid400", "pin": "建装建材(メラミン化粧板)の販売数量", "pin_type": "volume", "sign": "+", "series": "建築着工統計(非住宅)", "watch": "manual", "note": "メラミン化粧板等の建装建材の数量が利益の中心・国内非住宅依存"}
+{"code": "4208", "name": "ＵＢＥ", "s33": "化学", "scale": "TOPIX Mid400", "pin": "カプロラクタム-ベンゼンスプレッド", "pin_type": "spread", "sign": "+", "series": "TE naphtha(分母のみ)", "watch": "manual", "note": "ナイロン/カプロラクタムの対ベンゼンスプレッドが中心"}
+{"code": "4212", "name": "積水樹脂", "s33": "化学", "scale": "TOPIX Small 1", "pin": "公共インフラ(道路資材)工事の数量", "pin_type": "volume", "sign": "+", "series": "公共工事前払金保証統計", "watch": "manual", "note": "道路標識・防護柵など公共インフラ工事の数量が中心"}
+{"code": "4216", "name": "旭有機材", "s33": "化学", "scale": "TOPIX Small 1", "pin": "半導体・水処理向け樹脂バルブの受注数量", "pin_type": "volume", "sign": "+", "series": "SEMI 半導体製造装置出荷", "watch": "manual", "note": "半導体工場・水処理向け樹脂バルブの受注数量が中心"}
+{"code": "4272", "name": "日本化薬", "s33": "化学", "scale": "TOPIX Mid400", "pin": "自動車生産台数(火工品・セイフティ)", "pin_type": "volume", "sign": "+", "series": "自動車生産台数(自工会)", "watch": "manual", "note": "セイフティ(火工品)が営業利益最大・自動車生産台数に連動"}
+{"code": "4290", "name": "プレステージ・インターナショナル", "s33": "サービス業", "pin": "ロードサービス等の受電・出動件数", "pin_type": "volume", "sign": "na", "series": "none", "watch": "none", "note": "保険会社向けBPOの処理件数課金で、件数増が利益に直結"}
+{"code": "4307", "name": "野村総合研究所", "s33": "情報･通信業", "pin": "ITコンサル・SE単価", "pin_type": "price_set", "sign": "+", "series": "日銀CSPI 受託開発ソフトウェア", "watch": "manual", "note": "稼働は満杯で単価改定の浸透がそのまま売上単価に入る"}
+{"code": "4324", "name": "電通グループ", "s33": "サービス業", "pin": "グローバル広告需要（オーガニック成長率）", "pin_type": "volume", "sign": "+", "series": "日銀CSPI広告・海外同業オーガニック成長率", "watch": "manual", "note": "海外比率が高く、欧米の広告出稿量の増減が利益を左右する"}
+{"code": "4368", "name": "扶桑化学工業", "s33": "化学", "scale": "TOPIX Small 1", "pin": "CMP用コロイダルシリカの出荷数量", "pin_type": "volume", "sign": "+", "series": "SEMI シリコンウェハ出荷面積", "watch": "manual", "note": "CMP用コロイダルシリカの数量が利益の中心・食品添加物は安定"}
+{"code": "4369", "name": "トリケミカル研究所", "s33": "化学", "scale": "TOPIX Small 1", "pin": "半導体前駆体材料の出荷数量", "pin_type": "volume", "sign": "+", "series": "SEMI シリコンウェハ出荷面積", "watch": "manual", "note": "半導体前駆体材料の出荷数量がほぼ全ての利益を決める"}
+{"code": "4373", "name": "シンプレクス・ホールディングス", "s33": "情報･通信業", "pin": "金融機関のシステム投資額", "pin_type": "volume", "sign": "+", "series": "日銀CSPI 受託開発ソフトウェア", "watch": "manual", "note": "証券銀行のIT投資量と高単価の人月が利益の中心"}
+{"code": "4385", "name": "メルカリ", "s33": "情報･通信業", "pin": "流通総額GMV", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "手数料率×GMVの構造で出品取引の数量が利益を決める"}
+{"code": "4401", "name": "ＡＤＥＫＡ", "s33": "化学", "scale": "TOPIX Mid400", "pin": "情報電子化学品(半導体前駆体)の数量", "pin_type": "volume", "sign": "+", "series": "WSTS半導体売上", "watch": "manual", "note": "半導体前駆体など情報電子化学品の数量が利益の伸びを決める・推測"}
+{"code": "4403", "name": "日油", "s33": "化学", "scale": "TOPIX Mid400", "pin": "医療用PEG・防衛(推進薬)の受注数量", "pin_type": "volume", "sign": "+", "series": "防衛省中央調達実績", "watch": "manual", "note": "医療用PEGと防衛(推進薬)の受注数量が高採算利益の中心"}
+{"code": "4432", "name": "ウイングアーク１ｓｔ", "s33": "情報･通信業", "pin": "帳票SaaSの契約数", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "帳票クラウドの契約社数の積み上げが利益の中心"}
+{"code": "4443", "name": "Ｓａｎｓａｎ", "s33": "情報･通信業", "pin": "契約社数(ARR)", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "名刺請求書SaaSの契約社数の純増が利益を決める"}
+{"code": "4452", "name": "花王", "s33": "化学", "scale": "TOPIX Large70", "pin": "パーム油・油脂原料価格", "pin_type": "commodity", "sign": "-", "series": "MPOB パーム油/FCPO", "watch": "manual", "note": "油脂・界面活性剤原料が原価中心で上昇は減益、転嫁は遅行"}
+{"code": "4471", "name": "三洋化成工業", "s33": "化学", "scale": "TOPIX Small 1", "pin": "SAP・界面活性剤の売価-原料スプレッド", "pin_type": "spread", "sign": "+", "series": "TE naphtha(分母のみ)", "watch": "manual", "note": "SAP・界面活性剤の対原料スプレッドが利幅を決める・推測"}
+{"code": "4480", "name": "メドレー", "s33": "情報･通信業", "pin": "医療人材の紹介成約数", "pin_type": "volume", "sign": "+", "series": "厚労省 有効求人倍率", "watch": "manual", "note": "ジョブメドレーの成約数量が利益の中心で診療報酬は間接"}
+{"code": "4483", "name": "ＪＭＤＣ", "s33": "情報･通信業", "pin": "医療データの利用契約数", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "保険者と製薬向けデータ提供の契約数量が利益の中心"}
+{"code": "4502", "name": "武田薬品工業", "s33": "医薬品", "pin": "USD/JPY為替", "pin_type": "fx", "sign": "+", "series": "USD/JPY", "watch": "manual", "note": "海外売上約9割で外貨建て収益が円安時に膨らみ利益を押し上げる"}
+{"code": "4503", "name": "アステラス製薬", "s33": "医薬品", "pin": "主力品の特許切れと新薬承認", "pin_type": "event", "sign": "na", "series": "FDA承認・LOE情報", "watch": "manual", "note": "主力の特許切れと新薬パドセブの伸長が損益を決める"}
+{"code": "4506", "name": "住友ファーマ", "s33": "医薬品", "pin": "北米3製品の売上数量", "pin_type": "volume", "sign": "na", "series": "none", "watch": "none", "note": "北米3製品の売上と構造改革の進捗が黒字化を左右する"}
+{"code": "4507", "name": "塩野義製薬", "s33": "医薬品", "pin": "ViiVロイヤリティ収入", "pin_type": "volume", "sign": "na", "series": "none", "watch": "none", "note": "ViiVのHIV薬ロイヤリティと感染症薬の数量が利益の柱"}
+{"code": "4516", "name": "日本新薬", "s33": "医薬品", "pin": "ウプトラビのロイヤリティ", "pin_type": "volume", "sign": "na", "series": "none", "watch": "none", "note": "ウプトラビのロイヤリティとビルテプソ売上が利益の柱"}
+{"code": "4519", "name": "中外製薬", "s33": "医薬品", "pin": "USD/JPY為替", "pin_type": "fx", "sign": "+", "series": "USD/JPY", "watch": "manual", "note": "ロシュ向け輸出とロイヤリティが外貨建てで円安が増益要因"}
+{"code": "4521", "name": "科研製薬", "s33": "医薬品", "pin": "薬価（引き下げ構造）", "pin_type": "event", "sign": "+", "series": "厚労省 薬価改定", "watch": "manual", "note": "国内処方薬中心で薬価改定が売上単価を直接削る構造"}
+{"code": "4523", "name": "エーザイ", "s33": "医薬品", "pin": "レケンビの投与患者数", "pin_type": "volume", "sign": "na", "series": "none", "watch": "none", "note": "レケンビの投与患者数の立ち上がりが損益の分岐を決める"}
+{"code": "4527", "name": "ロート製薬", "s33": "医薬品", "pin": "目薬・スキンケアの販売数量", "pin_type": "volume", "sign": "na", "series": "none", "watch": "none", "note": "OTC中心で目薬とスキンケアの国内外販売数量が利益の中心"}
+{"code": "4528", "name": "小野薬品工業", "s33": "医薬品", "pin": "薬価（引き下げ構造）", "pin_type": "event", "sign": "+", "series": "厚労省 薬価改定", "watch": "manual", "note": "オプジーボの薬価引き下げが単価を削り上昇余地は乏しい"}
+{"code": "4536", "name": "参天製薬", "s33": "医薬品", "pin": "薬価（引き下げ構造）", "pin_type": "event", "sign": "+", "series": "厚労省 薬価改定", "watch": "manual", "note": "国内眼科薬中心で薬価改定が売上単価を直接削る構造"}
+{"code": "4540", "name": "ツムラ", "s33": "医薬品", "pin": "中国産生薬の仕入価格", "pin_type": "commodity", "sign": "-", "series": "中国 中薬材価格指数", "watch": "manual", "note": "漢方原料の中国産生薬の仕入価格が売上原価に直入りする"}
+{"code": "4543", "name": "テルモ", "s33": "精密機器", "pin": "心血管カテーテル等の販売数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "海外7割の数量成長が主。円安も追い風、償還価格は逆風"}
+{"code": "4544", "name": "Ｈ．Ｕ．グループホールディングス", "s33": "サービス業", "pin": "臨床検査の診療報酬点数", "pin_type": "event", "sign": "+", "series": "none", "watch": "none", "note": "検査単価は公定点数で決まり、実際は改定ごと引き下げ方向の逆風"}
+{"code": "4547", "name": "キッセイ薬品工業", "s33": "医薬品", "pin": "薬価（引き下げ構造）", "pin_type": "event", "sign": "+", "series": "厚労省 薬価改定", "watch": "manual", "note": "国内泌尿器薬中心で薬価改定が売上単価を直接削る構造"}
+{"code": "4549", "name": "栄研化学", "s33": "医薬品", "pin": "臨床検査の検査件数", "pin_type": "volume", "sign": "na", "series": "IDWR 感染症週報", "watch": "manual", "note": "感染症流行に伴う検査試薬の検査件数が利益を左右する"}
+{"code": "4552", "name": "ＪＣＲファーマ", "s33": "医薬品", "pin": "主力品と受託の数量", "pin_type": "volume", "sign": "na", "series": "none", "watch": "none", "note": "イズカーゴ等の販売とワクチン受託の数量が収益源となる"}
+{"code": "4553", "name": "東和薬品", "s33": "医薬品", "pin": "薬価（引き下げ構造）", "pin_type": "event", "sign": "+", "series": "厚労省 薬価改定", "watch": "manual", "note": "後発薬は薬価改定で単価が下がり数量増で補う構造"}
+{"code": "4559", "name": "ゼリア新薬工業", "s33": "医薬品", "pin": "薬価（引き下げ構造）", "pin_type": "event", "sign": "+", "series": "厚労省 薬価改定", "watch": "manual", "note": "国内処方薬と欧州事業が柱で薬価改定が国内単価を削る"}
+{"code": "4565", "name": "ネクセラファーマ", "s33": "医薬品", "pin": "提携マイルストン・ロイヤリティ", "pin_type": "event", "sign": "na", "series": "none", "watch": "none", "note": "創薬提携のマイルストンとロイヤリティ受領が収益の中心"}
+{"code": "4568", "name": "第一三共", "s33": "医薬品", "pin": "エンハーツの適応拡大・承認", "pin_type": "event", "sign": "na", "series": "FDA/PMDA承認情報", "watch": "manual", "note": "利益の中心はADCエンハーツで適応追加と承認が売上を決める"}
+{"code": "4569", "name": "杏林製薬", "s33": "医薬品", "pin": "薬価（引き下げ構造）", "pin_type": "event", "sign": "+", "series": "厚労省 薬価改定", "watch": "manual", "note": "国内呼吸器・耳鼻科薬中心で薬価改定が単価を削る構造"}
+{"code": "4578", "name": "大塚ホールディングス", "s33": "医薬品", "pin": "米国主力4品の販売数量", "pin_type": "volume", "sign": "na", "series": "none", "watch": "none", "note": "レキサルティ等の米国主力品の販売数量が利益の中心"}
+{"code": "4587", "name": "ペプチドリーム", "s33": "医薬品", "pin": "提携マイルストン達成", "pin_type": "event", "sign": "na", "series": "none", "watch": "none", "note": "創薬提携のマイルストン達成と放射性医薬品の進捗が収益源"}
+{"code": "4612", "name": "日本ペイントホールディングス", "s33": "化学", "scale": "TOPIX Mid400", "pin": "塗料の値決め(対原料の値上げ維持)", "pin_type": "price_set", "sign": "+", "series": "none", "watch": "none", "note": "原料下落時も値下げせず利幅拡大＝値決め力が利益の中心"}
+{"code": "4613", "name": "関西ペイント", "s33": "化学", "scale": "TOPIX Mid400", "pin": "自動車生産台数(自動車用塗料)", "pin_type": "volume", "sign": "+", "series": "自動車生産台数(自工会)", "watch": "manual", "note": "自動車用塗料が主力・国内外の自動車生産台数が数量を規定"}
+{"code": "4617", "name": "中国塗料", "s33": "化学", "scale": "TOPIX Small 1", "pin": "新造船建造量・就航船補修の塗料数量", "pin_type": "volume", "sign": "+", "series": "新造船竣工量(日本造船工業会)", "watch": "manual", "note": "船舶用塗料が主力・新造船建造量と就航船補修の数量が中心"}
+{"code": "4626", "name": "太陽ホールディングス", "s33": "化学", "scale": "TOPIX Mid400", "pin": "プリント配線板(PCB)の生産数量", "pin_type": "volume", "sign": "+", "series": "台湾PCBメーカー月次売上", "watch": "manual", "note": "PCB用ソルダーレジスト世界首位・基板生産数量が利益の中心"}
+{"code": "4631", "name": "ＤＩＣ", "s33": "化学", "scale": "TOPIX Mid400", "pin": "インキ・顔料の売価-石化原料スプレッド", "pin_type": "spread", "sign": "+", "series": "TE naphtha(分母のみ)", "watch": "manual", "note": "インキ・顔料は売価-石化原料スプレッドで利幅が決まる"}
+{"code": "4633", "name": "サカタインクス", "s33": "化学", "scale": "TOPIX Small 1", "pin": "インキ売価-樹脂/溶剤原料スプレッド", "pin_type": "spread", "sign": "+", "series": "TE naphtha(分母のみ)", "watch": "manual", "note": "インキ売価-樹脂/溶剤原料のスプレッドが利幅を決める"}
+{"code": "4634", "name": "ａｒｔｉｅｎｃｅ", "s33": "化学", "scale": "TOPIX Small 1", "pin": "インキ・色材の売価-原料スプレッド", "pin_type": "spread", "sign": "+", "series": "TE naphtha(分母のみ)", "watch": "manual", "note": "インキ・色材の売価-原料スプレッドが利幅を決める"}
+{"code": "4661", "name": "オリエンタルランド", "s33": "サービス業", "pin": "パークのゲスト1人当たり売上単価", "pin_type": "price_set", "sign": "+", "series": "OLC月次入園者数・IR単価開示", "watch": "manual", "note": "入園者数は容量頭打ちで、単価引き上げの浸透が営業利益を動かす"}
+{"code": "4665", "name": "ダスキン", "s33": "サービス業", "pin": "クリーン・ケアのレンタル契約口数", "pin_type": "volume", "sign": "na", "series": "none", "watch": "none", "note": "利益柱はモップ等のレンタルで、契約口数の純増が中心変数"}
+{"code": "4666", "name": "パーク２４", "s33": "不動産業", "pin": "時間貸し駐車場の稼働率", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "駐車場の稼働率と車室数が利益を動かす中心変数"}
+{"code": "4676", "name": "フジ・メディア・ホールディングス", "s33": "情報･通信業", "pin": "都心オフィス・ホテルの賃料", "pin_type": "asset", "sign": "+", "series": "三鬼商事 都心5区オフィス賃料", "watch": "manual", "note": "放送広告が不振で都市開発の賃料収入が利益の柱、推測"}
+{"code": "4680", "name": "ラウンドワン", "s33": "サービス業", "pin": "米国店舗の出店数・既存店客数", "pin_type": "volume", "sign": "na", "series": "none", "watch": "none", "note": "利益成長は米国ボウリング複合店の出店と既存店客数が決める"}
+{"code": "4681", "name": "リゾートトラスト", "s33": "サービス業", "pin": "会員権の販売口数", "pin_type": "volume", "sign": "na", "series": "none", "watch": "none", "note": "高額会員権の新規販売口数が利益の山谷を作る売り切り型"}
+{"code": "4684", "name": "オービック", "s33": "情報･通信業", "pin": "自社ERPの値決め(値引かない直販)", "pin_type": "price_set", "sign": "+", "series": "none", "watch": "none", "note": "OBIC7を定価直販する値決め力が高利益率の源泉である"}
+{"code": "4686", "name": "ジャストシステム", "s33": "情報･通信業", "pin": "スマイルゼミ会員数", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "通信教育の会員数が利益の中心で受講料は定額で安定"}
+{"code": "4689", "name": "ＬＩＮＥヤフー", "s33": "情報･通信業", "pin": "ネット広告出稿額(単価×量)", "pin_type": "volume", "sign": "+", "series": "日銀CSPI インターネット広告", "watch": "manual", "note": "利益の柱は広告で出稿量と入札単価が売上を決める"}
+{"code": "4694", "name": "ビー・エム・エル", "s33": "サービス業", "pin": "臨床検査の診療報酬点数", "pin_type": "event", "sign": "+", "series": "none", "watch": "none", "note": "受託検査の単価は公定点数で、改定は引き下げ方向の構造逆風"}
+{"code": "4704", "name": "トレンドマイクロ", "s33": "情報･通信業", "pin": "USD/JPY為替(外貨収益の円換算)", "pin_type": "fx", "sign": "+", "series": "USD/JPY", "watch": "manual", "note": "海外売上比率が高く円安で営業利益が押し上がる、契約数は安定"}
+{"code": "4716", "name": "日本オラクル", "s33": "情報･通信業", "pin": "クラウド・ライセンス契約数", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "国内法人のIT投資数量が中心で価格は米本社基準で固定"}
+{"code": "4722", "name": "フューチャー", "s33": "情報･通信業", "pin": "ITコンサル単価", "pin_type": "price_set", "sign": "+", "series": "日銀CSPI 受託開発ソフトウェア", "watch": "manual", "note": "単価引き上げの浸透が利益率を決め稼働はほぼ満杯"}
+{"code": "4732", "name": "ユー・エス・エス", "s33": "サービス業", "pin": "中古車オークション出品・成約台数", "pin_type": "volume", "sign": "+", "series": "USS月次AA統計", "watch": "manual", "note": "手数料は台数課金で、落札価格でなく成約台数が利益を決める"}
+{"code": "4733", "name": "オービックビジネスコンサルタント", "s33": "情報･通信業", "pin": "会計ソフト契約数(制度改正需要)", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "インボイス等の制度改正で買替数量が動き価格は安定的"}
+{"code": "4751", "name": "サイバーエージェント", "s33": "サービス業", "pin": "国内インターネット広告の出稿量", "pin_type": "volume", "sign": "+", "series": "電通 日本の広告費（ネット）・日銀CSPI広告", "watch": "manual", "note": "安定利益柱は広告代理事業で、ゲームは変動大・ABEMAは赤字"}
+{"code": "4755", "name": "楽天グループ", "s33": "サービス業", "pin": "楽天モバイルの契約回線数", "pin_type": "volume", "sign": "na", "series": "none", "watch": "none", "note": "フィンテックの利益をモバイル赤字が相殺し、回線数が損益分岐"}
+{"code": "4768", "name": "大塚商会", "s33": "情報･通信業", "pin": "中小企業のIT投資額(販売数量)", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "商材の仕入販売で数量が中心、仕入値上がりは原価側"}
+{"code": "4776", "name": "サイボウズ", "s33": "情報･通信業", "pin": "kintone契約数(ARR)", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "クラウドの契約ユーザー数の積み上げが利益の中心"}
+{"code": "4812", "name": "電通総研", "s33": "情報･通信業", "pin": "SE稼働率・受注量", "pin_type": "volume", "sign": "+", "series": "日銀CSPI 受託開発ソフトウェア", "watch": "manual", "note": "人月受託が主体で製造金融の受注量と稼働が利益を決める"}
+{"code": "4819", "name": "デジタルガレージ", "s33": "情報･通信業", "pin": "決済取扱高(GMV)", "pin_type": "volume", "sign": "+", "series": "経産省 キャッシュレス決済額", "watch": "manual", "note": "決済の取扱数量が本業で投資先の評価損益により振れる、推測"}
+{"code": "4825", "name": "ウェザーニューズ", "s33": "情報･通信業", "pin": "気象情報の契約数(航海・航空)", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "船舶航空の運航数に連動する契約数量が利益の中心"}
+{"code": "4849", "name": "エン", "s33": "サービス業", "pin": "求人広告・人材紹介の求人数", "pin_type": "volume", "sign": "na", "series": "厚労省 有効求人倍率", "watch": "manual", "note": "採用市況の求人数量が広告出稿と紹介成約の両方を左右する"}
+{"code": "4887", "name": "サワイグループホールディングス", "s33": "医薬品", "pin": "薬価（引き下げ構造）", "pin_type": "event", "sign": "+", "series": "厚労省 薬価改定", "watch": "manual", "note": "後発薬は毎年の薬価改定で単価が下がり数量増で補う構造"}
+{"code": "4901", "name": "富士フイルムホールディングス", "s33": "化学", "scale": "TOPIX Large70", "pin": "半導体材料の出荷数量", "pin_type": "volume", "sign": "+", "series": "WSTS半導体売上", "watch": "manual", "note": "半導体材料とinstaxが二本柱・半導体材料の出荷数量が中心"}
+{"code": "4902", "name": "コニカミノルタ", "s33": "電気機器", "pin": "USD/JPY為替", "pin_type": "fx", "sign": "+", "series": "USD/JPY(日銀・為替公開値)", "watch": "manual", "note": "海外売上8割・複合機の印刷量は構造減で為替が増減益の主因"}
+{"code": "4911", "name": "資生堂", "s33": "化学", "scale": "TOPIX Mid400", "pin": "中国・トラベルリテールの販売数量", "pin_type": "volume", "sign": "+", "series": "訪日外客数(JNTO)", "watch": "manual", "note": "中国とトラベルリテールの販売数量が損益分岐を跨ぐ中心"}
+{"code": "4912", "name": "ライオン", "s33": "化学", "scale": "TOPIX Mid400", "pin": "パーム油・油脂原料価格", "pin_type": "commodity", "sign": "-", "series": "MPOB パーム油/FCPO", "watch": "manual", "note": "油脂・界面活性剤原料が原価中心で上昇は減益"}
+{"code": "4914", "name": "高砂香料工業", "s33": "化学", "scale": "TOPIX Small 1", "pin": "香料の値決め・値上げ浸透", "pin_type": "price_set", "sign": "+", "series": "none", "watch": "none", "note": "香料は顧客別処方で値決め力・値上げ浸透が利益の中心"}
+{"code": "4919", "name": "ミルボン", "s33": "化学", "scale": "TOPIX Small 1", "pin": "美容室向け専売品の販売数量", "pin_type": "volume", "sign": "+", "series": "家計調査 理美容サービス", "watch": "manual", "note": "美容室向け専売品の販売数量が利益の中心・原料感応度は小"}
+{"code": "4922", "name": "コーセーホールディングス", "s33": "化学", "scale": "TOPIX Mid400", "pin": "訪日客・中国向け化粧品の販売数量", "pin_type": "volume", "sign": "+", "series": "訪日外客数(JNTO)", "watch": "manual", "note": "訪日客と中国向け高価格帯の販売数量が利益の中心"}
+{"code": "4927", "name": "ポーラ・オルビスホールディングス", "s33": "化学", "scale": "TOPIX Mid400", "pin": "国内化粧品(ポーラ訪販)の販売数量", "pin_type": "volume", "sign": "+", "series": "家計調査 化粧品支出", "watch": "manual", "note": "ポーラ訪販の国内販売数量が利益の中心・原料感応度は小"}
+{"code": "4928", "name": "ノエビアホールディングス", "s33": "化学", "scale": "TOPIX Small 1", "pin": "訪販・通販の会員向け販売数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "訪販・通販の会員向け販売数量が利益の中心"}
+{"code": "4958", "name": "長谷川香料", "s33": "化学", "scale": "TOPIX Small 1", "pin": "香料の値決め・値上げ浸透", "pin_type": "price_set", "sign": "+", "series": "none", "watch": "none", "note": "香料は処方単位の値決め力・値上げ浸透が利益の中心"}
+{"code": "4967", "name": "小林製薬", "s33": "化学", "scale": "TOPIX Mid400", "pin": "主力OTCブランドの販売数量", "pin_type": "volume", "sign": "+", "series": "家計調査 保健医療用品", "watch": "manual", "note": "主力OTCブランドの販売数量が中心・値決めは自社裁量"}
+{"code": "4971", "name": "メック", "s33": "化学", "scale": "TOPIX Small 1", "pin": "PCB・パッケージ基板の生産数量", "pin_type": "volume", "sign": "+", "series": "台湾PCBメーカー月次売上", "watch": "manual", "note": "PCB・パッケージ基板向け薬品の処理数量が利益の中心"}
+{"code": "4975", "name": "ＪＣＵ", "s33": "化学", "scale": "TOPIX Small 1", "pin": "PCB・半導体めっき薬品の消費数量", "pin_type": "volume", "sign": "+", "series": "台湾PCBメーカー月次売上", "watch": "manual", "note": "めっき薬品はPCB・半導体の生産数量で消費量が決まる"}
+{"code": "4980", "name": "デクセリアルズ", "s33": "化学", "scale": "TOPIX Mid400", "pin": "スマホ・ディスプレイ向け光学部材の数量", "pin_type": "volume", "sign": "+", "series": "スマホ出荷(IDC四半期)", "watch": "manual", "note": "スマホ・ディスプレイ向け光学部材の出荷数量が利益の中心"}
+{"code": "4985", "name": "アース製薬", "s33": "化学", "scale": "TOPIX Small 1", "pin": "夏季気温(殺虫剤の販売数量)", "pin_type": "volume", "sign": "+", "series": "気象庁 夏季平均気温", "watch": "manual", "note": "殺虫剤・虫よけが主力で夏の高温が販売数量を直接決める"}
+{"code": "4996", "name": "クミアイ化学工業", "s33": "化学", "scale": "TOPIX Small 1", "pin": "自社農薬アクシーブの北米向け販売数量", "pin_type": "volume", "sign": "+", "series": "CBOT大豆/USDA作付面積", "watch": "manual", "note": "自社農薬アクシーブの北米向け数量が利益の中心"}
+{"code": "5016", "name": "ＪＸ金属", "s33": "非鉄金属", "pin": "半導体用スパッタターゲット等の数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "利益柱は機能材料の数量型。銅製錬はTC/RCと副産金依存"}
+{"code": "5019", "name": "出光興産", "s33": "石油･石炭製品", "pin": "原油価格（在庫評価益）＋石炭権益", "pin_type": "commodity", "sign": "+", "series": "TE crude oil / TE coal", "watch": "auto", "note": "原油↑で在庫評価益、豪州石炭権益も売上単価に直結"}
+{"code": "5020", "name": "ＥＮＥＯＳホールディングス", "s33": "石油･石炭製品", "pin": "原油価格（在庫評価益＋石油マージン）", "pin_type": "commodity", "sign": "+", "series": "TE crude oil / TE brent", "watch": "auto", "note": "原油↑で在庫評価益と製品マージンが拡大＝素直な受益"}
+{"code": "5021", "name": "コスモエネルギーホールディングス", "s33": "石油･石炭製品", "pin": "原油価格（在庫評価益・精製マージン）", "pin_type": "commodity", "sign": "+", "series": "TE crude oil / TE brent", "watch": "auto", "note": "原油↑で在庫評価益と精製マージン改善。風力は数量型"}
+{"code": "5032", "name": "ＡＮＹＣＯＬＯＲ", "s33": "情報･通信業", "pin": "ライバー配信の課金・グッズ数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "投げ銭とグッズイベントの販売数量が利益の中心"}
+{"code": "5076", "name": "インフロニア・ホールディングス", "s33": "建設業", "pin": "公共インフラ・道路工事の受注高", "pin_type": "volume", "sign": "+", "series": "建設工事受注動態統計", "watch": "manual", "note": "舗装と公共土木の受注量が柱、合材はアスファルト価格連動"}
+{"code": "5101", "name": "横浜ゴム", "s33": "ゴム製品", "pin": "天然ゴム価格（原料コスト）", "pin_type": "commodity", "sign": "-", "series": "TE rubber", "watch": "auto", "note": "天然ゴムは買い手。上昇は原価増でタイヤ値上げにラグ"}
+{"code": "5105", "name": "ＴＯＹＯ　ＴＩＲＥ", "s33": "ゴム製品", "pin": "天然ゴム価格（原料コスト）", "pin_type": "commodity", "sign": "-", "series": "TE rubber", "watch": "auto", "note": "天然ゴムは買い手。北米向け数量と値上げが利益の中心"}
+{"code": "5108", "name": "ブリヂストン", "s33": "ゴム製品", "pin": "天然ゴム価格（原料コスト）", "pin_type": "commodity", "sign": "-", "series": "TE rubber", "watch": "auto", "note": "天然ゴムは買い手。値上がりは原価増で転嫁ラグ分が減益"}
+{"code": "5110", "name": "住友ゴム工業", "s33": "ゴム製品", "pin": "天然ゴム価格（原料コスト）", "pin_type": "commodity", "sign": "-", "series": "TE rubber", "watch": "auto", "note": "天然ゴムは買い手。上昇は原価増、価格転嫁のラグで減益"}
+{"code": "5192", "name": "三ツ星ベルト", "s33": "ゴム製品", "pin": "天然ゴム・合成ゴム価格（原料コスト）", "pin_type": "commodity", "sign": "-", "series": "TE rubber", "watch": "auto", "note": "ゴム原料は買い手。上昇は原価増、値上げ浸透で防衛する側"}
+{"code": "5201", "name": "ＡＧＣ", "s33": "ガラス･土石製品", "pin": "塩ビ・苛性ソーダ市況", "pin_type": "commodity", "sign": "+", "series": "TE polyvinyl", "watch": "auto", "note": "最大利益は東南アジアの塩ビ・苛性ソーダ。ガラスは数量型"}
+{"code": "5202", "name": "日本板硝子", "s33": "ガラス･土石製品", "pin": "自動車生産台数（自動車用ガラスの数量）", "pin_type": "volume", "sign": "+", "series": "自工会 自動車生産台数(月次)", "watch": "manual", "note": "利益柱は自動車用ガラスの数量。燃料ガスは大きなコスト"}
+{"code": "5208", "name": "有沢製作所", "s33": "化学", "scale": "TOPIX Small 1", "pin": "FPC基材など電子回路材料の出荷数量", "pin_type": "volume", "sign": "+", "series": "台湾PCBメーカー月次売上", "watch": "manual", "note": "FPC基材など電子回路材料の出荷数量が利益の中心"}
+{"code": "5214", "name": "日本電気硝子", "s33": "ガラス･土石製品", "pin": "ディスプレイ用ガラスの数量・価格", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "パネル稼働と価格改定が中心。燃料と電力はコスト側"}
+{"code": "5232", "name": "住友大阪セメント", "s33": "ガラス･土石製品", "pin": "セメント値上げ−石炭/電力コストの値差", "pin_type": "spread", "sign": "+", "series": "TE coal（分母のみauto）", "watch": "manual", "note": "石炭は買い手。値上げ浸透と燃料安の値差で利益が動く"}
+{"code": "5233", "name": "太平洋セメント", "s33": "ガラス･土石製品", "pin": "セメント値上げ−石炭/電力コストの値差", "pin_type": "spread", "sign": "+", "series": "TE coal（分母のみauto）", "watch": "manual", "note": "石炭・電力は買い手。値上げ浸透との値差が利益の中心"}
+{"code": "5262", "name": "日本ヒューム", "s33": "ガラス･土石製品", "pin": "土木・建築の受注数量（公共投資）", "pin_type": "volume", "sign": "+", "series": "国交省 建設工事受注動態統計(月次)", "watch": "manual", "note": "コンクリ二次製品の数量型。セメント・鋼材は買い手側"}
+{"code": "5301", "name": "東海カーボン", "s33": "ガラス･土石製品", "pin": "黒鉛電極・カーボンブラック価格", "pin_type": "commodity", "sign": "+", "series": "none", "watch": "none", "note": "黒鉛電極が売上単価。原料ニードルコークスはコスト側"}
+{"code": "5302", "name": "日本カーボン", "s33": "ガラス･土石製品", "pin": "黒鉛電極価格（電炉向け）", "pin_type": "commodity", "sign": "+", "series": "none", "watch": "none", "note": "黒鉛電極が売上単価。ニードルコークスと電力はコスト"}
+{"code": "5310", "name": "東洋炭素", "s33": "ガラス･土石製品", "pin": "特殊黒鉛の数量（半導体・SiC需要）", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "等方性黒鉛は数量型。原料コークスと電力はコスト側"}
+{"code": "5331", "name": "ノリタケ", "s33": "ガラス･土石製品", "pin": "電子ペースト・工業機材の販売数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "電子部材と研削砥石の数量型。銀・Pdは買い手側・推測"}
+{"code": "5332", "name": "ＴＯＴＯ", "s33": "ガラス･土石製品", "pin": "住宅着工・リフォーム数量（＋値上げ浸透）", "pin_type": "volume", "sign": "+", "series": "国交省 住宅着工統計(月次)", "watch": "manual", "note": "衛生陶器の数量と値上げが中心。中国住宅市況も変動要因"}
+{"code": "5333", "name": "ＮＧＫ", "s33": "ガラス･土石製品", "pin": "自動車生産台数（排ガス浄化セラミックスの数量）", "pin_type": "volume", "sign": "+", "series": "自工会 自動車生産台数(月次)", "watch": "manual", "note": "主力ハニカムは内燃機関車の数量連動。EV化は構造逆風"}
+{"code": "5334", "name": "日本特殊陶業", "s33": "ガラス･土石製品", "pin": "内燃機関車の生産・補修数量（点火プラグ）", "pin_type": "volume", "sign": "+", "series": "自工会 自動車生産台数(月次)", "watch": "manual", "note": "プラグ・センサの補修需要が高収益。EV化は構造逆風"}
+{"code": "5344", "name": "ＭＡＲＵＷＡ", "s33": "ガラス･土石製品", "pin": "半導体・通信向けセラミック基板の数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "AI/半導体向け基板の数量型。材料市況は直接効かない"}
+{"code": "5351", "name": "品川リフラ", "s33": "ガラス･土石製品", "pin": "粗鋼生産量（耐火物の数量）", "pin_type": "volume", "sign": "+", "series": "鉄連 粗鋼生産量(月次)", "watch": "manual", "note": "耐火物は鉄鋼稼働の数量型。マグネシア原料は買い手側"}
+{"code": "5384", "name": "フジミインコーポレーテッド", "s33": "ガラス･土石製品", "pin": "半導体生産・ウエハ稼働の数量", "pin_type": "volume", "sign": "+", "series": "WSTS/SEAJ(月次)", "watch": "manual", "note": "CMPスラリーは半導体稼働の数量型。原料はコスト側"}
+{"code": "5393", "name": "ニチアス", "s33": "ガラス･土石製品", "pin": "プラント保全・断熱工事の受注数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "石化・半導体プラントの保全と高機能製品の数量型・推測"}
+{"code": "5401", "name": "日本製鉄", "s33": "鉄鋼", "pin": "HRC−鉄鉱石/原料炭スプレッド", "pin_type": "spread", "sign": "+", "series": "TE iron ore + coking coal ＋ HRC(自前計算)", "watch": "manual", "note": "鉄鉱石・原料炭は買い手。単独上昇は減益、値差拡大で増益"}
+{"code": "5406", "name": "神戸製鋼所", "s33": "鉄鋼", "pin": "HRC−原料炭/鉄鉱石スプレッド", "pin_type": "spread", "sign": "+", "series": "TE coking coal + iron ore（分母のみauto）", "watch": "manual", "note": "鉄鋼が最大。原料炭↑単独は減益、建機と電力事業も寄与"}
+{"code": "5410", "name": "合同製鐵", "s33": "鉄鋼", "pin": "棒鋼価格−鉄スクラップの値差", "pin_type": "spread", "sign": "+", "series": "東京製鐵 スクラップ購入価格(月次)", "watch": "manual", "note": "電炉のメタルスプレッドが中心。スクラップ↑単独は減益"}
+{"code": "5411", "name": "ＪＦＥホールディングス", "s33": "鉄鋼", "pin": "HRC−鉄鉱石/原料炭スプレッド", "pin_type": "spread", "sign": "+", "series": "TE iron ore + coking coal ＋ HRC(自前計算)", "watch": "manual", "note": "高炉のスプレッドが利益の中心。鉄鉱石・原料炭は買い手"}
+{"code": "5423", "name": "東京製鐵", "s33": "鉄鋼", "pin": "鋼材価格−鉄スクラップの値差", "pin_type": "spread", "sign": "+", "series": "東京製鐵 製品価格・スクラップ購入価格(自社公表・月次)", "watch": "manual", "note": "主役価格を当社自身が毎月公表。値差拡大が直接増益"}
+{"code": "543A", "name": "ＡＲＣＨＩＯＮ", "s33": "輸送用機器", "pin": "商用車の販売台数", "pin_type": "volume", "sign": "na", "series": "国内大型トラック販売台数", "watch": "manual", "note": "日野と三菱ふそう統合会社でトラック販売台数が利益の中心。推測"}
+{"code": "5440", "name": "共英製鋼", "s33": "鉄鋼", "pin": "鉄筋価格−鉄スクラップの値差", "pin_type": "spread", "sign": "+", "series": "東京製鐵 スクラップ購入価格(月次)", "watch": "manual", "note": "国内外の電炉スプレッドが中心。ベトナム市況も効く"}
+{"code": "5444", "name": "大和工業", "s33": "鉄鋼", "pin": "米国電炉のH形鋼−鉄スクラップ値差", "pin_type": "spread", "sign": "+", "series": "米国鉄スクラップ・形鋼価格(有料)", "watch": "none", "note": "利益の大半が米国電炉。メタルスプレッドが中心で無料系列なし"}
+{"code": "5445", "name": "東京鐵鋼", "s33": "鉄鋼", "pin": "ねじ節鉄筋−鉄スクラップの値差", "pin_type": "spread", "sign": "+", "series": "東京製鐵 スクラップ購入価格(月次)", "watch": "manual", "note": "電炉スプレッドが利益の中心。建設需要の数量も効く"}
+{"code": "5451", "name": "ヨドコウ", "s33": "鉄鋼", "pin": "表面処理鋼板−母材コイルの値差", "pin_type": "spread", "sign": "+", "series": "TE zinc（原料側のみauto）", "watch": "manual", "note": "母材と亜鉛は買い手。値差と物置の数量が利益を動かす"}
+{"code": "5461", "name": "中部鋼鈑", "s33": "鉄鋼", "pin": "厚板価格−鉄スクラップの値差", "pin_type": "spread", "sign": "+", "series": "東京製鐵 スクラップ購入価格(月次)", "watch": "manual", "note": "電炉厚板のメタルスプレッドが中心。電力費も大きい"}
+{"code": "5463", "name": "丸一鋼管", "s33": "鉄鋼", "pin": "鋼管価格−母材コイルの値差", "pin_type": "spread", "sign": "+", "series": "none", "watch": "none", "note": "母材コイルは買い手。値差確保が利益、鋼材↑単独は中立〜減益"}
+{"code": "5471", "name": "大同特殊鋼", "s33": "鉄鋼", "pin": "自動車生産台数（特殊鋼の数量）", "pin_type": "volume", "sign": "+", "series": "自工会 自動車生産台数(月次)", "watch": "manual", "note": "特殊鋼は自動車数量型。スクラップ・合金はサーチャージ転嫁"}
+{"code": "547A", "name": "ムニノバホールディングス", "s33": "その他金融業", "pin": "無担保ローンの営業貸付金残高", "pin_type": "volume", "sign": "+", "series": "日本貸金業協会 無担保貸付残高(月次)", "watch": "manual", "note": "アイフルの持株会社で、消費者ローン残高の伸びが利益の中心"}
+{"code": "5480", "name": "日本冶金工業", "s33": "鉄鋼", "pin": "ニッケル価格（在庫評価・サーチャージ）", "pin_type": "commodity", "sign": "+", "series": "TE nickel", "watch": "auto", "note": "Ni↑は在庫評価益とサーチャージ増で増益、下落は逆"}
+{"code": "5482", "name": "愛知製鋼", "s33": "鉄鋼", "pin": "自動車生産台数（特殊鋼・鍛造の数量）", "pin_type": "volume", "sign": "+", "series": "自工会 自動車生産台数(月次)", "watch": "manual", "note": "トヨタ系の数量型。スクラップ・合金鉄はコスト側"}
+{"code": "5563", "name": "新日本電工", "s33": "鉄鋼", "pin": "合金鉄（フェロマンガン等）価格", "pin_type": "commodity", "sign": "+", "series": "none", "watch": "none", "note": "合金鉄が売上単価。マンガン鉱石と電力はコスト・無料系列なし"}
+{"code": "5602", "name": "栗本鐵工所", "s33": "鉄鋼", "pin": "水道管更新・産業機械の受注数量", "pin_type": "volume", "sign": "+", "series": "国交省 建設工事受注動態統計(月次)", "watch": "manual", "note": "ダクタイル管の更新需要が中心。鋼材・銑鉄は買い手側"}
+{"code": "5631", "name": "日本製鋼所", "s33": "機械", "pin": "防衛・原子力向け受注高", "pin_type": "volume", "sign": "+", "series": "自社受注高(IR四半期)", "watch": "manual", "note": "素形材の防衛原子力案件が利益源、鋼材は自社製で原価側"}
+{"code": "5702", "name": "大紀アルミニウム工業所", "s33": "非鉄金属", "pin": "アルミ地金−アルミスクラップの値差", "pin_type": "spread", "sign": "+", "series": "TE aluminum（分子のみauto）", "watch": "manual", "note": "売価はLME連動で原料はスクラップ。急騰時は在庫評価益"}
+{"code": "5703", "name": "日本軽金属ホールディングス", "s33": "非鉄金属", "pin": "アルミ地金価格", "pin_type": "commodity", "sign": "mixed", "series": "TE aluminum", "watch": "auto", "note": "地金は売価フォーミュラにもコストにも入り純方向が不定"}
+{"code": "5706", "name": "三井金属", "s33": "非鉄金属", "pin": "極薄銅箔の数量（半導体パッケージ基板需要）", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "利益柱はキャリア付極薄銅箔の数量。亜鉛製錬はTC型"}
+{"code": "5711", "name": "三菱マテリアル", "s33": "非鉄金属", "pin": "銅・金価格（自山鉱権益＋副産貴金属）", "pin_type": "commodity", "sign": "+", "series": "TE copper / TE gold", "watch": "auto", "note": "自山鉱と副産金で価格感応。製錬TCも効く・推測"}
+{"code": "5713", "name": "住友金属鉱山", "s33": "非鉄金属", "pin": "銅・金価格（菱刈金鉱山＋海外銅権益）", "pin_type": "commodity", "sign": "+", "series": "TE copper / TE gold", "watch": "auto", "note": "菱刈金鉱山と海外銅権益で金銅が売上単価に直結"}
+{"code": "5714", "name": "ＤＯＷＡホールディングス", "s33": "非鉄金属", "pin": "金・銀等の貴金属価格（リサイクル回収）", "pin_type": "commodity", "sign": "+", "series": "TE gold / TE silver", "watch": "auto", "note": "リサイクル原料からの貴金属回収が売上単価。亜鉛はTC型"}
+{"code": "5715", "name": "古河機械金属", "s33": "非鉄金属", "pin": "削岩機・産業機械の受注数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "利益柱は産業機械とユニック。金属事業は銅市況にも感応・推測"}
+{"code": "5726", "name": "大阪チタニウムテクノロジーズ", "s33": "非鉄金属", "pin": "スポンジチタン価格・数量（航空機需要）", "pin_type": "commodity", "sign": "+", "series": "none", "watch": "none", "note": "スポンジチタンが売上単価。無料の公開価格系列がない"}
+{"code": "5741", "name": "ＵＡＣＪ", "s33": "非鉄金属", "pin": "アルミ地金価格（在庫影響・メタル差益）", "pin_type": "commodity", "sign": "+", "series": "TE aluminum", "watch": "auto", "note": "地金↑は売価転嫁と在庫評価益で増益、下落局面は逆"}
+{"code": "5801", "name": "古河電気工業", "s33": "非鉄金属", "pin": "DC・電力向け光ファイバ/ケーブルの数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "利益柱は情報通信のDC需要。銅は建値スライドで買い手側"}
+{"code": "5802", "name": "住友電気工業", "s33": "非鉄金属", "pin": "自動車生産台数（ワイヤーハーネス数量）", "pin_type": "volume", "sign": "+", "series": "自工会 自動車生産台数(月次)", "watch": "manual", "note": "最大利益は自動車WHの数量型。銅は建値スライドで転嫁"}
+{"code": "5803", "name": "フジクラ", "s33": "非鉄金属", "pin": "データセンター向け光ケーブル・接続部品の数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "利益はほぼ情報通信。北米DC投資の数量型で銅はコスト側"}
+{"code": "5805", "name": "ＳＷＣＣ", "s33": "非鉄金属", "pin": "電力ケーブルの受注数量（送配電・DC投資）", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "送配電とDC投資の受注数量が中心。銅は建値スライド転嫁"}
+{"code": "5830", "name": "いよぎんホールディングス", "s33": "銀行業", "pin": "国内金利(政策金利・長期金利)", "pin_type": "rate", "sign": "+", "series": "日銀政策金利/10年JGB利回り", "watch": "manual", "note": "伊予銀行の地元貸出の利ざや拡大が中心、商品市況とは無関係"}
+{"code": "5831", "name": "しずおかフィナンシャルグループ", "s33": "銀行業", "pin": "国内金利(政策金利・長期金利)", "pin_type": "rate", "sign": "+", "series": "日銀政策金利/10年JGB利回り", "watch": "manual", "note": "静岡銀行の貸出利ざやが利益の中心、有価証券含み損は一時的"}
+{"code": "5832", "name": "ちゅうぎんフィナンシャルグループ", "s33": "銀行業", "pin": "国内金利(政策金利・長期金利)", "pin_type": "rate", "sign": "+", "series": "日銀政策金利/10年JGB利回り", "watch": "manual", "note": "中国銀行の地元貸出利ざやが柱、円金利上昇が最大ドライバー"}
+{"code": "5838", "name": "楽天銀行", "s33": "銀行業", "pin": "国内金利(政策金利・長期金利)", "pin_type": "rate", "sign": "+", "series": "日銀政策金利/10年JGB利回り", "watch": "manual", "note": "ネット専業で預金コスト上昇はあるが利ざや拡大と口座増が上回る"}
+{"code": "5844", "name": "京都フィナンシャルグループ", "s33": "銀行業", "pin": "国内金利(政策金利・長期金利)", "pin_type": "rate", "sign": "+", "series": "日銀政策金利/10年JGB利回り", "watch": "manual", "note": "京都銀行の貸出利ざやが本業、巨額の政策保有株の売却益も上乗せ"}
+{"code": "5851", "name": "リョービ", "s33": "非鉄金属", "pin": "自動車生産台数（ダイカスト部品の数量）", "pin_type": "volume", "sign": "+", "series": "自工会 自動車生産台数(月次)", "watch": "manual", "note": "アルミ地金は買い手でスライド転嫁。数量と稼働率が中心"}
+{"code": "5857", "name": "ＡＲＥホールディングス", "s33": "非鉄金属", "pin": "金・銀等の貴金属価格（回収・精錬）", "pin_type": "commodity", "sign": "+", "series": "TE gold / 金(田中貴金属)", "watch": "auto", "note": "使用済み電子部品からの貴金属回収が売上単価に直結"}
+{"code": "5901", "name": "東洋製罐グループホールディングス", "s33": "金属製品", "pin": "製缶の値上げ浸透（対アルミ・鋼板）", "pin_type": "price_set", "sign": "+", "series": "TE aluminum（コスト側のみauto）", "watch": "manual", "note": "アルミ・ブリキは買い手。値上げ浸透と数量が利益の中心"}
+{"code": "5911", "name": "横河ブリッジホールディングス", "s33": "金属製品", "pin": "橋梁・システム建築の受注高（公共予算）", "pin_type": "volume", "sign": "+", "series": "国交省 建設工事受注動態統計(月次)", "watch": "manual", "note": "鋼材は買い手。固定価格請負で鋼材↑は減益要因"}
+{"code": "5929", "name": "三和ホールディングス", "s33": "金属製品", "pin": "北米ガレージドアの数量（米住宅市場）", "pin_type": "volume", "sign": "+", "series": "米国住宅着工(月次)", "watch": "manual", "note": "利益過半が北米オーバーヘッドドア。鋼材は買い手側"}
+{"code": "5930", "name": "文化シヤッター", "s33": "金属製品", "pin": "非住宅建築着工の数量（＋値上げ浸透）", "pin_type": "volume", "sign": "+", "series": "国交省 建築着工統計(月次)", "watch": "manual", "note": "シャッターの数量と値上げが中心。鋼材は買い手側"}
+{"code": "5938", "name": "ＬＩＸＩＬ", "s33": "金属製品", "pin": "国内住宅着工・リフォーム数量", "pin_type": "volume", "sign": "+", "series": "国交省 住宅着工統計(月次)", "watch": "manual", "note": "数量と値上げ浸透が中心。アルミ・樹脂は買い手でコスト側"}
+{"code": "5943", "name": "ノーリツ", "s33": "金属製品", "pin": "給湯器の販売数量（住宅設備需要）", "pin_type": "volume", "sign": "+", "series": "国交省 住宅着工統計(月次)", "watch": "manual", "note": "給湯器の数量と値上げが中心。鋼材・銅は買い手側"}
+{"code": "5947", "name": "リンナイ", "s33": "金属製品", "pin": "給湯機器の販売数量（国内外）", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "給湯器の数量と値上げが中心。鋼材・銅は買い手側"}
+{"code": "5949", "name": "ユニプレス", "s33": "輸送用機器", "pin": "日産世界生産台数", "pin_type": "volume", "sign": "na", "series": "日産世界生産台数", "watch": "manual", "note": "日産向けプレス部品が主力で同社の生産台数に連動する"}
+{"code": "5970", "name": "ジーテクト", "s33": "金属製品", "pin": "自動車生産台数（車体プレス部品の数量）", "pin_type": "volume", "sign": "+", "series": "自工会 自動車生産台数(月次)", "watch": "manual", "note": "ホンダ系の生産台数連動。鋼材はスライド転嫁で買い手側"}
+{"code": "5975", "name": "東プレ", "s33": "金属製品", "pin": "自動車生産台数（プレス部品の数量）", "pin_type": "volume", "sign": "+", "series": "自工会 自動車生産台数(月次)", "watch": "manual", "note": "自動車プレスが利益の柱。鋼材は買い手、冷凍車も数量型"}
+{"code": "5988", "name": "パイオラックス", "s33": "金属製品", "pin": "自動車生産台数（ファスナーの数量）", "pin_type": "volume", "sign": "+", "series": "自工会 自動車生産台数(月次)", "watch": "manual", "note": "自動車部品の数量型。樹脂・鋼材は買い手側"}
+{"code": "5991", "name": "日本発條", "s33": "金属製品", "pin": "自動車生産台数（ばね・シートの数量）", "pin_type": "volume", "sign": "+", "series": "自工会 自動車生産台数(月次)", "watch": "manual", "note": "自動車数量型。HDDサスペンションはDC需要、鋼材は買い手"}
+{"code": "6005", "name": "三浦工業", "s33": "機械", "pin": "ボイラ入替・メンテ契約数", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "小型貫流ボイラの入替とメンテ数量が利益源、燃料高は間接"}
+{"code": "6013", "name": "タクマ", "s33": "機械", "pin": "ごみ焼却プラント受注・運営件数", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "自治体案件の受注数量型、売電収入は補助的で価格系列なし"}
+{"code": "6036", "name": "ＫｅｅＰｅｒ技研", "s33": "サービス業", "pin": "コーティング施工件数（店舗数）", "pin_type": "volume", "sign": "na", "series": "none", "watch": "none", "note": "直営店の施工件数拡大が利益源で、原材料価格の影響は小さい"}
+{"code": "6055", "name": "ジャパンマテリアル", "s33": "サービス業", "pin": "半導体工場の稼働・設備投資", "pin_type": "volume", "sign": "+", "series": "SEAJ 半導体製造装置販売高", "watch": "manual", "note": "工場向けガス供給と装置保守の受託数量が利益を動かす"}
+{"code": "6080", "name": "Ｍ＆Ａキャピタルパートナーズ", "s33": "サービス業", "pin": "M&A成約件数", "pin_type": "volume", "sign": "na", "series": "none", "watch": "none", "note": "成功報酬型で、案件の成約件数の増減が利益のほぼ全て"}
+{"code": "6088", "name": "シグマクシス・ホールディングス", "s33": "サービス業", "pin": "コンサル稼働人員・稼働率", "pin_type": "volume", "sign": "na", "series": "none", "watch": "none", "note": "人月型コンサルで、人員数と稼働率が利益を規定する"}
+{"code": "6098", "name": "リクルートホールディングス", "s33": "サービス業", "pin": "米国求人数×Indeed課金単価", "pin_type": "volume", "sign": "+", "series": "Indeed Hiring Lab 求人指数", "watch": "manual", "note": "利益柱HRテックはIndeedの求人件数と課金単価で決まる"}
+{"code": "6101", "name": "ツガミ", "s33": "機械", "pin": "中国向け精密旋盤の受注", "pin_type": "volume", "sign": "+", "series": "自社月次受注(IR)", "watch": "manual", "note": "中国のEV・電子向け小型旋盤の受注に依存する数量型"}
+{"code": "6103", "name": "オークマ", "s33": "機械", "pin": "工作機械受注額", "pin_type": "volume", "sign": "+", "series": "日工会 工作機械受注(月次)", "watch": "manual", "note": "受注生産で公表価格なし、月次受注が利益の先行指標になる"}
+{"code": "6104", "name": "芝浦機械", "s33": "機械", "pin": "射出成形機・工作機械の受注", "pin_type": "volume", "sign": "+", "series": "日工会 工作機械受注(月次)", "watch": "manual", "note": "成形機と工作機の受注数量型、鋼材など素材は仕入コスト"}
+{"code": "6113", "name": "アマダ", "s33": "機械", "pin": "板金機械の受注額", "pin_type": "volume", "sign": "+", "series": "日工会 工作機械受注(月次)", "watch": "manual", "note": "板金機受注と消耗部品の数量が利益源、製品公表価格はない"}
+{"code": "6118", "name": "アイダエンジニアリング", "s33": "機械", "pin": "プレス機受注(自動車設備投資)", "pin_type": "volume", "sign": "+", "series": "日工会 工作機械受注(月次)", "watch": "manual", "note": "車体プレス設備の受注数量が利益を決める受注生産型"}
+{"code": "6134", "name": "ＦＵＪＩ", "s33": "機械", "pin": "チップマウンター受注台数", "pin_type": "volume", "sign": "+", "series": "自社受注高(IR四半期)", "watch": "manual", "note": "実装機の受注台数がスマホ・車載の設備投資に連動する数量型"}
+{"code": "6135", "name": "牧野フライス製作所", "s33": "機械", "pin": "工作機械受注額", "pin_type": "volume", "sign": "+", "series": "日工会 工作機械受注(月次)", "watch": "manual", "note": "MC受注の数量型、金型・航空向け設備投資サイクルに連動"}
+{"code": "6136", "name": "オーエスジー", "s33": "機械", "pin": "工作機械稼働率(工具消費量)", "pin_type": "volume", "sign": "+", "series": "日工会 工作機械受注(月次)", "watch": "manual", "note": "消耗工具は稼働連動の数量型、タングステンは仕入コスト側"}
+{"code": "6140", "name": "旭ダイヤモンド工業", "s33": "機械", "pin": "半導体・自動車向け工具消費量", "pin_type": "volume", "sign": "+", "series": "SEAJ 半導体製造装置販売高(月次)", "watch": "manual", "note": "ダイヤ工具は稼働連動の消耗数量型、砥粒は仕入原価側"}
+{"code": "6141", "name": "ＤＭＧ森精機", "s33": "機械", "pin": "工作機械受注額", "pin_type": "volume", "sign": "+", "series": "日工会 工作機械受注(月次)", "watch": "manual", "note": "受注生産で公表価格なし、月次の受注額が利益の先行指標"}
+{"code": "6143", "name": "ソディック", "s33": "機械", "pin": "放電加工機・成形機の受注", "pin_type": "volume", "sign": "+", "series": "日工会 工作機械受注(月次)", "watch": "manual", "note": "中国の金型・電子部品需要に連動する受注数量型"}
+{"code": "6146", "name": "ディスコ", "s33": "機械", "pin": "後工程装置の出荷高(HBM関連)", "pin_type": "volume", "sign": "+", "series": "自社月次出荷高(IR)", "watch": "manual", "note": "ダイサ・グラインダの出荷数量が直結、月次出荷高を自社開示"}
+{"code": "6178", "name": "日本郵政", "s33": "サービス業", "pin": "国内金利（ゆうちょ運用利回り）", "pin_type": "rate", "sign": "+", "series": "10年JGB利回り", "watch": "manual", "note": "連結利益の過半はゆうちょ・かんぽで、円金利上昇が利鞘を広げる"}
+{"code": "6196", "name": "ストライクグループ", "s33": "サービス業", "pin": "M&A成約件数", "pin_type": "volume", "sign": "na", "series": "none", "watch": "none", "note": "仲介の成功報酬モデルで、成約件数が利益の中心変数"}
+{"code": "6200", "name": "インソース", "s33": "サービス業", "pin": "研修の実施本数・受講者数", "pin_type": "volume", "sign": "na", "series": "none", "watch": "none", "note": "講師派遣型研修の実施本数と受講者数が売上の計上単位"}
+{"code": "6209", "name": "リケンＮＰＲ", "s33": "機械", "pin": "エンジン車の生産台数", "pin_type": "volume", "sign": "+", "series": "自工会 四輪生産台数(月次)", "watch": "manual", "note": "ピストンリングは内燃機関の生産数量型、EV化は構造逆風"}
+{"code": "6222", "name": "島精機製作所", "s33": "機械", "pin": "横編機の販売台数", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "中国アパレルの設備投資に連動する台数型、価格系列なし"}
+{"code": "6235", "name": "オプトラン", "s33": "機械", "pin": "光学成膜装置の受注台数", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "スマホカメラ向け装置投資の数量型、中国顧客依存が強い"}
+{"code": "6250", "name": "やまびこ", "s33": "機械", "pin": "北米屋外作業機の販売数量", "pin_type": "volume", "sign": "+", "series": "米センサス 住宅着工(月次)", "watch": "manual", "note": "北米の造園・林業需要の数量型、輸出で為替感応も高い"}
+{"code": "6254", "name": "野村マイクロ・サイエンス", "s33": "機械", "pin": "半導体ファブ向け超純水装置受注", "pin_type": "volume", "sign": "+", "series": "SEAJ 半導体製造装置販売高(月次)", "watch": "manual", "note": "ファブ新設の受注数量型、台湾・米の大型案件で振れる"}
+{"code": "6258", "name": "平田機工", "s33": "機械", "pin": "自動車・半導体の生産設備受注", "pin_type": "volume", "sign": "+", "series": "自社受注高(IR四半期)", "watch": "manual", "note": "生産ライン一括受注の数量型、案件計上期でぶれやすい"}
+{"code": "6268", "name": "ナブテスコ", "s33": "機械", "pin": "ロボット・商用車の生産台数", "pin_type": "volume", "sign": "+", "series": "JARA ロボット統計(四半期)", "watch": "manual", "note": "精密減速機はロボット出荷、輸送機はトラック生産の数量型"}
+{"code": "6269", "name": "三井海洋開発", "s33": "機械", "pin": "FPSO受注・工事進捗", "pin_type": "volume", "sign": "+", "series": "自社受注残(IR四半期)", "watch": "manual", "note": "原油高は受注経由の1ホップ、利益は工事進行の出来高で決まる"}
+{"code": "6273", "name": "ＳＭＣ", "s33": "機械", "pin": "世界FA設備投資(受注数量)", "pin_type": "volume", "sign": "+", "series": "日工会 工作機械受注(月次)", "watch": "manual", "note": "空気圧機器はFA投資連動の数量型、鋼材アルミは仕入コスト"}
+{"code": "6277", "name": "ホソカワミクロン", "s33": "機械", "pin": "粉体機械の受注高", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "電池材料・食品向け設備の受注数量型、価格系列は存在しない"}
+{"code": "6278", "name": "ユニオンツール", "s33": "機械", "pin": "PCB用ドリルの出荷本数", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "基板生産量に連動する消耗品数量型、超硬材は仕入原価側"}
+{"code": "6282", "name": "オイレス工業", "s33": "機械", "pin": "自動車生産・建築免震の数量", "pin_type": "volume", "sign": "+", "series": "自工会 四輪生産台数(月次)", "watch": "manual", "note": "無給油軸受は車の生産台数と建築案件数の数量型"}
+{"code": "6284", "name": "日精エー・エス・ビー機械", "s33": "機械", "pin": "PET成形機の販売台数", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "新興国の飲料ボトル設備投資に連動する販売台数型"}
+{"code": "6287", "name": "サトー", "s33": "機械", "pin": "ラベル消耗品の出荷数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "本体より消耗ラベルの数量が利益源、原紙は仕入コスト側"}
+{"code": "6301", "name": "小松製作所", "s33": "機械", "pin": "建機・鉱山機械の販売台数", "pin_type": "volume", "sign": "+", "series": "CEMA 建設機械出荷金額(月次)", "watch": "manual", "note": "資源価格は鉱山機販売経由の1ホップ、直接効くのは台数と為替"}
+{"code": "6302", "name": "住友重機械工業", "s33": "機械", "pin": "減速機・産業機械の受注高", "pin_type": "volume", "sign": "+", "series": "自社受注高(IR四半期)", "watch": "manual", "note": "機械コンポーネントと半導体装置の受注数量が利益の中心"}
+{"code": "6305", "name": "日立建機", "s33": "機械", "pin": "建機・鉱山機械の販売台数", "pin_type": "volume", "sign": "+", "series": "CEMA 建設機械出荷金額(月次)", "watch": "manual", "note": "鉱山機は資源設備投資経由の1ホップ、直接は台数と為替"}
+{"code": "6315", "name": "ＴＯＷＡ", "s33": "機械", "pin": "半導体封止装置の受注台数", "pin_type": "volume", "sign": "+", "series": "SEAJ 半導体製造装置販売高(月次)", "watch": "manual", "note": "後工程モールド装置の受注数量型、先端パッケージに連動"}
+{"code": "6323", "name": "ローツェ", "s33": "機械", "pin": "半導体前工程投資(WFE)", "pin_type": "volume", "sign": "+", "series": "SEAJ 半導体製造装置販売高(月次)", "watch": "manual", "note": "ウェハ搬送ロボはWFE連動の数量型、対応する価格系列はない"}
+{"code": "6326", "name": "クボタ", "s33": "機械", "pin": "北米小型トラクター販売台数", "pin_type": "volume", "sign": "+", "series": "AEM 米トラクター販売(月次)", "watch": "manual", "note": "穀物価格は農家所得経由の1ホップ、直接は北米の販売台数"}
+{"code": "6331", "name": "三菱化工機", "s33": "機械", "pin": "化学プラント機器の受注高", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "遠心分離機・水素装置の受注数量型、価格系列は存在しない"}
+{"code": "6332", "name": "月島ホールディングス", "s33": "機械", "pin": "水処理・汚泥プラント受注", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "自治体の下水処理案件の受注数量型、運営受託が安定収益"}
+{"code": "6349", "name": "小森コーポレーション", "s33": "機械", "pin": "印刷機の受注台数", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "オフセット機は構造縮小、証券印刷機の受注数量が鍵"}
+{"code": "6361", "name": "荏原製作所", "s33": "機械", "pin": "半導体WFE(CMP装置販売)", "pin_type": "volume", "sign": "+", "series": "SEAJ 半導体製造装置販売高(月次)", "watch": "manual", "note": "精密電子が利益の過半、CMP装置の販売台数が中心の数量型"}
+{"code": "6363", "name": "酉島製作所", "s33": "機械", "pin": "中東向け大型ポンプ受注", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "原油高は水・電力予算経由の1ホップ、直接効くのは受注量"}
+{"code": "6367", "name": "ダイキン工業", "s33": "機械", "pin": "北米住宅用HVAC販売台数", "pin_type": "volume", "sign": "+", "series": "AHRI 米空調出荷統計(月次)", "watch": "manual", "note": "空調が利益の9割超、北米住宅HVACの販売台数が業績を左右"}
+{"code": "6368", "name": "オルガノ", "s33": "機械", "pin": "電子産業向け水処理受注", "pin_type": "volume", "sign": "+", "series": "SEAJ 半導体製造装置販売高(月次)", "watch": "manual", "note": "超純水装置は半導体ファブ投資に連動する受注数量型"}
+{"code": "6370", "name": "栗田工業", "s33": "機械", "pin": "電子産業向け超純水・薬品数量", "pin_type": "volume", "sign": "+", "series": "SEAJ 半導体製造装置販売高(月次)", "watch": "manual", "note": "薬品原料は仕入コスト、利益は電子向けサービスの数量で動く"}
+{"code": "6371", "name": "椿本チエイン", "s33": "機械", "pin": "自動車生産・物流設備の数量", "pin_type": "volume", "sign": "+", "series": "自工会 四輪生産台数(月次)", "watch": "manual", "note": "チェーンと搬送機は自動車生産と物流投資の数量型"}
+{"code": "6376", "name": "日機装", "s33": "精密機器", "pin": "透析装置・航空機部品の販売数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "医療と航空宇宙の数量型。診療報酬は逆風・推測"}
+{"code": "6383", "name": "ダイフク", "s33": "機械", "pin": "半導体・物流マテハン受注高", "pin_type": "volume", "sign": "+", "series": "自社受注高(IR四半期)", "watch": "manual", "note": "クリーンルーム搬送と物流設備の受注数量が利益源の数量型"}
+{"code": "6395", "name": "タダノ", "s33": "機械", "pin": "移動式クレーンの販売台数", "pin_type": "volume", "sign": "+", "series": "CEMA 建設機械出荷金額(月次)", "watch": "manual", "note": "北米欧州の建設需要に連動する台数型、鋼材は原価側"}
+{"code": "6407", "name": "ＣＫＤ", "s33": "機械", "pin": "半導体・FA設備投資の受注", "pin_type": "volume", "sign": "+", "series": "SEAJ 半導体製造装置販売高(月次)", "watch": "manual", "note": "空気圧機器と自動機械の受注数量型、電池向けも寄与する"}
+{"code": "6412", "name": "平和", "s33": "機械", "pin": "遊技機規則改正(スマパチ移行)", "pin_type": "event", "sign": "na", "series": "保通協 型式試験結果(月次)", "watch": "manual", "note": "PGMゴルフが安定収益、利益の振れは遊技機の規則。推測"}
+{"code": "6417", "name": "ＳＡＮＫＹＯ", "s33": "機械", "pin": "遊技機規則改正(スマパチ移行)", "pin_type": "event", "sign": "na", "series": "保通協 型式試験結果(月次)", "watch": "manual", "note": "規則改正とヒット機で販売台数が跳ねる典型的なイベント型"}
+{"code": "6419", "name": "マースグループホールディングス", "s33": "機械", "pin": "規則改正に伴うホール設備投資", "pin_type": "event", "sign": "na", "series": "保通協 型式試験結果(月次)", "watch": "manual", "note": "各台計数機はホールの入替投資に連動するイベント型"}
+{"code": "6420", "name": "ガリレイ", "s33": "機械", "pin": "外食・食品小売の設備投資", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "業務用冷機は店舗更新の数量型、値上げ浸透も利益に寄与"}
+{"code": "6432", "name": "竹内製作所", "s33": "機械", "pin": "北米コンパクト建機の販売台数", "pin_type": "volume", "sign": "+", "series": "CEMA 建設機械出荷金額(月次)", "watch": "manual", "note": "北米レンタル需要の台数型、国内生産で為替感応度も大きい"}
+{"code": "6436", "name": "アマノ", "s33": "機械", "pin": "就業管理・駐車場の契約数", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "情報システム契約と駐車場稼働の数量型、価格系列は存在しない"}
+{"code": "6448", "name": "ブラザー工業", "s33": "電気機器", "pin": "USD/JPY為替", "pin_type": "fx", "sign": "+", "series": "USD/JPY(日銀・為替公開値)", "watch": "manual", "note": "海外売上9割・消耗品数量は横ばいで為替が利益を最も動かす"}
+{"code": "6454", "name": "マックス", "s33": "機械", "pin": "北米住宅着工(釘打機需要)", "pin_type": "volume", "sign": "+", "series": "米センサス 住宅着工(月次)", "watch": "manual", "note": "建築工具が利益の柱、北米住宅着工の数量に連動する"}
+{"code": "6457", "name": "グローリー", "s33": "機械", "pin": "通貨処理機の販売台数", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "海外リテール向け機器の台数型、キャッシュレス化は構造逆風"}
+{"code": "6458", "name": "新晃工業", "s33": "機械", "pin": "ビル空調の更新・新設数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "業務用空調機は建設・改修案件の数量型、銅は原価側"}
+{"code": "6460", "name": "セガサミーホールディングス", "s33": "機械", "pin": "ゲームタイトル販売本数", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "利益の主力はゲーム、遊技機は規則改正イベントで副次的"}
+{"code": "6463", "name": "ＴＰＲ", "s33": "機械", "pin": "自動車生産台数", "pin_type": "volume", "sign": "+", "series": "自工会 四輪生産台数(月次)", "watch": "manual", "note": "ピストンリングは自動車生産の数量型、EV化は構造逆風"}
+{"code": "6465", "name": "ホシザキ", "s33": "機械", "pin": "自社製品の値上げ浸透", "pin_type": "price_set", "sign": "+", "series": "日銀CGPI 生産用機器(月次)", "watch": "manual", "note": "国内寡占で価格改定の浸透が営業利益率を押し上げた主因"}
+{"code": "6471", "name": "日本精工", "s33": "機械", "pin": "自動車生産台数", "pin_type": "volume", "sign": "+", "series": "自工会 四輪生産台数(月次)", "watch": "manual", "note": "軸受は自動車生産の数量型、特殊鋼は仕入コスト側に入る"}
+{"code": "6472", "name": "ＮＴＮ", "s33": "機械", "pin": "自動車生産台数", "pin_type": "volume", "sign": "+", "series": "自工会 四輪生産台数(月次)", "watch": "manual", "note": "自動車向け軸受の出荷数量が中心、鋼材は原価側でコスト"}
+{"code": "6473", "name": "ジェイテクト", "s33": "機械", "pin": "自動車生産台数", "pin_type": "volume", "sign": "+", "series": "自工会 四輪生産台数(月次)", "watch": "manual", "note": "ステアリングと軸受は車の生産台数に直結する数量型"}
+{"code": "6474", "name": "不二越", "s33": "機械", "pin": "自動車・工作機械向け出荷数量", "pin_type": "volume", "sign": "+", "series": "日工会 工作機械受注(月次)", "watch": "manual", "note": "軸受・工具・ロボットとも設備投資に連動する数量型"}
+{"code": "6479", "name": "ミネベアミツミ", "s33": "電気機器", "pin": "ベアリング・電子部品の出荷数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "ボールベアリング数量が利益の中心・為替も効くが従属的"}
+{"code": "6481", "name": "ＴＨＫ", "s33": "機械", "pin": "直動案内(LMガイド)の受注高", "pin_type": "volume", "sign": "+", "series": "自社月次受注(IR)", "watch": "manual", "note": "工作機械・半導体向け受注を月次開示、典型的な数量型"}
+{"code": "6486", "name": "イーグル工業", "s33": "機械", "pin": "自動車・産業機械の生産数量", "pin_type": "volume", "sign": "+", "series": "自工会 四輪生産台数(月次)", "watch": "manual", "note": "メカニカルシールは車と船舶産機の生産数量に連動する"}
+{"code": "6490", "name": "ＰＩＬＬＡＲ", "s33": "機械", "pin": "半導体WFE(超純水配管需要)", "pin_type": "volume", "sign": "+", "series": "SEAJ 半導体製造装置販売高(月次)", "watch": "manual", "note": "フッ素樹脂継手は半導体投資連動、同部門が利益率を牽引"}
+{"code": "6498", "name": "キッツ", "s33": "機械", "pin": "銅価と製品売価のスプレッド", "pin_type": "spread", "sign": "mixed", "series": "TE copper", "watch": "auto", "note": "青銅バルブで銅が主原料、転嫁ラグで純方向は不確定。推測"}
+{"code": "6501", "name": "日立製作所", "s33": "電気機器", "pin": "変圧器・送配電機器の値上げ浸透", "pin_type": "price_set", "sign": "+", "series": "none", "watch": "none", "note": "増益の中心はHitachi Energyの変圧器価格改善だが無料系列なし"}
+{"code": "6503", "name": "三菱電機", "s33": "電気機器", "pin": "FA・空調の出荷数量", "pin_type": "volume", "sign": "+", "series": "日工会 工作機械受注(月次)", "watch": "manual", "note": "利益柱はFAシステムと空調・数量型で商品価格は主役でない"}
+{"code": "6504", "name": "富士電機", "s33": "電気機器", "pin": "受配電・パワエレの設備投資(受注)", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "電力インフラとパワー半導体の数量型・変圧器価格も一部寄与"}
+{"code": "6506", "name": "安川電機", "s33": "電気機器", "pin": "サーボ・ロボットの受注(中国設備投資)", "pin_type": "volume", "sign": "+", "series": "日工会 工作機械受注(月次)", "watch": "manual", "note": "受注量が利益を決める・銅や鋼材はコスト側で受益にならない"}
+{"code": "6507", "name": "シンフォニアテクノロジー", "s33": "電気機器", "pin": "半導体搬送装置の受注(WFE)", "pin_type": "volume", "sign": "+", "series": "SEMI 北米半導体製造装置出荷額(月次)", "watch": "manual", "note": "クリーン搬送機器が利益柱で受注数量型・商品価格は無関係。推測"}
+{"code": "6508", "name": "明電舎", "s33": "電気機器", "pin": "変圧器・受配電機器の値上げ浸透", "pin_type": "price_set", "sign": "+", "series": "none", "watch": "none", "note": "世界的な変圧器不足で値上げが通り採算改善・無料系列なし"}
+{"code": "6516", "name": "山洋電気", "s33": "電気機器", "pin": "サーボ・冷却ファンの出荷数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "FAとデータセンター向けの数量型・商品市況は無関係"}
+{"code": "6523", "name": "ＰＨＣホールディングス", "s33": "電気機器", "pin": "診療報酬・保険点数の改定", "pin_type": "event", "sign": "+", "series": "none", "watch": "none", "note": "検査受託と医療ITは点数連動・引き下げ圧力が構造。推測"}
+{"code": "6525", "name": "ＫＯＫＵＳＡＩ　ＥＬＥＣＴＲＩＣ", "s33": "電気機器", "pin": "成膜装置の受注(メモリ向けWFE)", "pin_type": "volume", "sign": "+", "series": "SEMI 北米半導体製造装置出荷額(月次)", "watch": "manual", "note": "NAND価格は顧客投資を経由する2ホップ・自社は装置数量型"}
+{"code": "6526", "name": "ソシオネクスト", "s33": "電気機器", "pin": "カスタムSoCの出荷数量(顧客案件)", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "受注案件ベースの数量型・ファウンドリ価格は原価側"}
+{"code": "6532", "name": "ベイカレント", "s33": "サービス業", "pin": "コンサルタント人数×稼働率", "pin_type": "volume", "sign": "na", "series": "none", "watch": "none", "note": "人月モデルで、人員拡大と稼働率が利益をほぼ規定する"}
+{"code": "6544", "name": "ジャパンエレベーターサービスホールディングス", "s33": "サービス業", "pin": "エレベーター保守契約台数", "pin_type": "volume", "sign": "na", "series": "none", "watch": "none", "note": "独立系保守のストック契約台数の純増が利益の中心"}
+{"code": "6586", "name": "マキタ", "s33": "機械", "pin": "欧米電動工具の販売数量", "pin_type": "volume", "sign": "+", "series": "米センサス 住宅着工(月次)", "watch": "manual", "note": "欧米の建設DIY需要の数量型、海外比率が高く為替も効く"}
+{"code": "6588", "name": "東芝テック", "s33": "電気機器", "pin": "小売業の店舗投資(POS更新数量)", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "レジ更新の数量型・法制対応が需要の波を作る・価格は自社決め"}
+{"code": "6590", "name": "芝浦メカトロニクス", "s33": "電気機器", "pin": "半導体装置の受注台数(WFE)", "pin_type": "volume", "sign": "+", "series": "SEMI 北米半導体製造装置出荷額(月次)", "watch": "manual", "note": "洗浄・成膜装置の受注台数が利益を決める数量型"}
+{"code": "6592", "name": "マブチモーター", "s33": "電気機器", "pin": "USD/JPY為替", "pin_type": "fx", "sign": "+", "series": "USD/JPY(日銀・為替公開値)", "watch": "manual", "note": "売上がほぼ全額外貨建で円安が直接増益・銅と磁石はコスト側"}
+{"code": "6622", "name": "ダイヘン", "s33": "電気機器", "pin": "配電用変圧器の値上げ浸透", "pin_type": "price_set", "sign": "+", "series": "none", "watch": "none", "note": "電力向け変圧器の価格改善が利益柱・半導体搬送は数量型"}
+{"code": "6630", "name": "ヤーマン", "s33": "電気機器", "pin": "美容機器の販売数量(国内・中国)", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "美容家電の販売数量が利益を決める・原材料の影響は軽微"}
+{"code": "6632", "name": "ＪＶＣケンウッド", "s33": "電気機器", "pin": "車載機器・無線機の出荷数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "車載と無線の販売数量が利益源・部材と為替はコスト側"}
+{"code": "6645", "name": "オムロン", "s33": "電気機器", "pin": "制御機器(FA)の受注数量", "pin_type": "volume", "sign": "+", "series": "日工会 工作機械受注(月次)", "watch": "manual", "note": "中国など製造業設備投資の数量に連動・商品市況とは無関係"}
+{"code": "6651", "name": "日東工業", "s33": "電気機器", "pin": "配電盤の受注数量(建設・DC投資)", "pin_type": "volume", "sign": "+", "series": "建築着工統計(月次)", "watch": "manual", "note": "建設と電力投資の数量型・鋼板は原価側でコストになる"}
+{"code": "6652", "name": "ＩＤＥＣ", "s33": "電気機器", "pin": "制御・安全機器の出荷数量", "pin_type": "volume", "sign": "+", "series": "日工会 工作機械受注(月次)", "watch": "manual", "note": "製造業設備投資に連動する数量型・商品価格は無関係"}
+{"code": "6674", "name": "ジーエス・ユアサ　コーポレーション", "s33": "電気機器", "pin": "鉛価格", "pin_type": "commodity", "sign": "-", "series": "LME鉛(自動監視23系列に未収録)", "watch": "manual", "note": "鉛は原材料で売価転嫁にラグ・上昇局面は先にコスト増となる"}
+{"code": "6701", "name": "日本電気", "s33": "電気機器", "pin": "官公庁・通信キャリアのIT投資(受注)", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "国内ITサービスの受注量が利益源・商品価格の影響はほぼ無い"}
+{"code": "6702", "name": "富士通", "s33": "電気機器", "pin": "国内IT投資(サービス受注高)", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "利益の柱はサービスソリューションの受注量で典型的な数量型"}
+{"code": "6703", "name": "沖電気工業", "s33": "電気機器", "pin": "官公庁・金融向けシステムの受注", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "ATMと公共インフラの受注量が利益源・数量型で商品と無縁"}
+{"code": "6707", "name": "サンケン電気", "s33": "電気機器", "pin": "パワー半導体の出荷数量(車載・白物)", "pin_type": "volume", "sign": "+", "series": "自工会 四輪車生産台数(月次)", "watch": "manual", "note": "数量と稼働率が利益を決める・ウエハや金はコスト側"}
+{"code": "6723", "name": "ルネサスエレクトロニクス", "s33": "電気機器", "pin": "車載半導体の出荷数量(自動車生産台数)", "pin_type": "volume", "sign": "+", "series": "自工会 四輪車生産台数(月次)", "watch": "manual", "note": "車載マイコンの数量が利益の中心・ウエハや金はコスト側"}
+{"code": "6724", "name": "セイコーエプソン", "s33": "電気機器", "pin": "USD/JPY為替", "pin_type": "fx", "sign": "+", "series": "USD/JPY(日銀・為替公開値)", "watch": "manual", "note": "海外売上8割・インク消耗品の数量は横ばいで為替が主因"}
+{"code": "6727", "name": "ワコム", "s33": "電気機器", "pin": "ペンセンサ・タブレットの出荷数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "デジタルペン関連の出荷数量が利益の中心・商品市況は無関係"}
+{"code": "6728", "name": "アルバック", "s33": "電気機器", "pin": "真空装置の受注(半導体・FPD投資)", "pin_type": "volume", "sign": "+", "series": "SEMI 北米半導体製造装置出荷額(月次)", "watch": "manual", "note": "装置の受注台数が利益を決める・金属材料はコスト側"}
+{"code": "6737", "name": "ＥＩＺＯ", "s33": "電気機器", "pin": "液晶パネル価格", "pin_type": "commodity", "sign": "-", "series": "TrendForce 液晶パネル価格(月次)", "watch": "manual", "note": "パネルは仕入原価の主体で上昇は減益・医用は転嫁力あり"}
+{"code": "6744", "name": "能美防災", "s33": "電気機器", "pin": "建築着工・防災設備の更新工事量", "pin_type": "volume", "sign": "+", "series": "建築着工統計(月次)", "watch": "manual", "note": "工事受注の数量型・消防法の定期更新需要が下支えする"}
+{"code": "6750", "name": "エレコム", "s33": "電気機器", "pin": "USD/JPY為替(輸入仕入)", "pin_type": "fx", "sign": "-", "series": "USD/JPY(日銀・為替公開値)", "watch": "manual", "note": "中国生産のドル建て仕入で円安は原価増・メモリ高もコスト"}
+{"code": "6752", "name": "パナソニック　ホールディングス", "s33": "電気機器", "pin": "北米車載電池の生産数量(AMPC込み)", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "エナジーの生産量と税額控除が利益の中心・電池金属は概ね転嫁"}
+{"code": "6753", "name": "シャープ", "s33": "電気機器", "pin": "DRAM/NAND価格(PC・スマホの原価)", "pin_type": "commodity", "sign": "-", "series": "TrendForce メモリ価格・価格.com SSD", "watch": "manual", "note": "Dynabook等でメモリは仕入原価・高騰は減益要因。推測"}
+{"code": "6754", "name": "アンリツ", "s33": "電気機器", "pin": "通信計測器の受注(5G・光の開発投資)", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "顧客の研究開発投資の数量型・商品価格は損益に入らない"}
+{"code": "6758", "name": "ソニーグループ", "s33": "電気機器", "pin": "ゲーム課金・ソフト販売数量(PSN)", "pin_type": "volume", "sign": "+", "series": "ファミ通 週間販売本数", "watch": "manual", "note": "営業利益最大はG&NS・メモリ高騰はハード原価でむしろ減益"}
+{"code": "6762", "name": "ＴＤＫ", "s33": "電気機器", "pin": "スマホ向け小型二次電池の出荷数量", "pin_type": "volume", "sign": "+", "series": "IDC スマートフォン出荷(四半期)", "watch": "manual", "note": "利益の過半はエナジー応用(ATL)・コバルト等はコスト側"}
+{"code": "6768", "name": "タムラ製作所", "s33": "電気機器", "pin": "EV・電源向けトランスの出荷数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "変圧器と電子化学の数量型・銅とすずはコスト側"}
+{"code": "6770", "name": "アルプスアルパイン", "s33": "電気機器", "pin": "自動車生産台数(車載部品の出荷数量)", "pin_type": "volume", "sign": "+", "series": "自工会 四輪車生産台数(月次)", "watch": "manual", "note": "車載電子部品の数量が利益源・銅と樹脂はコスト側"}
+{"code": "6787", "name": "メイコー", "s33": "電気機器", "pin": "プリント基板の出荷数量(車載・AI)", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "基板の数量と稼働率が利益源・銅箔と金はコスト側"}
+{"code": "6804", "name": "ホシデン", "s33": "電気機器", "pin": "ゲーム機の生産台数(任天堂向け部品)", "pin_type": "volume", "sign": "+", "series": "ファミ通 週間販売台数", "watch": "manual", "note": "任天堂向け部品の数量が利益を左右・商品市況は無関係"}
+{"code": "6806", "name": "ヒロセ電機", "s33": "電気機器", "pin": "コネクタ出荷数量(スマホ・車載・産機)", "pin_type": "volume", "sign": "+", "series": "IDC スマートフォン出荷(四半期)", "watch": "manual", "note": "高粗利で数量がほぼ全て・金メッキの金価格はコスト側"}
+{"code": "6807", "name": "日本航空電子工業", "s33": "電気機器", "pin": "コネクタ出荷数量(車載・スマホ)", "pin_type": "volume", "sign": "+", "series": "自工会 四輪車生産台数(月次)", "watch": "manual", "note": "数量型・金メッキの金価格はコスト側で符号は逆になる"}
+{"code": "6810", "name": "マクセル", "s33": "電気機器", "pin": "電池・機能部材の出荷数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "産業用電池と部材の数量型・原材料は一貫してコスト側"}
+{"code": "6814", "name": "古野電気", "s33": "電気機器", "pin": "舶用電子機器の受注(新造船・換装)", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "新造船と換装需要の数量型・海運運賃は2ホップで対象外"}
+{"code": "6841", "name": "横河電機", "s33": "電気機器", "pin": "石油化学プラントの設備投資・保守(受注)", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "原油高は顧客capex経由の2ホップ・自社は受注数量型"}
+{"code": "6845", "name": "アズビル", "s33": "電気機器", "pin": "ビル・工場の設備投資(工事受注)", "pin_type": "volume", "sign": "+", "series": "建築着工統計(月次)", "watch": "manual", "note": "ビルオートメーションの工事量が利益源・商品価格は無関係"}
+{"code": "6849", "name": "日本光電工業", "s33": "電気機器", "pin": "医療機関の機器更新需要(出荷数量)", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "病院の設備投資数量が中心・診療報酬は間接的に効くのみ"}
+{"code": "6856", "name": "堀場製作所", "s33": "電気機器", "pin": "半導体設備投資(MFCの出荷数量)", "pin_type": "volume", "sign": "+", "series": "SEMI 北米半導体製造装置出荷額(月次)", "watch": "manual", "note": "利益寄与最大は半導体セグメント・装置向け部品の数量型"}
+{"code": "6857", "name": "アドバンテスト", "s33": "電気機器", "pin": "半導体テスタの受注台数(HBM/SoC投資)", "pin_type": "volume", "sign": "+", "series": "SEMI 北米半導体製造装置出荷額(月次)", "watch": "manual", "note": "利益はテスタ販売台数連動・商品価格は売価にも原価にも入らない"}
+{"code": "6859", "name": "エスペック", "s33": "電気機器", "pin": "環境試験器の受注(EV・電池の開発投資)", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "顧客の研究開発投資に連動する受注数量型・商品価格は無関係"}
+{"code": "6861", "name": "キーエンス", "s33": "電気機器", "pin": "製造業の設備投資(FAセンサ数量)", "pin_type": "volume", "sign": "+", "series": "日工会 工作機械受注(月次)", "watch": "manual", "note": "粗利8割で原材料影響は軽微・出荷数量が利益をほぼ決める"}
+{"code": "6866", "name": "日置電機", "s33": "電気機器", "pin": "電気計測器の出荷数量(EV・電池投資)", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "設備投資と開発投資の数量型・高粗利で原材料影響は軽微"}
+{"code": "6869", "name": "シスメックス", "s33": "電気機器", "pin": "検査試薬の消費数量(検査件数)", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "装置設置台数×試薬消費の数量型・価格は保険で下方硬直"}
+{"code": "6871", "name": "日本マイクロニクス", "s33": "電気機器", "pin": "プローブカードの出荷数量(DRAM/HBM検査)", "pin_type": "volume", "sign": "+", "series": "SEMI 北米半導体製造装置出荷額(月次)", "watch": "manual", "note": "メモリ生産量に連動する消耗品型・価格は自社値決め"}
+{"code": "6875", "name": "メガチップス", "s33": "電気機器", "pin": "ゲーム機向けカスタムLSIの出荷数量", "pin_type": "volume", "sign": "+", "series": "ファミ通 週間販売台数", "watch": "manual", "note": "任天堂向け比率が高い数量型・ファウンドリ価格は原価側"}
+{"code": "6902", "name": "デンソー", "s33": "輸送用機器", "pin": "世界自動車生産台数", "pin_type": "volume", "sign": "na", "series": "日系OEM世界生産台数", "watch": "manual", "note": "トヨタ系中心の世界自動車生産台数が売上と工場稼働を決める"}
+{"code": "6908", "name": "イリソ電子工業", "s33": "電気機器", "pin": "自動車生産台数(車載コネクタ数量)", "pin_type": "volume", "sign": "+", "series": "自工会 四輪車生産台数(月次)", "watch": "manual", "note": "車載コネクタの出荷数量が利益源・金と銅はコスト側"}
+{"code": "6914", "name": "オプテックスグループ", "s33": "電気機器", "pin": "防犯・建物向けセンサの出荷数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "海外の建設と防犯需要の数量型・為替も効くが従属的"}
+{"code": "6920", "name": "レーザーテック", "s33": "電気機器", "pin": "EUVマスク検査装置の受注台数", "pin_type": "volume", "sign": "+", "series": "SEMI 北米半導体製造装置出荷額(月次)", "watch": "manual", "note": "受注台数が利益をほぼ決める・商品市況は売上に入らない"}
+{"code": "6923", "name": "スタンレー電気", "s33": "電気機器", "pin": "自動車生産台数(ランプ出荷数量)", "pin_type": "volume", "sign": "+", "series": "自工会 四輪車生産台数(月次)", "watch": "manual", "note": "ランプの数量が利益の中心・樹脂と銅はコスト側"}
+{"code": "6925", "name": "ウシオ電機", "s33": "電気機器", "pin": "光源・ランプの出荷数量(半導体・FPD)", "pin_type": "volume", "sign": "+", "series": "SEMI 北米半導体製造装置出荷額(月次)", "watch": "manual", "note": "露光光源とランプの数量型・希ガス等はコスト側"}
+{"code": "6929", "name": "日本セラミック", "s33": "電気機器", "pin": "赤外線・超音波センサの出荷数量", "pin_type": "volume", "sign": "+", "series": "自工会 四輪車生産台数(月次)", "watch": "manual", "note": "車載と家電向けセンサの数量型・商品市況は損益に入らない"}
+{"code": "6941", "name": "山一電機", "s33": "電気機器", "pin": "ICソケット・車載コネクタの出荷数量", "pin_type": "volume", "sign": "+", "series": "SEMI 北米半導体製造装置出荷額(月次)", "watch": "manual", "note": "半導体テスト用ソケットの数量型・金はコスト側"}
+{"code": "6947", "name": "図研", "s33": "電気機器", "pin": "電子CADのライセンス・保守本数", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "ソフト販売本数と保守収入が利益源・商品価格は無関係"}
+{"code": "6951", "name": "日本電子", "s33": "電気機器", "pin": "電子顕微鏡・描画装置の受注台数", "pin_type": "volume", "sign": "+", "series": "SEMI 北米半導体製造装置出荷額(月次)", "watch": "manual", "note": "半導体と研究機関の設備投資に連動する受注台数型"}
+{"code": "6952", "name": "カシオ計算機", "s33": "電気機器", "pin": "時計の販売数量と平均単価", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "G-SHOCKの数量と高価格帯比率が利益源・商品市況は無関係"}
+{"code": "6954", "name": "ファナック", "s33": "電気機器", "pin": "工作機械・ロボットの受注台数", "pin_type": "volume", "sign": "+", "series": "日工会 工作機械受注(月次)", "watch": "manual", "note": "受注統計と利益が連動・鋼材や銅はコスト側で受益にならない"}
+{"code": "6963", "name": "ローム", "s33": "電気機器", "pin": "車載・産機向け半導体の出荷数量", "pin_type": "volume", "sign": "+", "series": "自工会 四輪車生産台数(月次)", "watch": "manual", "note": "数量と工場稼働率が利益を左右・材料価格は原価側"}
+{"code": "6965", "name": "浜松ホトニクス", "s33": "電気機器", "pin": "光半導体の出荷数量(半導体検査・医療)", "pin_type": "volume", "sign": "+", "series": "SEMI 北米半導体製造装置出荷額(月次)", "watch": "manual", "note": "数量型で商品市況は損益に入らない・為替も効くが従属的"}
+{"code": "6966", "name": "三井ハイテック", "s33": "電気機器", "pin": "EVモーターコアの出荷数量", "pin_type": "volume", "sign": "+", "series": "自工会 四輪車生産台数(月次)", "watch": "manual", "note": "モーターコアの数量が利益の中心・電磁鋼板はコスト側"}
+{"code": "6971", "name": "京セラ", "s33": "電気機器", "pin": "電子部品・半導体パッケージの出荷数量", "pin_type": "volume", "sign": "+", "series": "IDC スマートフォン出荷(四半期)", "watch": "manual", "note": "部品と基板の数量が利益の中心・金など貴金属はコスト側"}
+{"code": "6976", "name": "太陽誘電", "s33": "電気機器", "pin": "MLCC出荷数量(スマホ・車載)", "pin_type": "volume", "sign": "+", "series": "IDC スマートフォン出荷(四半期)", "watch": "manual", "note": "MLCCの数量と稼働率が利益を決める・公開価格系列がない"}
+{"code": "6981", "name": "村田製作所", "s33": "電気機器", "pin": "MLCC出荷数量(スマホ・車載)", "pin_type": "volume", "sign": "+", "series": "IDC スマートフォン出荷(四半期)", "watch": "manual", "note": "MLCCは自社値決めだが実質は数量連動・公開価格系列がない"}
+{"code": "6988", "name": "日東電工", "s33": "化学", "scale": "TOPIX Mid400", "pin": "半導体・スマホ向け機能材料の数量", "pin_type": "volume", "sign": "+", "series": "WSTS半導体売上", "watch": "manual", "note": "半導体・スマホ向け機能材料の数量が利益の中心"}
+{"code": "6995", "name": "東海理化電機製作所", "s33": "輸送用機器", "pin": "トヨタ世界生産台数", "pin_type": "volume", "sign": "na", "series": "トヨタ世界生産台数", "watch": "manual", "note": "トヨタ向けスイッチ・キーで同社の生産台数に連動する"}
+{"code": "6996", "name": "ニチコン", "s33": "電気機器", "pin": "コンデンサ・蓄電システムの出荷数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "数量型・アルミ箔などの材料は原価側で受益にならない"}
+{"code": "6999", "name": "ＫＯＡ", "s33": "電気機器", "pin": "抵抗器の出荷数量(車載・産機)", "pin_type": "volume", "sign": "+", "series": "自工会 四輪車生産台数(月次)", "watch": "manual", "note": "抵抗器の数量と稼働率が利益源・金属材料はコスト側"}
+{"code": "7003", "name": "三井Ｅ＆Ｓ", "s33": "機械", "pin": "港湾クレーンの受注台数", "pin_type": "volume", "sign": "+", "series": "自社受注高(IR四半期)", "watch": "manual", "note": "ガントリークレーン受注の数量型、鋼材は仕入コスト側"}
+{"code": "7004", "name": "カナデビア", "s33": "機械", "pin": "ごみ焼却プラントの受注・運営", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "自治体案件の受注数量型、長期運営契約が安定収益になる"}
+{"code": "7011", "name": "三菱重工業", "s33": "機械", "pin": "ガスタービン・防衛の受注高", "pin_type": "volume", "sign": "+", "series": "自社受注高(IR四半期)", "watch": "manual", "note": "GTCC受注と防衛予算増が利益源、鋼材は請負原価でコスト側"}
+{"code": "7012", "name": "川崎重工業", "s33": "輸送用機器", "pin": "二輪・航空・防衛の受注量", "pin_type": "volume", "sign": "na", "series": "none", "watch": "none", "note": "二輪と航空エンジン、防衛の受注・出荷数量が利益を決める"}
+{"code": "7013", "name": "ＩＨＩ", "s33": "機械", "pin": "民間航空エンジンのスペア需要", "pin_type": "volume", "sign": "+", "series": "IATA 旅客輸送量RPK(月次)", "watch": "manual", "note": "航空エンジン整備部品が利益の柱、運航量に連動する数量型"}
+{"code": "7014", "name": "名村造船所", "s33": "輸送用機器", "pin": "新造船価", "pin_type": "commodity", "sign": "+", "series": "Clarksons新造船価指数", "watch": "manual", "note": "受注時の新造船価が売上単価に直入りし鋼材は原価側に入る"}
+{"code": "7085", "name": "カーブスホールディングス", "s33": "サービス業", "pin": "在籍会員数（店舗数×会員）", "pin_type": "volume", "sign": "na", "series": "none", "watch": "none", "note": "月会費のストック収入で、在籍会員数の純増が利益源"}
+{"code": "7128", "name": "ユニソルホールディングス", "s33": "卸売業", "pin": "建設・設備投資の受注数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "建設資材と機械工具の商社、鋼材市況より工事・設備の数量が主 推測"}
+{"code": "7130", "name": "ヤマエグループホールディングス", "s33": "卸売業", "pin": "食品卸の取扱数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "九州地盤の食品卸に住宅資材を併営、薄利で取扱数量と物流が主因"}
+{"code": "7148", "name": "ＦＰＧ", "s33": "証券･商品先物取引業", "pin": "航空機リース商品(JOL)の組成・販売額", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "航空機オペレーティングリース出資の組成・販売額が収益の中心"}
+{"code": "7157", "name": "ライフネット生命保険", "s33": "保険業", "pin": "新契約年換算保険料(契約件数)", "pin_type": "volume", "sign": "+", "series": "会社月次 新契約件数開示", "watch": "manual", "note": "保有契約の積み上げが唯一の収益源で、価格でなく契約数量が主役"}
+{"code": "7164", "name": "全国保証", "s33": "その他金融業", "pin": "住宅ローン新規実行額", "pin_type": "volume", "sign": "+", "series": "日銀 貸出先別貸出金(住宅)", "watch": "manual", "note": "住宅ローン保証残高の積み上げが収益源、金利上昇は需要減で逆風"}
+{"code": "7167", "name": "めぶきフィナンシャルグループ", "s33": "銀行業", "pin": "国内金利(政策金利・長期金利)", "pin_type": "rate", "sign": "+", "series": "日銀政策金利/10年JGB利回り", "watch": "manual", "note": "常陽・足利の地元貸出の利ざや拡大が利益の中心、数量は横ばい"}
+{"code": "7172", "name": "ジャパンインベストメントアドバイザー", "s33": "証券･商品先物取引業", "pin": "航空機リース商品の組成・販売額", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "JOL組成・販売額が収益の柱で、機体需給と機体価格に依存する"}
+{"code": "7173", "name": "東京きらぼしフィナンシャルグループ", "s33": "銀行業", "pin": "国内金利(政策金利・長期金利)", "pin_type": "rate", "sign": "+", "series": "日銀政策金利/10年JGB利回り", "watch": "manual", "note": "きらぼし銀行の都内中小向け貸出の利ざや拡大が利益の中心"}
+{"code": "7180", "name": "九州フィナンシャルグループ", "s33": "銀行業", "pin": "国内金利(政策金利・長期金利)", "pin_type": "rate", "sign": "+", "series": "日銀政策金利/10年JGB利回り", "watch": "manual", "note": "肥後・鹿児島の貸出利ざやが柱で、円金利上昇が最大ドライバー"}
+{"code": "7181", "name": "かんぽ生命保険", "s33": "保険業", "pin": "超長期金利(30年JGB)", "pin_type": "rate", "sign": "+", "series": "30年JGB利回り(財務省)", "watch": "manual", "note": "巨額の円債運用で、再投資利回りの上昇が基礎利益を動かす中心"}
+{"code": "7182", "name": "ゆうちょ銀行", "s33": "銀行業", "pin": "国内金利(政策金利・長期金利)", "pin_type": "rate", "sign": "+", "series": "日銀政策金利/10年JGB利回り", "watch": "manual", "note": "巨額の預金を国債等で運用、再投資利回りの上昇が収益の中心"}
+{"code": "7184", "name": "富山第一銀行", "s33": "銀行業", "pin": "国内金利(政策金利・長期金利)", "pin_type": "rate", "sign": "+", "series": "日銀政策金利/10年JGB利回り", "watch": "manual", "note": "富山県の地元貸出の利ざやが収益源、円金利上昇が主ドライバー"}
+{"code": "7186", "name": "横浜フィナンシャルグループ", "s33": "銀行業", "pin": "国内金利(政策金利・長期金利)", "pin_type": "rate", "sign": "+", "series": "日銀政策金利/10年JGB利回り", "watch": "manual", "note": "横浜銀行の首都圏貸出の利ざや拡大が利益の中心、商材は持たない"}
+{"code": "7189", "name": "西日本フィナンシャルホールディングス", "s33": "銀行業", "pin": "国内金利(政策金利・長期金利)", "pin_type": "rate", "sign": "+", "series": "日銀政策金利/10年JGB利回り", "watch": "manual", "note": "西日本シティ銀行の地元貸出利ざやが柱、金利上昇が主ドライバー"}
+{"code": "7199", "name": "プレミアグループ", "s33": "その他金融業", "pin": "中古車オートクレジット取扱高", "pin_type": "volume", "sign": "+", "series": "USS 中古車オークション成約台数(月次)", "watch": "manual", "note": "中古車販売台数に連動、故障保証の修理費上昇はコストで逆風"}
+{"code": "7201", "name": "日産自動車", "s33": "輸送用機器", "pin": "世界販売台数と工場稼働率", "pin_type": "volume", "sign": "na", "series": "米新車販売SAAR", "watch": "manual", "note": "北米中心の販売台数と稼働率が損益分岐点を左右する"}
+{"code": "7202", "name": "いすゞ自動車", "s33": "輸送用機器", "pin": "商用車の販売台数", "pin_type": "volume", "sign": "na", "series": "国内大型トラック販売台数", "watch": "manual", "note": "国内トラックとタイのピックアップの販売台数が利益の中心"}
+{"code": "7203", "name": "トヨタ自動車", "s33": "輸送用機器", "pin": "USD/JPY為替", "pin_type": "fx", "sign": "+", "series": "USD/JPY", "watch": "manual", "note": "対ドル1円の円安で営業利益が数百億円動く最大の変動要因"}
+{"code": "7211", "name": "三菱自動車工業", "s33": "輸送用機器", "pin": "ASEAN・豪州の販売台数", "pin_type": "volume", "sign": "na", "series": "none", "watch": "none", "note": "ASEANと豪州の販売台数が連結利益の大半を占める"}
+{"code": "7220", "name": "武蔵精密工業", "s33": "輸送用機器", "pin": "ホンダ二輪・四輪生産台数", "pin_type": "volume", "sign": "na", "series": "ホンダ世界生産台数", "watch": "manual", "note": "ホンダ向けギア類が主力で同社の生産台数に連動する"}
+{"code": "7224", "name": "新明和工業", "s33": "輸送用機器", "pin": "特装車出荷と防衛受注", "pin_type": "volume", "sign": "na", "series": "none", "watch": "none", "note": "特装車の出荷台数と防衛・航空の受注が利益の柱を成す"}
+{"code": "7226", "name": "極東開発工業", "s33": "輸送用機器", "pin": "特装車の出荷台数", "pin_type": "volume", "sign": "na", "series": "国内大型トラック販売台数", "watch": "manual", "note": "トラック架装の出荷台数が中心でシャシー供給量が制約要因"}
+{"code": "7239", "name": "タチエス", "s33": "輸送用機器", "pin": "日産世界生産台数", "pin_type": "volume", "sign": "na", "series": "日産世界生産台数", "watch": "manual", "note": "日産向けシートが主力で同社の生産台数に売上が連動する"}
+{"code": "7240", "name": "ＮＯＫ", "s33": "輸送用機器", "pin": "FPCとシールの受注数量", "pin_type": "volume", "sign": "na", "series": "none", "watch": "none", "note": "スマホ向けFPCと車載シールの受注数量が工場稼働を決める"}
+{"code": "7241", "name": "フタバ産業", "s33": "輸送用機器", "pin": "トヨタ世界生産台数", "pin_type": "volume", "sign": "na", "series": "トヨタ世界生産台数", "watch": "manual", "note": "トヨタ向け排気系部品で同社の生産台数に連動する"}
+{"code": "7242", "name": "カヤバ", "s33": "輸送用機器", "pin": "四輪・建機部品の出荷数量", "pin_type": "volume", "sign": "na", "series": "none", "watch": "none", "note": "四輪ショックと建機用シリンダーの出荷数量が利益を決める"}
+{"code": "7246", "name": "プレス工業", "s33": "輸送用機器", "pin": "商用車・建機の生産台数", "pin_type": "volume", "sign": "na", "series": "国内大型トラック販売台数", "watch": "manual", "note": "トラック用フレームが主力で商用車と建機の生産台数に連動"}
+{"code": "7259", "name": "アイシン", "s33": "輸送用機器", "pin": "トヨタ系世界生産台数", "pin_type": "volume", "sign": "na", "series": "日系OEM世界生産台数", "watch": "manual", "note": "トヨタ系の生産台数に連動し電動化投資が利益率を圧迫する"}
+{"code": "7261", "name": "マツダ", "s33": "輸送用機器", "pin": "USD/JPY為替", "pin_type": "fx", "sign": "+", "series": "USD/JPY", "watch": "manual", "note": "北米比率が高く対ドル1円で営業利益が数十億円動く"}
+{"code": "7267", "name": "本田技研工業", "s33": "輸送用機器", "pin": "USD/JPY為替", "pin_type": "fx", "sign": "+", "series": "USD/JPY", "watch": "manual", "note": "二輪が利益柱だが対ドル1円の為替感応度が最大の振れ要因"}
+{"code": "7269", "name": "スズキ", "s33": "輸送用機器", "pin": "インド四輪販売台数", "pin_type": "volume", "sign": "na", "series": "SIAMインド乗用車販売", "watch": "manual", "note": "連結利益の過半がインドで現地四輪販売台数が中心"}
+{"code": "7270", "name": "ＳＵＢＡＲＵ", "s33": "輸送用機器", "pin": "USD/JPY為替", "pin_type": "fx", "sign": "+", "series": "USD/JPY", "watch": "manual", "note": "北米売上7割で対ドル1円が営業利益約100億円を動かす"}
+{"code": "7272", "name": "ヤマハ発動機", "s33": "輸送用機器", "pin": "船外機・二輪の販売数量", "pin_type": "volume", "sign": "na", "series": "none", "watch": "none", "note": "北米船外機と新興国二輪の販売数量が利益の柱を成す"}
+{"code": "7276", "name": "小糸製作所", "s33": "電気機器", "pin": "自動車生産台数(ランプ出荷数量)", "pin_type": "volume", "sign": "+", "series": "自工会 四輪車生産台数(月次)", "watch": "manual", "note": "トヨタ系の生産台数に連動する数量型・樹脂はコスト側"}
+{"code": "7278", "name": "エクセディ", "s33": "輸送用機器", "pin": "クラッチ等の出荷数量", "pin_type": "volume", "sign": "na", "series": "none", "watch": "none", "note": "クラッチの出荷数量が利益源でEV化により構造的に細る"}
+{"code": "7280", "name": "ミツバ", "s33": "電気機器", "pin": "自動車生産台数(車載モーター数量)", "pin_type": "volume", "sign": "+", "series": "自工会 四輪車生産台数(月次)", "watch": "manual", "note": "車載モーターの数量型・銅は原価の主体でコスト側"}
+{"code": "7282", "name": "豊田合成", "s33": "輸送用機器", "pin": "トヨタ世界生産台数", "pin_type": "volume", "sign": "na", "series": "トヨタ世界生産台数", "watch": "manual", "note": "トヨタ向け樹脂・ゴム部品で同社の生産台数に連動する"}
+{"code": "7283", "name": "愛三工業", "s33": "輸送用機器", "pin": "トヨタ世界生産台数", "pin_type": "volume", "sign": "na", "series": "トヨタ世界生産台数", "watch": "manual", "note": "トヨタ向け燃料系部品で同社の生産台数に連動する"}
+{"code": "7296", "name": "エフ・シー・シー", "s33": "輸送用機器", "pin": "ホンダ二輪生産台数", "pin_type": "volume", "sign": "na", "series": "ホンダ世界生産台数", "watch": "manual", "note": "二輪用クラッチが主力でホンダ系二輪の生産台数に連動する"}
+{"code": "7309", "name": "シマノ", "s33": "輸送用機器", "pin": "自転車部品の需要数量", "pin_type": "volume", "sign": "na", "series": "none", "watch": "none", "note": "欧州中心の自転車部品需要と流通在庫調整が利益を支配する"}
+{"code": "7313", "name": "テイ・エス　テック", "s33": "輸送用機器", "pin": "ホンダ四輪生産台数", "pin_type": "volume", "sign": "na", "series": "ホンダ世界生産台数", "watch": "manual", "note": "ホンダ向けシートが主力で同社の四輪生産台数に連動する"}
+{"code": "7327", "name": "第四北越フィナンシャルグループ", "s33": "銀行業", "pin": "国内金利(政策金利・長期金利)", "pin_type": "rate", "sign": "+", "series": "日銀政策金利/10年JGB利回り", "watch": "manual", "note": "第四・北越の新潟県内貸出の利ざや拡大が利益の中心となる"}
+{"code": "7337", "name": "ひろぎんホールディングス", "s33": "銀行業", "pin": "国内金利(政策金利・長期金利)", "pin_type": "rate", "sign": "+", "series": "日銀政策金利/10年JGB利回り", "watch": "manual", "note": "広島銀行の貸出利ざや拡大が利益の中心、商品市況とは無関係"}
+{"code": "7350", "name": "おきなわフィナンシャルグループ", "s33": "銀行業", "pin": "国内金利(政策金利・長期金利)", "pin_type": "rate", "sign": "+", "series": "日銀政策金利/10年JGB利回り", "watch": "manual", "note": "沖縄銀行の地元貸出利ざやが柱、観光需要は数量面の補助要因"}
+{"code": "7380", "name": "十六フィナンシャルグループ", "s33": "銀行業", "pin": "国内金利(政策金利・長期金利)", "pin_type": "rate", "sign": "+", "series": "日銀政策金利/10年JGB利回り", "watch": "manual", "note": "十六銀行の岐阜・愛知の貸出利ざや拡大が利益の中心となる"}
+{"code": "7381", "name": "ＣＣＩグループ", "s33": "銀行業", "pin": "国内金利(政策金利・長期金利)", "pin_type": "rate", "sign": "+", "series": "日銀政策金利/10年JGB利回り", "watch": "manual", "note": "旧北國FHD、北國銀行の貸出利ざやが柱でコンサル収益は補助"}
+{"code": "7383", "name": "ネットプロテクションズホールディングス", "s33": "その他金融業", "pin": "後払い決済(BNPL)の取扱高", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "後払い決済の取扱高×手数料率が収益で、価格でなく流通額が主役"}
+{"code": "7389", "name": "あいちフィナンシャルグループ", "s33": "銀行業", "pin": "国内金利(政策金利・長期金利)", "pin_type": "rate", "sign": "+", "series": "日銀政策金利/10年JGB利回り", "watch": "manual", "note": "愛知・中京銀行の地元貸出の利ざや拡大が利益の中心となる"}
+{"code": "7419", "name": "ノジマ", "s33": "小売業", "pin": "既存店売上・通信回線契約数", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "家電の既存店とキャリアショップ・MVNOの契約数が利益源"}
+{"code": "7421", "name": "カッパ・クリエイト", "s33": "小売業", "pin": "既存店売上・客数", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "回転寿司の客数が利益、コメ・水産高は原価側の逆風"}
+{"code": "7433", "name": "伯東", "s33": "卸売業", "pin": "電子部品・半導体の取扱数量", "pin_type": "volume", "sign": "+", "series": "WSTS 世界半導体出荷", "watch": "manual", "note": "電子部品商社で価格は仕入売価の両面、数量とマージンが利益を決める"}
+{"code": "7453", "name": "良品計画", "s33": "小売業", "pin": "既存店売上・客単価", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "無印は既存店売上が中心、ドル建て仕入で円安は原価増"}
+{"code": "7456", "name": "松田産業", "s33": "卸売業", "pin": "金・貴金属価格", "pin_type": "commodity", "sign": "+", "series": "TE gold-int", "watch": "auto", "note": "電子スクラップから回収した金銀パラの売却単価が金価格に直結する"}
+{"code": "7458", "name": "第一興商", "s33": "卸売業", "pin": "カラオケ室稼働・来店客数", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "業種は卸売だが実質カラオケDAMと店舗運営、客数が利益を決める"}
+{"code": "7459", "name": "メディパルホールディングス", "s33": "卸売業", "pin": "薬価(引き下げ改定)", "pin_type": "event", "sign": "+", "series": "厚労省 薬価改定率", "watch": "manual", "note": "医薬卸は薬価改定で売価が決まり薬価差益の幅が利益を左右する"}
+{"code": "7476", "name": "アズワン", "s33": "卸売業", "pin": "研究・製造現場の消耗品出荷数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "理化学消耗品のカタログ通販、単価でなく研究・製造の稼働数量が主"}
+{"code": "7512", "name": "イオン北海道", "s33": "小売業", "pin": "既存店売上・客単価", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "北海道地盤のGMS/SMで既存店売上が利益を決める"}
+{"code": "7513", "name": "コジマ", "s33": "小売業", "pin": "既存店売上（夏季エアコン需要）", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "家電量販は既存店売上と白物需要で利益が動く"}
+{"code": "7516", "name": "コーナン商事", "s33": "小売業", "pin": "既存店売上・プロ需要", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "HCは既存店売上とPB比率が利益、建材は仕入原価側"}
+{"code": "7532", "name": "パン・パシフィック・インターナショナルホールディングス", "s33": "小売業", "pin": "既存店売上・免税売上", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "ドンキの既存店と免税が利益の中心、仕入は転嫁側"}
+{"code": "7545", "name": "西松屋チェーン", "s33": "小売業", "pin": "既存店売上・客数", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "既存店売上が利益源、出生数減が構造的な数量逆風"}
+{"code": "7550", "name": "ゼンショーホールディングス", "s33": "小売業", "pin": "既存店売上・客数（国内＋海外）", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "すき家と海外M&A店の客数が利益、牛肉とコメは原価側"}
+{"code": "7552", "name": "ハピネット", "s33": "卸売業", "pin": "玩具・ゲームソフトの出荷数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "玩具ゲーム卸でヒット作の出荷数量が主、価格転嫁の余地は小さい"}
+{"code": "7575", "name": "日本ライフライン", "s33": "卸売業", "pin": "保険償還価格の改定", "pin_type": "event", "sign": "+", "series": "厚労省 保険償還価格", "watch": "manual", "note": "不整脈カテーテルの償還価格改定が粗利を規定、手術件数は数量側"}
+{"code": "7581", "name": "サイゼリヤ", "s33": "小売業", "pin": "既存店売上・客数（国内＋アジア）", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "アジア店の客数が利益を牽引、輸入食材で円安は原価増"}
+{"code": "7593", "name": "ＶＴホールディングス", "s33": "小売業", "pin": "新車・中古車の販売台数", "pin_type": "volume", "sign": "+", "series": "自販連 新車販売台数(月次)", "watch": "manual", "note": "ディーラーは台数と整備稼働が利益、中古相場は在庫評価に一部"}
+{"code": "7595", "name": "アルゴグラフィックス", "s33": "情報･通信業", "pin": "CAD/PLMライセンス販売数", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "製造業のCAD投資数量が中心で外貨仕入のため円安は原価増"}
+{"code": "7599", "name": "ＩＤＯＭ", "s33": "卸売業", "pin": "中古車オークション相場", "pin_type": "commodity", "sign": "+", "series": "USS 月次成約単価", "watch": "manual", "note": "中古車在庫の評価と販売単価が相場に直結、仕入原価にも同時に効く"}
+{"code": "7606", "name": "ユナイテッドアローズ", "s33": "小売業", "pin": "既存店売上・客単価", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "セレクト衣料は既存店売上とプロパー消化率が利益源"}
+{"code": "7611", "name": "ハイデイ日高", "s33": "小売業", "pin": "既存店売上・客数", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "首都圏中華の深夜客数が利益、豚肉・小麦は原価側"}
+{"code": "7613", "name": "シークス", "s33": "卸売業", "pin": "EMS生産数量(車載・家電)", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "電子機器の受託製造が主、部材は転嫁され生産数量と稼働率が利益源"}
+{"code": "7616", "name": "コロワイド", "s33": "小売業", "pin": "既存店売上・客数", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "多業態外食で客数が利益、食材は多品種で原価側"}
+{"code": "7630", "name": "壱番屋", "s33": "小売業", "pin": "コメ（業務用）価格", "pin_type": "commodity", "sign": "-", "series": "農水省 相対取引価格(月次)", "watch": "manual", "note": "カレー専門でコメが原価の中心、米価高騰は値上げ遅行で減益"}
+{"code": "7649", "name": "スギホールディングス", "s33": "小売業", "pin": "既存店売上・調剤処方箋枚数", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "物販の既存店売上が主、調剤の薬価改定は構造的逆風"}
+{"code": "7701", "name": "島津製作所", "s33": "精密機器", "pin": "分析計測機器の受注数量（研究開発投資）", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "製薬・大学・半導体の設備投資に連動する受注数量型"}
+{"code": "7721", "name": "東京計器", "s33": "精密機器", "pin": "防衛・船舶向け機器の受注数量", "pin_type": "volume", "sign": "+", "series": "防衛省 中央調達契約実績(年次)", "watch": "manual", "note": "防衛予算増と船舶機器の受注が利益の中心"}
+{"code": "7729", "name": "東京精密", "s33": "精密機器", "pin": "半導体後工程装置の受注数量", "pin_type": "volume", "sign": "+", "series": "SEAJ 日本製半導体製造装置販売高(月次)", "watch": "manual", "note": "ダイサ・プローバの受注が中心。半導体投資の数量型"}
+{"code": "7730", "name": "マニー", "s33": "精密機器", "pin": "手術用縫合針・歯科材の販売数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "医療用消耗品の数量成長が中心。新興国需要と為替も効く"}
+{"code": "7731", "name": "ニコン", "s33": "精密機器", "pin": "カメラ・交換レンズの販売数量と単価", "pin_type": "volume", "sign": "+", "series": "CIPA デジタルカメラ出荷統計(月次)", "watch": "manual", "note": "利益柱は映像事業。露光装置は台数少・為替感応も大きい"}
+{"code": "7733", "name": "オリンパス", "s33": "精密機器", "pin": "内視鏡・処置具の販売数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "内視鏡の数量と為替が中心。償還価格は引下げ圧力"}
+{"code": "7734", "name": "理研計器", "s33": "精密機器", "pin": "ガス検知器の受注数量（プラント設備投資）", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "石化・半導体プラントの保安投資に連動する数量型"}
+{"code": "7735", "name": "ＳＣＲＥＥＮホールディングス", "s33": "電気機器", "pin": "洗浄装置の受注(WFE)", "pin_type": "volume", "sign": "+", "series": "SEMI 北米半導体製造装置出荷額(月次)", "watch": "manual", "note": "洗浄装置の販売台数型・メモリ価格は顧客投資経由の2ホップ"}
+{"code": "7740", "name": "タムロン", "s33": "精密機器", "pin": "交換レンズ・車載カメラの販売数量", "pin_type": "volume", "sign": "+", "series": "CIPA 交換レンズ出荷統計(月次)", "watch": "manual", "note": "交換レンズと車載光学の数量が中心。為替感応も大きい"}
+{"code": "7741", "name": "ＨＯＹＡ", "s33": "精密機器", "pin": "半導体マスクブランクス・HDD基板の数量", "pin_type": "volume", "sign": "+", "series": "SEAJ 日本製半導体製造装置販売高(月次)", "watch": "manual", "note": "高収益の情報通信部門はマスクブランクス等の数量型"}
+{"code": "7744", "name": "ノーリツ鋼機", "s33": "精密機器", "pin": "傘下事業（ヘルスケア等）の売上数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "持株型で事業入替が利益を左右。商品市況とは無関係・推測"}
+{"code": "7745", "name": "Ａ＆Ｄホロンホールディングス", "s33": "精密機器", "pin": "計測機器・半導体検査装置の受注数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "計測と半導体検査の受注数量型。市況価格は直接効かない"}
+{"code": "7747", "name": "朝日インテック", "s33": "精密機器", "pin": "ガイドワイヤ等の販売数量（海外PCI件数）", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "医療用細径デバイスの数量成長が中心。為替も追い風"}
+{"code": "7751", "name": "キヤノン", "s33": "電気機器", "pin": "USD/JPY為替", "pin_type": "fx", "sign": "+", "series": "USD/JPY(日銀・為替公開値)", "watch": "manual", "note": "海外売上8割で為替感応度が最大・プリンタ数量は構造的に微減"}
+{"code": "7752", "name": "リコー", "s33": "電気機器", "pin": "USD/JPY為替", "pin_type": "fx", "sign": "+", "series": "USD/JPY(日銀・為替公開値)", "watch": "manual", "note": "海外6割・印刷量は構造減で為替と構造改革が増減益の主因"}
+{"code": "7762", "name": "シチズン時計", "s33": "精密機器", "pin": "時計の販売数量・単価（＋工作機械受注）", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "時計が最大利益。工作機械受注と為替も大きく効く"}
+{"code": "7780", "name": "メニコン", "s33": "精密機器", "pin": "メルスプラン会員数（定額契約の数量）", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "定額制の会員数増が利益の中心。素材市況は効かない"}
+{"code": "7821", "name": "前田工繊", "s33": "その他製品", "pin": "公共土木工事の施工量", "pin_type": "volume", "sign": "na", "series": "公共工事前払金保証統計", "watch": "manual", "note": "防災・土木の公共工事量が地盤資材の出荷数量を決める"}
+{"code": "7826", "name": "フルヤ金属", "s33": "その他製品", "pin": "イリジウム・ルテニウム価格", "pin_type": "commodity", "sign": "+", "series": "フルヤ金属Ir/Ru公表価格", "watch": "manual", "note": "IrとRuの価格が製品売上単価と在庫評価に直結する"}
+{"code": "7832", "name": "バンダイナムコホールディングス", "s33": "その他製品", "pin": "主力IPの販売数量", "pin_type": "volume", "sign": "na", "series": "none", "watch": "none", "note": "ガンダム等IPのトイホビーとゲームの販売数量が利益の中心"}
+{"code": "7839", "name": "ＳＨＯＥＩ", "s33": "その他製品", "pin": "USD/JPY・EUR/JPY為替", "pin_type": "fx", "sign": "+", "series": "USD/JPY", "watch": "manual", "note": "海外売上8割超で円安が売上単価と利益率を押し上げる"}
+{"code": "7846", "name": "パイロットコーポレーション", "s33": "その他製品", "pin": "USD/JPY為替", "pin_type": "fx", "sign": "+", "series": "USD/JPY", "watch": "manual", "note": "海外売上7割超で円安が売上と営業利益を大きく押し上げる"}
+{"code": "7860", "name": "エイベックス", "s33": "情報･通信業", "pin": "ライブ動員数・音楽配信数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "ライブ動員と原盤印税の数量が利益の中心で価格でない"}
+{"code": "7864", "name": "フジシールインターナショナル", "s33": "その他製品", "pin": "樹脂フィルム原料価格", "pin_type": "commodity", "sign": "-", "series": "TE Naphtha", "watch": "auto", "note": "シュリンクラベル原料の樹脂価格が売上原価に直入りする"}
+{"code": "7867", "name": "タカラトミー", "s33": "その他製品", "pin": "主力玩具の販売数量", "pin_type": "volume", "sign": "na", "series": "none", "watch": "none", "note": "トミカやベイブレード等主力玩具の販売数量が利益の中心"}
+{"code": "7911", "name": "ＴＯＰＰＡＮホールディングス", "s33": "その他製品", "pin": "BPO・マスクの受注数量", "pin_type": "volume", "sign": "na", "series": "none", "watch": "none", "note": "BPOとパッケージ、半導体マスクの受注数量が利益を決める"}
+{"code": "7912", "name": "大日本印刷", "s33": "その他製品", "pin": "電子部材の出荷数量", "pin_type": "volume", "sign": "na", "series": "none", "watch": "none", "note": "有機EL用メタルマスク等エレクトロニクスの数量が利益を牽引"}
+{"code": "7915", "name": "ＮＩＳＳＨＡ", "s33": "その他製品", "pin": "デバイス向け受注数量", "pin_type": "volume", "sign": "na", "series": "none", "watch": "none", "note": "スマホ・医療デバイス向けの受注数量が工場稼働を決める"}
+{"code": "7936", "name": "アシックス", "s33": "その他製品", "pin": "自社製品の値上げ浸透", "pin_type": "price_set", "sign": "+", "series": "none", "watch": "none", "note": "値上げと定価販売比率の上昇で粗利率が改善し増益となる"}
+{"code": "7943", "name": "ニチハ", "s33": "ガラス･土石製品", "pin": "住宅着工（窯業系外装材の数量）", "pin_type": "volume", "sign": "+", "series": "国交省 住宅着工統計(月次)", "watch": "manual", "note": "国内外の住宅着工に連動。セメント・パルプ原料は買い手"}
+{"code": "7944", "name": "ローランド", "s33": "その他製品", "pin": "USD/JPY為替", "pin_type": "fx", "sign": "+", "series": "USD/JPY", "watch": "manual", "note": "海外売上9割で円安が電子楽器の円建て売上を押し上げる"}
+{"code": "7947", "name": "エフピコ", "s33": "化学", "scale": "TOPIX Small 1", "pin": "ポリスチレン(PS)原料価格", "pin_type": "commodity", "sign": "-", "series": "日銀CGPI ポリスチレン", "watch": "manual", "note": "PS原料が原価中心・上昇は減益、値上げ転嫁は遅行"}
+{"code": "7951", "name": "ヤマハ", "s33": "その他製品", "pin": "楽器の海外販売数量", "pin_type": "volume", "sign": "na", "series": "none", "watch": "none", "note": "中国など海外の楽器販売数量が利益を左右し為替は増幅要因"}
+{"code": "7956", "name": "ピジョン", "s33": "その他製品", "pin": "中国ベビー用品の販売数量", "pin_type": "volume", "sign": "na", "series": "none", "watch": "none", "note": "中国での哺乳瓶などベビー用品の販売数量が利益の主柱"}
+{"code": "7965", "name": "象印マホービン", "s33": "電気機器", "pin": "自社製品の値上げ浸透", "pin_type": "price_set", "sign": "+", "series": "CGPI 家庭用電気機器(日銀・月次)", "watch": "manual", "note": "原材料高を値上げで転嫁・浸透度と販売数量が利益を左右"}
+{"code": "7966", "name": "リンテック", "s33": "その他製品", "pin": "半導体・電子向けテープ数量", "pin_type": "volume", "sign": "na", "series": "SEMI/WSTS半導体出荷", "watch": "manual", "note": "半導体・電子向け粘着テープの出荷数量が利益を牽引する"}
+{"code": "7970", "name": "信越ポリマー", "s33": "化学", "scale": "TOPIX Small 1", "pin": "半導体ウェハー出荷枚数(搬送容器数量)", "pin_type": "volume", "sign": "+", "series": "SEMI シリコンウェハ出荷面積", "watch": "manual", "note": "半導体ウェハー出荷容器が利益柱・ウェハー出荷枚数に連動"}
+{"code": "7972", "name": "イトーキ", "s33": "その他製品", "pin": "オフィス家具の受注量", "pin_type": "volume", "sign": "na", "series": "三鬼商事 都心5区空室率", "watch": "manual", "note": "オフィス移転・改装案件の受注量が利益の中心を占める"}
+{"code": "7974", "name": "任天堂", "s33": "その他製品", "pin": "ハード/ソフト販売本数", "pin_type": "volume", "sign": "na", "series": "ファミ通週間ハード販売", "watch": "manual", "note": "Switch系のハードとソフトの販売本数が利益を直接決める"}
+{"code": "7976", "name": "三菱鉛筆", "s33": "その他製品", "pin": "USD/JPY為替", "pin_type": "fx", "sign": "+", "series": "USD/JPY", "watch": "manual", "note": "海外売上が約半分で円安が円建て売上と利益を押し上げる。推測"}
+{"code": "7981", "name": "タカラスタンダード", "s33": "その他製品", "pin": "新設住宅着工戸数", "pin_type": "volume", "sign": "na", "series": "国交省 新設住宅着工戸数", "watch": "manual", "note": "システムキッチン等の出荷が新設住宅着工戸数に連動する"}
+{"code": "7984", "name": "コクヨ", "s33": "その他製品", "pin": "オフィス家具の受注量", "pin_type": "volume", "sign": "na", "series": "三鬼商事 都心5区空室率", "watch": "manual", "note": "オフィス移転・改装に伴う家具受注量が利益の中心"}
+{"code": "7988", "name": "ニフコ", "s33": "化学", "scale": "TOPIX Mid400", "pin": "自動車生産台数", "pin_type": "volume", "sign": "+", "series": "自動車生産台数(自工会)", "watch": "manual", "note": "自動車内装ファスナーが主力・自動車生産台数が数量を規定"}
+{"code": "7990", "name": "グローブライド", "s33": "その他製品", "pin": "釣具の販売数量", "pin_type": "volume", "sign": "na", "series": "none", "watch": "none", "note": "釣具の国内外販売数量が利益の中心で為替も増幅要因。推測"}
+{"code": "7994", "name": "オカムラ", "s33": "その他製品", "pin": "オフィス家具の受注量", "pin_type": "volume", "sign": "na", "series": "三鬼商事 都心5区空室率", "watch": "manual", "note": "オフィス家具の受注量が利益の中心で物流機器も柱となる"}
+{"code": "7995", "name": "バルカー", "s33": "化学", "scale": "TOPIX Small 1", "pin": "半導体装置・プラント向けシール材の数量", "pin_type": "volume", "sign": "+", "series": "SEMI 半導体製造装置出荷", "watch": "manual", "note": "半導体装置・プラント向けシール材の需要数量が利益の中心"}
+{"code": "8001", "name": "伊藤忠商事", "s33": "卸売業", "pin": "鉄鉱石・原料炭価格", "pin_type": "commodity", "sign": "+", "series": "TE iron-ore", "watch": "auto", "note": "金属カンパニーが最大益・豪州鉄鉱石権益が持分利益に直結、非資源厚く感応度は中"}
+{"code": "8002", "name": "丸紅", "s33": "卸売業", "pin": "銅価格(LME)", "pin_type": "commodity", "sign": "+", "series": "TE copper", "watch": "auto", "note": "チリ銅権益の持分利益が最大の変動要因、アグリ・電力は数量側の寄与"}
+{"code": "8008", "name": "ヨンドシーホールディングス", "s33": "小売業", "pin": "金・地金価格", "pin_type": "commodity", "sign": "-", "series": "田中貴金属 金小売価格", "watch": "auto", "note": "ジュエリーは金が仕入原価、金高で店頭単価上昇も客数減"}
+{"code": "8012", "name": "長瀬産業", "s33": "卸売業", "pin": "電子材料・機能素材の取扱数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "化学品商社で市況は仕入売価の両面、半導体材料の数量が利益を動かす"}
+{"code": "8015", "name": "豊田通商", "s33": "卸売業", "pin": "トヨタ世界生産台数", "pin_type": "volume", "sign": "+", "series": "トヨタ月次生産台数(IR)", "watch": "manual", "note": "トヨタ系の物流・部品と新興国販売が主、生産台数が取扱数量を決める"}
+{"code": "8016", "name": "オンワードホールディングス", "s33": "繊維製品", "pin": "既存店・EC売上（客数・客単価）", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "アパレル小売の数量と単価が中心。素材と為替はコスト側"}
+{"code": "8020", "name": "兼松", "s33": "卸売業", "pin": "電子デバイス・ICT機器の取扱数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "電子・デバイスが最大益、鉄鋼食料も持つが数量とマージンが主因"}
+{"code": "8022", "name": "美津濃", "s33": "その他製品", "pin": "自社製品の値上げ浸透", "pin_type": "price_set", "sign": "+", "series": "none", "watch": "none", "note": "値上げと定価販売比率の上昇で粗利率が改善し増益となる"}
+{"code": "8031", "name": "三井物産", "s33": "卸売業", "pin": "鉄鉱石価格", "pin_type": "commodity", "sign": "+", "series": "TE iron-ore", "watch": "auto", "note": "金属資源が利益の約4割・豪州鉄鉱石の持分生産が売上単価に直結する"}
+{"code": "8035", "name": "東京エレクトロン", "s33": "電気機器", "pin": "WFE(半導体前工程投資額)", "pin_type": "volume", "sign": "+", "series": "SEMI 北米半導体製造装置出荷額(月次)", "watch": "manual", "note": "装置販売台数が売上・メモリ価格は顧客投資を経由する2ホップ"}
+{"code": "8050", "name": "セイコーグループ", "s33": "精密機器", "pin": "時計ブランドの販売数量・単価", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "時計事業が利益の柱。デバイス・システムも数量型"}
+{"code": "8051", "name": "山善", "s33": "卸売業", "pin": "工作機械受注額(設備投資)", "pin_type": "volume", "sign": "+", "series": "日工会 工作機械受注", "watch": "manual", "note": "生産財商社で工作機械・工具の受注数量が主、住設は住宅着工に連動"}
+{"code": "8053", "name": "住友商事", "s33": "卸売業", "pin": "建機・航空機リースの稼働台数", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "資源縮小後は輸送機・建機が最大益、市況より稼働・販売数量が主 推測"}
+{"code": "8056", "name": "ＢＩＰＲＯＧＹ", "s33": "情報･通信業", "pin": "SE稼働率・受注量", "pin_type": "volume", "sign": "+", "series": "日銀CSPI 受託開発ソフトウェア", "watch": "manual", "note": "人月受託が主体で金融公共の受注量と稼働が利益を決める"}
+{"code": "8057", "name": "内田洋行", "s33": "卸売業", "pin": "文教ICT・オフィス案件の受注数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "GIGAスクール等の公共ICT案件と什器販売、予算と受注数量が主因"}
+{"code": "8058", "name": "三菱商事", "s33": "卸売業", "pin": "原料炭価格", "pin_type": "commodity", "sign": "+", "series": "TE coking-coal", "watch": "auto", "note": "豪州BMA原料炭とLNGが二本柱・原料炭市況が持分利益を最も動かす"}
+{"code": "8060", "name": "キヤノンマーケティングジャパン", "s33": "卸売業", "pin": "複合機・ITサービスの受注数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "キヤノン製品の国内販売とITソリューション、案件数量が利益を決める"}
+{"code": "8061", "name": "西華産業", "s33": "卸売業", "pin": "発電・産業設備の受注数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "三菱系の機械商社で電力向けプラント機器の受注案件数が利益を決める"}
+{"code": "8074", "name": "ＹＵＡＳＡ", "s33": "卸売業", "pin": "産業機械・建材の受注数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "機械建材商社で設備投資と建設需要の数量が主、市況は仕入売価両面"}
+{"code": "8078", "name": "阪和興業", "s33": "卸売業", "pin": "鋼材・ニッケル等の市況", "pin_type": "commodity", "sign": "+", "series": "TE nickel", "watch": "auto", "note": "鉄鋼非鉄の在庫を持つトレーダーで市況上昇が在庫評価と売価に直入"}
+{"code": "8079", "name": "正栄食品工業", "s33": "卸売業", "pin": "カカオ豆価格", "pin_type": "commodity", "sign": "-", "series": "TE cocoa", "watch": "auto", "note": "カカオ・ナッツを輸入して加工販売する買い手、原料高は原価増に直結"}
+{"code": "8086", "name": "ニプロ", "s33": "精密機器", "pin": "透析・注射器等の販売数量（海外含む）", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "数量成長が中心。薬価・診療報酬の引下げは恒常的逆風・推測"}
+{"code": "8088", "name": "岩谷産業", "s33": "卸売業", "pin": "LPガス価格(サウジCP)", "pin_type": "commodity", "sign": "mixed", "series": "サウジCP(月次公表)", "watch": "manual", "note": "LPGは仕入も売価も連動、在庫評価は+だが需要減は-で純方向が不定"}
+{"code": "8097", "name": "三愛オブリ", "s33": "卸売業", "pin": "石油製品市況(原油連動)", "pin_type": "commodity", "sign": "mixed", "series": "TE brent", "watch": "auto", "note": "石油製品の仕入販売で在庫評価は+、需要減とマージン縮小は-で不定"}
+{"code": "8098", "name": "稲畑産業", "s33": "卸売業", "pin": "電子材料・液晶材料の取扱数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "住友化学系の化学品商社で情報電子の取扱数量が利益寄与では最大"}
+{"code": "8111", "name": "ゴールドウイン", "s33": "繊維製品", "pin": "既存店売上・客単価（ブランド需要）", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "THE NORTH FACEの数量と単価が中心。素材はコスト側"}
+{"code": "8113", "name": "ユニ・チャーム", "s33": "化学", "scale": "TOPIX Large70", "pin": "パルプ・不織布樹脂価格", "pin_type": "commodity", "sign": "-", "series": "NBSKパルプ価格(月次)", "watch": "manual", "note": "パルプ・不織布樹脂が原価中心・上昇は減益、数量は新興国依存"}
+{"code": "8125", "name": "ワキタ", "s33": "卸売業", "pin": "建機レンタルの稼働率", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "建機レンタルと不動産賃貸の二本柱、建設需要の稼働数量が主因"}
+{"code": "8129", "name": "東邦ホールディングス", "s33": "卸売業", "pin": "薬価(引き下げ改定)", "pin_type": "event", "sign": "+", "series": "厚労省 薬価改定率", "watch": "manual", "note": "医薬卸で薬価改定が売価を規定、薬価差益と物流費が利益を決める"}
+{"code": "8130", "name": "サンゲツ", "s33": "卸売業", "pin": "内装材の値上げ浸透", "pin_type": "price_set", "sign": "+", "series": "none", "watch": "none", "note": "壁紙・床材で自社が価格改定を主導、浸透度が粗利率を直接動かす"}
+{"code": "8133", "name": "伊藤忠エネクス", "s33": "卸売業", "pin": "石油製品市況(原油連動)", "pin_type": "commodity", "sign": "mixed", "series": "TE brent", "watch": "auto", "note": "石油・LPG販売で在庫評価は+、需要と数量は逆で純方向は確定しない"}
+{"code": "8136", "name": "サンリオ", "s33": "卸売業", "pin": "海外ライセンス収入(ロイヤリティ)", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "IPライセンスが利益の柱、料率でなく海外での商品化数量が主因"}
+{"code": "8153", "name": "モスフードサービス", "s33": "卸売業", "pin": "既存店売上・客単価(値上げ)", "pin_type": "price_set", "sign": "+", "series": "none", "watch": "none", "note": "外食本体で値上げ浸透と客数が利益を決める、原料高は逆方向コスト"}
+{"code": "8154", "name": "加賀電子", "s33": "卸売業", "pin": "電子部品・EMSの取扱数量", "pin_type": "volume", "sign": "+", "series": "WSTS 世界半導体出荷", "watch": "manual", "note": "電子部品商社にEMSを併営、価格は転嫁され取扱数量が利益を動かす"}
+{"code": "8160", "name": "木曽路", "s33": "小売業", "pin": "国産和牛の枝肉相場", "pin_type": "commodity", "sign": "-", "series": "東京都中央卸売市場 枝肉価格", "watch": "manual", "note": "しゃぶしゃぶ・すき焼きで和牛が原価の中心、相場高で採算悪化"}
+{"code": "8173", "name": "Ｊｏｓｈｉｎ", "s33": "小売業", "pin": "既存店売上（夏季エアコン需要）", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "家電量販は既存店売上と白物需要で利益が動く"}
+{"code": "8174", "name": "日本瓦斯", "s33": "小売業", "pin": "LPガス輸入CP価格（仕入）", "pin_type": "commodity", "sign": "-", "series": "サウジCP(LPG)・貿易統計CIF", "watch": "manual", "note": "仕入はCP連動で小売価格は下方硬直、CP下落局面に粗利拡大"}
+{"code": "8179", "name": "ロイヤルホールディングス", "s33": "小売業", "pin": "既存店売上・ホテル稼働率", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "外食既存店と機内食・ホテルの稼働という数量が利益を動かす"}
+{"code": "8194", "name": "ライフコーポレーション", "s33": "小売業", "pin": "既存店売上・客単価", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "都市型SMは既存店売上と生鮮粗利が利益、仕入は原価側"}
+{"code": "8200", "name": "リンガーハット", "s33": "小売業", "pin": "既存店売上・客数", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "ちゃんぽん業態の客数が利益、国産野菜と豚肉は原価側"}
+{"code": "8214", "name": "ＡＯＫＩホールディングス", "s33": "小売業", "pin": "快活CLUBの稼働・既存店売上", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "利益の柱は快活CLUBの店舗稼働、紳士服は既存店売上"}
+{"code": "8218", "name": "コメリ", "s33": "小売業", "pin": "既存店売上・農業資材需要", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "農業系HCは既存店売上が利益源、肥料や建材は原価側"}
+{"code": "8219", "name": "青山商事", "s33": "小売業", "pin": "既存店売上・客数", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "紳士服は既存店売上が利益源、スーツ需要の構造縮小が逆風"}
+{"code": "8227", "name": "しまむら", "s33": "小売業", "pin": "既存店売上・客単価", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "低価格衣料は既存店売上が利益源、円安は仕入原価増"}
+{"code": "8233", "name": "高島屋", "s33": "小売業", "pin": "百貨店の免税・高額品売上", "pin_type": "volume", "sign": "+", "series": "JNTO訪日外客数・百貨店協会免税売上", "watch": "manual", "note": "国内百貨店の免税と外商が利益の柱、訪日客数に連動"}
+{"code": "8237", "name": "松屋", "s33": "小売業", "pin": "銀座店の免税・高額品売上", "pin_type": "volume", "sign": "+", "series": "JNTO訪日外客数・百貨店協会免税売上", "watch": "manual", "note": "銀座店の免税比率が高く、訪日客数に利益が直接連動"}
+{"code": "8242", "name": "エイチ・ツー・オー　リテイリング", "s33": "小売業", "pin": "百貨店の免税・高額品売上", "pin_type": "volume", "sign": "+", "series": "JNTO訪日外客数・百貨店協会免税売上", "watch": "manual", "note": "阪急うめだの免税と高額品が利益の中心、訪日客数依存"}
+{"code": "8252", "name": "丸井グループ", "s33": "小売業", "pin": "エポスカード取扱高・債権残高", "pin_type": "volume", "sign": "+", "series": "月次カード取扱高(IR)", "watch": "manual", "note": "利益の大半はフィンテック、債権残高の伸びが源泉"}
+{"code": "8253", "name": "クレディセゾン", "s33": "その他金融業", "pin": "カードショッピング取扱高", "pin_type": "volume", "sign": "+", "series": "日本クレジット協会 カード取扱高(月次)", "watch": "manual", "note": "取扱高と与信残高が収益源、調達金利の上昇はコスト増で逆風"}
+{"code": "8267", "name": "イオン", "s33": "小売業", "pin": "グループ既存店売上・カード債権残高", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "GMSは薄利、金融・モール・ドラッグの数量が利益の柱"}
+{"code": "8273", "name": "イズミ", "s33": "小売業", "pin": "既存店売上・客単価", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "中国地方のGMS/SMで既存店売上とSC賃料収入が利益源"}
+{"code": "8276", "name": "平和堂", "s33": "小売業", "pin": "既存店売上・客単価", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "滋賀地盤のSM/GMSで既存店売上が利益を決める"}
+{"code": "8278", "name": "フジ", "s33": "小売業", "pin": "既存店売上・客単価", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "四国地盤のSM/GMSで既存店売上と統合効果が利益源"}
+{"code": "8281", "name": "ゼビオホールディングス", "s33": "小売業", "pin": "既存店売上・客数", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "スポーツ用品小売は既存店売上が利益源、仕入は原価側"}
+{"code": "8282", "name": "ケーズホールディングス", "s33": "小売業", "pin": "既存店売上（夏季エアコン需要）", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "家電量販は既存店売上と猛暑の白物需要で利益が動く"}
+{"code": "8283", "name": "ＰＡＬＴＡＣ", "s33": "卸売業", "pin": "日用品・化粧品の出荷数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "日用品卸で薄利、物流網の取扱数量とドラッグ店舗数が利益を決める"}
+{"code": "8303", "name": "ＳＢＩ新生銀行", "s33": "銀行業", "pin": "無担保ローン(レイク)の貸付残高", "pin_type": "volume", "sign": "+", "series": "日本貸金業協会 無担保貸付残高(月次)", "watch": "manual", "note": "利益の柱はレイクの消費者ローン残高で、銀行の利ざやは補助的"}
+{"code": "8304", "name": "あおぞら銀行", "s33": "銀行業", "pin": "米長期金利(US10Y)", "pin_type": "rate", "sign": "-", "series": "米10年債利回り", "watch": "manual", "note": "外債運用と米不動産与信が重く米金利上昇は評価損と与信費用で減益"}
+{"code": "8306", "name": "三菱ＵＦＪフィナンシャル・グループ", "s33": "銀行業", "pin": "国内金利(政策金利・長期金利)", "pin_type": "rate", "sign": "+", "series": "日銀政策金利/10年JGB利回り", "watch": "manual", "note": "円金利上昇で預貸金利ざやが拡大、海外貸出と手数料も上乗せする"}
+{"code": "8308", "name": "りそなホールディングス", "s33": "銀行業", "pin": "国内金利(政策金利・長期金利)", "pin_type": "rate", "sign": "+", "series": "日銀政策金利/10年JGB利回り", "watch": "manual", "note": "個人・中小向け貸出の利ざやが柱、決済手数料は金利中立の補助"}
+{"code": "8309", "name": "三井住友トラストグループ", "s33": "銀行業", "pin": "国内金利(政策金利・長期金利)", "pin_type": "rate", "sign": "+", "series": "日銀政策金利/10年JGB利回り", "watch": "manual", "note": "銀行勘定の利ざやが最大、受託資産手数料は株価連動の補助収益"}
+{"code": "8316", "name": "三井住友フィナンシャルグループ", "s33": "銀行業", "pin": "国内金利(政策金利・長期金利)", "pin_type": "rate", "sign": "+", "series": "日銀政策金利/10年JGB利回り", "watch": "manual", "note": "国内貸出の利ざや拡大が利益の主軸、決済・消費者金融も金利連動"}
+{"code": "8331", "name": "千葉銀行", "s33": "銀行業", "pin": "国内金利(政策金利・長期金利)", "pin_type": "rate", "sign": "+", "series": "日銀政策金利/10年JGB利回り", "watch": "manual", "note": "千葉県内の住宅・法人貸出の利ざや拡大が利益の中心となる"}
+{"code": "8334", "name": "群馬銀行", "s33": "銀行業", "pin": "国内金利(政策金利・長期金利)", "pin_type": "rate", "sign": "+", "series": "日銀政策金利/10年JGB利回り", "watch": "manual", "note": "群馬県内の貸出利ざやが柱、円金利上昇が最大の増益要因となる"}
+{"code": "8336", "name": "武蔵野銀行", "s33": "銀行業", "pin": "国内金利(政策金利・長期金利)", "pin_type": "rate", "sign": "+", "series": "日銀政策金利/10年JGB利回り", "watch": "manual", "note": "埼玉県の貸出利ざやが収益源、円金利上昇が最大の増益要因"}
+{"code": "8337", "name": "千葉興業銀行", "s33": "銀行業", "pin": "国内金利(政策金利・長期金利)", "pin_type": "rate", "sign": "+", "series": "日銀政策金利/10年JGB利回り", "watch": "manual", "note": "千葉県内の中小向け貸出の利ざや拡大が利益の中心となる"}
+{"code": "8341", "name": "七十七銀行", "s33": "銀行業", "pin": "国内金利(政策金利・長期金利)", "pin_type": "rate", "sign": "+", "series": "日銀政策金利/10年JGB利回り", "watch": "manual", "note": "宮城県の地元貸出利ざやが中心、有価証券運用も金利に感応する"}
+{"code": "8346", "name": "東邦銀行", "s33": "銀行業", "pin": "国内金利(政策金利・長期金利)", "pin_type": "rate", "sign": "+", "series": "日銀政策金利/10年JGB利回り", "watch": "manual", "note": "福島県の地元貸出利ざやが柱、有価証券含み損は一時要因"}
+{"code": "8354", "name": "ふくおかフィナンシャルグループ", "s33": "銀行業", "pin": "国内金利(政策金利・長期金利)", "pin_type": "rate", "sign": "+", "series": "日銀政策金利/10年JGB利回り", "watch": "manual", "note": "福岡銀行など傘下行の貸出利ざやが柱、みんなの銀行は数量型"}
+{"code": "8358", "name": "スルガ銀行", "s33": "銀行業", "pin": "国内金利(政策金利・長期金利)", "pin_type": "rate", "sign": "+", "series": "日銀政策金利/10年JGB利回り", "watch": "manual", "note": "個人向け不動産投資ローンの高利回りが柱、金利上昇で利ざや改善"}
+{"code": "8359", "name": "八十二長野銀行", "s33": "銀行業", "pin": "国内金利(政策金利・長期金利)", "pin_type": "rate", "sign": "+", "series": "日銀政策金利/10年JGB利回り", "watch": "manual", "note": "長野県の貸出利ざやが利益の中心、政策保有株の売却益も補助"}
+{"code": "8360", "name": "山梨中央銀行", "s33": "銀行業", "pin": "国内金利(政策金利・長期金利)", "pin_type": "rate", "sign": "+", "series": "日銀政策金利/10年JGB利回り", "watch": "manual", "note": "山梨県の貸出利ざやと有価証券運用が収益源、商材は持たない"}
+{"code": "8361", "name": "大垣共立銀行", "s33": "銀行業", "pin": "国内金利(政策金利・長期金利)", "pin_type": "rate", "sign": "+", "series": "日銀政策金利/10年JGB利回り", "watch": "manual", "note": "岐阜県の地元貸出の利ざや拡大が利益の中心で、金利が主役"}
+{"code": "8366", "name": "滋賀銀行", "s33": "銀行業", "pin": "国内金利(政策金利・長期金利)", "pin_type": "rate", "sign": "+", "series": "日銀政策金利/10年JGB利回り", "watch": "manual", "note": "滋賀県の貸出利ざやが柱、円金利上昇が最大ドライバーとなる"}
+{"code": "8367", "name": "南都銀行", "s33": "銀行業", "pin": "国内金利(政策金利・長期金利)", "pin_type": "rate", "sign": "+", "series": "日銀政策金利/10年JGB利回り", "watch": "manual", "note": "奈良県の地元貸出利ざやが収益源、商品市況とは無関係である"}
+{"code": "8368", "name": "百五銀行", "s33": "銀行業", "pin": "国内金利(政策金利・長期金利)", "pin_type": "rate", "sign": "+", "series": "日銀政策金利/10年JGB利回り", "watch": "manual", "note": "三重県の貸出利ざや拡大が利益の中心、有価証券運用も金利連動"}
+{"code": "8370", "name": "紀陽銀行", "s33": "銀行業", "pin": "国内金利(政策金利・長期金利)", "pin_type": "rate", "sign": "+", "series": "日銀政策金利/10年JGB利回り", "watch": "manual", "note": "和歌山・大阪の貸出利ざやが柱、円金利上昇で収益が改善する"}
+{"code": "8377", "name": "ほくほくフィナンシャルグループ", "s33": "銀行業", "pin": "国内金利(政策金利・長期金利)", "pin_type": "rate", "sign": "+", "series": "日銀政策金利/10年JGB利回り", "watch": "manual", "note": "北陸・北海道銀行の貸出利ざや拡大が利益の中心、商材はない"}
+{"code": "8381", "name": "山陰合同銀行", "s33": "銀行業", "pin": "国内金利(政策金利・長期金利)", "pin_type": "rate", "sign": "+", "series": "日銀政策金利/10年JGB利回り", "watch": "manual", "note": "山陰の地元貸出利ざやが収益源、円金利上昇が主ドライバー"}
+{"code": "8386", "name": "百十四銀行", "s33": "銀行業", "pin": "国内金利(政策金利・長期金利)", "pin_type": "rate", "sign": "+", "series": "日銀政策金利/10年JGB利回り", "watch": "manual", "note": "香川県の貸出利ざやが利益の中心、政策保有株の売却益も補助"}
+{"code": "8388", "name": "阿波銀行", "s33": "銀行業", "pin": "国内金利(政策金利・長期金利)", "pin_type": "rate", "sign": "+", "series": "日銀政策金利/10年JGB利回り", "watch": "manual", "note": "徳島県の地元貸出利ざやが柱、有価証券運用も金利に感応する"}
+{"code": "8399", "name": "琉球銀行", "s33": "銀行業", "pin": "国内金利(政策金利・長期金利)", "pin_type": "rate", "sign": "+", "series": "日銀政策金利/10年JGB利回り", "watch": "manual", "note": "沖縄県の貸出利ざや拡大が利益の中心、観光は数量面の補助"}
+{"code": "8410", "name": "セブン銀行", "s33": "銀行業", "pin": "ATM総利用件数", "pin_type": "volume", "sign": "+", "series": "会社月次 ATM利用件数開示", "watch": "manual", "note": "収益はATM1件あたり手数料×件数で、金利も商品市況もほぼ効かない"}
+{"code": "8411", "name": "みずほフィナンシャルグループ", "s33": "銀行業", "pin": "国内金利(政策金利・長期金利)", "pin_type": "rate", "sign": "+", "series": "日銀政策金利/10年JGB利回り", "watch": "manual", "note": "大企業貸出が中心で、円金利上昇による利ざや改善が利益を動かす"}
+{"code": "8418", "name": "山口フィナンシャルグループ", "s33": "銀行業", "pin": "国内金利(政策金利・長期金利)", "pin_type": "rate", "sign": "+", "series": "日銀政策金利/10年JGB利回り", "watch": "manual", "note": "山口・もみじ銀行の貸出利ざやが柱、円金利上昇で改善する"}
+{"code": "8424", "name": "芙蓉総合リース", "s33": "その他金融業", "pin": "リース・割賦の営業資産残高", "pin_type": "volume", "sign": "+", "series": "リース事業協会 リース取扱高(月次)", "watch": "manual", "note": "資産残高×スプレッドが収益、調達金利上昇はコスト増で逆風"}
+{"code": "8425", "name": "みずほリース", "s33": "その他金融業", "pin": "リース営業資産残高", "pin_type": "volume", "sign": "+", "series": "リース事業協会 リース取扱高(月次)", "watch": "manual", "note": "リース資産残高の積み上げが収益源で、調達金利上昇はコスト増"}
+{"code": "8439", "name": "東京センチュリー", "s33": "その他金融業", "pin": "営業資産残高(航空機・オートリース)", "pin_type": "volume", "sign": "+", "series": "リース事業協会 リース取扱高(月次)", "watch": "manual", "note": "航空機・オートリースの資産残高が主役、機体価格と米金利も影響"}
+{"code": "8473", "name": "ＳＢＩホールディングス", "s33": "証券･商品先物取引業", "pin": "SBI証券の株式売買代金", "pin_type": "volume", "sign": "+", "series": "JPX 東証売買代金(日次)", "watch": "manual", "note": "SBI証券の売買代金と口座数が中心、銀行・保険・投資事業も併営"}
+{"code": "8511", "name": "日本証券金融", "s33": "その他金融業", "pin": "短期金利(無担保コールO/N)", "pin_type": "rate", "sign": "+", "series": "無担保コールO/N(日銀・日次)", "watch": "manual", "note": "貸借取引と短期金融の利ざやが金利上昇で改善、信用残高も効く"}
+{"code": "8522", "name": "名古屋銀行", "s33": "銀行業", "pin": "国内金利(政策金利・長期金利)", "pin_type": "rate", "sign": "+", "series": "日銀政策金利/10年JGB利回り", "watch": "manual", "note": "愛知県の中小向け貸出の利ざやが収益源、商材は持たない"}
+{"code": "8524", "name": "北洋銀行", "s33": "銀行業", "pin": "国内金利(政策金利・長期金利)", "pin_type": "rate", "sign": "+", "series": "日銀政策金利/10年JGB利回り", "watch": "manual", "note": "北海道の地元貸出利ざやが柱、円金利上昇が最大の増益要因"}
+{"code": "8544", "name": "京葉銀行", "s33": "銀行業", "pin": "国内金利(政策金利・長期金利)", "pin_type": "rate", "sign": "+", "series": "日銀政策金利/10年JGB利回り", "watch": "manual", "note": "千葉県の住宅ローン中心で、円金利上昇による利ざや改善が主役"}
+{"code": "8566", "name": "リコーリース", "s33": "その他金融業", "pin": "リース・割賦の営業資産残高", "pin_type": "volume", "sign": "+", "series": "リース事業協会 リース取扱高(月次)", "watch": "manual", "note": "中小向けリース・割賦の資産残高が収益源、商品市況とは無関係"}
+{"code": "8570", "name": "イオンフィナンシャルサービス", "s33": "その他金融業", "pin": "カード取扱高・割賦債権残高", "pin_type": "volume", "sign": "+", "series": "日本クレジット協会 カード取扱高(月次)", "watch": "manual", "note": "国内カードとアジアの与信残高が収益源、現地金利上昇はコスト"}
+{"code": "8572", "name": "アコム", "s33": "その他金融業", "pin": "無担保ローンの営業貸付金残高", "pin_type": "volume", "sign": "+", "series": "日本貸金業協会 無担保貸付残高(月次)", "watch": "manual", "note": "貸付残高×貸出金利が収益、利息返還引当の増減も損益を動かす"}
+{"code": "8584", "name": "ジャックス", "s33": "その他金融業", "pin": "オートローン・割賦の取扱高", "pin_type": "volume", "sign": "+", "series": "日本クレジット協会 カード取扱高(月次)", "watch": "manual", "note": "オートクレジット残高が収益源、調達金利の上昇はコストで逆風"}
+{"code": "8585", "name": "オリエントコーポレーション", "s33": "その他金融業", "pin": "オートローン・カード債権残高", "pin_type": "volume", "sign": "+", "series": "日本クレジット協会 カード取扱高(月次)", "watch": "manual", "note": "オートローンとカード残高が収益の中心、金利上昇は調達コスト増"}
+{"code": "8591", "name": "オリックス", "s33": "その他金融業", "pin": "保有不動産・投資先の売却益(資産価格)", "pin_type": "asset", "sign": "+", "series": "国交省 不動産価格指数(月次)", "watch": "manual", "note": "多角化だが投資・不動産・PEの売却益が利益変動の最大要因"}
+{"code": "8593", "name": "三菱ＨＣキャピタル", "s33": "その他金融業", "pin": "リース営業資産残高", "pin_type": "volume", "sign": "+", "series": "リース事業協会 リース取扱高(月次)", "watch": "manual", "note": "リース資産残高と航空機・不動産の売却益が利益の中心となる"}
+{"code": "8595", "name": "ジャフコ　グループ", "s33": "証券･商品先物取引業", "pin": "投資先株価(新興株市況)", "pin_type": "asset", "sign": "+", "series": "東証グロース250指数", "watch": "manual", "note": "未上場投資先のIPO・売却益が損益のほぼ全てで新興株市況に直結"}
+{"code": "8600", "name": "トモニホールディングス", "s33": "銀行業", "pin": "国内金利(政策金利・長期金利)", "pin_type": "rate", "sign": "+", "series": "日銀政策金利/10年JGB利回り", "watch": "manual", "note": "徳島大正・香川銀行の地元貸出の利ざや拡大が利益の中心"}
+{"code": "8601", "name": "大和証券グループ本社", "s33": "証券･商品先物取引業", "pin": "東証1日平均売買代金", "pin_type": "volume", "sign": "+", "series": "JPX 東証売買代金(日次)", "watch": "manual", "note": "リテール委託とホールセール収益が売買代金に連動する数量型"}
+{"code": "8604", "name": "野村ホールディングス", "s33": "証券･商品先物取引業", "pin": "東証1日平均売買代金", "pin_type": "volume", "sign": "+", "series": "JPX 東証売買代金(日次)", "watch": "manual", "note": "委託手数料とトレーディングが売買代金に連動、商品でなく数量型"}
+{"code": "8609", "name": "岡三証券グループ", "s33": "証券･商品先物取引業", "pin": "リテール株式売買代金", "pin_type": "volume", "sign": "+", "series": "JPX 東証売買代金(日次)", "watch": "manual", "note": "対面リテールの委託手数料と投信販売が売買代金に連動する数量型"}
+{"code": "8613", "name": "丸三証券", "s33": "証券･商品先物取引業", "pin": "リテール株式売買代金", "pin_type": "volume", "sign": "+", "series": "JPX 東証売買代金(日次)", "watch": "manual", "note": "個人向け対面営業の委託手数料が中心で、相場活況が唯一の増益源"}
+{"code": "8616", "name": "東海東京フィナンシャル・ホールディングス", "s33": "証券･商品先物取引業", "pin": "リテール株式売買代金", "pin_type": "volume", "sign": "+", "series": "JPX 東証売買代金(日次)", "watch": "manual", "note": "対面リテールの委託・引受収益が売買代金に連動、商材は持たない"}
+{"code": "8628", "name": "松井証券", "s33": "証券･商品先物取引業", "pin": "個人信用取引の売買代金", "pin_type": "volume", "sign": "+", "series": "JPX 東証売買代金(日次)", "watch": "manual", "note": "個人信用取引の売買代金が収益の大半、金利収入も信用残高に連動"}
+{"code": "8630", "name": "ＳＯＭＰＯホールディングス", "s33": "保険業", "pin": "国内損保の保険料率改定", "pin_type": "price_set", "sign": "+", "series": "損保料率算出機構 参考純率改定", "watch": "manual", "note": "国内損保の料率引上げ浸透が利益の柱、介護・海外事業は補助"}
+{"code": "8697", "name": "日本取引所グループ", "s33": "その他金融業", "pin": "東証1日平均売買代金", "pin_type": "volume", "sign": "+", "series": "JPX 東証売買代金(日次)", "watch": "manual", "note": "取引所の手数料は売買代金と清算件数に比例、価格でなく数量が主役"}
+{"code": "8698", "name": "マネックスグループ", "s33": "証券･商品先物取引業", "pin": "ビットコイン価格", "pin_type": "commodity", "sign": "+", "series": "BTC/JPY(取引所公表)", "watch": "manual", "note": "コインチェックの取引高と手数料がBTC価格に連動、金融唯一の商品型"}
+{"code": "8706", "name": "極東証券", "s33": "証券･商品先物取引業", "pin": "外債・投信の販売額と自己運用損益", "pin_type": "volume", "sign": "+", "series": "JPX 東証売買代金(日次)", "watch": "manual", "note": "リテールの債券・投信販売と自己勘定運用が損益を左右する。推測"}
+{"code": "8707", "name": "岩井コスモホールディングス", "s33": "証券･商品先物取引業", "pin": "リテール株式売買代金", "pin_type": "volume", "sign": "+", "series": "JPX 東証売買代金(日次)", "watch": "manual", "note": "個人向け委託手数料が収益の中心で、相場の売買代金に直結する"}
+{"code": "8714", "name": "池田泉州ホールディングス", "s33": "銀行業", "pin": "国内金利(政策金利・長期金利)", "pin_type": "rate", "sign": "+", "series": "日銀政策金利/10年JGB利回り", "watch": "manual", "note": "池田泉州銀行の大阪府内貸出の利ざや拡大が利益の中心となる"}
+{"code": "8715", "name": "アニコム　ホールディングス", "s33": "保険業", "pin": "ペット保険の保有契約件数", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "契約件数の増加が収益源、動物診療費の上昇は損害率悪化で逆風"}
+{"code": "8725", "name": "ＭＳ＆ＡＤインシュアランスグループホールディングス", "s33": "保険業", "pin": "火災・自動車の保険料率改定", "pin_type": "price_set", "sign": "+", "series": "損保料率算出機構 参考純率改定", "watch": "manual", "note": "料率引上げの浸透が増益源で、政策保有株の売却益も上乗せされる"}
+{"code": "8729", "name": "ソニーフィナンシャルグループ", "s33": "保険業", "pin": "超長期金利(30年JGB)", "pin_type": "rate", "sign": "+", "series": "30年JGB利回り(財務省)", "watch": "manual", "note": "ソニー生命の運用利回りと責任準備金負担が超長期金利上昇で改善"}
+{"code": "8750", "name": "第一ライフグループ", "s33": "保険業", "pin": "超長期金利(30年JGB)", "pin_type": "rate", "sign": "+", "series": "30年JGB利回り(財務省)", "watch": "manual", "note": "超長期金利上昇で運用利回り改善と逆ざや解消が進み利益が増える"}
+{"code": "8766", "name": "東京海上ホールディングス", "s33": "保険業", "pin": "火災・自動車の保険料率改定", "pin_type": "price_set", "sign": "+", "series": "損保料率算出機構 参考純率改定", "watch": "manual", "note": "料率引上げの浸透が収益改善の主因、自然災害と政策株売却も効く"}
+{"code": "8771", "name": "イー・ギャランティ", "s33": "その他金融業", "pin": "売掛債権保証の保証債務残高", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "保証残高×保証料率が収益、企業倒産の増加は保証履行で逆風"}
+{"code": "8795", "name": "Ｔ＆Ｄホールディングス", "s33": "保険業", "pin": "超長期金利(30年JGB)", "pin_type": "rate", "sign": "+", "series": "30年JGB利回り(財務省)", "watch": "manual", "note": "太陽・大同生命の資産運用と負債評価が超長期金利上昇で改善する"}
+{"code": "8801", "name": "三井不動産", "s33": "不動産業", "pin": "都心オフィス賃料・空室率", "pin_type": "asset", "sign": "+", "series": "三鬼商事オフィスマーケット月次", "watch": "manual", "note": "賃貸が利益の柱で都心の賃料改定と空室率に直結する"}
+{"code": "8802", "name": "三菱地所", "s33": "不動産業", "pin": "丸の内オフィス賃料・空室率", "pin_type": "asset", "sign": "+", "series": "三鬼商事オフィスマーケット月次", "watch": "manual", "note": "丸の内ビル賃貸が利益の大半、賃料改定と稼働率が中心"}
+{"code": "8803", "name": "平和不動産", "s33": "不動産業", "pin": "東京オフィス賃料・兜町の不動産価格", "pin_type": "asset", "sign": "+", "series": "三鬼商事オフィスマーケット月次", "watch": "manual", "note": "証券街ビルの賃貸と再開発物件の価格が利益の中心"}
+{"code": "8804", "name": "東京建物", "s33": "不動産業", "pin": "都心オフィス賃料・物件売却価格", "pin_type": "asset", "sign": "+", "series": "三鬼商事オフィスマーケット月次", "watch": "manual", "note": "オフィス賃貸と分譲売却が柱で都心不動産価格に連動"}
+{"code": "8830", "name": "住友不動産", "s33": "不動産業", "pin": "都心オフィス賃料・稼働率", "pin_type": "asset", "sign": "+", "series": "三鬼商事オフィスマーケット月次", "watch": "manual", "note": "自社保有オフィス賃貸が利益の柱、賃料改定で利益が動く"}
+{"code": "8848", "name": "レオパレス２１", "s33": "不動産業", "pin": "アパートの入居率", "pin_type": "volume", "sign": "+", "series": "自社月次入居率開示", "watch": "manual", "note": "一括借上のため入居率が利益を左右する中心変数になる"}
+{"code": "8850", "name": "スターツコーポレーション", "s33": "不動産業", "pin": "賃貸管理戸数・入居率と仲介件数", "pin_type": "volume", "sign": "+", "series": "自社月次開示", "watch": "manual", "note": "賃貸仲介・管理と建設請負の取扱量が利益の中心になる"}
+{"code": "8871", "name": "ゴールドクレスト", "s33": "不動産業", "pin": "首都圏マンション分譲価格", "pin_type": "asset", "sign": "+", "series": "不動産経済研究所 マンション市場", "watch": "manual", "note": "都心高額マンションの販売価格と契約率が利益を決める"}
+{"code": "8876", "name": "リログループ", "s33": "サービス業", "pin": "借上社宅の管理受託戸数", "pin_type": "volume", "sign": "na", "series": "none", "watch": "none", "note": "法人の社宅代行の受託戸数がストック収益で、賃料は転嫁前提"}
+{"code": "8892", "name": "エスコン", "s33": "不動産業", "pin": "商業施設・マンションの開発売却価格", "pin_type": "asset", "sign": "+", "series": "不動産研究所 期待利回り", "watch": "manual", "note": "開発物件の売却益が利益の柱で不動産価格に連動する"}
+{"code": "8897", "name": "ＭＩＲＡＲＴＨホールディングス", "s33": "不動産業", "pin": "マンション分譲価格", "pin_type": "asset", "sign": "+", "series": "不動産経済研究所 マンション市場", "watch": "manual", "note": "タカラレーベンの分譲販売価格が柱、再エネ売電が副収益"}
+{"code": "8919", "name": "カチタス", "s33": "不動産業", "pin": "中古戸建の販売価格−仕入価格", "pin_type": "spread", "sign": "+", "series": "不動産価格指数（中古戸建）", "watch": "manual", "note": "空き家を安く仕入れ再生販売、仕入販売の差が粗利を決める"}
+{"code": "8923", "name": "トーセイ", "s33": "不動産業", "pin": "中小不動産の売却価格", "pin_type": "asset", "sign": "+", "series": "不動産研究所 期待利回り", "watch": "manual", "note": "再生不動産と開発物件の売却益が利益の中心になる"}
+{"code": "8934", "name": "サンフロンティア不動産", "s33": "不動産業", "pin": "都心中小ビルの価格・賃料", "pin_type": "asset", "sign": "+", "series": "三鬼商事オフィスマーケット月次", "watch": "manual", "note": "再生ビルの売却益と賃料が柱で都心不動産価格に直結"}
+{"code": "9001", "name": "東武鉄道", "s33": "陸運業", "pin": "鉄道輸送人員・レジャー来場者", "pin_type": "volume", "sign": "+", "series": "東武鉄道 月次輸送実績", "watch": "manual", "note": "運輸とスカイツリー等レジャーの人流量が利益の中心"}
+{"code": "9003", "name": "相鉄ホールディングス", "s33": "陸運業", "pin": "沿線不動産の賃貸・分譲", "pin_type": "asset", "sign": "+", "series": "国交省 不動産価格指数", "watch": "manual", "note": "営業利益は不動産が最大、鉄道は安定でホテルが上乗せ・推測"}
+{"code": "9005", "name": "東急", "s33": "陸運業", "pin": "渋谷等の不動産賃料・地価", "pin_type": "asset", "sign": "+", "series": "三鬼商事 都心オフィス賃料", "watch": "manual", "note": "不動産が営業利益の柱、渋谷の賃料と分譲が利益を決める"}
+{"code": "9006", "name": "京浜急行電鉄", "s33": "陸運業", "pin": "鉄道輸送人員（羽田アクセス）", "pin_type": "volume", "sign": "+", "series": "JNTO 訪日外客数", "watch": "manual", "note": "羽田国際線の増便で訪日客の輸送量が利益に直結"}
+{"code": "9007", "name": "小田急電鉄", "s33": "陸運業", "pin": "鉄道輸送人員", "pin_type": "volume", "sign": "+", "series": "小田急 月次輸送実績", "watch": "manual", "note": "運輸が利益の柱で定期外人員が変動主因、流通は補助"}
+{"code": "9008", "name": "京王電鉄", "s33": "陸運業", "pin": "鉄道輸送人員", "pin_type": "volume", "sign": "+", "series": "京王 月次輸送実績", "watch": "manual", "note": "運輸と流通が主力、定期外輸送人員の回復度が利益を決める"}
+{"code": "9009", "name": "京成電鉄", "s33": "陸運業", "pin": "オリエンタルランド持分法利益", "pin_type": "asset", "sign": "+", "series": "OLC株価(4661)・TDR入園者数", "watch": "manual", "note": "OLC株22%の持分法益が経常利益の3〜4割を占める"}
+{"code": "9010", "name": "富士急行", "s33": "陸運業", "pin": "観光入込・遊園地来場者数（訪日客）", "pin_type": "volume", "sign": "+", "series": "JNTO 訪日外客数", "watch": "manual", "note": "富士山観光の集客が利益の中心で鉄道は付随、訪日客依存"}
+{"code": "9020", "name": "東日本旅客鉄道", "s33": "陸運業", "pin": "鉄道旅客輸送量（定期外・新幹線）", "pin_type": "volume", "sign": "+", "series": "JR東日本 月次輸送実績", "watch": "manual", "note": "運輸が利益の柱、定期外と新幹線の人キロが増益に直結"}
+{"code": "9021", "name": "西日本旅客鉄道", "s33": "陸運業", "pin": "鉄道旅客輸送量（新幹線・訪日客）", "pin_type": "volume", "sign": "+", "series": "JR西日本 月次輸送実績", "watch": "manual", "note": "山陽新幹線と関西インバウンドの輸送量が利益の中心"}
+{"code": "9022", "name": "東海旅客鉄道", "s33": "陸運業", "pin": "東海道新幹線の輸送量", "pin_type": "volume", "sign": "+", "series": "JR東海 月次輸送量", "watch": "manual", "note": "連結利益のほぼ全てが東海道新幹線で人キロが直接効く"}
+{"code": "9023", "name": "東京地下鉄", "s33": "陸運業", "pin": "鉄道輸送人員", "pin_type": "volume", "sign": "+", "series": "東京メトロ 月次輸送人員", "watch": "manual", "note": "ほぼ鉄道専業で都心の定期外輸送量が利益をほぼ決める"}
+{"code": "9024", "name": "西武ホールディングス", "s33": "陸運業", "pin": "ホテル客室単価・稼働（訪日客）", "pin_type": "price_set", "sign": "+", "series": "日銀CSPI 宿泊サービス", "watch": "manual", "note": "プリンスホテル等のホテルレジャーが営業利益の最大寄与"}
+{"code": "9025", "name": "鴻池運輸", "s33": "陸運業", "pin": "顧客工場の構内作業量（稼働率）", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "製鉄所や工場の生産稼働に構内物流の作業量が連動"}
+{"code": "9031", "name": "西日本鉄道", "s33": "陸運業", "pin": "福岡都市圏の輸送量・沿線需要", "pin_type": "volume", "sign": "+", "series": "西鉄 月次輸送実績", "watch": "manual", "note": "運輸不動産物流に分散し福岡都市圏の需要量が共通軸・推測"}
+{"code": "9037", "name": "ハマキョウレックス", "s33": "陸運業", "pin": "3PLセンター受託件数・物量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "センター受託数と物量が利益の中心、人件費はコスト"}
+{"code": "9039", "name": "サカイ引越センター", "s33": "陸運業", "pin": "引越件数（住宅移動需要）", "pin_type": "volume", "sign": "+", "series": "総務省 住民基本台帳 移動者数", "watch": "manual", "note": "引越件数が売上のほぼ全て、人手不足の人件費はコスト"}
+{"code": "9041", "name": "近鉄グループホールディングス", "s33": "陸運業", "pin": "鉄道輸送人員（訪日客含む）", "pin_type": "volume", "sign": "+", "series": "JNTO 訪日外客数", "watch": "manual", "note": "運輸が営業利益最大、関西訪日客の輸送量が変動主因"}
+{"code": "9042", "name": "阪急阪神ホールディングス", "s33": "陸運業", "pin": "梅田等の不動産賃料・地価", "pin_type": "asset", "sign": "+", "series": "三鬼商事 大阪オフィス賃料", "watch": "manual", "note": "不動産が営業利益最大、梅田の賃貸と分譲が利益を決める"}
+{"code": "9044", "name": "ＮＡＮＫＡＩ", "s33": "陸運業", "pin": "関空アクセスの輸送人員（訪日客）", "pin_type": "volume", "sign": "+", "series": "JNTO 訪日外客数", "watch": "manual", "note": "ラピート等の訪日客輸送が変動主因、不動産も同規模・推測"}
+{"code": "9045", "name": "京阪ホールディングス", "s33": "陸運業", "pin": "沿線不動産の分譲・賃貸", "pin_type": "asset", "sign": "+", "series": "国交省 不動産価格指数", "watch": "manual", "note": "不動産が営業利益の約4割で最大、鉄道は安定収益・推測"}
+{"code": "9048", "name": "名古屋鉄道", "s33": "陸運業", "pin": "鉄道輸送人員（中部空港アクセス）", "pin_type": "volume", "sign": "+", "series": "名鉄 月次輸送実績", "watch": "manual", "note": "運輸が利益の柱、中部空港アクセスと定期外人員が効く"}
+{"code": "9064", "name": "ヤマトホールディングス", "s33": "陸運業", "pin": "宅急便の取扱個数", "pin_type": "volume", "sign": "+", "series": "ヤマト 月次取扱数量", "watch": "manual", "note": "単価改善しても数量減で減益、月次取扱個数が利益の中心"}
+{"code": "9065", "name": "山九", "s33": "陸運業", "pin": "プラント構内物流・定修工事の受注量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "製鉄石化プラントの稼働と定修工事量に利益が連動"}
+{"code": "9068", "name": "丸全昭和運輸", "s33": "陸運業", "pin": "化学・産業物流の取扱数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "化学産業向け輸送保管の物量が利益の中心、荷主稼働に連動"}
+{"code": "9069", "name": "センコーグループホールディングス", "s33": "陸運業", "pin": "3PL取扱物量", "pin_type": "volume", "sign": "+", "series": "国交省 貨物輸送量", "watch": "manual", "note": "受託センターの物量拡大が利益の中心、燃料人件費はコスト"}
+{"code": "9072", "name": "ニッコンホールディングス", "s33": "陸運業", "pin": "国内自動車生産台数", "pin_type": "volume", "sign": "+", "series": "自工会 国内自動車生産台数", "watch": "manual", "note": "自動車部品物流が主力で完成車メーカーの生産量に直結"}
+{"code": "9075", "name": "福山通運", "s33": "陸運業", "pin": "特別積合せ運賃の値上げ浸透", "pin_type": "price_set", "sign": "+", "series": "日銀CSPI 道路貨物輸送", "watch": "manual", "note": "特積の運賃改定が利益の中心、貨物量は減少基調・推測"}
+{"code": "9076", "name": "セイノーホールディングス", "s33": "陸運業", "pin": "特別積合せ運賃の値上げ浸透", "pin_type": "price_set", "sign": "+", "series": "日銀CSPI 道路貨物輸送", "watch": "manual", "note": "2024年問題で運賃改定が進み、貨物量減を単価上昇で補う"}
+{"code": "9090", "name": "ＡＺ−ＣＯＭ丸和ホールディングス", "s33": "陸運業", "pin": "EC・低温配送の取扱物量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "EC物流と低温食品配送の物量拡大が利益の中心"}
+{"code": "9101", "name": "日本郵船", "s33": "海運業", "pin": "コンテナ運賃SCFI", "pin_type": "commodity", "sign": "+", "series": "SCFI", "watch": "auto", "note": "ONE持分益が最大の振れ幅、コンテナ運賃が売値そのものになる"}
+{"code": "9104", "name": "商船三井", "s33": "海運業", "pin": "コンテナ運賃SCFI", "pin_type": "commodity", "sign": "+", "series": "SCFI", "watch": "auto", "note": "ONE持分益が利益変動の中心、LNG・自動車船は長期契約で安定的"}
+{"code": "9107", "name": "川崎汽船", "s33": "海運業", "pin": "コンテナ運賃SCFI", "pin_type": "commodity", "sign": "+", "series": "SCFI", "watch": "auto", "note": "利益の大半がONE持分益、コンテナ運賃の変動がそのまま反映される"}
+{"code": "9110", "name": "ＮＳユナイテッド海運", "s33": "海運業", "pin": "ドライバルク運賃BDI", "pin_type": "commodity", "sign": "+", "series": "BDI", "watch": "auto", "note": "ケープ主体のバルカー運航で運賃が売値そのもの、長期契約も一部あり"}
+{"code": "9119", "name": "飯野海運", "s33": "海運業", "pin": "ケミカル・プロダクト船運賃", "pin_type": "commodity", "sign": "+", "series": "Baltic Clean Tanker Index", "watch": "manual", "note": "ケミカル船とLPG船の運賃が売値、不動産賃貸が下支えするが従属的"}
+{"code": "9142", "name": "九州旅客鉄道", "s33": "陸運業", "pin": "鉄道輸送人員（訪日客）", "pin_type": "volume", "sign": "+", "series": "JNTO 訪日外客数", "watch": "manual", "note": "運輸は訪日客依存、駅ビル不動産も利益の4割前後・推測"}
+{"code": "9143", "name": "ＳＧホールディングス", "s33": "陸運業", "pin": "宅配便取扱個数（EC物量）", "pin_type": "volume", "sign": "+", "series": "国交省 宅配便取扱個数", "watch": "manual", "note": "デリバリーが利益の大半でEC物量が中心、単価改善が上乗せ"}
+{"code": "9147", "name": "ＮＩＰＰＯＮ　ＥＸＰＲＥＳＳホールディングス", "s33": "陸運業", "pin": "国際フォワーディングの運賃スプレッド", "pin_type": "spread", "sign": "+", "series": "SCFI JSON・TAC航空運賃指数", "watch": "auto", "note": "航空海上の運賃上昇局面で取扱マージンが拡大し増益"}
+{"code": "9201", "name": "日本航空", "s33": "空運業", "pin": "国際線旅客イールド(単価)", "pin_type": "price_set", "sign": "+", "series": "none", "watch": "none", "note": "国際線旅客と国際貨物の単価が主、インバウンド下で単価維持が鍵"}
+{"code": "9202", "name": "ＡＮＡホールディングス", "s33": "空運業", "pin": "国際線旅客イールド(単価)", "pin_type": "price_set", "sign": "+", "series": "none", "watch": "none", "note": "国際線の単価×搭乗率が主、燃油は逆方向コストで単価転嫁が鍵"}
+{"code": "9247", "name": "ＴＲＥホールディングス", "s33": "サービス業", "pin": "鉄スクラップ価格（H2）", "pin_type": "commodity", "sign": "+", "series": "鉄リ工業会 月次・東京製鐵購入価格改定", "watch": "manual", "note": "金属リサイクルの販売単価に直接入る。廃棄物処理単価も併存"}
+{"code": "9267", "name": "Ｇｅｎｋｙ　ＤｒｕｇＳｔｏｒｅｓ", "s33": "小売業", "pin": "既存店売上・新規出店数", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "食品比率の高いDgSで客数と出店ペースが利益源"}
+{"code": "9274", "name": "ＫＰＰグループホールディングス", "s33": "卸売業", "pin": "紙・板紙の取扱数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "紙卸で国内は構造的需要減、海外M&A分の取扱数量が利益を左右する"}
+{"code": "9301", "name": "三菱倉庫", "s33": "倉庫･運輸関連業", "pin": "都心オフィス賃料・稼働率", "pin_type": "asset", "sign": "+", "series": "三鬼商事 都心5区オフィス賃料", "watch": "manual", "note": "営業利益の相当部分が保有不動産の賃貸で、物流は数量型"}
+{"code": "9302", "name": "三井倉庫ホールディングス", "s33": "倉庫･運輸関連業", "pin": "国際物流の取扱数量", "pin_type": "volume", "sign": "+", "series": "財務省 貿易統計 輸出入数量", "watch": "manual", "note": "フォワーディング中心で、運賃水準より取扱物量が利益を動かす"}
+{"code": "9303", "name": "住友倉庫", "s33": "倉庫･運輸関連業", "pin": "保有不動産の賃料・稼働率", "pin_type": "asset", "sign": "+", "series": "三鬼商事 オフィス賃料", "watch": "manual", "note": "倉庫収入に加え、賃貸不動産が利益の大きな部分を占める"}
+{"code": "9336", "name": "大栄環境", "s33": "サービス業", "pin": "廃棄物の処理受入単価", "pin_type": "price_set", "sign": "+", "series": "none", "watch": "none", "note": "最終処分場の希少性で受入単価に値決め力があり、数量も寄与"}
+{"code": "9364", "name": "上組", "s33": "倉庫･運輸関連業", "pin": "港湾取扱貨物量（コンテナ等）", "pin_type": "volume", "sign": "+", "series": "国交省 港湾統計・コンテナ取扱量", "watch": "manual", "note": "港湾荷役は作業数量課金で、貿易量の増減が直接利益に効く"}
+{"code": "9401", "name": "ＴＢＳホールディングス", "s33": "情報･通信業", "pin": "テレビ広告出稿(単価×量)", "pin_type": "volume", "sign": "+", "series": "日銀CSPI テレビ広告", "watch": "manual", "note": "広告収入が売上の柱で赤坂再開発の賃料が下支えする"}
+{"code": "9404", "name": "日本テレビホールディングス", "s33": "情報･通信業", "pin": "テレビ広告出稿(単価×量)", "pin_type": "volume", "sign": "+", "series": "日銀CSPI テレビ広告", "watch": "manual", "note": "視聴率に連動するスポット広告の数量が利益の中心"}
+{"code": "9409", "name": "テレビ朝日ホールディングス", "s33": "情報･通信業", "pin": "テレビ広告出稿(単価×量)", "pin_type": "volume", "sign": "+", "series": "日銀CSPI テレビ広告", "watch": "manual", "note": "スポットとタイムの広告出稿量が利益の中心を占める"}
+{"code": "9412", "name": "スカパーＪＳＡＴ", "s33": "情報･通信業", "pin": "衛星回線契約数・有料放送加入数", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "トランスポンダ契約と加入者数が中心で価格は長期固定"}
+{"code": "9413", "name": "テレビ東京ホールディングス", "s33": "情報･通信業", "pin": "テレビ広告出稿+アニメ版権数量", "pin_type": "volume", "sign": "+", "series": "日銀CSPI テレビ広告", "watch": "manual", "note": "広告出稿量に加えアニメ版権の販売数量が利益に効く"}
+{"code": "9416", "name": "ビジョン", "s33": "情報･通信業", "pin": "日本人出国者数(WiFiレンタル数)", "pin_type": "volume", "sign": "+", "series": "法務省 出国日本人数", "watch": "manual", "note": "海外WiFiの貸出数が利益の中心で円安は出国減で逆風"}
+{"code": "9418", "name": "Ｕ−ＮＥＸＴ　ＨＯＬＤＩＮＧＳ", "s33": "情報･通信業", "pin": "動画配信の有料会員数", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "配信会員数とUSEN店舗契約数の積み上げが利益の中心"}
+{"code": "9432", "name": "ＮＴＴ", "s33": "情報･通信業", "pin": "移動通信料金水準(ドコモARPU)", "pin_type": "price_set", "sign": "+", "series": "総務省CPI 移動電話通信料", "watch": "manual", "note": "利益最大のドコモは通信料が売上単価、値下げ圧力が直撃する"}
+{"code": "9433", "name": "ＫＤＤＩ", "s33": "情報･通信業", "pin": "移動通信料金水準(au ARPU)", "pin_type": "price_set", "sign": "+", "series": "総務省CPI 移動電話通信料", "watch": "manual", "note": "利益の柱はau通信料、料金競争と値下げ要請で単価が動く"}
+{"code": "9434", "name": "ソフトバンク", "s33": "情報･通信業", "pin": "移動通信料金水準(ARPU)", "pin_type": "price_set", "sign": "+", "series": "総務省CPI 移動電話通信料", "watch": "manual", "note": "モバイル通信料が売上単価、料金値下げ圧力が利益を左右する"}
+{"code": "9435", "name": "光通信", "s33": "情報･通信業", "pin": "法人向け継続課金の契約件数", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "ストック課金の件数積み上げが利益で保有株評価益も変動要因"}
+{"code": "9449", "name": "ＧＭＯインターネットグループ", "s33": "情報･通信業", "pin": "ネット金融の取引高(売買代金)", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "金融とインフラが柱で相場ボラにより取引数量が振れる、推測"}
+{"code": "9468", "name": "ＫＡＤＯＫＡＷＡ", "s33": "情報･通信業", "pin": "IP作品の販売数量(書籍/ゲーム)", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "ヒットIPの出荷数量が中心で用紙代は原価側の逆風になる"}
+{"code": "9501", "name": "東京電力ホールディングス", "s33": "電気･ガス業", "pin": "柏崎刈羽原発の再稼働", "pin_type": "event", "sign": "+", "series": "none", "watch": "none", "note": "再稼働可否で燃料費が数千億円動き利益変動の最大要因"}
+{"code": "9502", "name": "中部電力", "s33": "電気･ガス業", "pin": "LNG・JEPX価格", "pin_type": "commodity", "sign": "mixed", "series": "LNG輸入価格/JEPXスポット", "watch": "manual", "note": "小売調達は−だがJERA持分は燃料高で+、純方向が定まらない"}
+{"code": "9503", "name": "関西電力", "s33": "電気･ガス業", "pin": "JEPXスポット価格", "pin_type": "commodity", "sign": "+", "series": "JEPXスポット価格", "watch": "manual", "note": "原発7基で限界費用が低くJEPX高が卸売収入増に直結"}
+{"code": "9504", "name": "中国電力", "s33": "電気･ガス業", "pin": "石炭・燃料価格", "pin_type": "commodity", "sign": "-", "series": "coal（石炭）", "watch": "auto", "note": "石炭火力主体で燃調ラグにより燃料高が短期の減益要因"}
+{"code": "9505", "name": "北陸電力", "s33": "電気･ガス業", "pin": "石炭・燃料価格", "pin_type": "commodity", "sign": "-", "series": "coal（石炭）", "watch": "auto", "note": "志賀原発停止で石炭火力依存、燃調ラグで燃料高が減益"}
+{"code": "9506", "name": "東北電力", "s33": "電気･ガス業", "pin": "LNG・石炭など燃料価格", "pin_type": "commodity", "sign": "-", "series": "coal（石炭）", "watch": "auto", "note": "女川再稼働後も火力比率が高く燃調ラグで燃料高が減益"}
+{"code": "9507", "name": "四国電力", "s33": "電気･ガス業", "pin": "燃料価格（LNG・石炭）", "pin_type": "commodity", "sign": "-", "series": "coal（石炭）", "watch": "auto", "note": "伊方稼働で緩和も火力併用、燃調ラグで燃料高が減益。推測"}
+{"code": "9508", "name": "九州電力", "s33": "電気･ガス業", "pin": "JEPXスポット価格", "pin_type": "commodity", "sign": "+", "series": "JEPXスポット価格", "watch": "manual", "note": "原発4基稼働で限界費用が低くJEPX高で卸売益が増える"}
+{"code": "9509", "name": "北海道電力", "s33": "電気･ガス業", "pin": "泊原発の再稼働", "pin_type": "event", "sign": "+", "series": "none", "watch": "none", "note": "泊停止で燃料費負担が重く再稼働可否が利益の最大変数"}
+{"code": "9511", "name": "沖縄電力", "s33": "電気･ガス業", "pin": "石炭・石油など燃料価格", "pin_type": "commodity", "sign": "-", "series": "coal（石炭）", "watch": "auto", "note": "原発がなく石炭石油依存、燃調ラグで燃料高が減益要因"}
+{"code": "9513", "name": "電源開発", "s33": "電気･ガス業", "pin": "JEPXスポット価格", "pin_type": "commodity", "sign": "+", "series": "JEPXスポット価格", "watch": "manual", "note": "卸電気で燃料はパススルー、水力と卸売がJEPX高の純受益"}
+{"code": "9519", "name": "レノバ", "s33": "電気･ガス業", "pin": "再エネ発電所の稼働・新規運開", "pin_type": "volume", "sign": "+", "series": "自社運転容量開示", "watch": "manual", "note": "FIT固定価格のため市況でなく稼働設備量が利益を決める"}
+{"code": "9531", "name": "東京瓦斯", "s33": "電気･ガス業", "pin": "LNG・米天然ガス価格", "pin_type": "commodity", "sign": "mixed", "series": "LNG輸入価格/HH天然ガス", "watch": "manual", "note": "都市ガス小売は原調ラグで−、米シェール上流は+で方向不定"}
+{"code": "9532", "name": "大阪瓦斯", "s33": "電気･ガス業", "pin": "米天然ガスHH・LNG価格", "pin_type": "commodity", "sign": "mixed", "series": "HH天然ガス/LNG輸入価格", "watch": "manual", "note": "海外エネルギー（米シェール）は+、国内小売は原調ラグで−"}
+{"code": "9533", "name": "東邦瓦斯", "s33": "電気･ガス業", "pin": "LNG調達価格", "pin_type": "commodity", "sign": "-", "series": "LNG輸入価格（財務省貿易統計）", "watch": "manual", "note": "上流権益が薄く原料費調整のラグで燃料高が短期減益"}
+{"code": "9543", "name": "静岡ガス", "s33": "電気･ガス業", "pin": "LNG調達価格", "pin_type": "commodity", "sign": "-", "series": "LNG輸入価格（財務省貿易統計）", "watch": "manual", "note": "LNG調達の原料費調整ラグで燃料高が短期の減益要因"}
+{"code": "9551", "name": "メタウォーター", "s33": "電気･ガス業", "pin": "上下水道の更新投資・O&M受注", "pin_type": "volume", "sign": "+", "series": "水道事業 建設改良費統計", "watch": "manual", "note": "自治体の水インフラ更新投資額が受注と利益を決める"}
+{"code": "9552", "name": "クオンツ総研ホールディングス", "s33": "サービス業", "pin": "M&A成約件数", "pin_type": "volume", "sign": "na", "series": "none", "watch": "none", "note": "M&A仲介の成功報酬型で、成約件数が利益を決める。推測"}
+{"code": "9601", "name": "松竹", "s33": "情報･通信業", "pin": "都心賃貸不動産の賃料(歌舞伎座等)", "pin_type": "asset", "sign": "+", "series": "三鬼商事 都心5区オフィス賃料", "watch": "manual", "note": "興行は変動が大きく不動産賃料が利益の安定的な柱、推測"}
+{"code": "9602", "name": "東宝", "s33": "情報･通信業", "pin": "映画興行収入(観客動員数)", "pin_type": "volume", "sign": "+", "series": "興行通信社 週末興行成績", "watch": "manual", "note": "アニメ含む興行の動員数が利益の中心で不動産賃料が下支え"}
+{"code": "9603", "name": "エイチ・アイ・エス", "s33": "サービス業", "pin": "海外旅行の取扱人数", "pin_type": "volume", "sign": "na", "series": "法務省 出国日本人数", "watch": "manual", "note": "海外旅行の送客人数が中心で、円安は旅行費高騰により逆風"}
+{"code": "9605", "name": "東映", "s33": "情報･通信業", "pin": "アニメIPの版権収入・興行動員数", "pin_type": "volume", "sign": "+", "series": "興行通信社 週末興行成績", "watch": "manual", "note": "ドラゴンボール等の海外版権と興行動員が利益の中心"}
+{"code": "9616", "name": "共立メンテナンス", "s33": "サービス業", "pin": "ホテルADR（ドーミーイン客室単価）", "pin_type": "price_set", "sign": "+", "series": "日銀CSPI宿泊・ホテルREIT月次", "watch": "manual", "note": "寮事業は安定収益で、利益変動はホテルの客室単価と稼働率"}
+{"code": "9621", "name": "建設技術研究所", "s33": "サービス業", "pin": "公共事業（防災・国土強靱化）予算", "pin_type": "volume", "sign": "+", "series": "国交省予算・公共工事前払金保証統計", "watch": "manual", "note": "建設コンサルの受注は官公需の予算数量に連動して動く"}
+{"code": "9627", "name": "アインホールディングス", "s33": "小売業", "pin": "薬価・調剤報酬改定（引き下げ構造）", "pin_type": "event", "sign": "+", "series": "厚労省 薬価改定率", "watch": "manual", "note": "調剤は薬価差益と技術料が源泉、改定ごとに引き下げ圧力"}
+{"code": "9672", "name": "東京都競馬", "s33": "サービス業", "pin": "大井競馬の売得金（発売額）", "pin_type": "volume", "sign": "+", "series": "地方競馬全国協会 月次売得金", "watch": "manual", "note": "勝馬投票券の発売額に連動する施設賃貸収入が利益柱"}
+{"code": "9678", "name": "カナモト", "s33": "サービス業", "pin": "建設機械レンタルの稼働率", "pin_type": "volume", "sign": "+", "series": "国交省 建設総合統計", "watch": "manual", "note": "建設投資に連動する保有機の稼働。中古機売却相場も利益に効く"}
+{"code": "9682", "name": "ＤＴＳ", "s33": "情報･通信業", "pin": "SE稼働率・受注量", "pin_type": "volume", "sign": "+", "series": "日銀CSPI 受託開発ソフトウェア", "watch": "manual", "note": "人月受託が主体で技術者の稼働数と受注量が利益を決める"}
+{"code": "9684", "name": "スクウェア・エニックス・ホールディングス", "s33": "情報･通信業", "pin": "ゲーム販売本数・課金数量", "pin_type": "volume", "sign": "+", "series": "App Storeセールスランキング", "watch": "manual", "note": "大型タイトルの販売本数が利益を左右し価格は定価で固定"}
+{"code": "9692", "name": "シーイーシー", "s33": "情報･通信業", "pin": "SE稼働率・受注量", "pin_type": "volume", "sign": "+", "series": "日銀CSPI 受託開発ソフトウェア", "watch": "manual", "note": "製造業向け人月受託が主体で稼働人数が利益を決める"}
+{"code": "9697", "name": "カプコン", "s33": "情報･通信業", "pin": "デジタル販売本数(旧作カタログ含む)", "pin_type": "volume", "sign": "+", "series": "Steam/App売上ランキング", "watch": "manual", "note": "自社IPの販売本数が売上で原価が軽く数量が直に利益化"}
+{"code": "9699", "name": "ニシオホールディングス", "s33": "サービス業", "pin": "建設機械レンタルの稼働率", "pin_type": "volume", "sign": "+", "series": "国交省 建設総合統計", "watch": "manual", "note": "土木・建築の工事量に連動する保有機の稼働率が中心変数"}
+{"code": "9706", "name": "日本空港ビルデング", "s33": "不動産業", "pin": "羽田の国際線旅客数", "pin_type": "volume", "sign": "+", "series": "JNTO訪日外客数/空港旅客数", "watch": "manual", "note": "免税店売上と施設賃料が旅客数に直結、国際線客数が中心"}
+{"code": "9715", "name": "トランス・コスモス", "s33": "サービス業", "pin": "BPO・コンタクトセンターの稼働席数", "pin_type": "volume", "sign": "na", "series": "none", "watch": "none", "note": "受託業務量（席数×時間）課金で、数量拡大が利益源"}
+{"code": "9716", "name": "乃村工藝社", "s33": "サービス業", "pin": "商業施設・展示の受注高", "pin_type": "volume", "sign": "na", "series": "none", "watch": "none", "note": "内装ディスプレイの受注数量が中心で、資材高は原価を圧迫"}
+{"code": "9722", "name": "藤田観光", "s33": "サービス業", "pin": "ホテルADR（客室単価）", "pin_type": "price_set", "sign": "+", "series": "日銀CSPI宿泊・ホテルREIT月次", "watch": "manual", "note": "椿山荘とワシントンの客室単価上昇が利益改善の主因"}
+{"code": "9735", "name": "セコム", "s33": "サービス業", "pin": "機械警備の契約件数", "pin_type": "volume", "sign": "na", "series": "none", "watch": "none", "note": "月額ストック課金で、契約件数の純増と人件費が利益を決める"}
+{"code": "9743", "name": "丹青社", "s33": "サービス業", "pin": "内装ディスプレイの受注高", "pin_type": "volume", "sign": "na", "series": "none", "watch": "none", "note": "商業・文化施設の内装受注数量が利益を決め、資材高は逆風"}
+{"code": "9744", "name": "メイテックグループホールディングス", "s33": "サービス業", "pin": "技術者派遣の請求単価", "pin_type": "price_set", "sign": "+", "series": "日銀CSPI 労働者派遣", "watch": "manual", "note": "正社員技術者の固定費に対し、請求単価の上昇が直接利益になる"}
+{"code": "9746", "name": "ＴＫＣ", "s33": "情報･通信業", "pin": "会計事務所の関与先契約数", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "会計事務所と自治体の継続課金件数が利益の中心を占める"}
+{"code": "9757", "name": "船井総研ホールディングス", "s33": "サービス業", "pin": "コンサル会員数・稼働人員", "pin_type": "volume", "sign": "na", "series": "none", "watch": "none", "note": "月次会員制コンサルの会員数とコンサルタント人員数が中心"}
+{"code": "9759", "name": "ＮＳＤ", "s33": "情報･通信業", "pin": "SE稼働率・受注量", "pin_type": "volume", "sign": "+", "series": "日銀CSPI 受託開発ソフトウェア", "watch": "manual", "note": "人月受託が主体で技術者の稼働数と単価改定が利益を決める"}
+{"code": "9766", "name": "コナミグループ", "s33": "情報･通信業", "pin": "遊戯王TCG出荷・ゲーム課金数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "カード出荷数量とデジタル課金が利益の中心で紙代は軽微"}
+{"code": "9793", "name": "ダイセキ", "s33": "サービス業", "pin": "再生重油の販売価格（原油連動）", "pin_type": "commodity", "sign": "+", "series": "TE crude-oil/brent（既存自動系列）", "watch": "auto", "note": "廃油リサイクルの再生油売価が原油に連動。処理単価も強含み。推測"}
+{"code": "9824", "name": "泉州電業", "s33": "卸売業", "pin": "銅建値(電線売価)", "pin_type": "commodity", "sign": "+", "series": "TE copper", "watch": "auto", "note": "電線専門卸で売価が銅建値に連動、在庫評価益も同時に発生する"}
+{"code": "9828", "name": "Ｇｅｎｋｉ　Ｇｌｏｂａｌ　Ｄｉｎｉｎｇ　Ｃｏｎｃｅｐｔｓ", "s33": "小売業", "pin": "既存店売上・客数", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "回転寿司の客数が利益、水産とコメは原価側の逆風"}
+{"code": "9830", "name": "トラスコ中山", "s33": "卸売業", "pin": "工具・消耗品の出荷数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "MRO卸で在庫即納が売り、製造業の稼働に伴う出荷数量が利益源"}
+{"code": "9831", "name": "ヤマダホールディングス", "s33": "小売業", "pin": "既存店売上・住宅受注", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "家電の既存店売上が主、住宅・リフォームの受注が補完"}
+{"code": "9832", "name": "オートバックスセブン", "s33": "卸売業", "pin": "既存店売上・車検整備件数", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "カー用品小売で来店客数と車検整備件数が主、商品単価の影響は従"}
+{"code": "9842", "name": "アークランズ", "s33": "小売業", "pin": "既存店売上・客数（HC＋かつや）", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "HCの既存店とかつやの客数が利益、豚肉・木材は原価側"}
+{"code": "9843", "name": "ニトリホールディングス", "s33": "小売業", "pin": "USD/JPY為替", "pin_type": "fx", "sign": "-", "series": "USD/JPY", "watch": "manual", "note": "海外生産のドル建て仕入が原価の大半で、円安が粗利を直接削る"}
+{"code": "9861", "name": "吉野家ホールディングス", "s33": "小売業", "pin": "米国産牛肉（ショートプレート）価格", "pin_type": "commodity", "sign": "-", "series": "貿易統計 牛肉輸入単価・alic", "watch": "manual", "note": "牛丼専業で牛肉とコメが原価の中心、値上げ遅行で利益が振れる"}
+{"code": "9869", "name": "加藤産業", "s33": "卸売業", "pin": "食品卸の取扱数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "食品卸で粗利率は数%、メーカー値上げ分は通過し数量と物流が主因"}
+{"code": "9882", "name": "イエローハット", "s33": "卸売業", "pin": "既存店売上・車検整備件数", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "カー用品小売でタイヤ・整備の来店数量が主、価格要因は限定的"}
+{"code": "9887", "name": "松屋フーズホールディングス", "s33": "小売業", "pin": "コメ・輸入牛肉の仕入価格", "pin_type": "commodity", "sign": "-", "series": "農水省 相対取引価格・牛肉輸入単価", "watch": "manual", "note": "牛めしと定食でコメと輸入牛が原価の中心、値上げ遅行で減益"}
+{"code": "9889", "name": "ＪＢＣＣホールディングス", "s33": "情報･通信業", "pin": "IT商材の販売数量(IBM系)", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "ハード仕入販売が主体でドル建て仕入のため円安は原価増"}
+{"code": "9900", "name": "サガミホールディングス", "s33": "小売業", "pin": "既存店売上・客数", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "麺類業態の客数が利益、そば粉・小麦は原価側の逆風"}
+{"code": "9934", "name": "因幡電機産業", "s33": "卸売業", "pin": "銅建値(電線売価)", "pin_type": "commodity", "sign": "+", "series": "TE copper", "watch": "auto", "note": "電線が主力商材で銅建値が売価に直結、空調部材など非電線比率も高い"}
+{"code": "9936", "name": "王将フードサービス", "s33": "小売業", "pin": "既存店売上・客数", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "餃子業態の客数が利益、豚肉・小麦・野菜は原価側"}
+{"code": "9948", "name": "アークス", "s33": "小売業", "pin": "既存店売上・客単価", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "北海道・東北SM連合で既存店売上が利益を決める"}
+{"code": "9956", "name": "バローホールディングス", "s33": "小売業", "pin": "既存店売上・客単価", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "SM＋DgS＋HCの複合で既存店売上と製造小売粗利が利益源"}
+{"code": "9960", "name": "東テク", "s33": "卸売業", "pin": "空調・計装設備の受注数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "ビル空調計装の商社兼工事で建築設備投資の受注案件数が利益を決める"}
+{"code": "9962", "name": "ミスミグループ本社", "s33": "卸売業", "pin": "FA部品の受注数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "製造業の設備投資と保守需要で受注数量が決まり単価は自社カタログ"}
+{"code": "9974", "name": "ベルク", "s33": "小売業", "pin": "既存店売上・客単価", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "北関東SMは既存店売上と出店ペースが利益を決める"}
+{"code": "9983", "name": "ファーストリテイリング", "s33": "小売業", "pin": "ユニクロ既存店売上・客単価", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "利益の柱は海外ユニクロの既存店、綿花は原価側で影響小"}
+{"code": "9984", "name": "ソフトバンクグループ", "s33": "情報･通信業", "pin": "保有株式評価額(Arm株価)", "pin_type": "asset", "sign": "+", "series": "ARM(NASDAQ)株価", "watch": "manual", "note": "損益の実体は投資評価損益でArm時価が最大の変動要因になる"}
+{"code": "9987", "name": "スズケン", "s33": "卸売業", "pin": "薬価(引き下げ改定)", "pin_type": "event", "sign": "+", "series": "厚労省 薬価改定率", "watch": "manual", "note": "医薬卸主体で薬価改定が売価を規定、調剤・製造の補完はあるが従"}
+{"code": "9989", "name": "サンドラッグ", "s33": "小売業", "pin": "既存店売上・客数", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "物販主体で既存店売上が利益を決める、仕入は原価側"}
+{"code": "9997", "name": "ベルーナ", "s33": "小売業", "pin": "通販の稼働顧客数", "pin_type": "volume", "sign": "+", "series": "四半期セグメント売上(IR)", "watch": "manual", "note": "総合通販の顧客数が主、不動産・ホテルも数量型で価格でない"}
