@@ -39,7 +39,7 @@ import jq_fetch  # noqa: E402  Canonical データローダ
 import measure_base_rate as mbr  # noqa: E402  Canonical カレンダー/bars
 
 LOG_PATH = APP / "data/price_watch/forward_log.jsonl"
-SPEC_VERSION = 1
+SPEC_VERSION = 2  # v2=帰属プロトコル受益カード（2026-07-28）。v1発火とは別系列として集計する
 WINDOWS_BD = {"w8": 40, "w15": 75}  # 営業日（≒8週 / ≒15週）
 CODE_RE = re.compile(r"(?<![0-9A-Za-z])([0-9]{4}|[0-9]{3}[A-Z])(?![0-9A-Za-z])")
 
@@ -109,7 +109,9 @@ def ensure_preregistration() -> None:
         "windows_bd": WINDOWS_BD,
         "metric": "銘柄リターン - TOPIXリターン（超過リターン）",
         "hit_rule": "超過リターン > 0",
-        "universe_rule": "configs/price_universe_sources.json の当該系列の受益銘柄・全件（後知恵の選別禁止）",
+        "universe_rule": "configs/price_universe_sources.json の当該系列の受益カードのうち "
+                         "sign=+ かつ tier in (confirmed, provisional) の全件（後知恵の選別禁止。"
+                         "rejected は帰属プロトコルv2の事前棄却＝docs/price-watch-universe.md §0b）",
         "note": "観察記録。trials.jsonl（正式αレーン）には登録しない",
     })
     print(f"[forward] 事前宣言 v{SPEC_VERSION} を記録")
@@ -167,7 +169,7 @@ def evaluate() -> int:
     """期日が到来した firing を評価して evaluation を append する（冪等）。"""
     log = read_log()
     firings = [e for e in log if e.get("type") == "firing"]
-    done = {(e["fire_date"], e["series_id"], e["window"]) for e in log
+    done = {(e.get("spec_version"), e["fire_date"], e["series_id"], e["window"]) for e in log
             if e.get("type") == "evaluation"}
     if not firings:
         print("[forward] 発火記録がまだありません（発火時に自動で記録されます）")
@@ -179,7 +181,7 @@ def evaluate() -> int:
         for win, eval_day in (f.get("eval_days") or {}).items():
             if not eval_day or eval_day > today:
                 continue
-            if (f["fire_date"], f["series_id"], win) in done:
+            if (f.get("spec_version"), f["fire_date"], f["series_id"], win) in done:
                 continue
             tpx_now = topix.get(eval_day)
             tpx_ent = f.get("topix_entry")

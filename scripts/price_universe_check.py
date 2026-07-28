@@ -138,11 +138,11 @@ def beneficiaries_display(s: dict, today: str) -> str:
     t = datetime.strptime(today, "%Y-%m-%d")
     for b in cards:
         tag = "" if b["tier"] == "confirmed" else "(仮)"
-        stale = ""
+        stale = "(STALE要再確認)"  # verified 無しは無期限に新鮮扱いしない（Codex軽微指摘）
         if b.get("verified"):
             age = (t - datetime.strptime(b["verified"], "%Y-%m-%d")).days
-            if age > 365:
-                stale = "(STALE要再確認)"
+            if age <= 365:
+                stale = ""
         parts.append(f"{b['code']}{tag}{stale}")
     return "/".join(parts)
 
