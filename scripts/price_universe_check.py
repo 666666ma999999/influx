@@ -176,6 +176,49 @@ def parse_jepx(today: str) -> dict | None:
             "monthly_pct": None, "src_date": days[-1].replace("/", "-"), "layout": "jepx_csv"}
 
 
+def parse_boj(page: str, data_code: str) -> dict | None:
+    """日銀「主要時系列統計データ表」から月次系列を1本取る（月次レーン用・2026-07-28）。
+
+    https://www.stat-search.boj.or.jp/ssi/mtshtml/<page>.html（Shift-JIS）。
+    列は**データコードでアンカーする**（列位置や系列名は表記変更で動くが、データコードは
+    統計の恒久IDなので最も堅い。位置固定禁止の規約に沿う）。
+    value=最新月の指数、monthly_pct=前月比%、src_date="YYYY-MM"、weekly_pct=None（月次のため）。
+    """
+    rows = re.findall(r"<tr[^>]*>(.*?)</tr>", page, re.S)
+
+    def cells(r: str) -> list[str]:
+        return [re.sub(r"\s+", " ", strip_tags(c)).strip()
+                for c in re.findall(r"<t[dh][^>]*>(.*?)</t[dh]>", r, re.S)]
+
+    col = None
+    for r in rows[:10]:
+        c = cells(r)
+        if c and c[0].startswith("データコード"):
+            for i, v in enumerate(c):
+                if v == data_code:
+                    col = i
+                    break
+            break
+    if col is None:
+        return None  # コードが見つからない＝列を推測しない（黙って別系列を採らない）
+
+    series: list[tuple[str, float]] = []
+    for r in rows:
+        c = cells(r)
+        if not c or not re.match(r"^\d{4}/\d{2}$", c[0]) or len(c) <= col:
+            continue
+        try:
+            series.append((c[0], float(c[col].replace(",", ""))))
+        except ValueError:
+            continue  # 空欄・「-」は欠測として飛ばす
+    if len(series) < 2:
+        return None
+    (m1, v1), (m0, v0) = series[-1], series[-2]
+    return {"value": v1, "day_pct": None, "weekly_pct": None,
+            "monthly_pct": round((v1 / v0 - 1) * 100, 2) if v0 else None,
+            "src_date": m1.replace("/", "-"), "layout": "boj_mts"}
+
+
 def beneficiaries_display(s: dict, today: str) -> str:
     """受益カード（帰属プロトコルv2）の発火時表示。
 
@@ -241,6 +284,11 @@ def main() -> int:
                 parsed = parse_scfi(json.loads(fetch("https://en.sse.net.cn/currentIndex?indexName=scfi")))
             elif s["type"] == "jepx":
                 parsed = parse_jepx(today)
+            elif s["type"] == "boj":
+                resp = requests.get(f"https://www.stat-search.boj.or.jp/ssi/mtshtml/{s['page']}.html",
+                                    headers={"User-Agent": UA}, timeout=60)
+                resp.raise_for_status()
+                parsed = parse_boj(resp.content.decode("shift_jis", errors="replace"), s["data_code"])
             else:
                 parsed = parse_tanaka(fetch("https://gold.tanaka.co.jp/commodity/souba/"))
             if parsed is None or parsed["value"] is None:
@@ -275,8 +323,9 @@ def main() -> int:
                 four_w = (parsed["value"] / cands[-1]["value"] - 1) * 100
             # サイト側が週次%を出さない系列（田中貴金属・BDI個別ページ等）は自前履歴から算出する
             # （P0-②・2026-07-28。これが無いと weekly が永久に None で発火経路が4週累積だけになる）。
-            # 自前履歴依存なので four_week と同じく status==ok の時のみ判定に使う
-            if parsed.get("weekly_pct") is None:
+            # 自前履歴依存なので four_week と同じく status==ok の時のみ判定に使う。
+            # 月次系列は元データが月1回しか動かず、5〜9日前と比べても常に0%になるので対象外
+            if parsed.get("weekly_pct") is None and s.get("cadence") != "monthly":
                 wk_cands = [r for d, r in by_date.items()
                             if d and 5 <= (target_dt - datetime.strptime(d, "%Y-%m-%d")).days <= 9
                             and r.get("value")]
@@ -288,14 +337,24 @@ def main() -> int:
             # 平均絶対値13.9%・+5%だと41%の日で発火）。上書き値は series.alert に根拠つきで置く
             th = {**alert_cfg, **s.get("alert", {})}
             trigger = []
-            # weekly はサイト側の値なら自前履歴と独立なので suspect_jump でも判定する（A-3）。
-            # 自前算出（weekly_src=self）は履歴依存なので four_week と同じく ok の時のみ
-            wk, wk_self = row.get("weekly_pct"), row.get("weekly_src") == "self"
-            if wk is not None and wk >= th["weekly_pct"] and (not wk_self or row["status"] == "ok"):
-                trigger.append(f"weekly {wk:+.1f}%" + ("(自前)" if wk_self else ""))
-            # 4週累積は自前履歴に依存するため ok の時のみ
-            if row["status"] == "ok" and four_w is not None and four_w >= th["four_week_pct"]:
-                trigger.append(f"4週累積 {four_w:+.1f}%")
+            if s.get("cadence") == "monthly":
+                # 月次レーン: 週次の閾値体系（週+5%等）は月次統計の刻み（0.1〜0.5%/月）に
+                # 対して大きすぎて永久に鳴らない。前月比を専用閾値で見る。
+                # かつ**同じ月の値で毎週鳴らない**よう、前回記録と同じ公表月なら判定しない
+                prev_months = {r.get("src_date") for r in prev if r.get("src_date")}
+                mo = parsed.get("monthly_pct")
+                if parsed.get("src_date") not in prev_months and mo is not None \
+                        and mo >= th.get("monthly_pct", 1.0):
+                    trigger.append(f"前月比 {mo:+.2f}%({parsed['src_date']}公表)")
+            else:
+                # weekly はサイト側の値なら自前履歴と独立なので suspect_jump でも判定する（A-3）。
+                # 自前算出（weekly_src=self）は履歴依存なので four_week と同じく ok の時のみ
+                wk, wk_self = row.get("weekly_pct"), row.get("weekly_src") == "self"
+                if wk is not None and wk >= th["weekly_pct"] and (not wk_self or row["status"] == "ok"):
+                    trigger.append(f"weekly {wk:+.1f}%" + ("(自前)" if wk_self else ""))
+                # 4週累積は自前履歴に依存するため ok の時のみ
+                if row["status"] == "ok" and four_w is not None and four_w >= th["four_week_pct"]:
+                    trigger.append(f"4週累積 {four_w:+.1f}%")
             row["four_week_pct"] = round(four_w, 2) if four_w is not None else None
             row["four_week_base_date"] = cands[-1].get("date") if cands else None
             rows.append(row)

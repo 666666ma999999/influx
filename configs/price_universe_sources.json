@@ -711,6 +711,49 @@
           "reason": "DC電力費が原価の中核=電力高は減益(sign−)"
         }
       ]
+    },
+    {
+      "id": "cgpi-all",
+      "label": "国内企業物価指数",
+      "type": "boj",
+      "page": "pr01_m_1",
+      "data_code": "PR01'PRCG20_2200000000",
+      "jp": "企業物価(国内総平均)",
+      "cadence": "monthly",
+      "alert": {
+        "monthly_pct": 1.0
+      },
+      "note": "モノの値上げ環境。前月比+1.0%は月次統計としては大きい変化",
+      "beneficiaries": []
+    },
+    {
+      "id": "cspi-all",
+      "label": "企業向けサービス価格指数",
+      "type": "boj",
+      "page": "pr02_m_1",
+      "data_code": "PR02'PRCS20_5200000000",
+      "jp": "サービス価格(総平均)",
+      "cadence": "monthly",
+      "alert": {
+        "monthly_pct": 0.5
+      },
+      "note": "サービスの値上げ浸透環境。サービス価格はモノより粘着的なため閾値を低く",
+      "beneficiaries": []
+    },
+    {
+      "id": "cspi-labor",
+      "label": "高人件費率サービス",
+      "type": "boj",
+      "page": "pr02_m_1",
+      "data_code": "PR02'PRCS20_52S0000002",
+      "jp": "高人件費率サービス",
+      "cadence": "monthly",
+      "alert": {
+        "monthly_pct": 0.5
+      },
+      "note": "派遣・警備・ビルメン等の単価環境。人件費転嫁の進み具合",
+      "beneficiaries": []
     }
-  ]
+  ],
+  "_monthly_lane": "月次レーン(cadence=monthly・2026-07-28新設): 月次統計は刻みが0.1〜0.5%/月で週次閾値では永久に鳴らないため前月比を専用閾値で見る。同じ公表月では再発火しない。**銘柄を鳴らさない環境指標レーン**=マクロ集計値を個社に紐付けるのは帰属プロトコル§0bの1ホップ制限に反するため beneficiaries は空。用途は price_set型64社(加工食品24/SIer19等)の追い風・向かい風の背景判断。"
 }
