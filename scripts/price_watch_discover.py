@@ -51,6 +51,12 @@ TOKEN_RE = re.compile(
     r"[ァ-ヴー]{3,}|(?=[A-Za-z0-9-]*[0-9])[A-Za-z0-9][A-Za-z0-9\-]{2,}|[一-龠]{3,}"
 )
 PRICE_HINT_RE = re.compile(r"[0-9][0-9,.]*\s*(?:円|万円|ドル|%|％|倍)")
+# 株式相場の実況投稿は「値上がり」クエリに大量ヒットするが、実物価格の話ではないので
+# 投稿ごと除外する（実測: 日経平均まとめ1本から「日経平均/半導体関連株/全面高/P500」が候補化・B-3後続）
+MARKET_POST_RE = re.compile(
+    r"日経平均|大引け|寄り付き|前場|後場|終値|株式市場|全面高|全面安|東証|ダウ平均|"
+    r"S&P|ナスダック|グロース市場|プライム市場|ストップ高|出来高|決算発表"
+)
 STOPLIST = {
     # 価格語・一般語（検索語自体と頻出ノイズ）
     "値上げ", "値上がり", "品薄", "高騰", "価格改定", "価格転嫁", "物価上昇", "インフレ",
@@ -129,16 +135,27 @@ def extract_candidates(posts: list[dict], known: set[str]) -> list[dict]:
     """ルールベース抽出: 既知語彙・ストップリストを除いた候補トークンを採点する。"""
     stats: dict[str, dict] = defaultdict(lambda: {"authors": set(), "posts": 0, "price_hint": 0,
                                                   "likes": 0, "sample": ""})
+    n_market_skipped = 0
     for post in posts:
         text = unicodedata.normalize("NFKC", post.get("content") or "")
         if not text:
             continue
-        has_price = bool(PRICE_HINT_RE.search(text))
+        if MARKET_POST_RE.search(text):
+            n_market_skipped += 1
+            continue  # 株式相場の実況は実物価格の話ではない
         for token in set(TOKEN_RE.findall(text)):
             if token in known or token in STOPLIST or len(token) < 3:
                 continue
             if re.fullmatch(r"[0-9,.\-]+", token):  # 数字だけの断片（金額の切れ端）は除外
                 continue
+            # 価格表現は候補語の前後15文字窓だけを見る（30文字だと隣接する無関係な相場値を
+            # 拾う実測あり: 「日経平均 64,931円 …イラン」→ 15文字で解消・B-3）
+            has_price = False
+            for m in re.finditer(re.escape(token), text):
+                window = text[max(0, m.start() - 15):m.end() + 15]
+                if PRICE_HINT_RE.search(window):
+                    has_price = True
+                    break
             s = stats[token]
             s["authors"].add(post.get("author", ""))
             s["posts"] += 1
@@ -152,12 +169,16 @@ def extract_candidates(posts: list[dict], known: set[str]) -> list[dict]:
         n_authors = len(s["authors"])
         if n_authors < 2:  # 複数投稿者が最低条件（単発バズ・宣伝の除外）
             continue
-        score = n_authors * (1 + s["price_hint"])
+        # 連投で青天井にならないよう比率化（寄与は最大2倍）・同点は likes でタイブレーク（B-3）
+        hint_ratio = s["price_hint"] / max(s["posts"], 1)
+        score = round(n_authors * (1 + hint_ratio), 2)
         candidates.append({
             "token": token, "score": score, "authors": n_authors, "posts": s["posts"],
             "price_hint_posts": s["price_hint"], "likes_sum": s["likes"], "sample": s["sample"],
         })
-    candidates.sort(key=lambda c: -c["score"])
+    candidates.sort(key=lambda c: (-c["score"], -c["authors"], -c["likes_sum"]))
+    if n_market_skipped:
+        print(f"[filter] 株式相場の実況投稿を {n_market_skipped} 件除外")
     return candidates[:CANDIDATE_CAP]
 
 
@@ -219,7 +240,14 @@ def main() -> int:
     print(f"[collect] day={day} posts={len(posts)} per_query={stats['per_query']} "
           f"wall={stats['login_wall']}")
     if not posts:
-        print("[done] 投稿ゼロ（候補なし）")
+        # 失敗週・ゼロ週も必ず1行残す（行なしだと実行忘れと区別できない・B-2）
+        append_event(QUEUE_PATH, {
+            "type": "candidate_batch", "date": day, "n_posts": 0,
+            "status": "login_wall" if stats["login_wall"] else ("error" if stats["errors"] else "empty"),
+            "per_query": stats["per_query"], "errors": stats["errors"],
+            "llm_refined": False, "candidates": [],
+        })
+        print("[done] 投稿ゼロ（候補なし・台帳へ status 行を記録）")
         return 1 if stats["login_wall"] or stats["errors"] else 0
 
     known = load_known_vocab()
@@ -229,6 +257,8 @@ def main() -> int:
 
     event = {
         "type": "candidate_batch", "date": day, "n_posts": len(posts),
+        "status": "partial" if stats["errors"] else "ok",
+        "per_query": stats["per_query"], "errors": stats["errors"],
         "llm_refined": refined is not None, "candidates": final,
     }
     append_event(QUEUE_PATH, event)

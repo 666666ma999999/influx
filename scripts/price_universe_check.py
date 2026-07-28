@@ -70,24 +70,39 @@ def parse_te(html: str, slug: str, label: str) -> dict | None:
                 value = float(m.group().replace(",", ""))
             elif re.search(r"[A-Za-z]", c):
                 src_date = c  # 日付セル（Jul/28等）は数値扱いしない（Codex SUSPECT-1）
-        return {
-            "value": value,
-            "day_pct": pcts[0] if len(pcts) > 0 else None,
-            "weekly_pct": pcts[1] if len(pcts) > 1 else None,
-            "monthly_pct": pcts[2] if len(pcts) > 2 else None,
-            "src_date": src_date,
-        }
+        # 列構成を%セル数で判定する（位置固定は禁止・A-1）。
+        #   一覧(/commodities): [%Chg, Weekly, Monthly, YTD, YoY] = 5個 → weekly は pcts[1]
+        #   個別(/commodity/x): [Day, Month, Year]                = 3個 → **weekly 列は存在しない**
+        # 未知の列数は誤ラベルを避けるため値を採らない（parse_fail にする）。
+        n_pct = len(pcts)
+        if n_pct >= 5:
+            return {"value": value, "day_pct": pcts[0], "weekly_pct": pcts[1],
+                    "monthly_pct": pcts[2], "src_date": src_date, "layout": "index5"}
+        if n_pct == 3:
+            return {"value": value, "day_pct": pcts[0], "weekly_pct": None,
+                    "monthly_pct": pcts[1], "src_date": src_date, "layout": "detail3"}
+        return None
     return None
 
 
 def parse_tanaka(html: str) -> dict | None:
-    """田中貴金属の店頭金小売価格（円/g）。「金」ラベル近傍の最初の5桁数値を採る。"""
-    text = strip_tags(html)
-    m = re.search(r"金[^銀白]{0,120}?([0-9]{2},[0-9]{3})\s*円", text)
+    """田中貴金属の金・店頭小売価格（円/g）と公表日を採る。
+
+    A-2対策: (1)数値に左境界を付け6桁以上にも対応（10万円/g超で下5桁を拾う事故の防止）
+    (2)「店頭小売価格」にアンカー（買取価格へ静かにズレるのを防ぐ）(3)公表日を src_date に格納
+    （実行が公表時刻09:30 JST より前だと前日値を当日として記録する事故の検知用）。
+    """
+    text = re.sub(r"\s+", " ", strip_tags(html))
+    # 金ブロック = 「金」〜「プラチナ」までにスライスしてから小売価格を探す
+    gold_start = text.find("公表")
+    block = text[gold_start:text.find("プラチナ", gold_start)] if gold_start >= 0 else text
+    m = re.search(r"店頭小売価格[^0-9]{0,40}?(?<![0-9,])([0-9]{1,3}(?:,[0-9]{3})+)\s*円", block)
     if not m:
         return None
+    d = re.search(r"(\d{4})年(\d{2})月(\d{2})日", text)
+    src_date = f"{d.group(1)}-{d.group(2)}-{d.group(3)}" if d else ""
     return {"value": float(m.group(1).replace(",", "")), "day_pct": None,
-            "weekly_pct": None, "monthly_pct": None, "src_date": ""}
+            "weekly_pct": None, "monthly_pct": None, "src_date": src_date, "layout": "tanaka"}
 
 
 def load_history() -> dict[str, list[dict]]:
@@ -114,8 +129,9 @@ def main() -> int:
     try:
         te_index_html = fetch("https://tradingeconomics.com/commodities")
     except Exception as exc:  # noqa: BLE001
-        te_index_html = ""
-        print(f"[warn] TE一覧ページ取得失敗: {str(exc)[:80]}")
+        # 一覧が取れないと全系列が列構成の違う個別ページへ落ちるため即停止（A-1）
+        print(f"[FATAL] TE一覧ページ取得失敗のため中断（誤列での記録を防ぐ）: {str(exc)[:100]}")
+        return 1
 
     rows, alerts = [], []
     for s in cfg["series"]:
@@ -135,8 +151,12 @@ def main() -> int:
             prev = [r for r in history.get(s["id"], []) if r.get("status") == "ok"]
             suspect = bool(prev and prev[-1].get("value") and
                            abs(parsed["value"] / prev[-1]["value"] - 1) > 0.5)
-            row = {**base, **parsed, "status": "suspect_jump" if suspect else "ok"}
-            rows.append(row)
+            status = "suspect_jump" if suspect else "ok"
+            # 公表日が当日でない系列は stale（前日値を当日として記録する事故の検知・A-2）
+            if parsed.get("layout") == "tanaka" and parsed.get("src_date") and \
+                    parsed["src_date"] != datetime.now().strftime("%Y-%m-%d"):
+                status = "stale"
+            row = {**base, **parsed, "status": status}
             # 4週累積: 日付基準で25〜35日前の最新レコードと比較（同日再実行・実行間隔の
             # 乱れに頑健・Codex CONFIRMED-2）。該当なしなら判定しない
             four_w = None
@@ -150,15 +170,19 @@ def main() -> int:
             if cands:
                 four_w = (parsed["value"] / cands[-1]["value"] - 1) * 100
             trigger = []
-            if row["status"] == "ok":
-                if parsed.get("weekly_pct") is not None and parsed["weekly_pct"] >= alert_cfg["weekly_pct"]:
-                    trigger.append(f"weekly {parsed['weekly_pct']:+.1f}%")
-                if four_w is not None and four_w >= alert_cfg["four_week_pct"]:
-                    trigger.append(f"4週累積 {four_w:+.1f}%")
+            # weekly はサイト側の値で自前履歴と独立なので suspect_jump でも判定する（A-3）
+            if parsed.get("weekly_pct") is not None and parsed["weekly_pct"] >= alert_cfg["weekly_pct"]:
+                trigger.append(f"weekly {parsed['weekly_pct']:+.1f}%")
+            # 4週累積は自前履歴に依存するため ok の時のみ
+            if row["status"] == "ok" and four_w is not None and four_w >= alert_cfg["four_week_pct"]:
+                trigger.append(f"4週累積 {four_w:+.1f}%")
+            row["four_week_pct"] = round(four_w, 2) if four_w is not None else None
+            row["four_week_base_date"] = cands[-1].get("date") if cands else None
+            rows.append(row)
             if trigger:
                 alerts.append((s, row, trigger))
             wk = f"{parsed['weekly_pct']:+.1f}%" if parsed.get("weekly_pct") is not None else "-"
-            print(f"[ok] {s['id']:<12} {parsed['value']:>10} weekly={wk} {row['status'] if row['status']!='ok' else ''}")
+            print(f"[{row['status']}] {s['id']:<12} {parsed['value']:>10} weekly={wk}")
         except Exception as exc:  # noqa: BLE001  取得失敗は系列単位fail-soft
             rows.append({**base, "status": "error", "error": str(exc)[:100]})
             print(f"[error] {s['id']}: {str(exc)[:80]}")
@@ -169,7 +193,10 @@ def main() -> int:
             fh.write(json.dumps(r, ensure_ascii=False) + "\n")
 
     ok = sum(1 for r in rows if r["status"] == "ok")
+    bad = [r for r in rows if r["status"] not in ("ok",)]
     print(f"\n[done] {ok}/{len(rows)} ok → {LEDGER_PATH}")
+    if bad:
+        print(f"⚠️ 要確認 {len(bad)} 件: " + ", ".join(f"{r['id']}({r['status']})" for r in bad))
     if alerts:
         print(f"\n🚨 閾値超え {len(alerts)} 系列:")
         for s, row, trigger in alerts:
