@@ -45,6 +45,20 @@ VALID_SIGNS = {"+", "-", "0"}
 VALID_TIERS = {"confirmed", "provisional", "rejected"}
 STALE_DAYS = 365
 
+# 根拠が「連鎖」でなく「連想」だと自白しているカードは受益として使えない（関門C=1ホップ制限）。
+# 2026-07-28 実害: ゲオHD(2681) が中古車の受益に入っていた。根拠欄には
+# 「pin=中古品（古着・トレカ・ゲーム機）相場で中古車ではない。リユース相場全般の連想波及としてのみ」
+# と書いてあったが、evidence が非空であることしか検査していなかったため通過した。
+# 同社は実際には中古車事業を持たない（グループは衣料/時計/宝石/農機具/通信機器）。
+# 「推測」は最初この一覧に入れていたが、日鉄鉱業(1515)・三菱マテリアル(5711) を誤検出した。
+# 台帳の note の「推測」は〈事業は実在し pin にも載っているが感応度の大きさが未検証〉の意味で、
+# それは tier=provisional が既に表している。落とすべきなのは「事業connectionそのものが無い」側だけ。
+ASSOCIATION_WORDS = ("連想", "イメージ", "なんとなく", "であろう")
+# 以下は「正当な但し書き」なので落とさない。ただし人間が定期的に読み直せるよう一覧表示する
+# （例: 2ホップ=反応が遅い / メモリ専用ではない=専業ではないが受益はする / 推測=感応度が未実測）。
+CAVEAT_WORDS = ("2ホップ", "ではない", "では無い", "弱い", "限定的", "明示していない", "未明示",
+                "のみ", "推測", "憶測")
+
 
 def load(path: Path = MAP_PATH) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
@@ -130,6 +144,11 @@ def validate(m: dict | None = None, center_pin: dict | None = None,
                     errors.append(f"{sid}/{kind}: 未知の sign={b.get('sign')} (code={code})")
                 if not b.get("evidence"):
                     errors.append(f"{sid}/{kind}: code={code} に evidence が無い")
+                elif kind == "beneficiaries" and s.get("actionable"):
+                    hit = [w for w in ASSOCIATION_WORDS if w in b["evidence"]]
+                    if hit:
+                        errors.append(f"{sid}: code={code} の根拠が連鎖でなく連想 {hit}"
+                                      f"（関門C違反。連想で銘柄を出してはいけない）")
                 # 表示時に datetime.strptime へ渡る値。ここで弾かないと「検証は通るのに
                 # 発火した瞬間に落ちる」＝一番まずいタイミングで壊れる（Codex PLAUSIBLE-5）
                 if b.get("verified"):
@@ -265,6 +284,18 @@ def main() -> int:
         print(f"  {mark} {s['id']:24s} {s['shortage_type']:11s} "
               f"受益{len(s.get('beneficiaries', [])):3d} 罠{len(s.get('traps', [])):3d} "
               f"{s['label']}")
+    # 落とさないが人間が読み直すべきカード（但し書き付き）。放置すると
+    # 「弱い根拠のまま確証カードに昇格していた」に気づけない
+    caveats = [(s["id"], b["code"], b.get("name", ""), b["tier"],
+                [w for w in CAVEAT_WORDS if w in b.get("evidence", "")])
+               for s in m["subjects"] if s.get("actionable")
+               for b in s.get("beneficiaries", [])
+               if any(w in b.get("evidence", "") for w in CAVEAT_WORDS)]
+    if caveats:
+        print(f"\n[要再読 {len(caveats)}枚] 根拠に但し書きがあるカード（エラーではない）")
+        for sid, code, name, tier, ws in caveats:
+            print(f"  {sid:20s} {code} {name} ({tier}) {ws}")
+
     if errors:
         print(f"\nNG: 検証エラー {len(errors)} 件")
         for e in errors:
