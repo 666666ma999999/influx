@@ -48,7 +48,7 @@ CANDIDATE_CAP = 20
 
 # 候補トークン: カタカナ3+ / 型番風ASCII(数字含む3+) / 漢字3+
 TOKEN_RE = re.compile(
-    r"[ァ-ヴー]{3,}|(?=[A-Za-z0-9]*[0-9])[A-Za-z0-9][A-Za-z0-9\-]{2,}|[一-龠]{3,}"
+    r"[ァ-ヴー]{3,}|(?=[A-Za-z0-9-]*[0-9])[A-Za-z0-9][A-Za-z0-9\-]{2,}|[一-龠]{3,}"
 )
 PRICE_HINT_RE = re.compile(r"[0-9][0-9,.]*\s*(?:円|万円|ドル|%|％|倍)")
 STOPLIST = {
@@ -119,6 +119,8 @@ def collect_posts(day: str) -> tuple[list[dict], dict]:
     for r in all_rows:
         prev = by_id.get(r["id"])
         if prev is None or r["likes"] > prev["likes"]:
+            if prev and prev.get("content") and not r.get("content"):
+                r["content"] = prev["content"]  # 本文ありを空本文で潰さない（Codex CONFIRMED-3）
             by_id[r["id"]] = r
     return list(by_id.values()), stats
 
@@ -167,8 +169,12 @@ def llm_refine(candidates: list[dict]) -> list[dict] | None:
         print("[llm] スキップ: ANTHROPIC_API_KEY が未設定/プレースホルダ"
               "（ルールベース候補のみ出力。有効化は ~/.zshrc に実キー設定）")
         return None
-    import urllib.request
-    from collector.llm_classifier import DEFAULT_LLM_CONFIG  # モデル名等の正本を流用
+    try:
+        import urllib.request
+        from collector.llm_classifier import DEFAULT_LLM_CONFIG  # モデル名等の正本を流用
+    except Exception as exc:  # noqa: BLE001  import失敗もルール結果へフォールバック（Codex CONFIRMED-5）
+        print(f"[llm] import失敗（ルール結果を使用）: {str(exc)[:80]}")
+        return None
     prompt = (
         "以下はX投稿から抽出した『値上がり/品薄の話題に出た語』の候補です。"
         "各語が【具体的な商品・素材・部材の名前】なら keep、一般語・サービス名・"

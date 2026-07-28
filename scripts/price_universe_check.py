@@ -51,20 +51,31 @@ def parse_te(html: str, slug: str, label: str) -> dict | None:
         if not re.search(rf"/commodity/{re.escape(slug)}[\"'/?#]", row):
             continue
         cells = [strip_tags(c).strip() for c in re.findall(r"<td[^>]*>(.*?)</td>", row, re.S)]
-        cells = [c for c in cells if c]
-        if not cells or label.lower() not in cells[0].lower():
+        # 空セルを除去しない（除去すると列が左詰めされ値を取り違える・Codex CONFIRMED-1）。
+        # 値=name以降で「%を含まない最初の数値」、%列=「%を含むセル」を出現順に[Day,Weekly,Monthly]
+        name_idx = next((i for i, c in enumerate(cells) if c), None)
+        if name_idx is None or label.lower() not in cells[name_idx].lower():
             continue
-        nums = []
-        for c in cells[1:]:
+        value = None
+        pcts: list[float | None] = []
+        src_date = ""
+        for c in cells[name_idx + 1:]:
+            if not c:
+                pcts.append(None) if False else None
+                continue
             m = NUM_RE.search(c.replace("%", ""))
-            nums.append(float(m.group().replace(",", "")) if m else None)
-        # 実測の列順: [現在値, 前日差, Day%, Weekly%, Monthly%..] + 末尾セルは日付
+            if "%" in c:
+                pcts.append(float(m.group().replace(",", "")) if m else None)
+            elif value is None and m and not re.search(r"[A-Za-z]", c):
+                value = float(m.group().replace(",", ""))
+            elif re.search(r"[A-Za-z]", c):
+                src_date = c  # 日付セル（Jul/28等）は数値扱いしない（Codex SUSPECT-1）
         return {
-            "value": nums[0] if nums else None,
-            "day_pct": nums[2] if len(nums) > 2 else None,
-            "weekly_pct": nums[3] if len(nums) > 3 else None,
-            "monthly_pct": nums[4] if len(nums) > 4 else None,
-            "src_date": cells[-1] if cells else "",
+            "value": value,
+            "day_pct": pcts[0] if len(pcts) > 0 else None,
+            "weekly_pct": pcts[1] if len(pcts) > 1 else None,
+            "monthly_pct": pcts[2] if len(pcts) > 2 else None,
+            "src_date": src_date,
         }
     return None
 
@@ -126,10 +137,18 @@ def main() -> int:
                            abs(parsed["value"] / prev[-1]["value"] - 1) > 0.5)
             row = {**base, **parsed, "status": "suspect_jump" if suspect else "ok"}
             rows.append(row)
-            # 4週累積: 履歴の約4週前(週次実行前提で4本前)の値と比較
+            # 4週累積: 日付基準で25〜35日前の最新レコードと比較（同日再実行・実行間隔の
+            # 乱れに頑健・Codex CONFIRMED-2）。該当なしなら判定しない
             four_w = None
-            if len(prev) >= 4 and prev[-4].get("value"):
-                four_w = (parsed["value"] / prev[-4]["value"] - 1) * 100
+            by_date: dict[str, dict] = {}
+            for r in sorted(prev, key=lambda x: (x.get("date", ""), x.get("run_at", ""))):
+                by_date[r.get("date", "")] = r
+            target_dt = datetime.strptime(today, "%Y-%m-%d")
+            cands = [r for d, r in by_date.items()
+                     if d and 25 <= (target_dt - datetime.strptime(d, "%Y-%m-%d")).days <= 35
+                     and r.get("value")]
+            if cands:
+                four_w = (parsed["value"] / cands[-1]["value"] - 1) * 100
             trigger = []
             if row["status"] == "ok":
                 if parsed.get("weekly_pct") is not None and parsed["weekly_pct"] >= alert_cfg["weekly_pct"]:
