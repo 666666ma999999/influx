@@ -30,6 +30,7 @@ UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36")
 TAG_RE = re.compile(r"<[^>]+>")
 NUM_RE = re.compile(r"-?[0-9][0-9,]*\.?[0-9]*")
+JST = timezone(timedelta(hours=9))  # 台帳の日付は日本時間基準（監視対象が日本株のため）
 
 
 def strip_tags(html: str) -> str:
@@ -389,7 +390,12 @@ def main() -> int:
     cfg = json.loads(CONFIG_PATH.read_text())
     alert_cfg = cfg["alert"]
     history = load_history()
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    # 日付は **JST基準**（run_at はUTCのまま＝実行時刻の絶対記録）。
+    # UTC日付だと launchd の月曜08:30 JST 実行が UTC では日曜になり、同じ日の手動再実行
+    # （昼＝UTCでも月曜）が別日として記録される。前向き記録の同日重複排除もすり抜ける
+    # （2026-07-28 Codex CONFIRMED・実害を日付計算で確認済み）。
+    # 監視対象は日本株なので日本の営業日で数えるのが本来の定義でもある。
+    today = datetime.now(JST).strftime("%Y-%m-%d")
     run_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
 
     # TE は一覧ページ1回で全系列の行を取得（リクエスト削減・自ページに行が無い系列対策）。
@@ -427,8 +433,12 @@ def main() -> int:
                                     headers={"User-Agent": UA}, timeout=60)
                 resp.raise_for_status()
                 parsed = parse_boj(resp.content.decode("shift_jis", errors="replace"), s["data_code"])
-            else:
+            elif s["type"] == "tanaka":
                 parsed = parse_tanaka(fetch("https://gold.tanaka.co.jp/commodity/souba/"))
+            else:
+                # 未知の type を既存パーサへ流すと別サイトの値を静かに記録する。
+                # 型を増やしたら分岐も足す（fail-fast・Codex軽微指摘）
+                raise ValueError(f"未知の series type: {s['type']}")
             if parsed is None or parsed["value"] is None:
                 rows.append({**base, "status": "parse_fail"})
                 print(f"[parse_fail] {s['id']}")
@@ -444,7 +454,7 @@ def main() -> int:
             status = "suspect_jump" if suspect else "ok"
             # 公表日が当日でない系列は stale（前日値を当日として記録する事故の検知・A-2）
             if parsed.get("layout") == "tanaka" and parsed.get("src_date") and \
-                    parsed["src_date"] != datetime.now().strftime("%Y-%m-%d"):
+                    parsed["src_date"] != today:  # 田中貴金属は09:30JST公表・当日一致が正
                 status = "stale"
             # JEPXは日次公表（翌日受渡分まで出る）。3日以上古い＝公開停止/取得ズレの検知
             if parsed.get("layout") == "jepx_csv" and parsed.get("src_date") and \
