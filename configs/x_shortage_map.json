@@ -1,0 +1,2364 @@
+{
+  "version": 1,
+  "generated": "2026-07-28",
+  "note": "X の品薄・値上がり検知クエリ → 受益銘柄の対応表。銘柄は TOP1000台帳(data/center_pin/center_pin.jsonl)に実在するコードのみ。帰属規律は docs/price-watch-universe.md §0b（帰属プロトコルv2）に従う",
+  "shortage_types": {
+    "price": {
+      "actionable": true,
+      "desc": "スポット価格が公表され、品薄が即座に単価へ乗る。受益銘柄がTOP1000内に不在なら actionable=false になりうる"
+    },
+    "capex": {
+      "actionable": true,
+      "desc": "品薄が増産投資を呼び、装置・材料に発注が来る（数四半期遅れ）"
+    },
+    "resale": {
+      "actionable": false,
+      "desc": "定価固定でプレミアムが二次流通に落ち、メーカー収益に入らない"
+    },
+    "disruption": {
+      "actionable": false,
+      "desc": "供給断絶。需要増ではなく復旧で終わる"
+    },
+    "broad": {
+      "actionable": false,
+      "desc": "主題が特定できない汎用クエリ。銘柄付与が原理的に不可能"
+    },
+    "demand": {
+      "actionable": true,
+      "desc": "需要急増による品薄。作り手も売り手も数量で儲かる（値引き縮小）。小売が受益側に立てる唯一の型"
+    },
+    "secondary": {
+      "actionable": true,
+      "desc": "定価固定の品薄で、プレミアムを取る二次流通（中古・フリマ）側が受益"
+    }
+  },
+  "layers": {
+    "maker": "品薄の物そのものを作る",
+    "parts": "その物の中身の部材・部品",
+    "equipment": "その物を作る製造装置",
+    "material": "作るときに消費する材料・ガス・薬品",
+    "trader": "権益・在庫を保有し値差を取る",
+    "secondary": "二次流通（中古・フリマ）側",
+    "user": "買って使う側（sign=-）",
+    "retail": "売る店（品薄では仕入れられず sign=-）"
+  },
+  "signs": {
+    "+": "受益",
+    "-": "損失",
+    "0": "中立（関係ありそうだが実際は動かない＝取り違え防止の記録）"
+  },
+  "subjects": [
+    {
+      "id": "dram",
+      "label": "メモリ/DRAM/DDR5",
+      "queries": [
+        "gen1-memori-kotou",
+        "gen1-ddr5-price"
+      ],
+      "shortage_type": "price",
+      "actionable": true,
+      "reason": "DRAMはスポット/契約価格が公表され品薄が即座に単価へ乗るため、メモリ生産・検査に紐づく装置と材料の需要が同時に立ち上がる",
+      "lag_note": "0〜8週（価格は即時、装置受注は1四半期遅れ）",
+      "beneficiaries": [
+        {
+          "code": "6146",
+          "name": "ディスコ",
+          "layer": "equipment",
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "center_pin pin='後工程装置の出荷高(HBM関連)'＝HBM(=DRAM積層)の生産連鎖を明示。note='ダイサ・グラインダの出荷数量が直結、月次出荷高を自社開示'",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "6871",
+          "name": "日本マイクロニクス",
+          "layer": "equipment",
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "center_pin pin='プローブカードの出荷数量(DRAM/HBM検査)'＝DRAMを明示。note='メモリ生産量に連動する消耗品型'で増産に即応する消耗品",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "6525",
+          "name": "ＫＯＫＵＳＡＩ　ＥＬＥＣＴＲＩＣ",
+          "layer": "equipment",
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "center_pin pin='成膜装置の受注(メモリ向けWFE)'＝メモリ向け投資を明示。ただし同社note='NAND価格は顧客投資を経由する2ホップ'＝価格→受注は1四半期以上の遅れ",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "6857",
+          "name": "アドバンテスト",
+          "layer": "equipment",
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "center_pin pin='半導体テスタの受注台数(HBM/SoC投資)'＝HBMを明示。note='利益はテスタ販売台数連動・商品価格は売価にも原価にも入らない'＝価格ではなく投資量経由",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "8035",
+          "name": "東京エレクトロン",
+          "layer": "equipment",
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "pin='WFE(半導体前工程投資額)'・連鎖は妥当だが明示なし（note が『メモリ価格は顧客投資を経由する2ホップ』と自ら距離を明示）",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "7735",
+          "name": "ＳＣＲＥＥＮホールディングス",
+          "layer": "equipment",
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "pin='洗浄装置の受注(WFE)'・連鎖は妥当だが明示なし（note='メモリ価格は顧客投資経由の2ホップ'）",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "6323",
+          "name": "ローツェ",
+          "layer": "equipment",
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "pin='半導体前工程投資(WFE)'・連鎖は妥当だが明示なし（ウェハ搬送はメモリ増産でも需要が出るが対象工程を特定していない）",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "3436",
+          "name": "ＳＵＭＣＯ",
+          "layer": "material",
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "pin='300mmシリコンウエハ価格・出荷面積'・連鎖は妥当だが明示なし（メモリ増産はウエハ投入枚数を押し上げるが pin はメモリを特定していない）",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "4186",
+          "name": "東京応化工業",
+          "layer": "material",
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "pin='フォトレジストの出荷数量'・連鎖は妥当だが明示なし（前工程稼働の消耗品でメモリ専用ではない）",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "4368",
+          "name": "扶桑化学工業",
+          "layer": "material",
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "pin='CMP用コロイダルシリカの出荷数量'・連鎖は妥当だが明示なし（CMPスラリーは稼働連動の消耗品）",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "4004",
+          "name": "レゾナック・ホールディングス",
+          "layer": "material",
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "pin='半導体後工程材料の出荷数量'・連鎖は妥当だが明示なし（HBMは後工程が主戦場だが pin は品目を特定していない）",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "4203",
+          "name": "住友ベークライト",
+          "layer": "material",
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "pin='半導体封止材の出荷数量'・連鎖は妥当だが明示なし（後工程数量型でメモリ専用ではない）",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "3110",
+          "name": "日東紡績",
+          "layer": "material",
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "pin='電子材料用ガラスクロスの数量（AI基板需要）'・AIサーバ基板向けで連鎖は妥当だが DRAM/HBM を明示していない",
+          "verified": "2026-07-28"
+        }
+      ],
+      "traps": [
+        {
+          "code": "6753",
+          "name": "シャープ",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "pin='DRAM/NAND価格(PC・スマホの原価)' pin_type=commodity sign='-'＝台帳が明示的にメモリを原価側と判定。note='Dynabook等でメモリは仕入原価・高騰は減益要因'"
+        },
+        {
+          "code": "6758",
+          "name": "ソニーグループ",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "note='営業利益最大はG&NS・メモリ高騰はハード原価でむしろ減益'＝メモリを買って組み込む側"
+        },
+        {
+          "code": "6750",
+          "name": "エレコム",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "pin='USD/JPY為替(輸入仕入)' sign='-'・note='中国生産のドル建て仕入で円安は原価増・メモリ高もコスト'＝メモリを買って製品化する側"
+        },
+        {
+          "code": "3107",
+          "name": "ダイワボウホールディングス",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "pin='法人PC出荷台数'＝利益はPCの出荷台数で決まる。メモリ高騰はPC価格を押し上げ台数を抑える方向に効く"
+        },
+        {
+          "code": "6902",
+          "name": "デンソー",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "pin='世界自動車生産台数'＝半導体を買って組み込む側。2021年の半導体不足では完成車の減産で生産台数そのものが落ちた（※当時の逼迫は車載MCUでDRAMではない点は留保）"
+        },
+        {
+          "code": "3048",
+          "name": "ビックカメラ",
+          "layer": "retail",
+          "sign": "-",
+          "evidence": "pin='既存店売上・免税売上'＝利益は仕入価格ではなく既存店売上と客数で決まる。メモリ品薄は仕入難と販売数量減として効く"
+        }
+      ],
+      "group": "A-semiconductor"
+    },
+    {
+      "id": "nand-ssd",
+      "label": "NAND/SSD",
+      "queries": [
+        "gen1-ssd-price"
+      ],
+      "shortage_type": "price",
+      "actionable": true,
+      "reason": "NAND契約価格が公表され、国内に価格がそのまま売上単価になるメーカー（キオクシア）が実在するため品薄が即座に損益へ乗る",
+      "lag_note": "0〜12週（NAND契約価格は四半期改定、店頭SSD価格は即時）",
+      "beneficiaries": [
+        {
+          "code": "285A",
+          "name": "キオクシアホールディングス",
+          "layer": "maker",
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "center_pin pin='NAND価格' pin_type='commodity' sign='+'・note='NAND価格が売上単価そのもの・電気機器で唯一の素直な受益'。series='TrendForce NAND契約価格(四半期)・価格.com SSD'",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "6525",
+          "name": "ＫＯＫＵＳＡＩ　ＥＬＥＣＴＲＩＣ",
+          "layer": "equipment",
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "center_pin pin='成膜装置の受注(メモリ向けWFE)'＝メモリ(NAND積層)向け投資を明示。ただし note='NAND価格は顧客投資を経由する2ホップ・自社は装置数量型'＝反応は遅い",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "6871",
+          "name": "日本マイクロニクス",
+          "layer": "equipment",
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "pin='プローブカードの出荷数量(DRAM/HBM検査)'＝pin はDRAM/HBMのみでNANDは明示なし。note='メモリ生産量に連動する消耗品型'で連鎖は妥当",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "6146",
+          "name": "ディスコ",
+          "layer": "equipment",
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "pin='後工程装置の出荷高(HBM関連)'＝pin はHBM明示でNANDは明示なし。ダイシング/グラインドは全チップ共通のため連鎖は妥当",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "8035",
+          "name": "東京エレクトロン",
+          "layer": "equipment",
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "pin='WFE(半導体前工程投資額)'・連鎖は妥当だが明示なし（note が『メモリ価格は顧客投資を経由する2ホップ』と距離を明示）",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "7735",
+          "name": "ＳＣＲＥＥＮホールディングス",
+          "layer": "equipment",
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "pin='洗浄装置の受注(WFE)'・連鎖は妥当だが明示なし（note='メモリ価格は顧客投資経由の2ホップ'）",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "3436",
+          "name": "ＳＵＭＣＯ",
+          "layer": "material",
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "pin='300mmシリコンウエハ価格・出荷面積'・連鎖は妥当だが明示なし（NAND増産はウエハ投入増だが pin は品目を特定していない）",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "4186",
+          "name": "東京応化工業",
+          "layer": "material",
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "pin='フォトレジストの出荷数量'・連鎖は妥当だが明示なし（前工程稼働の消耗品）",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "4203",
+          "name": "住友ベークライト",
+          "layer": "material",
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "pin='半導体封止材の出荷数量'・連鎖は妥当だが明示なし（後工程数量型でNAND専用ではない）",
+          "verified": "2026-07-28"
+        }
+      ],
+      "traps": [
+        {
+          "code": "6753",
+          "name": "シャープ",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "pin='DRAM/NAND価格(PC・スマホの原価)' sign='-'＝台帳がNAND価格を原価側と明示。series にも'価格.com SSD'が入っており逆符号で効く"
+        },
+        {
+          "code": "6750",
+          "name": "エレコム",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "pin='USD/JPY為替(輸入仕入)' sign='-'・note='メモリ高もコスト'＝SSD・周辺機器を仕入れて売る側で、NAND高は原価増"
+        },
+        {
+          "code": "6758",
+          "name": "ソニーグループ",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "note='メモリ高騰はハード原価でむしろ減益'＝ゲーム機に内蔵SSDを組み込む側"
+        },
+        {
+          "code": "3107",
+          "name": "ダイワボウホールディングス",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "pin='法人PC出荷台数'＝SSD値上がりはPC/IT機器の価格上昇として出荷台数を抑える方向に効く"
+        },
+        {
+          "code": "3048",
+          "name": "ビックカメラ",
+          "layer": "retail",
+          "sign": "-",
+          "evidence": "pin='既存店売上・免税売上'＝利益は仕入価格でなく既存店売上と客数。SSD品薄は在庫確保難と販売数量減として効く"
+        }
+      ],
+      "group": "A-semiconductor"
+    },
+    {
+      "id": "hdd",
+      "label": "HDD/ニアラインHDD",
+      "queries": [
+        "gen1-hdd-price"
+      ],
+      "shortage_type": "capex",
+      "actionable": true,
+      "reason": "国内上場にHDD完成品メーカーがなく品薄は単価に乗らないが、逼迫がディスク媒体・ガラス基板の増産投資と部材発注として国内サプライヤーに数四半期遅れで届く",
+      "lag_note": "1〜3四半期（増産投資の意思決定→部材発注→計上）",
+      "beneficiaries": [
+        {
+          "code": "7741",
+          "name": "ＨＯＹＡ",
+          "layer": "parts",
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "center_pin pin='半導体マスクブランクス・HDD基板の数量'＝HDD基板を明示。裏付け: FY25 Q4決算説明会で『ニアラインHDD需要の強さ』とベトナム新工場Phase 1 500億円投資を公表[web:HOYA公式IR https://www.hoya.com/wp-content/uploads/2026/05/FY25-Q4-Transcript_J.pdf]",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "6762",
+          "name": "ＴＤＫ",
+          "layer": "parts",
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "pin='スマホ向け小型二次電池の出荷数量'・連鎖は妥当だが明示なし。HDDヘッド/サスペンションは『磁気応用製品』セグメントで『データセンター向けニアライン用HDDの需要も引き続き高水準』と自社開示[web:TDK 2026年3月期第2四半期決算短信]。ただし note='利益の過半はエナジー応用(ATL)'＝寄与は部分的",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "4004",
+          "name": "レゾナック・ホールディングス",
+          "layer": "parts",
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "pin='半導体後工程材料の出荷数量'・連鎖は妥当だが明示なし。HD媒体の外販事業を持ち2026/5/11に生産能力1.6億枚→約2.1億枚(+31%)への拡大を公表[web:レゾナック公式 https://www.resonac.com/jp/news/2026/05/11/3818.html]",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "5991",
+          "name": "日本発條",
+          "layer": "parts",
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "pin='自動車生産台数（ばね・シートの数量）'・pin はHDDを明示せず。note='HDDサスペンションはDC需要'と台帳自身が連鎖を認めるが、pin(利益の中心)は自動車側にある＝寄与は部分的",
+          "verified": "2026-07-28"
+        }
+      ],
+      "traps": [
+        {
+          "code": "3778",
+          "name": "さくらインターネット",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "pin='電力調達価格(JEPX・燃調)' sign='-'＝原価型のDC事業者。HDDを買って設備に組み込む側で、ストレージ品薄・高騰は増設コスト増と調達遅延として効く"
+        },
+        {
+          "code": "6750",
+          "name": "エレコム",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "pin='USD/JPY為替(輸入仕入)' sign='-'＝外付けストレージを輸入仕入して売る側で、HDD高騰は仕入原価増"
+        },
+        {
+          "code": "3048",
+          "name": "ビックカメラ",
+          "layer": "retail",
+          "sign": "-",
+          "evidence": "pin='既存店売上・免税売上'＝利益は既存店売上と客数で決まる。HDD品薄は在庫確保難と販売数量減として効く"
+        }
+      ],
+      "group": "A-semiconductor"
+    },
+    {
+      "id": "cpu-logic",
+      "label": "CPU/ロジック半導体",
+      "queries": [
+        "gen1-cpu-price"
+      ],
+      "shortage_type": "capex",
+      "actionable": true,
+      "reason": "国内上場にCPUメーカーがなく品薄は単価に乗らないが、逼迫がファウンドリ/パッケージの増産投資を呼びICパッケージ基板・材料・テスタの発注として国内へ届く",
+      "lag_note": "1〜3四半期（基板は数量連動で先行、前工程装置は最も遅い）",
+      "beneficiaries": [
+        {
+          "code": "4062",
+          "name": "イビデン",
+          "layer": "parts",
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "center_pin pin='ICパッケージ基板の出荷数量(サーバ/PC)'＝CPUを載せるパッケージ基板そのものを明示。note='顧客CPUの基板発注量が利益を決める'",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "6857",
+          "name": "アドバンテスト",
+          "layer": "equipment",
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "center_pin pin='半導体テスタの受注台数(HBM/SoC投資)'＝SoC(=ロジック)投資を明示。note='利益はテスタ販売台数連動'＝価格ではなく投資量経由",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "2802",
+          "name": "味の素",
+          "layer": "material",
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "pin='自社製品の値上げ浸透'・連鎖は妥当だが明示なし。note='変動主因はABF半導体材料'＝ABF(パッケージ基板の層間絶縁材)はCPUパッケージ連鎖だが pin は食品側",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "6971",
+          "name": "京セラ",
+          "layer": "parts",
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "pin='電子部品・半導体パッケージの出荷数量'・パッケージ連鎖は妥当だが CPU/ロジック向けとは明示なし（series='IDC スマートフォン出荷'でスマホ寄り）",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "6920",
+          "name": "レーザーテック",
+          "layer": "equipment",
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "pin='EUVマスク検査装置の受注台数'・EUVは先端ロジックの工程で連鎖は妥当だが CPU を明示せず",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "8035",
+          "name": "東京エレクトロン",
+          "layer": "equipment",
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "pin='WFE(半導体前工程投資額)'・ファウンドリ増産投資の受け皿で連鎖は妥当だが CPU/ロジックを明示せず",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "6146",
+          "name": "ディスコ",
+          "layer": "equipment",
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "pin='後工程装置の出荷高(HBM関連)'・pin はHBM明示でCPU/ロジックは明示なし。先端パッケージのダイシング/グラインドで連鎖は妥当",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "3436",
+          "name": "ＳＵＭＣＯ",
+          "layer": "material",
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "pin='300mmシリコンウエハ価格・出荷面積'・ロジック増産はウエハ投入増だが pin は用途を特定していない",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "4186",
+          "name": "東京応化工業",
+          "layer": "material",
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "pin='フォトレジストの出荷数量'・前工程稼働の消耗品で連鎖は妥当だが CPU を明示せず",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "4203",
+          "name": "住友ベークライト",
+          "layer": "material",
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "pin='半導体封止材の出荷数量'・後工程数量型で連鎖は妥当だが CPU を明示せず",
+          "verified": "2026-07-28"
+        }
+      ],
+      "traps": [
+        {
+          "code": "6902",
+          "name": "デンソー",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "pin='世界自動車生産台数'＝半導体を買って組み込む側。2021年の半導体不足では完成車が減産となり生産台数そのものが落ちた実例がある"
+        },
+        {
+          "code": "3107",
+          "name": "ダイワボウホールディングス",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "pin='法人PC出荷台数'＝CPU値上がりはPC価格上昇として出荷台数を抑える方向に効く。CPUは仕入原価側"
+        },
+        {
+          "code": "6753",
+          "name": "シャープ",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "pin='DRAM/NAND価格(PC・スマホの原価)' sign='-'＝台帳がPC/スマホ部材を原価側と明示。Dynabook等でCPUも同様に仕入原価"
+        },
+        {
+          "code": "3048",
+          "name": "ビックカメラ",
+          "layer": "retail",
+          "sign": "-",
+          "evidence": "pin='既存店売上・免税売上'＝利益は既存店売上と客数で決まり、PCパーツの単価上昇は販売数量減で相殺される"
+        },
+        {
+          "code": "9831",
+          "name": "ヤマダホールディングス",
+          "layer": "retail",
+          "sign": "-",
+          "evidence": "pin='既存店売上・住宅受注'＝利益は既存店売上が主。PC/パーツの品薄は在庫確保難と販売数量減として効く"
+        }
+      ],
+      "group": "A-semiconductor"
+    },
+    {
+      "id": "gpu-graphics",
+      "label": "グラボ/GPU（コンシューマ）",
+      "queries": [
+        "gen1-gurabo-price"
+      ],
+      "shortage_type": "resale",
+      "actionable": false,
+      "reason": "GPUダイもグラフィックスボードも国内上場に作り手が存在せず、店頭品薄のプレミアムは海外AIB・国内小売・二次流通に落ちて日本企業の損益に届かない",
+      "lag_note": "該当なし（プレミアムがメーカー損益に届かないため待っても入らない）。AIサーバ側の受益連鎖を取りたい場合は dram / cpu-logic subject を使う",
+      "beneficiaries": [],
+      "traps": [
+        {
+          "code": "3778",
+          "name": "さくらインターネット",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "pin='電力調達価格(JEPX・燃調)' sign='-'・note='GPU受注は数量側'＝GPUを買って設備に組み込む側で、GPU高騰は調達コスト増と増設遅延として効く"
+        },
+        {
+          "code": "6758",
+          "name": "ソニーグループ",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "note='営業利益最大はG&NS・メモリ高騰はハード原価でむしろ減益'＝ゲーム機にGPU/メモリを組み込む側で、部材高騰は原価増"
+        },
+        {
+          "code": "3107",
+          "name": "ダイワボウホールディングス",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "pin='法人PC出荷台数'＝GPU/パーツの値上がりはPC価格上昇として出荷台数を抑える方向に効く"
+        },
+        {
+          "code": "3048",
+          "name": "ビックカメラ",
+          "layer": "retail",
+          "sign": "-",
+          "evidence": "pin='既存店売上・免税売上'＝利益は既存店売上と客数で決まる。グラボ品薄は入荷減＝販売数量減で、単価上昇は利益に直結しない"
+        },
+        {
+          "code": "7419",
+          "name": "ノジマ",
+          "layer": "retail",
+          "sign": "-",
+          "evidence": "pin='既存店売上・通信回線契約数'＝利益源は既存店とキャリアショップ契約数。PCパーツの品薄プレミアムは損益の中心に入らない"
+        }
+      ],
+      "group": "A-semiconductor",
+      "contested": {
+        "call": "resale=非対象",
+        "counter": "AI向けGPU逼迫は後工程・基板の増産投資を実際に呼ぶ。日本語Xの『グラボ品薄』がコンシューマ店頭の話に偏るという前提が崩れれば capex=対象に反転する",
+        "mitigation": "その受益連鎖(装置・基板・テスタ)は dram / cpu-logic に計上済みのため、resale 判定でも取りこぼしは出ない"
+      }
+    },
+    {
+      "id": "copper",
+      "label": "銅",
+      "queries": [
+        "gen1-douka-kotou"
+      ],
+      "shortage_type": "price",
+      "actionable": true,
+      "reason": "LME銅は毎日公表され、権益保有・製錬・非鉄在庫商社の売上単価と在庫評価に即座に乗る。",
+      "lag_note": "0〜8週（LMEは即時、決算反映は四半期）",
+      "beneficiaries": [
+        {
+          "code": "5713",
+          "name": "住友金属鉱山",
+          "layer": "trader",
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "E2:金属事業が利益柱・銅権益+製錬(3班検証) [流用:series=copper]。pin=「銅・金価格（菱刈金鉱山＋海外銅権益）」",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "5711",
+          "name": "三菱マテリアル",
+          "layer": "trader",
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "製錬はTC/RC支配的・銅価の純感応度E1/E2未確認 [流用:series=copper]",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "5714",
+          "name": "ＤＯＷＡホールディングス",
+          "layer": "trader",
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "製錬・貴金属副産物あり・純感応度E1/E2未確認 [流用:series=copper]",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "8002",
+          "name": "丸紅",
+          "layer": "trader",
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "center_pin の pin=「銅価格(LME)」・note=「チリ銅権益の持分利益が最大の変動要因」",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "1515",
+          "name": "日鉄鉱業",
+          "layer": "trader",
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "pin=「銅価格（チリ自社鉱山）＋石灰石数量」だが note が「推測」・数量の柱は石灰石",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "9824",
+          "name": "泉州電業",
+          "layer": "trader",
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "pin=「銅建値(電線売価)」・note=「電線専門卸で売価が銅建値に連動、在庫評価益も同時に発生する」",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "9934",
+          "name": "因幡電機産業",
+          "layer": "trader",
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "pin=「銅建値(電線売価)」・note=「電線が主力商材で銅建値が売価に直結」。ただし非電線比率も高い",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "3036",
+          "name": "アルコニックス",
+          "layer": "trader",
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "pin=「非鉄価格(アルミ・銅LME)」・note=「非鉄商社で売上単価と在庫評価にLME価格が直接入る」",
+          "verified": "2026-07-28"
+        }
+      ],
+      "traps": [
+        {
+          "code": "5803",
+          "name": "フジクラ",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "pin=「データセンター向け光ケーブル・接続部品の数量」・note=「銅はコスト側」。銅高で連想買いされるが数量型"
+        },
+        {
+          "code": "5801",
+          "name": "古河電気工業",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "note=「銅は建値スライドで買い手側」。利益柱は情報通信の数量"
+        },
+        {
+          "code": "5802",
+          "name": "住友電気工業",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "note=「最大利益は自動車WHの数量型。銅は建値スライドで転嫁」＝銅高そのものは中立〜コスト"
+        },
+        {
+          "code": "5805",
+          "name": "ＳＷＣＣ",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "note=「送配電とDC投資の受注数量が中心。銅は建値スライド転嫁」"
+        },
+        {
+          "code": "5943",
+          "name": "ノーリツ",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "note=「鋼材・銅は買い手側」。給湯器の数量型"
+        },
+        {
+          "code": "5947",
+          "name": "リンナイ",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "note=「鋼材・銅は買い手側」"
+        },
+        {
+          "code": "6506",
+          "name": "安川電機",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "note=「銅や鋼材はコスト側で受益にならない」"
+        },
+        {
+          "code": "6954",
+          "name": "ファナック",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "note=「鋼材や銅はコスト側で受益にならない」"
+        },
+        {
+          "code": "5016",
+          "name": "ＪＸ金属",
+          "layer": "user",
+          "sign": "0",
+          "evidence": "社名は銅製錬だが pin=「半導体用スパッタターゲット等の数量」・note=「銅製錬はTC/RCと副産金依存」＝銅価直結ではない"
+        }
+      ],
+      "group": "B-material-food-vehicle"
+    },
+    {
+      "id": "gold",
+      "label": "金",
+      "queries": [
+        "gen1-kinkakaku"
+      ],
+      "shortage_type": "price",
+      "actionable": true,
+      "reason": "金地金価格は毎日公表され、鉱山権益と貴金属リサイクル回収の売上単価にそのまま入る。",
+      "lag_note": "0〜8週",
+      "beneficiaries": [
+        {
+          "code": "5713",
+          "name": "住友金属鉱山",
+          "layer": "trader",
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "E2:菱刈金鉱山+製錬副産金(金属事業) [流用:series=gold-int/gold-tanaka]",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "7456",
+          "name": "松田産業",
+          "layer": "trader",
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "E2:主業=貴金属リサイクル(回収型) [流用:series=gold-int/gold-tanaka]。pin=「金・貴金属価格」",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "5857",
+          "name": "ＡＲＥホールディングス",
+          "layer": "trader",
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "E2:主業=貴金属精錬リサイクル [流用:series=gold-int/gold-tanaka]。pin=「金・銀等の貴金属価格（回収・精錬）」",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "5714",
+          "name": "ＤＯＷＡホールディングス",
+          "layer": "trader",
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "pin=「金・銀等の貴金属価格（リサイクル回収）」・note=「リサイクル原料からの貴金属回収が売上単価」（新規：金series未収録）",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "5711",
+          "name": "三菱マテリアル",
+          "layer": "trader",
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "pin=「銅・金価格（自山鉱権益＋副産貴金属）」だが note 末尾が「推測」・製錬TCの寄与も混在",
+          "verified": "2026-07-28"
+        }
+      ],
+      "traps": [
+        {
+          "code": "8008",
+          "name": "ヨンドシーホールディングス",
+          "layer": "retail",
+          "sign": "-",
+          "evidence": "pin=「金・地金価格」sign=-・note=「ジュエリーは金が仕入原価、金高で店頭単価上昇も客数減」"
+        },
+        {
+          "code": "6941",
+          "name": "山一電機",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "note=「金はコスト側」。ICソケットのメッキ材として金を買う側"
+        },
+        {
+          "code": "7826",
+          "name": "フルヤ金属",
+          "layer": "maker",
+          "sign": "0",
+          "evidence": "貴金属だが pin=「イリジウム・ルテニウム価格」で金とは別建値。金高で連想買いされやすい"
+        }
+      ],
+      "group": "B-material-food-vehicle"
+    },
+    {
+      "id": "rare-metal",
+      "label": "レアメタル・レアアース",
+      "queries": [
+        "gen1-rare-metal"
+      ],
+      "shortage_type": "price",
+      "actionable": true,
+      "reason": "個別金属の建値が売上単価に直入りする製造・回収・在庫商社は存在するが、公開価格系列が乏しくクエリ側で主題を特定しづらい。",
+      "lag_note": "2〜12週（自社建値・四半期決算で顕在化）",
+      "beneficiaries": [
+        {
+          "code": "7826",
+          "name": "フルヤ金属",
+          "layer": "maker",
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "自社サイト実読:Ir/Ruの製造販売+世界最大級リサイクル能力・FMBIは自社建値。ただし買い側エクスポージャもありE1/E2で純感応度未確認 [流用:series=fmbi-iridium/fmbi-ruthenium]",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "5726",
+          "name": "大阪チタニウムテクノロジーズ",
+          "layer": "maker",
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "pin=「スポンジチタン価格・数量（航空機需要）」・note=「スポンジチタンが売上単価」。ただし無料の公開価格系列なし",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "5857",
+          "name": "ＡＲＥホールディングス",
+          "layer": "trader",
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "E2:主業=貴金属精錬リサイクル [流用:series=platinum]",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "5714",
+          "name": "ＤＯＷＡホールディングス",
+          "layer": "trader",
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "PGMリサイクルあり・純感応度E1/E2未確認 [流用:series=platinum]",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "8078",
+          "name": "阪和興業",
+          "layer": "trader",
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "pin=「鋼材・ニッケル等の市況」・note=「鉄鋼非鉄の在庫を持つトレーダーで市況上昇が在庫評価と売価に直入」",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "3036",
+          "name": "アルコニックス",
+          "layer": "trader",
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "pin=「非鉄価格(アルミ・銅LME)」でレアメタルそのものは pin に明示なし。非鉄商社としての波及のみ",
+          "verified": "2026-07-28"
+        }
+      ],
+      "traps": [
+        {
+          "code": "6762",
+          "name": "ＴＤＫ",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "note=「コバルト等はコスト側」。電池金属高は原価増"
+        },
+        {
+          "code": "6592",
+          "name": "マブチモーター",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "note=「銅と磁石はコスト側」。レアアース磁石高はコスト"
+        },
+        {
+          "code": "6136",
+          "name": "オーエスジー",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "note=「タングステンは仕入コスト側」"
+        },
+        {
+          "code": "4078",
+          "name": "堺化学工業",
+          "layer": "maker",
+          "sign": "0",
+          "evidence": "pin=「MLCC向け電子材料(チタン酸バリウム)の数量」＝数量型で金属市況に直結しない"
+        },
+        {
+          "code": "6752",
+          "name": "パナソニック　ホールディングス",
+          "layer": "user",
+          "sign": "0",
+          "evidence": "note=「電池金属は概ね転嫁」＝価格連動での受益ではない"
+        }
+      ],
+      "group": "B-material-food-vehicle"
+    },
+    {
+      "id": "lumber",
+      "label": "木材",
+      "queries": [
+        "gen1-kenzai"
+      ],
+      "shortage_type": "price",
+      "actionable": false,
+      "reason": "木材高で純増益になる銘柄がTOP1000台帳に存在しない（既存series=lumberの候補2社とも rejected）。買い手側の減益銘柄だけが特定できる主題。",
+      "lag_note": "4〜16週（住宅の請負・分譲は完工基準で遅行）",
+      "beneficiaries": [],
+      "traps": [
+        {
+          "code": "1911",
+          "name": "住友林業",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "木材流通は受益だが住宅事業のコスト増と相殺=符号未確定(mixed) [流用:series=lumber rejected]。pin=「米国新築住宅の販売戸数」・note=「木材は仕入側」"
+        },
+        {
+          "code": "1419",
+          "name": "タマホーム",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "pin=「住宅販売単価−木材/建材仕入」＝木材は差引される側。木材単独高は粗利圧迫"
+        },
+        {
+          "code": "3291",
+          "name": "飯田グループホールディングス",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "pin=「建売分譲価格−木材/土地仕入」・note=「ウッドショックで粗利が激変」＝木材高は分母側"
+        },
+        {
+          "code": "3465",
+          "name": "ケイアイスター不動産",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "pin=「建売分譲価格−土地/建材仕入」＝仕入高は粗利減"
+        },
+        {
+          "code": "3050",
+          "name": "ＤＣＭホールディングス",
+          "layer": "retail",
+          "sign": "-",
+          "evidence": "note=「木材建材は原価側」。HCは既存店売上が利益源"
+        },
+        {
+          "code": "3191",
+          "name": "ジョイフル本田",
+          "layer": "retail",
+          "sign": "-",
+          "evidence": "note=「木材建材は原価側」"
+        },
+        {
+          "code": "9842",
+          "name": "アークランズ",
+          "layer": "retail",
+          "sign": "-",
+          "evidence": "note=「豚肉・木材は原価側」"
+        }
+      ],
+      "group": "B-material-food-vehicle"
+    },
+    {
+      "id": "steel-kenzai",
+      "label": "建材・鉄骨・鋼材",
+      "queries": [
+        "gen1-kenzai"
+      ],
+      "shortage_type": "price",
+      "actionable": true,
+      "reason": "鋼材建値と建材の値上げ浸透は在庫商社と値決め主導メーカーの粗利に直入りするが、施工側は固定価格請負で真逆に振れる。",
+      "lag_note": "4〜12週",
+      "beneficiaries": [
+        {
+          "code": "8078",
+          "name": "阪和興業",
+          "layer": "trader",
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "pin=「鋼材・ニッケル等の市況」・note=「鉄鋼非鉄の在庫を持つトレーダーで市況上昇が在庫評価と売価に直入」",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "8130",
+          "name": "サンゲツ",
+          "layer": "trader",
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "pin=「内装材の値上げ浸透」・note=「壁紙・床材で自社が価格改定を主導、浸透度が粗利率を直接動かす」",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "5423",
+          "name": "東京製鐵",
+          "layer": "maker",
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "pin=「鋼材価格−鉄スクラップの値差」＝鋼材単独↑なら値差拡大で増益だが、スクラップ同時高だと中立。level ではなく spread が pin なので provisional",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "5930",
+          "name": "文化シヤッター",
+          "layer": "maker",
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "pin=「非住宅建築着工の数量（＋値上げ浸透）」に値上げが含まれるが note=「鋼材は買い手側」で原材料高とは逆方向",
+          "verified": "2026-07-28"
+        }
+      ],
+      "traps": [
+        {
+          "code": "1801",
+          "name": "大成建設",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "pin=「建設資材・労務費（鋼材/生コン）」sign=-・note=「固定価格請負で資材労務費高が採算を直撃した」"
+        },
+        {
+          "code": "1802",
+          "name": "大林組",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "pin=「建設資材・労務費（鋼材/生コン）」sign=-・「資材労務費は原価側に入る」"
+        },
+        {
+          "code": "1803",
+          "name": "清水建設",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "pin=「建設資材・労務費（鋼材/生コン）」sign=-"
+        },
+        {
+          "code": "1812",
+          "name": "鹿島建設",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "pin=「建設資材・労務費（鋼材/生コン）」sign=-"
+        },
+        {
+          "code": "1808",
+          "name": "長谷工コーポレーション",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "pin=「マンション建設の資材・労務費」sign=-・「資材労務費高が完工利益率を圧迫」"
+        },
+        {
+          "code": "5911",
+          "name": "横河ブリッジホールディングス",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "社名は鋼構造だが note=「鋼材は買い手。固定価格請負で鋼材↑は減益要因」"
+        },
+        {
+          "code": "3431",
+          "name": "宮地エンジニアリンググループ",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "note=「鋼材は買い手。固定価格請負なので鋼材↑は減益要因」"
+        },
+        {
+          "code": "5463",
+          "name": "丸一鋼管",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "note=「母材コイルは買い手。値差確保が利益、鋼材↑単独は中立〜減益」＝業種名に鋼が入る典型的な罠"
+        },
+        {
+          "code": "5929",
+          "name": "三和ホールディングス",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "note=「鋼材は買い手側」。北米ガレージドアの数量型"
+        },
+        {
+          "code": "5262",
+          "name": "日本ヒューム",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "note=「セメント・鋼材は買い手側」。コンクリ二次製品の数量型"
+        }
+      ],
+      "group": "B-material-food-vehicle"
+    },
+    {
+      "id": "kaiun-unchin",
+      "label": "海運・運賃",
+      "queries": [
+        "gen1-kaiun-unchin"
+      ],
+      "shortage_type": "price",
+      "actionable": true,
+      "reason": "SCFI/BDIは週次公表で、運賃がそのまま船社の売値になるため利益への転写が最も直接的な主題。",
+      "lag_note": "0〜6週（運賃は週次公表・ONE持分益は四半期反映）",
+      "beneficiaries": [
+        {
+          "code": "9101",
+          "name": "日本郵船",
+          "layer": "trader",
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "E2:コンテナ船(ONE持分)が利益柱・運賃=売値 [流用:series=scfi/bdi]。pin=「コンテナ運賃SCFI」",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "9104",
+          "name": "商船三井",
+          "layer": "trader",
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "E2:コンテナ船(ONE持分)が利益柱 [流用:series=scfi/bdi]",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "9107",
+          "name": "川崎汽船",
+          "layer": "trader",
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "E2:コンテナ船(ONE持分)が利益柱 [流用:series=scfi]",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "9110",
+          "name": "ＮＳユナイテッド海運",
+          "layer": "trader",
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "E2:主業=ばら積み海運 [流用:series=bdi]。pin=「ドライバルク運賃BDI」・「運賃が売値そのもの」",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "9119",
+          "name": "飯野海運",
+          "layer": "trader",
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "pin=「ケミカル・プロダクト船運賃」・note=「ケミカル船とLPG船の運賃が売値」（新規：既存seriesはSCFI/BDIのみで本船種未収録）",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "9147",
+          "name": "ＮＩＰＰＯＮ　ＥＸＰＲＥＳＳホールディングス",
+          "layer": "trader",
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "pin=「国際フォワーディングの運賃スプレッド」・note=「航空海上の運賃上昇局面で取扱マージンが拡大し増益」",
+          "verified": "2026-07-28"
+        }
+      ],
+      "traps": [
+        {
+          "code": "9302",
+          "name": "三井倉庫ホールディングス",
+          "layer": "trader",
+          "sign": "0",
+          "evidence": "pin=「国際物流の取扱数量」・note=「運賃水準より取扱物量が利益を動かす」＝運賃高でも増益とは限らない"
+        },
+        {
+          "code": "9364",
+          "name": "上組",
+          "layer": "trader",
+          "sign": "0",
+          "evidence": "note=「港湾荷役は作業数量課金」＝運賃ではなく貨物量が利益。運賃高＝物量減なら逆風"
+        },
+        {
+          "code": "9202",
+          "name": "ＡＮＡホールディングス",
+          "layer": "user",
+          "sign": "0",
+          "evidence": "pin=「国際線旅客イールド(単価)」だが note=「燃油は逆方向コスト」。海上運賃とは別建て"
+        },
+        {
+          "code": "3038",
+          "name": "神戸物産",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "note=「輸入食材の仕入原価が…粗利率を圧迫する」＝荷主側で運賃高はコスト増"
+        },
+        {
+          "code": "8267",
+          "name": "イオン",
+          "layer": "retail",
+          "sign": "-",
+          "evidence": "輸入商材の荷主側。note=「GMSは薄利」で運賃高の原価増を吸収しきれない"
+        }
+      ],
+      "group": "B-material-food-vehicle"
+    },
+    {
+      "id": "denki-gas",
+      "label": "電気代・ガス代",
+      "queries": [
+        "gen1-denki-gas"
+      ],
+      "shortage_type": "price",
+      "actionable": true,
+      "reason": "小売料金の値上げ自体は燃料費調整によるパススルーで増益要因ではなく、実際に儲かるのは限界費用が低くJEPXスポット高で卸売収入が伸びる発電側だけ。",
+      "lag_note": "0〜12週（燃調は約2ヶ月ラグ・JEPXは即日）",
+      "beneficiaries": [
+        {
+          "code": "9513",
+          "name": "電源開発",
+          "layer": "maker",
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "E2:卸電気専業・燃料はパススルーで水力/卸売がJEPX高の純受益 [流用:series=jepx]。※本クエリは小売料金であり受益経路(JEPXスポット)とは連鎖が一段ずれる",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "9503",
+          "name": "関西電力",
+          "layer": "maker",
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "原発7基で限界費用が低くJEPX高が卸売収入増(E1/E2未確認) [流用:series=jepx]",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "9508",
+          "name": "九州電力",
+          "layer": "maker",
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "原発4基稼働で限界費用が低い(E1/E2未確認) [流用:series=jepx]",
+          "verified": "2026-07-28"
+        }
+      ],
+      "traps": [
+        {
+          "code": "9504",
+          "name": "中国電力",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "pin=「石炭・燃料価格」sign=-・note=「石炭火力主体で燃調ラグにより燃料高が短期の減益要因」 [流用:series=jepx rejected]"
+        },
+        {
+          "code": "9505",
+          "name": "北陸電力",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "note=「志賀原発停止で石炭火力依存、燃調ラグで燃料高が減益」 [流用:series=jepx rejected]"
+        },
+        {
+          "code": "9506",
+          "name": "東北電力",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "note=「火力比率が高く燃調ラグで燃料高が減益」 [流用:series=jepx rejected]"
+        },
+        {
+          "code": "9507",
+          "name": "四国電力",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "note=「燃調ラグで燃料高が減益。推測」 [流用:series=jepx rejected]"
+        },
+        {
+          "code": "9511",
+          "name": "沖縄電力",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "note=「原発がなく石炭石油依存、燃調ラグで燃料高が減益要因」 [流用:series=jepx rejected]"
+        },
+        {
+          "code": "9502",
+          "name": "中部電力",
+          "layer": "user",
+          "sign": "0",
+          "evidence": "sign=mixed・「小売調達は−だがJERA持分は燃料高で+、純方向が定まらない」 [流用:series=jepx rejected]"
+        },
+        {
+          "code": "9531",
+          "name": "東京瓦斯",
+          "layer": "user",
+          "sign": "0",
+          "evidence": "sign=mixed・pin=「LNG・米天然ガス価格」・note=「都市ガス小売は原調ラグで−、米シェール上流は+で方向不定」。ガス代値上げ＝増益ではない"
+        },
+        {
+          "code": "9532",
+          "name": "大阪瓦斯",
+          "layer": "user",
+          "sign": "0",
+          "evidence": "sign=mixed・note=「海外エネルギー（米シェール）は+、国内小売は原調ラグで−」"
+        },
+        {
+          "code": "9533",
+          "name": "東邦瓦斯",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "pin=「LNG調達価格」sign=-・note=「上流権益が薄く原料費調整のラグで燃料高が短期減益」"
+        },
+        {
+          "code": "9543",
+          "name": "静岡ガス",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "pin=「LNG調達価格」sign=-・note=「原料費調整ラグで燃料高が短期の減益要因」"
+        },
+        {
+          "code": "3778",
+          "name": "さくらインターネット",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "pin=「電力調達価格(JEPX・燃調)」sign=-・note=「DC電力費が原価の中核で高騰時に実際に減益」 [流用:series=jepx rejected]"
+        },
+        {
+          "code": "9501",
+          "name": "東京電力ホールディングス",
+          "layer": "maker",
+          "sign": "0",
+          "evidence": "センターピンは柏崎刈羽の再稼働eventでありJEPX/料金ではない [流用:series=jepx rejected]"
+        }
+      ],
+      "group": "B-material-food-vehicle"
+    },
+    {
+      "id": "kome",
+      "label": "米（コメ）",
+      "queries": [
+        "gen1-kome-price"
+      ],
+      "shortage_type": "price",
+      "actionable": false,
+      "reason": "相対取引価格は公表されるが、TOP1000台帳に米価上昇で増益になる生産・流通側の銘柄が1社も存在せず、外食・米菓のコスト増だけが特定できる。",
+      "lag_note": "4〜24週（外食・加工は値上げ遅行で減益が先に出る）",
+      "beneficiaries": [],
+      "traps": [
+        {
+          "code": "2220",
+          "name": "亀田製菓",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "pin=「国産うるち米（加工用米）価格」sign=-・note=「米菓の主原料である米の買い手で、米価高騰が直接コスト増」"
+        },
+        {
+          "code": "7630",
+          "name": "壱番屋",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "pin=「コメ（業務用）価格」sign=-・note=「カレー専門でコメが原価の中心、米価高騰は値上げ遅行で減益」"
+        },
+        {
+          "code": "9887",
+          "name": "松屋フーズホールディングス",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "pin=「コメ・輸入牛肉の仕入価格」sign=-・note=「値上げ遅行で減益」"
+        },
+        {
+          "code": "9861",
+          "name": "吉野家ホールディングス",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "note=「牛丼専業で牛肉とコメが原価の中心、値上げ遅行で利益が振れる」"
+        },
+        {
+          "code": "7550",
+          "name": "ゼンショーホールディングス",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "note=「牛肉とコメは原価側」"
+        },
+        {
+          "code": "2695",
+          "name": "くら寿司",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "note=「コメ・水産高は原価側の逆風」"
+        },
+        {
+          "code": "3563",
+          "name": "ＦＯＯＤ　＆　ＬＩＦＥ　ＣＯＭＰＡＮＩＥＳ",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "note=「水産とコメ高は原価側の逆風」"
+        },
+        {
+          "code": "7421",
+          "name": "カッパ・クリエイト",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "note=「コメ・水産高は原価側の逆風」"
+        },
+        {
+          "code": "9828",
+          "name": "Ｇｅｎｋｉ　Ｇｌｏｂａｌ　Ｄｉｎｉｎｇ　Ｃｏｎｃｅｐｔｓ",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "note=「水産とコメは原価側の逆風」"
+        },
+        {
+          "code": "2752",
+          "name": "フジオフードグループ本社",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "note=「コメ・食材は原価側の逆風」"
+        },
+        {
+          "code": "6326",
+          "name": "クボタ",
+          "layer": "equipment",
+          "sign": "0",
+          "evidence": "農機で連想買いされるが note=「穀物価格は農家所得経由の1ホップ、直接は北米の販売台数」＝国内米価とは無関係"
+        },
+        {
+          "code": "8218",
+          "name": "コメリ",
+          "layer": "retail",
+          "sign": "0",
+          "evidence": "社名に「コメ」が入るが実体は農業系HCで pin=「既存店売上・農業資材需要」。米価とは無関係（名称由来の誤検知）"
+        }
+      ],
+      "group": "B-material-food-vehicle"
+    },
+    {
+      "id": "coffee-cacao",
+      "label": "コーヒー豆・カカオ",
+      "queries": [
+        "gen1-coffee-cacao"
+      ],
+      "shortage_type": "price",
+      "actionable": true,
+      "reason": "国際相場は日次公表だが日本株では大半が買い手であり、カカオ高で代替油脂(CBE)需要が伸びる不二製油だけが構造的な受益。",
+      "lag_note": "8〜26週（買い付けヘッジで期ずれ・値上げ浸透は半年遅行）",
+      "beneficiaries": [
+        {
+          "code": "2607",
+          "name": "不二製油",
+          "layer": "material",
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "E1:会社開示でカカオ双方向感応(高騰→代替油脂CBE需要増) [流用:series=cocoa]。pin=「カカオ豆相場・加工マージン」・note=「業務用チョコの川上でカカオ高が加工マージン拡大に直結」",
+          "verified": "2026-07-28"
+        }
+      ],
+      "traps": [
+        {
+          "code": "8079",
+          "name": "正栄食品工業",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "pin=「カカオ豆価格」sign=-・note=「カカオ・ナッツを輸入して加工販売する買い手、原料高は原価増に直結」＝カカオ関連で最も誤買いされやすい"
+        },
+        {
+          "code": "3087",
+          "name": "ドトール・日レスホールディングス",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "pin=「アラビカコーヒー生豆価格」sign=-・note=「焙煎卸と店舗で生豆が原価の中心、高騰は値上げ遅行で減益」"
+        },
+        {
+          "code": "2201",
+          "name": "森永製菓",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "note=「カカオと乳原料は全てコスト」。受益は値上げ浸透であってカカオ高ではない"
+        },
+        {
+          "code": "2206",
+          "name": "江崎グリコ",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "note=「カカオ乳の高騰はコスト側」"
+        },
+        {
+          "code": "2269",
+          "name": "明治ホールディングス",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "note=「生乳とカカオはコスト側」"
+        },
+        {
+          "code": "3543",
+          "name": "コメダホールディングス",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "note=「豆や小麦は逆方向のコスト」"
+        },
+        {
+          "code": "3395",
+          "name": "サンマルクホールディングス",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "note=「小麦・コーヒーは原価側」"
+        }
+      ],
+      "group": "B-material-food-vehicle"
+    },
+    {
+      "id": "shokuhin-neage",
+      "label": "食品値上げ",
+      "queries": [
+        "gen1-shokuhin-neage"
+      ],
+      "shortage_type": "price",
+      "actionable": true,
+      "reason": "「自社製品の値上げ浸透」を center_pin が pin として明示する食品メーカー群は、値上げが原価上昇を上回った分がそのまま増益になる。",
+      "lag_note": "8〜26週（値上げ実施から浸透・数量回復まで2四半期程度）",
+      "beneficiaries": [
+        {
+          "code": "2802",
+          "name": "味の素",
+          "layer": "maker",
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "pin=「自社製品の値上げ浸透」・note=「利益額最大は調味料食品の値上げ」。ただし変動主因はABF半導体材料と併記あり",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "2897",
+          "name": "日清食品ホールディングス",
+          "layer": "maker",
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "pin=「即席麺の値上げ浸透」・note=「国内と米州の値上げ浸透が利益中心、小麦と油脂はコスト」",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "2212",
+          "name": "山崎製パン",
+          "layer": "maker",
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "pin=「パン・菓子の値上げ浸透」・note=「量販向け値上げの浸透度が利益を左右」",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "2229",
+          "name": "カルビー",
+          "layer": "maker",
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "pin=「自社製品の値上げ浸透」・note=「スナックの値上げ浸透が利益の中心」",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "2264",
+          "name": "森永乳業",
+          "layer": "maker",
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "pin=「乳製品の値上げ浸透」・note=「値上げ転嫁の速度が利益を決める」",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "2270",
+          "name": "雪印メグミルク",
+          "layer": "maker",
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "pin=「乳製品の値上げ浸透」・note=「飲用乳と乳製品の値上げ転嫁が利益中心」",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "2269",
+          "name": "明治ホールディングス",
+          "layer": "maker",
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "pin=「食品（乳・菓子）の値上げ浸透」・note=「利益最大は食品セグメント」",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "2201",
+          "name": "森永製菓",
+          "layer": "maker",
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "pin=「自社製品の値上げ浸透」・note=「菓子の値上げ浸透が利益を決める」",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "2206",
+          "name": "江崎グリコ",
+          "layer": "maker",
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "pin=「自社製品の値上げ浸透」・note=「菓子とアイスの値上げ浸透が中心」",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "2810",
+          "name": "ハウス食品グループ本社",
+          "layer": "maker",
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "pin=「自社製品の値上げ浸透」・note=「ルウと海外豆腐の値上げが利益中心」",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "2001",
+          "name": "ニップン",
+          "layer": "maker",
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "pin=「自社製品の値上げ浸透」・note=「小麦は売渡価格で転嫁、製品値上げと加工食品が利益源」",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "2002",
+          "name": "日清製粉グループ本社",
+          "layer": "maker",
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "pin=「自社製品の値上げ浸透」・note=「輸入小麦は売渡価格で転嫁され中立、製品値上げが利益源」",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "2871",
+          "name": "ニチレイ",
+          "layer": "maker",
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "pin=「冷凍食品・低温物流の値上げ浸透」・note=「保管配送料金の改定が効く」",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "2593",
+          "name": "伊藤園",
+          "layer": "maker",
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "pin=「茶飲料の値上げ浸透」・note=「荒茶高騰は買い手側コスト、製品値上げの浸透が利益を決める」",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "2587",
+          "name": "サントリービバレッジ＆フード",
+          "layer": "maker",
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "pin=「飲料の値上げ浸透」・note=「原材料と物流費はコスト」",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "2579",
+          "name": "コカ・コーラ　ボトラーズジャパンホールディングス",
+          "layer": "maker",
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "pin=「飲料の値上げ浸透」・note=「砂糖とPET樹脂はコスト、値上げ浸透と販売数量が利益を決める」",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "2590",
+          "name": "ダイドーグループホールディングス",
+          "layer": "maker",
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "pin=「自販機飲料の値上げ浸透」・note=「値上げ浸透と1台当り本数が中心」",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "2502",
+          "name": "アサヒグループホールディングス",
+          "layer": "maker",
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "pin=「ビール類の値上げ浸透」・note=「国内酒類と欧州豪州の単価改善が利益中心、麦芽等はコスト」",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "2503",
+          "name": "キリンホールディングス",
+          "layer": "maker",
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "pin=「酒類・飲料の値上げ浸透」・note=「国内ビールと豪ライオンの値上げが主因」",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "2914",
+          "name": "日本たばこ産業",
+          "layer": "maker",
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "pin=「海外たばこの価格改定（値上げ浸透）」・note=「価格改定が増益の主因」。ただし食品ではなくたばこ・海外主体",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "2109",
+          "name": "ＤＭ三井製糖",
+          "layer": "maker",
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "pin=「精製糖の販売価格改定」・note=「粗糖高は糖価調整制度で緩和、売価改定と数量が利益中心」",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "2801",
+          "name": "キッコーマン",
+          "layer": "maker",
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "pin=「北米醤油・食品卸の値上げ浸透」だが利益の約7割が海外＝国内「食品値上げ」クエリとは連鎖がずれる",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "2875",
+          "name": "東洋水産",
+          "layer": "maker",
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "pin=「北米即席麺の値上げ浸透」で海外が営業利益の約半分＝国内クエリとの連鎖が弱い",
+          "verified": "2026-07-28"
+        }
+      ],
+      "traps": [
+        {
+          "code": "8079",
+          "name": "正栄食品工業",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "pin=「カカオ豆価格」sign=-。原材料が上がった側であって値上げで儲かる側ではない"
+        },
+        {
+          "code": "2220",
+          "name": "亀田製菓",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "pin=「国産うるち米（加工用米）価格」sign=-。食品株だが原材料の買い手として符号がマイナス"
+        },
+        {
+          "code": "2809",
+          "name": "キユーピー",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "pin=「鶏卵相場（M玉）」sign=-・note=「卵価上昇は直接コスト増」"
+        },
+        {
+          "code": "2281",
+          "name": "プリマハム",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "pin=「豚肉相場（原料コスト）」sign=-・note=「相場高は転嫁遅行で減益・推測」"
+        },
+        {
+          "code": "3941",
+          "name": "レンゴー",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "pin=「古紙価格（段ボール原料コスト）」sign=-。食品値上げの裏で包材コストは上がる側"
+        },
+        {
+          "code": "3038",
+          "name": "神戸物産",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "pin=「USD/JPY為替」sign=-・note=「輸入食材の仕入原価が円安で膨らみ業務スーパーの粗利率を圧迫する」"
+        },
+        {
+          "code": "3222",
+          "name": "ユナイテッド・スーパーマーケット・ホールディングス",
+          "layer": "retail",
+          "sign": "-",
+          "evidence": "note=「仕入は原価側」。値上げは小売にとって仕入原価増で客数減リスクも伴う"
+        },
+        {
+          "code": "2791",
+          "name": "大黒天物産",
+          "layer": "retail",
+          "sign": "-",
+          "evidence": "note=「仕入は原価側」。ディスカウントSMは値上げ転嫁が最も難しい"
+        },
+        {
+          "code": "8267",
+          "name": "イオン",
+          "layer": "retail",
+          "sign": "-",
+          "evidence": "note=「GMSは薄利」。食品値上げはPB以外では原価増"
+        },
+        {
+          "code": "2296",
+          "name": "伊藤ハム米久ホールディングス",
+          "layer": "user",
+          "sign": "0",
+          "evidence": "sign=mixed・note=「食肉卸と加工の両建てで相場の純方向が定まらない・推測」"
+        }
+      ],
+      "group": "B-material-food-vehicle"
+    },
+    {
+      "id": "used-car",
+      "label": "中古車相場",
+      "queries": [
+        "gen1-kuruma-price"
+      ],
+      "shortage_type": "price",
+      "actionable": true,
+      "reason": "中古車オークション相場は週次で公表され、在庫を持つ流通業者の販売単価と在庫評価に直入りする（自動車メーカーには届かない）。",
+      "lag_note": "2〜12週（在庫回転が1〜3ヶ月）",
+      "beneficiaries": [
+        {
+          "code": "7599",
+          "name": "ＩＤＯＭ",
+          "layer": "trader",
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "pin=「中古車オークション相場」・note=「中古車在庫の評価と販売単価が相場に直結」。ただし「仕入原価にも同時に効く」と併記あり",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "3186",
+          "name": "ネクステージ",
+          "layer": "trader",
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "pin=「中古車小売相場（オークション相場）」・note=「中古車の販売単価と在庫評価に直結、台帳の受益3社の1つ」",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "7593",
+          "name": "ＶＴホールディングス",
+          "layer": "trader",
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "pin=「新車・中古車の販売台数」＝台数型で note は「中古相場は在庫評価に一部」＝相場感応は限定的",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "2681",
+          "name": "ゲオホールディングス",
+          "layer": "trader",
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "pin=「中古品（古着・トレカ・ゲーム機）相場」で中古車ではない。リユース相場全般の連想波及としてのみ",
+          "verified": "2026-07-28"
+        }
+      ],
+      "traps": [
+        {
+          "code": "4732",
+          "name": "ユー・エス・エス",
+          "layer": "trader",
+          "sign": "0",
+          "evidence": "中古車オークション最大手だが note=「手数料は台数課金で、落札価格でなく成約台数が利益を決める」＝相場高でも増益しない最大の罠"
+        },
+        {
+          "code": "7199",
+          "name": "プレミアグループ",
+          "layer": "trader",
+          "sign": "0",
+          "evidence": "pin=「中古車オートクレジット取扱高」・note=「中古車販売台数に連動」＝相場ではなく台数。相場高で台数が減れば逆風"
+        },
+        {
+          "code": "7201",
+          "name": "日産自動車",
+          "layer": "maker",
+          "sign": "0",
+          "evidence": "pin=「世界販売台数と工場稼働率」。中古車のプレミアムはメーカーの損益に届かない"
+        },
+        {
+          "code": "7267",
+          "name": "本田技研工業",
+          "layer": "maker",
+          "sign": "0",
+          "evidence": "pin=「USD/JPY為替」。中古車相場は自社売上単価に入らない"
+        },
+        {
+          "code": "8015",
+          "name": "豊田通商",
+          "layer": "trader",
+          "sign": "0",
+          "evidence": "pin=「トヨタ世界生産台数」＝新車生産の数量型で中古相場とは無関係"
+        }
+      ],
+      "group": "B-material-food-vehicle"
+    },
+    {
+      "id": "new-car-delivery",
+      "label": "新車の納期遅延",
+      "queries": [
+        "gen1-kuruma-price"
+      ],
+      "shortage_type": "disruption",
+      "actionable": false,
+      "reason": "納期遅延は半導体・部品の供給断絶が原因で、メーカーは売りたくても作れない＝台数減の減益要因であり復旧で終わる。",
+      "lag_note": "12〜52週（供給復旧まで数四半期）",
+      "traps": [
+        {
+          "code": "7201",
+          "name": "日産自動車",
+          "layer": "maker",
+          "sign": "-",
+          "evidence": "pin=「世界販売台数と工場稼働率」・note=「稼働率が損益分岐点を左右する」＝納期遅延は稼働率低下で減益"
+        },
+        {
+          "code": "7593",
+          "name": "ＶＴホールディングス",
+          "layer": "retail",
+          "sign": "-",
+          "evidence": "pin=「新車・中古車の販売台数」＝納車できない期間は台数が立たない"
+        },
+        {
+          "code": "5970",
+          "name": "ジーテクト",
+          "layer": "parts",
+          "sign": "-",
+          "evidence": "pin=「自動車生産台数（車体プレス部品の数量）」＝生産減が直撃"
+        },
+        {
+          "code": "5991",
+          "name": "日本発條",
+          "layer": "parts",
+          "sign": "-",
+          "evidence": "pin=「自動車生産台数（ばね・シートの数量）」＝数量型で納期遅延は逆風"
+        },
+        {
+          "code": "6472",
+          "name": "ＮＴＮ",
+          "layer": "parts",
+          "sign": "-",
+          "evidence": "pin=「自動車生産台数」＝生産台数連動で減産は減益"
+        }
+      ],
+      "group": "B-material-food-vehicle",
+      "dormant_beneficiaries": [
+        {
+          "code": "9832",
+          "name": "オートバックスセブン",
+          "layer": "retail",
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "pin=「既存店売上・車検整備件数」。納期遅延→保有年数の長期化→車検整備需要増、という2ホップの連鎖で pin は明示していない",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "9882",
+          "name": "イエローハット",
+          "layer": "retail",
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "pin=「既存店売上・車検整備件数」・note=「タイヤ・整備の来店数量が主」。同じく2ホップで pin 未明示",
+          "verified": "2026-07-28"
+        }
+      ],
+      "dormant_note": "actionable=false のため表示しない。分類が覆った時に再利用する候補",
+      "beneficiaries": []
+    },
+    {
+      "id": "bike",
+      "label": "バイク値上がり",
+      "queries": [
+        "gen1-bike-price"
+      ],
+      "shortage_type": "resale",
+      "actionable": false,
+      "reason": "新車は定価販売でメーカー損益は台数型、値上がりプレミアムは二次流通に落ちるが該当する中古バイク流通企業がTOP1000台帳に存在しない。",
+      "lag_note": "該当なし（受益銘柄を特定できないためラグ定義不可）",
+      "beneficiaries": [],
+      "traps": [
+        {
+          "code": "7272",
+          "name": "ヤマハ発動機",
+          "layer": "maker",
+          "sign": "0",
+          "evidence": "pin=「船外機・二輪の販売数量」sign=na＝値上がりではなく数量が利益を決める。バイク高騰で最も誤買いされやすい"
+        },
+        {
+          "code": "7267",
+          "name": "本田技研工業",
+          "layer": "maker",
+          "sign": "0",
+          "evidence": "pin=「USD/JPY為替」・note=「二輪が利益柱だが対ドル1円の為替感応度が最大の振れ要因」＝実質は為替株"
+        },
+        {
+          "code": "7012",
+          "name": "川崎重工業",
+          "layer": "maker",
+          "sign": "0",
+          "evidence": "pin=「二輪・航空・防衛の受注量」sign=na＝受注数量型。二輪の比重も小さい"
+        },
+        {
+          "code": "7296",
+          "name": "エフ・シー・シー",
+          "layer": "parts",
+          "sign": "0",
+          "evidence": "pin=「ホンダ二輪生産台数」sign=na＝生産台数型で値上がりは無関係"
+        },
+        {
+          "code": "7220",
+          "name": "武蔵精密工業",
+          "layer": "parts",
+          "sign": "0",
+          "evidence": "pin=「ホンダ二輪・四輪生産台数」sign=na＝生産台数型"
+        },
+        {
+          "code": "5108",
+          "name": "ブリヂストン",
+          "layer": "user",
+          "sign": "-",
+          "evidence": "pin=「天然ゴム価格（原料コスト）」sign=-。二輪関連の連想で買われるが原料の買い手"
+        }
+      ],
+      "group": "B-material-food-vehicle"
+    },
+    {
+      "id": "kaden-neage",
+      "label": "家電の値上げ（メーカー自身の定価改定）",
+      "queries": [
+        "gen1-kaden-neage"
+      ],
+      "shortage_type": "price",
+      "actionable": true,
+      "reason": "このクエリが拾うのは品薄プレミアムではなく『メーカー/流通の値上げ発表』＝定価そのものの改定で、単価が実際にP/Lの売上に入る。よって resale の例外条件（定価改定）に該当し actionable とする。ただし台帳977社で家電の値上げ浸透をセンターピンに持つのは象印マホービン7965のみで、パナソニックHD6752（pin=北米車載電池の生産数量）・ソニーグループ6758（pin=ゲーム課金・ソフト販売数量）・三菱電機6503（pin=FA・空調の出荷数量）は家電値上げが主役変数ではない＝見かけ受益。家電量販（ビックカメラ3048・ヤマダHD9831・ノジマ7419等）は値上げが客単価と仕入原価の両方に入るスプレッド型で符号が確定しないため beneficiaries に入れない。",
+      "lag_note": "値上げは『告知→実施→粗利への浸透』の3段で、X の話題は実施1〜3ヶ月前の告知に集中する。株側で確認できるのは決算の粗利率改善で、2〜4四半期後。確度=概算・AI仮置き（実測なし）。",
+      "beneficiaries": [
+        {
+          "code": "7965",
+          "name": "象印マホービン",
+          "layer": "maker",
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "center_pin.jsonl: pin=\"自社製品の値上げ浸透\" / pin_type=price_set / sign=+ / watch=manual。台帳が当社の利益を動かす中心をまさに『自社製品の値上げ浸透』と明示している。",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "6465",
+          "name": "ホシザキ",
+          "layer": "maker",
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "center_pin.jsonl: pin=\"自社製品の値上げ浸透\"（s33=機械）。値上げ浸透型である点は pin 明示だが、主力は業務用厨房機器で X の『家電 値上げ』話題には乗りにくく、クエリとの対応が弱いため provisional。",
+          "verified": "2026-07-28"
+        }
+      ],
+      "traps": [
+        {
+          "code": "6758",
+          "name": "ソニーグループ",
+          "layer": "maker",
+          "sign": "-",
+          "evidence": "center_pin.jsonl note=\"営業利益最大はG&NS・メモリ高騰はハード原価でむしろ減益\"。家電/OA の値上げ局面はNAND・DRAM等の部材高と同時に来ることが多く、当社側は原価増＝減益方向（docs/price-watch-universe.md §0『NAND/DRAM: キオクシア=受益 vs 家電/OA(ソニー/パナ等)=コスト。同一業種内で符号逆転』）。"
+        }
+      ],
+      "group": "C-consumer-broad-disruption"
+    },
+    {
+      "id": "aircon-reizouko",
+      "label": "エアコン・冷蔵庫（猛暑需要の品薄／白物値上げ）",
+      "queries": [
+        "gen1-aircon-shinausu"
+      ],
+      "shortage_type": "demand",
+      "actionable": true,
+      "reason": "エアコンの品薄は転売プレミアムではなく猛暑による需要超過のシグナルで、量販店では値引き縮小（実売単価上昇）と数量増が同方向に効く。台帳の家電量販4社は pin が文字どおり『既存店売上（夏季エアコン需要）』で、X の品薄話題とセンターピンの主役変数が一致する稀なケースなので actionable=true とした。ただし反証も明記する：(a) docs/price-watch-universe.md §0 の33業種判定表は小売業92社の受益を中古車リユース3社のみとし家電量販を✕としている、(b) §0b 関門C（1ホップ制限）から見ると『猛暑→需要→既存店売上』は需要経由に読めて棄却対象になりうる。将来この判定を覆す場合はこの2点が根拠になる。メーカー側のダイキン工業6367（pin=北米住宅用HVAC販売台数）・三菱電機6503（pin=FA・空調の出荷数量）は国内猛暑が主役変数でないため beneficiaries に入れない。部材のKHネオケム4189（pin=冷凍機油用エステルの出荷数量(空調生産)）は空調生産量に連動するが、シーズン中の品薄→増産は限定的で2段目の連鎖なので同じく外した。（分類: demand 型。供給制約型の品薄とは受益者が異なる）",
+      "lag_note": "猛暑品薄の X 話題は当該月内に既存店売上へ出る（月次開示は翌月上旬）ため、本群では最短の伝播。逆に9月以降の話題は在庫処分局面と重なり符号が反転しうる。確度=概算・AI仮置き（前向き実測なし）。",
+      "beneficiaries": [
+        {
+          "code": "2730",
+          "name": "エディオン",
+          "layer": "retail",
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "center_pin.jsonl: pin=\"既存店売上（夏季エアコン需要）\" / note=\"家電量販は既存店売上と猛暑の白物需要で利益が動く\" / sign=+。品薄シグナルの原因（猛暑需要）がそのまま pin。",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "8282",
+          "name": "ケーズホールディングス",
+          "layer": "retail",
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "center_pin.jsonl: pin=\"既存店売上（夏季エアコン需要）\" / note=\"家電量販は既存店売上と猛暑の白物需要で利益が動く\" / sign=+。",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "7513",
+          "name": "コジマ",
+          "layer": "retail",
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "center_pin.jsonl: pin=\"既存店売上（夏季エアコン需要）\" / note=\"家電量販は既存店売上と白物需要で利益が動く\" / sign=+。",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "8173",
+          "name": "Ｊｏｓｈｉｎ",
+          "layer": "retail",
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "center_pin.jsonl: pin=\"既存店売上（夏季エアコン需要）\" / note=\"家電量販は既存店売上と白物需要で利益が動く\" / sign=+。",
+          "verified": "2026-07-28"
+        }
+      ],
+      "traps": [
+        {
+          "code": "3048",
+          "name": "ビックカメラ",
+          "layer": "retail",
+          "sign": "-",
+          "evidence": "center_pin.jsonl: pin=\"既存店売上・免税売上\" / note=\"家電量販は既存店とインバウンド免税が利益変動の中心\"。同じ家電量販でも pin にエアコン・白物が入っておらず主役は免税＝猛暑品薄では動かない。品薄で在庫が引けなければ都市型店舗は機会損失側。"
+        },
+        {
+          "code": "9831",
+          "name": "ヤマダホールディングス",
+          "layer": "retail",
+          "sign": "-",
+          "evidence": "center_pin.jsonl: pin=\"既存店売上・住宅受注\" / note=\"家電の既存店売上が主、住宅・リフォームの受注が補完\"。pin にエアコン需要の明示がなく住宅受注の比重が大きいため、猛暑品薄では pin が動かない見かけ受益。"
+        }
+      ],
+      "group": "C-consumer-broad-disruption",
+      "contested": {
+        "call": "price=対象（家電量販4社）",
+        "counter": "docs §0 の33業種表は家電量販を✕としており、§0b 関門C(1ホップ制限)にも当たる。品薄が『猛暑の需要超過』でなく『供給難』なら量販は仕入れられず逆に減益",
+        "mitigation": "4社とも center_pin の pin が『既存店売上（夏季エアコン需要）』と明示しておりtier規則上は confirmed。反証が出たら subject ごと actionable=false にする"
+      }
+    },
+    {
+      "id": "game-console",
+      "label": "ゲーム機（Switch/PS5）・ゲームソフトのプレ値",
+      "queries": [
+        "gen1-game-console",
+        "gen1-game-puremia"
+      ],
+      "shortage_type": "resale",
+      "actionable": false,
+      "reason": "メーカーは定価で卸すため、転売価格が5万円になってもメーカーの売上単価は1円も変わらない。プレミアムは全額が二次流通の取り分で、むしろ品薄は pin である『販売本数／生産台数』の機会損失になる。任天堂7974（pin=ハード/ソフト販売本数）・ソニーグループ6758（pin=ゲーム課金・ソフト販売数量(PSN)）ともに数量型で、転売相場は入力変数ですらない。部品側のホシデン6804（pin=ゲーム機の生産台数(任天堂向け部品)）・メガチップス6875（pin=ゲーム機向けカスタムLSIの出荷数量）も数量型で、品薄＝生産が需要に追いつかない状態では上振れしない。メーカー受益に変わるのは『メーカー自身の定価改定（値上げ）』が発表された時のみで、その場合は shortage_type=price として別途扱うこと。二次流通側の受益は subject=secondary-resale に分離した。",
+      "lag_note": "",
+      "beneficiaries": [],
+      "traps": [
+        {
+          "code": "7974",
+          "name": "任天堂",
+          "layer": "maker",
+          "sign": "-",
+          "evidence": "center_pin.jsonl: pin=\"ハード/ソフト販売本数\" / note=\"Switch系のハードとソフトの販売本数が利益を直接決める\" / sign=na。品薄は作れば売れる需要を取り逃す＝販売本数の機会損失で、転売プレミアムは売上に一切計上されない。"
+        },
+        {
+          "code": "6758",
+          "name": "ソニーグループ",
+          "layer": "maker",
+          "sign": "-",
+          "evidence": "center_pin.jsonl: note=\"営業利益最大はG&NS・メモリ高騰はハード原価でむしろ減益\"。PS5品薄がメモリ需給逼迫に起因する局面では、当社はハード原価増の側に立つ。"
+        },
+        {
+          "code": "7552",
+          "name": "ハピネット",
+          "layer": "retail",
+          "sign": "-",
+          "evidence": "center_pin.jsonl: pin=\"玩具・ゲームソフトの出荷数量\" / note=\"玩具ゲーム卸でヒット作の出荷数量が主、価格転嫁の余地は小さい\"。卸は定価流通の中にいるため、品薄は出荷数量の減少＝pinにマイナス。"
+        }
+      ],
+      "group": "C-consumer-broad-disruption"
+    },
+    {
+      "id": "toreka",
+      "label": "トレカ・ポケカの相場高騰",
+      "queries": [
+        "gen1-toreka-kotou",
+        "gen1-pokeka-price"
+      ],
+      "shortage_type": "resale",
+      "actionable": false,
+      "reason": "パック定価は固定で、高騰しているのは二次流通のシングルカード相場。発行元にプレミアムは入らない。ポケカの発行元である株式会社ポケモンは非上場で台帳に存在せず、関連するコナミグループ9766（pin=遊戯王TCG出荷・ゲーム課金数量）・ハピネット7552（pin=玩具・ゲームソフトの出荷数量）・ディー・エヌ・エー2432（note=ポケカ等のロイヤリティ数量が利益の中心で価格でない）はいずれも出荷/ロイヤリティ数量型で、相場が2倍でも pin は動かない。docs/price-watch-universe.md §0b 関門B『圏外しか受益者がいなければ受益者なし＝発火記録のみ』に該当するため beneficiaries は空。二次流通側の受益は subject=secondary-resale に分離した。",
+      "lag_note": "",
+      "beneficiaries": [],
+      "traps": [
+        {
+          "code": "9766",
+          "name": "コナミグループ",
+          "layer": "maker",
+          "sign": "-",
+          "evidence": "center_pin.jsonl: pin=\"遊戯王TCG出荷・ゲーム課金数量\" / note=\"カード出荷数量とデジタル課金が利益の中心で紙代は軽微\"。シングル相場の高騰は売上単価に入らず、品薄局面はむしろ出荷数量の取り逃し。"
+        },
+        {
+          "code": "7552",
+          "name": "ハピネット",
+          "layer": "retail",
+          "sign": "-",
+          "evidence": "center_pin.jsonl: pin=\"玩具・ゲームソフトの出荷数量\" / note=\"玩具ゲーム卸でヒット作の出荷数量が主、価格転嫁の余地は小さい\"。トレカ卸も定価流通で、相場高騰の取り分がない。"
+        }
+      ],
+      "group": "C-consumer-broad-disruption"
+    },
+    {
+      "id": "figure-plamo",
+      "label": "フィギュア・プラモのプレ値／品薄",
+      "queries": [
+        "gen1-figure-puremia"
+      ],
+      "shortage_type": "resale",
+      "actionable": false,
+      "reason": "ガンプラ・フィギュアの品薄も定価固定でプレミアムは二次流通に落ちる。バンダイナムコHD7832（pin=主力IPの販売数量）・タカラトミー7867（pin=主力玩具の販売数量）はいずれも販売数量型で、プレ値は売上単価に入らないどころか品薄は数量の機会損失。メーカー受益に転じるのは定価改定または増産設備投資（capex）が公表された時で、その時は別 subject を立てること。",
+      "lag_note": "",
+      "beneficiaries": [],
+      "traps": [
+        {
+          "code": "7832",
+          "name": "バンダイナムコホールディングス",
+          "layer": "maker",
+          "sign": "-",
+          "evidence": "center_pin.jsonl: pin=\"主力IPの販売数量\" / note=\"ガンダム等IPのトイホビーとゲームの販売数量が利益の中心\" / sign=na。プレ値は二次流通の取り分で、品薄は販売数量の取り逃し。"
+        },
+        {
+          "code": "7867",
+          "name": "タカラトミー",
+          "layer": "maker",
+          "sign": "-",
+          "evidence": "center_pin.jsonl: pin=\"主力玩具の販売数量\" / note=\"トミカやベイブレード等主力玩具の販売数量が利益の中心\" / sign=na。同上。"
+        }
+      ],
+      "group": "C-consumer-broad-disruption"
+    },
+    {
+      "id": "secondary-resale",
+      "label": "二次流通（中古相場・フリマ）side の受益",
+      "queries": [
+        "gen1-toreka-kotou",
+        "gen1-pokeka-price",
+        "gen1-game-console",
+        "gen1-figure-puremia",
+        "gen1-pureba-generic",
+        "gen1-tenbai-kakaku"
+      ],
+      "shortage_type": "secondary",
+      "actionable": true,
+      "reason": "resale はメーカー側では非対象だが、プレミアムを受け取る二次流通側は上場していれば受益しうる。台帳977社を全走査したところ、中古相場が売価・在庫評価に直接入るのはゲオホールディングス2681のみで、pin が『中古品（古着・トレカ・ゲーム機）相場』とクエリ対象そのものを名指ししている。メルカリ4385は相場高騰がGMV（＝単価×数量）を押し上げる1ホップだが、pin note が数量主導と書いており、かつトレカ・ゲーム機がGMVに占める比率が小さいため provisional。ブックオフGHD9278・コメ兵2780・バリュエンスHD9270は docs/price-watch-universe.md §14 の受益銘柄欄に載っているが TOP1000圏外で center_pin.jsonl に存在しないため、§0b 関門B に従い一切記載しない（『代わりに近い大手』の後付け禁止）。注意：§0b の是正実績に『GPU→ゲオ（細すぎ）』＝関門D（商材+10%→営業利益+2%以上を式で書けるか）での棄却例があり、トレカ・ゲーム機はゲオのリユース主力商材なのでGPUよりは通るが、桁チェックの再確認は売買判断前に必須。（分類: secondary 型。供給制約型の品薄とは受益者が異なる）",
+      "lag_note": "中古買取相場は日次で動き（§14 の『本台帳最速』系列）、在庫評価益として四半期決算に出るまでは1〜2四半期。X の高騰話題→決算での確認は概ね3〜6ヶ月後。確度=概算・AI仮置き。",
+      "beneficiaries": [
+        {
+          "code": "2681",
+          "name": "ゲオホールディングス",
+          "layer": "secondary",
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "center_pin.jsonl: pin=\"中古品（古着・トレカ・ゲーム機）相場\" / note=\"リユースは中古相場が売価と在庫評価に直結、台帳の受益3社\" / sign=+。pin がトレカ・ゲーム機の中古相場を名指ししており連鎖が明示されている。",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "4385",
+          "name": "メルカリ",
+          "layer": "secondary",
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "center_pin.jsonl: pin=\"流通総額GMV\" / note=\"手数料率×GMVの構造で出品取引の数量が利益を決める\" / sign=+。GMV=単価×数量なので転売単価の上昇は1ホップで収益に入るが、台帳 note が数量主導と明記しており、かつ対象カテゴリのGMV比率が不明なため provisional。",
+          "verified": "2026-07-28"
+        }
+      ],
+      "traps": [],
+      "group": "C-consumer-broad-disruption"
+    },
+    {
+      "id": "broad-generic",
+      "label": "汎用クエリ（値上げ／値上がり／高騰／品薄／プレ値／転売 価格）",
+      "queries": [
+        "gen1-neage-generic",
+        "gen1-neagari-generic",
+        "gen1-kotou-generic",
+        "gen1-shinausu-generic",
+        "gen1-pureba-generic",
+        "gen1-tenbai-kakaku"
+      ],
+      "shortage_type": "broad",
+      "actionable": false,
+      "reason": "主題（何が値上がり・品薄なのか）がクエリから特定できないため、銘柄を出すこと自体が原理的に不可能。これらは発見器の入口＝ヒット本文から商材を抽出して初めて他 subject／他グループの価格系列にマップする用途であり、クエリIDそのものに銘柄を紐付けてはいけない。特に『プレ値』『転売 価格』はホビー・チケット・限定品に強く偏り、商材が特定できても大半が resale（定価固定）に着地するため、抽出後も actionable にならない確率が高い。銘柄を出すのは、抽出した商材が docs/price-watch-universe.md の価格系列に載っており §0b の5関門を通った時だけ。",
+      "lag_note": "",
+      "beneficiaries": [],
+      "traps": [],
+      "group": "C-consumer-broad-disruption"
+    },
+    {
+      "id": "demand-tightness-broad",
+      "label": "需給逼迫シグナル（納期遅延／入荷未定／購入制限）",
+      "queries": [
+        "gen2-nouki-chien",
+        "gen2-nyuka-mitei",
+        "gen2-kounyu-seigen"
+      ],
+      "shortage_type": "broad",
+      "actionable": false,
+      "reason": "3本とも『何が』逼迫しているかを含まない主題不明のシグナルで、broad と判定した。disruption ではないのは、供給断絶ではなく需要超過や物流の詰まりでも同じ語彙が出るため（納期遅延はB2B部材、入荷未定は消費財、購入制限は米・トレカ・ゲーム機で実績）。docs/price-watch-universe.md §16 も『品薄シグナル単独では買わない（価格ソースでの裏取りを待って5チェックへ）』と明記しており、このクエリ群の役割は価格系列の1〜2段階先行する早期警報であって銘柄特定ではない。運用としては、ヒット本文から商材を抽出し該当する価格系列の subject へマップした上で初めて銘柄が出る。",
+      "lag_note": "§16 の実測（半導体）では 品薄・EOL報道→スポット価格→株の反応まで8〜15週。ただしこれは商材が特定できた場合の値で、主題不明のままでは適用できない。出所=docs/price-watch-universe.md §16。",
+      "beneficiaries": [],
+      "traps": [],
+      "group": "C-consumer-broad-disruption"
+    },
+    {
+      "id": "supply-disruption",
+      "label": "供給断絶（出荷/生産停止・工場火災・輸出規制）",
+      "queries": [
+        "gen2-shukka-teishi",
+        "gen2-koujou-jiko",
+        "gen2-yushutsu-kisei"
+      ],
+      "shortage_type": "disruption",
+      "actionable": false,
+      "reason": "供給断絶は需要増ではなく供給側の毀損で、当事者企業は減益（生産停止・被災・輸出停止＝いずれも売上と数量の毀損）。上昇するのは『断絶した商材の市況』であって、受益するのは断絶していない競合という2段構えになる。この対応表の単位（クエリ→銘柄）ではどの商材が動くかも誰が競合かも事前に固定できないため、クエリIDに銘柄を紐付けない。正しい運用は、事象から商材を特定→docs/price-watch-universe.md の該当価格系列で実際に価格が動いたことを確認→§0b の5関門（特に関門A 符号一文宣言と関門C 1ホップ制限）を通った競合だけを買い候補にする、という順序。イベントは復旧で終わる＝持続性がないため、価格系列側の裏取りなしに入るのは特に危険。参考として §16 はレアアース輸出規制→双日2768 を例示するが、双日の pin は『一般炭価格』でレアアースではなく、この例示自体が関門C を通っていないので候補として採用しない。",
+      "lag_note": "断絶イベントは価格系列より先行するが、復旧見通しが出た時点で市況が巻き戻るため保有期間の設計が別途必要。定量の実測はこのグループでは取っていない（根拠数字なし・定性判断）。",
+      "beneficiaries": [],
+      "traps": [],
+      "group": "C-consumer-broad-disruption"
+    }
+  ],
+  "actionable_rule": "subject.actionable = shortage_types[type].actionable かつ beneficiaries が非空。型が対象でも TOP1000内に受益銘柄が居なければ非対象（無理に銘柄を立てない）"
+}

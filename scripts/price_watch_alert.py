@@ -12,6 +12,10 @@ zスコア >= z_threshold（既定3.0）でアラートを出す。
 - ベースライン日数 < min_baseline_days（既定7）はウォームアップ扱い＝判定スキップ。
 - σ=0（毎日同数）はゼロ除算せず、count > mean のときのみ sigma0_jump として警告扱い。
 - 同一 (date, query_id) のアラートは重複追記しない（再実行しても通知が増えない）。
+- **受益銘柄は configs/x_shortage_map.json 経由でのみ付ける**（2026-07-28 追加）。
+  台帳 data/center_pin/center_pin.jsonl（TOP1000）に実在するコードだけが出る＝関門B。
+  転売プレ値・供給断絶・主題不明のクエリは銘柄を出さず「なぜ出さないか」を表示する。
+  対応表が壊れている（検証エラー）ときは銘柄を一切出さない＝誤帰属より沈黙を選ぶ。
 - 出力: output/price_watch/alerts-YYYY-MM-DD.jsonl（検知時のみ append・gitignore対象）
   + stdout の全クエリ表。
 
@@ -33,6 +37,24 @@ APP = Path("/app") if Path("/app/scripts").exists() else Path(__file__).resolve(
 DEFAULT_CONFIG = APP / "configs/x_price_watch.json"
 DEFAULT_LEDGER = APP / "data/x_price_watch/ledger.jsonl"
 DEFAULT_OUT_DIR = APP / "output/price_watch"
+
+
+def load_shortage_map() -> tuple[dict | None, str]:
+    """品薄→受益銘柄の対応表を読み、自己検証を通ったときだけ返す。
+
+    検証エラー時は None を返して銘柄付与を止める（誤った銘柄を出すより沈黙を選ぶ）。
+    対応表が無い環境でもアラート判定自体は動く（銘柄欄が「対応表なし」になるだけ）。
+    """
+    try:
+        sys.path.insert(0, str(APP / "scripts"))
+        import x_shortage_map as xsm
+        m = xsm.load()
+        errors = xsm.validate(m)
+        if errors:
+            return None, f"対応表に検証エラー{len(errors)}件（銘柄付与を停止）: {errors[0][:60]}"
+        return m, ""
+    except Exception as exc:  # noqa: BLE001
+        return None, f"対応表を読めません: {str(exc)[:80]}"
 
 
 def load_ledger(path: Path) -> list[dict]:
@@ -138,6 +160,11 @@ def main() -> int:
     parser.add_argument("--out-dir", type=Path, default=DEFAULT_OUT_DIR)
     parser.add_argument("--date", help="判定対象日 YYYY-MM-DD（省略時=台帳の最新日）")
     parser.add_argument("--selftest", action="store_true")
+    # 前向き記録は仮説検定の証拠台帳（n>=100で初めて結論を出す）。合成データや
+    # 別台帳での検証実行が本番台帳へ混入すると検定が壊れるため、--ledger を既定以外に
+    # した実行は既定で記録しない（2026-07-28: 合成テストが実際に3行汚染した事故の恒久対策）。
+    parser.add_argument("--forward", choices=["auto", "on", "off"], default="auto",
+                        help="前向き記録への追記。auto=既定台帳のときだけ記録（既定）")
     args = parser.parse_args()
 
     if args.selftest:
@@ -177,6 +204,20 @@ def main() -> int:
             alerts.append({"date": target_date, "query_id": qid, "lane": entry.get("lane", ""),
                            "q": entry["q"], **res, "samples": latest.get("samples", [])})
 
+    # 受益銘柄の付与（対応表が健全なときのみ・関門B=TOP1000台帳内に限る）
+    smap, smap_err = load_shortage_map()
+    if smap_err:
+        print(f"\n[shortage_map] WARN: {smap_err}")
+    if alerts and smap is not None:
+        import x_shortage_map as xsm
+        for a in alerts:
+            a["stocks"] = [{"code": c["code"], "name": c.get("name", ""),
+                            "tier": c["tier"], "layer": c["layer"],
+                            "subject": c["subject"], "shortage_type": c["shortage_type"]}
+                           for c in xsm.cards_for_query(smap, a["query_id"])]
+            a["stocks_display"] = xsm.display_for_query(smap, a["query_id"], target_date)
+            a["subjects"] = [s["id"] for s in xsm.subjects_for_query(smap, a["query_id"])]
+
     if alerts:
         args.out_dir.mkdir(parents=True, exist_ok=True)
         out = args.out_dir / f"alerts-{target_date}.jsonl"
@@ -186,18 +227,31 @@ def main() -> int:
             for a in new_alerts:
                 fh.write(json.dumps(a, ensure_ascii=False) + "\n")
         print(f"\n🚨 アラート {len(alerts)} 件（新規追記 {len(new_alerts)} 件）→ {out}")
-        # 前向き記録（X側は銘柄が特定できないため発火イベントのみ・C-1対応）
-        try:
-            sys.path.insert(0, str(APP / "scripts"))
-            import price_watch_forward as fwd
-            for a in new_alerts:
-                fwd.append({"type": "x_firing", "spec_version": fwd.SPEC_VERSION,
-                            "fire_date": a["date"], "query_id": a["query_id"],
-                            "lane": a.get("lane", ""), "count": a.get("count"),
-                            "z": a.get("z"), "verdict": a.get("verdict"),
-                            "note": "銘柄未特定（Xレーンは候補生成）"})
-        except Exception as exc:  # noqa: BLE001
-            print(f"[forward] WARN: X発火の記録に失敗: {str(exc)[:80]}")
+        for a in alerts:
+            print(f"  {a['query_id']:<24} → {a.get('stocks_display', '対応表なし')}")
+        # 前向き記録（受益銘柄つき。銘柄が出ない分類は理由を note に残す）
+        do_forward = (args.forward == "on"
+                      or (args.forward == "auto" and args.ledger == DEFAULT_LEDGER))
+        if not do_forward:
+            print(f"[forward] SKIP: 前向き記録に追記しません"
+                  f"（--forward={args.forward} / ledger={args.ledger.name}）")
+        else:
+            try:
+                sys.path.insert(0, str(APP / "scripts"))
+                import price_watch_forward as fwd
+                for a in new_alerts:
+                    stocks = a.get("stocks", [])
+                    fwd.append({"type": "x_firing", "spec_version": fwd.SPEC_VERSION,
+                                "fire_date": a["date"], "query_id": a["query_id"],
+                                "lane": a.get("lane", ""), "count": a.get("count"),
+                                "z": a.get("z"), "verdict": a.get("verdict"),
+                                "subjects": a.get("subjects", []),
+                                "stocks": [{"code": s["code"], "tier": s["tier"]}
+                                           for s in stocks],
+                                "note": a.get("stocks_display", "対応表なし")
+                                if not stocks else f"受益{len(stocks)}社"})
+            except Exception as exc:  # noqa: BLE001
+                print(f"[forward] WARN: X発火の記録に失敗: {str(exc)[:80]}")
     else:
         print("\nアラートなし")
     return 0
