@@ -753,6 +753,282 @@
       },
       "note": "派遣・警備・ビルメン等の単価環境。人件費転嫁の進み具合",
       "beneficiaries": []
+    },
+    {
+      "id": "fmbi-iridium",
+      "label": "FMBI Iridium",
+      "type": "fmbi",
+      "metal": "iridium",
+      "currency": "JPY",
+      "jp": "イリジウム(フルヤ自社公表)",
+      "driver": "pgm-iridium",
+      "note": "出所=https://www.furuyametals.co.jp/products/cms-data/datedata.json（一覧表ページのJS DATA_URL）。HTMLの価格ブロックは静的プレースホルダで2026-07-28時点2026/03/02のまま=絶対に読まない(公表日ごと古くstale判定もすり抜ける)。営業日日次10:30東京公表。円建てはFXを含む(金属自体の騰勢はvalue_alt=USD建てで確認)",
+      "beneficiaries": [
+        {
+          "code": "7826",
+          "btype": 1,
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "自社サイト実読:Ir/Ruの製造販売+世界最大級リサイクル能力・FMBIは自社建値。ただし買い側エクスポージャもありE1/E2で純感応度未確認",
+          "verified": "2026-07-28"
+        }
+      ]
+    },
+    {
+      "id": "fmbi-ruthenium",
+      "label": "FMBI Ruthenium",
+      "type": "fmbi",
+      "metal": "ruthenium",
+      "currency": "JPY",
+      "jp": "ルテニウム(フルヤ自社公表)",
+      "driver": "pgm-ruthenium",
+      "note": "同上（Irと同一エンドポイント・fetchは1回に集約済み）",
+      "beneficiaries": [
+        {
+          "code": "7826",
+          "btype": 1,
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "同上",
+          "verified": "2026-07-28"
+        }
+      ]
+    },
+    {
+      "id": "pe-naphtha-spread",
+      "label": "Polyethylene-Naphtha Spread",
+      "jp": "PE-ナフサスプレッド",
+      "type": "spread",
+      "driver": "petchem-spread",
+      "num": {
+        "slug": "polyethylene",
+        "label": "Polyethylene",
+        "ccy": "CNY",
+        "unit": "CNY/T",
+        "venue": "DCE先物"
+      },
+      "den": {
+        "slug": "naphtha",
+        "label": "Naphtha",
+        "ccy": "USD",
+        "unit": "USD/T",
+        "venue": "OTC/CFD"
+      },
+      "coef": 1.0,
+      "vat_divisor": 1.0,
+      "alert": {
+        "weekly_abs_usd": 15.0,
+        "four_week_abs_usd": 30.0
+      },
+      "alert_note": "スプレッドは負値を取りうるため%判定禁止(PVCで実測: 週次-7.23USD/Tの縮小が%だと+9.6%で誤発火・4週累積も両方負の区間で+に出る)。15USD/T=実測σ8.0の1.87倍・年約4.8回想定・8週履歴後にz>=2へ再フィット",
+      "note": "分子=DCE先物の中国国内価格(増値税13%込)。CFRアジアとは水準がズレるが変化の方向は代替可(推測・未照合)。TEにethylene/propylene/benzeneのスラッグは存在せず(全99スラッグ実測)、1段下流のポリマーで代替。一覧ページ限定(個別ページはweekly列なし)。脚の出所日は最大1日ズレる",
+      "beneficiaries": [
+        {
+          "code": "4183",
+          "btype": 1,
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "center_pin台帳: pin_type=spread「基盤素材の対ナフサスプレッド」sign=+。E2(有報セグメント利益比)未取得",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "4005",
+          "btype": 1,
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "center_pin台帳: pin_type=spread「石化スプレッド」sign=+。E2未取得",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "4188",
+          "btype": 1,
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "石化セグメント保有だが台帳の中心ピンはMMA市況。関門D(桁)未検証",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "3407",
+          "tier": "rejected",
+          "reason": "台帳が中心ピンを住宅(ヘーベルハウス)引渡棟数と裁定済み=石化は利益の中心でない(関門D)"
+        },
+        {
+          "code": "4004",
+          "tier": "rejected",
+          "reason": "石化事業分離後・台帳の中心ピンは半導体後工程材料の出荷数量"
+        },
+        {
+          "code": "4114",
+          "tier": "rejected",
+          "reason": "プロピレンは同社のコスト側(アクリル酸-プロピレンスプレッド)。符号未確定(関門A mixed)"
+        },
+        {
+          "code": "4045",
+          "tier": "rejected",
+          "reason": "同上(アクリル酸-プロピレン型)"
+        },
+        {
+          "code": "4631",
+          "tier": "rejected",
+          "reason": "インキ=樹脂を仕入れる側。樹脂高はコスト増でsign=-(関門A・買いシグナル禁止)"
+        },
+        {
+          "code": "4633",
+          "tier": "rejected",
+          "reason": "同上"
+        },
+        {
+          "code": "4634",
+          "tier": "rejected",
+          "reason": "同上"
+        },
+        {
+          "code": "3402",
+          "tier": "rejected",
+          "reason": "繊維/フィルムは石化原料の買い手。分子は自社製品値上げでPEではない"
+        },
+        {
+          "code": "4208",
+          "tier": "rejected",
+          "reason": "カプロラクタム-ベンゼン型。TEにbenzeneスラッグが存在せず本系列では代替不能"
+        }
+      ]
+    },
+    {
+      "id": "pp-naphtha-spread",
+      "label": "Polypropylene-Naphtha Spread",
+      "jp": "PP-ナフサスプレッド",
+      "type": "spread",
+      "driver": "petchem-spread",
+      "num": {
+        "slug": "polypropylene",
+        "label": "Polypropylene",
+        "ccy": "CNY",
+        "unit": "CNY/T",
+        "venue": "DCE先物"
+      },
+      "den": {
+        "slug": "naphtha",
+        "label": "Naphtha",
+        "ccy": "USD",
+        "unit": "USD/T",
+        "venue": "OTC/CFD"
+      },
+      "coef": 1.0,
+      "vat_divisor": 1.0,
+      "alert": {
+        "weekly_abs_usd": 15.0,
+        "four_week_abs_usd": 30.0
+      },
+      "alert_note": "スプレッドは負値を取りうるため%判定禁止(PVCで実測: 週次-7.23USD/Tの縮小が%だと+9.6%で誤発火・4週累積も両方負の区間で+に出る)。15USD/T=実測σ8.0の1.87倍・年約4.8回想定・8週履歴後にz>=2へ再フィット",
+      "note": "分子=DCE先物の中国国内価格(増値税13%込)。CFRアジアとは水準がズレるが変化の方向は代替可(推測・未照合)。TEにethylene/propylene/benzeneのスラッグは存在せず(全99スラッグ実測)、1段下流のポリマーで代替。一覧ページ限定(個別ページはweekly列なし)。脚の出所日は最大1日ズレる",
+      "beneficiaries": [
+        {
+          "code": "4183",
+          "btype": 1,
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "center_pin台帳: pin_type=spread「基盤素材の対ナフサスプレッド」sign=+。E2(有報セグメント利益比)未取得",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "4005",
+          "btype": 1,
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "center_pin台帳: pin_type=spread「石化スプレッド」sign=+。E2未取得",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "4188",
+          "btype": 1,
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "石化セグメント保有だが台帳の中心ピンはMMA市況。関門D(桁)未検証",
+          "verified": "2026-07-28"
+        },
+        {
+          "code": "3407",
+          "tier": "rejected",
+          "reason": "台帳が中心ピンを住宅(ヘーベルハウス)引渡棟数と裁定済み=石化は利益の中心でない(関門D)"
+        },
+        {
+          "code": "4004",
+          "tier": "rejected",
+          "reason": "石化事業分離後・台帳の中心ピンは半導体後工程材料の出荷数量"
+        },
+        {
+          "code": "4114",
+          "tier": "rejected",
+          "reason": "プロピレンは同社のコスト側(アクリル酸-プロピレンスプレッド)。符号未確定(関門A mixed)"
+        },
+        {
+          "code": "4045",
+          "tier": "rejected",
+          "reason": "同上(アクリル酸-プロピレン型)"
+        },
+        {
+          "code": "4631",
+          "tier": "rejected",
+          "reason": "インキ=樹脂を仕入れる側。樹脂高はコスト増でsign=-(関門A・買いシグナル禁止)"
+        },
+        {
+          "code": "4633",
+          "tier": "rejected",
+          "reason": "同上"
+        },
+        {
+          "code": "4634",
+          "tier": "rejected",
+          "reason": "同上"
+        },
+        {
+          "code": "3402",
+          "tier": "rejected",
+          "reason": "繊維/フィルムは石化原料の買い手。分子は自社製品値上げでPEではない"
+        },
+        {
+          "code": "4208",
+          "tier": "rejected",
+          "reason": "カプロラクタム-ベンゼン型。TEにbenzeneスラッグが存在せず本系列では代替不能"
+        }
+      ]
+    },
+    {
+      "id": "sm-naphtha-spread",
+      "label": "Styrene-Naphtha Spread",
+      "jp": "SM-ナフサスプレッド",
+      "type": "spread",
+      "driver": "petchem-spread",
+      "num": {
+        "slug": "styrene",
+        "label": "Styrene",
+        "ccy": "CNY",
+        "unit": "CNY/MT",
+        "venue": "DCE先物"
+      },
+      "den": {
+        "slug": "naphtha",
+        "label": "Naphtha",
+        "ccy": "USD",
+        "unit": "USD/T",
+        "venue": "OTC/CFD"
+      },
+      "coef": 1.0,
+      "vat_divisor": 1.0,
+      "alert": {
+        "weekly_abs_usd": 15.0,
+        "four_week_abs_usd": 30.0
+      },
+      "alert_note": "スプレッドは負値を取りうるため%判定禁止(PVCで実測: 週次-7.23USD/Tの縮小が%だと+9.6%で誤発火・4週累積も両方負の区間で+に出る)。15USD/T=実測σ8.0の1.87倍・年約4.8回想定・8週履歴後にz>=2へ再フィット",
+      "note": "分子=DCE先物の中国国内価格(増値税13%込)。CFRアジアとは水準がズレるが変化の方向は代替可(推測・未照合)。TEにethylene/propylene/benzeneのスラッグは存在せず(全99スラッグ実測)、1段下流のポリマーで代替。一覧ページ限定(個別ページはweekly列なし)。脚の出所日は最大1日ズレる",
+      "beneficiaries": [
+        {
+          "code": "7947",
+          "tier": "rejected",
+          "reason": "PS原料の買い手=sign-(台帳裁定済み)。正の受益者は台帳に該当なし=受益者なし系列"
+        }
+      ]
     }
   ],
   "_monthly_lane": "月次レーン(cadence=monthly・2026-07-28新設): 月次統計は刻みが0.1〜0.5%/月で週次閾値では永久に鳴らないため前月比を専用閾値で見る。同じ公表月では再発火しない。**銘柄を鳴らさない環境指標レーン**=マクロ集計値を個社に紐付けるのは帰属プロトコル§0bの1ホップ制限に反するため beneficiaries は空。用途は price_set型64社(加工食品24/SIer19等)の追い風・向かい風の背景判断。"

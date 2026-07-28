@@ -17,7 +17,7 @@ from __future__ import annotations
 import json
 import re
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import requests
@@ -176,6 +176,136 @@ def parse_jepx(today: str) -> dict | None:
             "monthly_pct": None, "src_date": days[-1].replace("/", "-"), "layout": "jepx_csv"}
 
 
+def parse_spread(index_html: str, s: dict) -> dict | None:
+    """石化スプレッド（製品 − ナフサ）を TE 一覧ページの2脚から合成する（2026-07-28 新設）。
+
+    分子はDCE先物のCNY建て（polyethylene/polypropylene/styrene）、分母はナフサのUSD/T。
+    通貨違いは ECB 参照レート（frankfurter.dev・無料/キー不要）で解決する。
+        value[USD/T] = 分子[CNY/T] / USDCNY / vat_divisor - 分母[USD/T] * coef
+
+    **%判定は禁止**（実測で確認した事故）: スプレッドは負値を取りうるため、PVCの
+    週次 -7.23 USD/T の「縮小」が%表示では +9.6% になり買い側で誤発火する。
+    そこで weekly_pct は None を返し、代わりに weekly_abs（USD/Tの実変化）で判定する。
+    各脚の週次%から1週前の値を解析的に復元するので、自前履歴ゼロの初回から判定が効く。
+
+    coef=1.0 は業界慣行の1:1差引き（ナフサ1tからエチレンは約3割だが、残りの併産品を
+    ナフサ等価で評価する前提。質量収支の3.0を入れると併産品クレジット無しの無意味な値になる）。
+    vat_divisor は中国国内価格の増値税13%を落とす任意パラメータ（既定1.0）。
+    一覧ページ限定（個別ページは weekly 列が無く週次変化が消える）。
+    """
+    num = parse_te(index_html, s["num"]["slug"], s["num"]["label"])
+    den = parse_te(index_html, s["den"]["slug"], s["den"]["label"])
+    if not num or not den or num.get("value") is None or den.get("value") is None:
+        return None
+    try:
+        fx = requests.get("https://api.frankfurter.dev/v1/latest?base=USD&symbols=CNY",
+                          headers={"User-Agent": UA}, timeout=30)
+        fx.raise_for_status()
+        usdcny = float(fx.json()["rates"]["CNY"])
+    except Exception:  # noqa: BLE001  FXが取れなければ通貨換算できない＝値を捏造しない
+        return None
+    coef, vat = float(s.get("coef", 1.0)), float(s.get("vat_divisor", 1.0))
+
+    def spread(n_val: float, d_val: float) -> float:
+        return n_val / usdcny / vat - d_val * coef
+
+    value = spread(num["value"], den["value"])
+    # 1週前の各脚を週次%から解析的に復元（片脚でも週次%が無ければ週次判定はしない）
+    weekly_abs = None
+    if num.get("weekly_pct") is not None and den.get("weekly_pct") is not None:
+        n_prev = num["value"] / (1 + num["weekly_pct"] / 100)
+        d_prev = den["value"] / (1 + den["weekly_pct"] / 100)
+        weekly_abs = round(value - spread(n_prev, d_prev), 2)
+    # 脚の出所日は最大1日ズレる。src_date は古い方に合わせる（新しく見せない）
+    dates = [x.get("src_date") or "" for x in (num, den)]
+    return {"value": round(value, 2), "day_pct": None, "weekly_pct": None,
+            "monthly_pct": None, "src_date": min(d for d in dates) if all(dates) else "",
+            "layout": "spread", "weekly_abs": weekly_abs, "usdcny": round(usdcny, 4),
+            "legs": f"{s['num']['slug']}:{num.get('src_date')} / {s['den']['slug']}:{den.get('src_date')}"}
+
+
+FMBI_URL = "https://www.furuyametals.co.jp/products/cms-data/datedata.json"
+FMBI_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+# メタル→JSONキー。**キー名でアンカーする**（位置・添字で採らない）。
+# キー改名時は別メタルへ静かにズレるより parse_fail を選ぶ。
+FMBI_KEYS = {
+    "iridium": {"jpy": "price_yen_iridium", "usd": "price_iridium"},
+    "ruthenium": {"jpy": "price_yen_ruthenium", "usd": "price_ruthenium"},
+}
+
+
+def _fmbi_num(v) -> float | None:
+    """数値セルを厳密に float 化（想定外の型・書式は None にして黙って採らない）。"""
+    if isinstance(v, bool):
+        return None
+    if isinstance(v, (int, float)):
+        return float(v)
+    if isinstance(v, str):
+        s = re.sub(r"[¥￥$,\s]", "", v)
+        if re.fullmatch(r"-?[0-9]+(?:\.[0-9]+)?", s):
+            return float(s)
+    return None
+
+
+def parse_fmbi(payload: list, metal: str, currency: str = "JPY") -> dict | None:
+    """フルヤ金属の自社公表価格 FMBI（イリジウム/ルテニウム）を採る（2026-07-28 新設）。
+
+    出所は一覧表ページ(/products/fmbi-table/)が読む JSON = FMBI_URL。
+    2022-01-05 以降の全公表日を持つ日次配列（実測1080件）で、1レコード=
+    {date, time, price_yen_iridium, price_yen_ruthenium, price_iridium, price_ruthenium}
+    （円建て=円/g・ドル建て=$/toz・time は全件 "10:30" 東京）。
+
+    **HTML を読んではいけない**（2026-07-28 実測・田中貴金属A-2と同種の事故）: ページの
+    価格ブロックはサーバ側の静的プレースホルダで「2026/03/02」のまま5ヶ月固まっており、
+    実表示は上記 JSON を取得した JS が実行時に上書きしている。HTML から採ると
+    **公表日フィールドごと古いため stale 判定もすり抜けて** 静かに旧価格を記録する。
+    JSON が取れなければ HTML へフォールバックせず parse_fail にすること。
+
+    設計（parse_tanaka / parse_te の教訓の踏襲）:
+    - メタルは FMBI_KEYS のキー名でアンカー（添字・位置で採らない）
+    - 数値は _fmbi_num で厳密変換（桁数を仮定しない）
+    - **JSON は日付順に並んでいない**（実測: 生の先頭が最新日）ので必ず日付ソートしてから最終行
+    - day/weekly/monthly は「暦日でN日前**以前**の直近公表日」と比較（添字で-1/-5/-20 と
+      数えると祝日・年末年始で基準日が静かにズレる）
+    - 円建ては FX を含む。金属自体の騰勢かは value_alt（USD建て）で確認する
+    """
+    keys = FMBI_KEYS.get(metal)
+    if keys is None or not isinstance(payload, list) or not payload:
+        return None
+    key = keys["jpy"] if currency == "JPY" else keys["usd"]
+
+    rows: list[tuple[str, float, dict]] = []
+    for r in payload:
+        if not isinstance(r, dict):
+            continue
+        d = r.get("date")
+        if not isinstance(d, str) or not FMBI_DATE_RE.match(d):
+            continue
+        v = _fmbi_num(r.get(key))
+        if v is None:
+            continue
+        rows.append((d, v, r))
+    if not rows:
+        return None  # キー改名・全欠損は別メタルを採らず parse_fail にする
+    rows.sort(key=lambda x: x[0])
+
+    src_date, value, latest = rows[-1]
+    latest_dt = datetime.strptime(src_date, "%Y-%m-%d")
+
+    def pct_back(days: int) -> float | None:
+        target = latest_dt - timedelta(days=days)
+        prior = [v for d, v, _ in rows if datetime.strptime(d, "%Y-%m-%d") <= target]
+        if not prior or not prior[-1]:
+            return None
+        return round((value / prior[-1] - 1) * 100, 2)
+
+    other = keys["usd"] if currency == "JPY" else keys["jpy"]
+    return {"value": value, "day_pct": pct_back(1), "weekly_pct": pct_back(7),
+            "monthly_pct": pct_back(30), "src_date": src_date, "layout": "fmbi_json",
+            "unit": "JPY/g" if currency == "JPY" else "USD/toz", "metal": metal,
+            "value_alt": _fmbi_num(latest.get(other)), "src_time": latest.get("time")}
+
+
 def parse_boj(page: str, data_code: str) -> dict | None:
     """日銀「主要時系列統計データ表」から月次系列を1本取る（月次レーン用・2026-07-28）。
 
@@ -271,6 +401,8 @@ def main() -> int:
         print(f"[FATAL] TE一覧ページ取得失敗のため中断（誤列での記録を防ぐ）: {str(exc)[:100]}")
         return 1
 
+    fmbi_payload: list | None = None  # Ir/Ru は同一エンドポイント＝1回だけ取って使い回す
+
     rows, alerts = [], []
     for s in cfg["series"]:
         base = {"date": today, "id": s["id"], "jp": s["jp"], "run_at": run_at}
@@ -284,6 +416,12 @@ def main() -> int:
                 parsed = parse_scfi(json.loads(fetch("https://en.sse.net.cn/currentIndex?indexName=scfi")))
             elif s["type"] == "jepx":
                 parsed = parse_jepx(today)
+            elif s["type"] == "spread":
+                parsed = parse_spread(te_index_html, s)
+            elif s["type"] == "fmbi":
+                if fmbi_payload is None:
+                    fmbi_payload = json.loads(fetch(FMBI_URL))
+                parsed = parse_fmbi(fmbi_payload, s["metal"], s.get("currency", "JPY"))
             elif s["type"] == "boj":
                 resp = requests.get(f"https://www.stat-search.boj.or.jp/ssi/mtshtml/{s['page']}.html",
                                     headers={"User-Agent": UA}, timeout=60)
@@ -296,8 +434,13 @@ def main() -> int:
                 print(f"[parse_fail] {s['id']}")
                 continue
             prev = [r for r in history.get(s["id"], []) if r.get("status") == "ok"]
-            suspect = bool(prev and prev[-1].get("value") and
-                           abs(parsed["value"] / prev[-1]["value"] - 1) > 0.5)
+            # 比率ベースの跳び検知はゼロ近傍を跨ぐスプレッドでは常時発動するため絶対値で見る
+            if s["type"] == "spread":
+                suspect = bool(prev and prev[-1].get("value") is not None and
+                               abs(parsed["value"] - prev[-1]["value"]) > 200)
+            else:
+                suspect = bool(prev and prev[-1].get("value") and
+                               abs(parsed["value"] / prev[-1]["value"] - 1) > 0.5)
             status = "suspect_jump" if suspect else "ok"
             # 公表日が当日でない系列は stale（前日値を当日として記録する事故の検知・A-2）
             if parsed.get("layout") == "tanaka" and parsed.get("src_date") and \
@@ -307,6 +450,12 @@ def main() -> int:
             if parsed.get("layout") == "jepx_csv" and parsed.get("src_date") and \
                     (datetime.strptime(today, "%Y-%m-%d")
                      - datetime.strptime(parsed["src_date"], "%Y-%m-%d")).days > 3:
+                status = "stale"
+            # FMBIは営業日日次10:30JST公表。通常3日・三連休4日空き、年末年始/GWは最大11日
+            # （実測）なので閾値は5日。年2回程度の誤 stale は許容する
+            if parsed.get("layout") == "fmbi_json" and parsed.get("src_date") and \
+                    (datetime.strptime(today, "%Y-%m-%d")
+                     - datetime.strptime(parsed["src_date"], "%Y-%m-%d")).days > 5:
                 status = "stale"
             row = {**base, **parsed, "status": status}
             # 4週累積: 日付基準で25〜35日前の最新レコードと比較（同日再実行・実行間隔の
@@ -319,13 +468,20 @@ def main() -> int:
             cands = [r for d, r in by_date.items()
                      if d and 25 <= (target_dt - datetime.strptime(d, "%Y-%m-%d")).days <= 35
                      and r.get("value")]
+            four_w_abs = None
             if cands:
-                four_w = (parsed["value"] / cands[-1]["value"] - 1) * 100
+                # スプレッドは負値を取りうるので比率にすると符号が壊れる（両方負の区間で
+                # 比率が+方向に出て誤発火する・レビュー指摘）。絶対差(USD/T)で持つ
+                if s["type"] == "spread":
+                    four_w_abs = round(parsed["value"] - cands[-1]["value"], 2)
+                else:
+                    four_w = (parsed["value"] / cands[-1]["value"] - 1) * 100
             # サイト側が週次%を出さない系列（田中貴金属・BDI個別ページ等）は自前履歴から算出する
             # （P0-②・2026-07-28。これが無いと weekly が永久に None で発火経路が4週累積だけになる）。
             # 自前履歴依存なので four_week と同じく status==ok の時のみ判定に使う。
             # 月次系列は元データが月1回しか動かず、5〜9日前と比べても常に0%になるので対象外
-            if parsed.get("weekly_pct") is None and s.get("cadence") != "monthly":
+            if parsed.get("weekly_pct") is None and s.get("cadence") != "monthly" \
+                    and s["type"] != "spread":
                 wk_cands = [r for d, r in by_date.items()
                             if d and 5 <= (target_dt - datetime.strptime(d, "%Y-%m-%d")).days <= 9
                             and r.get("value")]
@@ -337,7 +493,15 @@ def main() -> int:
             # 平均絶対値13.9%・+5%だと41%の日で発火）。上書き値は series.alert に根拠つきで置く
             th = {**alert_cfg, **s.get("alert", {})}
             trigger = []
-            if s.get("cadence") == "monthly":
+            if s["type"] == "spread":
+                # スプレッドは%でなく絶対値(USD/T)で判定する（負値を取りうるため・上記コメント）
+                wa, fa = parsed.get("weekly_abs"), four_w_abs
+                row["weekly_abs"], row["four_week_abs"] = wa, fa
+                if wa is not None and wa >= th.get("weekly_abs_usd", 15.0):
+                    trigger.append(f"週次 {wa:+.1f}USD/T")
+                if row["status"] == "ok" and fa is not None and fa >= th.get("four_week_abs_usd", 30.0):
+                    trigger.append(f"4週 {fa:+.1f}USD/T")
+            elif s.get("cadence") == "monthly":
                 # 月次レーン: 週次の閾値体系（週+5%等）は月次統計の刻み（0.1〜0.5%/月）に
                 # 対して大きすぎて永久に鳴らない。前月比を専用閾値で見る。
                 # かつ**同じ月の値で毎週鳴らない**よう、前回記録と同じ公表月なら判定しない
