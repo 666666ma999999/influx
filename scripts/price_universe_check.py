@@ -433,6 +433,11 @@ def main() -> int:
                                     headers={"User-Agent": UA}, timeout=60)
                 resp.raise_for_status()
                 parsed = parse_boj(resp.content.decode("shift_jis", errors="replace"), s["data_code"])
+            elif s["type"] == "tokyosteel":
+                # 国内実勢（東京製鐵の自社公表建値）。PDFを解析するため別モジュールに分離。
+                # 標準ライブラリのみで動くので requests 依存とは独立
+                import tokyosteel_scrap
+                parsed = tokyosteel_scrap.fetch_tokyosteel_scrap(today)
             elif s["type"] == "tanaka":
                 parsed = parse_tanaka(fetch("https://gold.tanaka.co.jp/commodity/souba/"))
             else:
@@ -466,6 +471,12 @@ def main() -> int:
             if parsed.get("layout") == "fmbi_json" and parsed.get("src_date") and \
                     (datetime.strptime(today, "%Y-%m-%d")
                      - datetime.strptime(parsed["src_date"], "%Y-%m-%d")).days > 5:
+                status = "stale"
+            # 東京製鐵は改定のたびの公表（2026年は平均7.8日間隔・最長27日を実測）。
+            # 日付一致は要求せず45日以上の据え置きを異常とみなす
+            if parsed.get("layout") == "tokyosteel_pdf_v1" and parsed.get("src_date") and \
+                    (datetime.strptime(today, "%Y-%m-%d")
+                     - datetime.strptime(parsed["src_date"], "%Y-%m-%d")).days > 45:
                 status = "stale"
             row = {**base, **parsed, "status": status}
             # 4週累積: 日付基準で25〜35日前の最新レコードと比較（同日再実行・実行間隔の
