@@ -8,6 +8,9 @@ PROJECT_ROOT="$HOME/Desktop/biz/influx"
 cd "$PROJECT_ROOT" || exit 1
 ACCOUNTS_US="yukimamax paurooteri investramza Biz_zatukora tomoyaasakura kakatothecat Drdebuneko YasLovesTech"
 ACCOUNTS_JP="ShinjukuSokai"
+# 第23R裁定②: 前向き勝率台帳の段階拡大（月+10人上限・bot徴候で即停止）。
+# 選定=config記載順の先頭10（結果で選ばない・2026-07-28追加）。
+ACCOUNTS_JP_SEARCH="goto_finance cissan_9984 tesuta001 yurumazu 2okutameo tapazou29 kanpo_blog haru_tachibana8 heihachiro888 uehara_sato4"
 RUN_DAY=$(date +%Y%m%d)
 SINCE=$(date -v-14d +%Y-%m-%d)
 UNTIL=$(date -v+1d +%Y-%m-%d)
@@ -53,5 +56,6 @@ capture_group() {
 # profile直読み。超高頻度（16投稿/2日実測）なので週次でもスクロール多め。
 capture_group us_forward search 40 $ACCOUNTS_US
 capture_group jp_forward profile 80 $ACCOUNTS_JP
+capture_group jp_forward search 25 $ACCOUNTS_JP_SEARCH
 docker compose -f docker-compose.vnc.yml down
 echo "[us-watchlist] $RUN_DAY 完了 (us+jp)"
