@@ -1,0 +1,27 @@
+{
+  "_comment": "B2B価格週次チェッカーの対象系列（docs/price-watch-universe.md の機械取得可能サブセット）。TE=tradingeconomics.com/commodity/<slug>（存在しないスラッグも200を返すため行スコープ+ラベル一致で判定）。閾値超えのみ表出力。",
+  "version": 1,
+  "alert": { "weekly_pct": 5.0, "four_week_pct": 10.0 },
+  "series": [
+    { "id": "copper", "label": "Copper", "type": "te", "slug": "copper", "jp": "銅", "stocks": "5713/5711/5714" },
+    { "id": "aluminum", "label": "Aluminum", "type": "te", "slug": "aluminum", "jp": "アルミ", "stocks": "5703/5741" },
+    { "id": "nickel", "label": "Nickel", "type": "te", "slug": "nickel", "jp": "ニッケル", "stocks": "5713/5541" },
+    { "id": "zinc", "label": "Zinc", "type": "te", "slug": "zinc", "jp": "亜鉛", "stocks": "5706/5707" },
+    { "id": "iron-ore", "label": "Iron Ore", "type": "te", "slug": "iron-ore", "jp": "鉄鉱石", "stocks": "8031/8058" },
+    { "id": "gold-int", "label": "Gold", "type": "te", "slug": "gold", "jp": "金(国際)", "stocks": "5713/7456/5857" },
+    { "id": "silver", "label": "Silver", "type": "te", "slug": "silver", "jp": "銀", "stocks": "5706/5713/5714" },
+    { "id": "platinum", "label": "Platinum", "type": "te", "slug": "platinum", "jp": "プラチナ", "stocks": "5714/5857" },
+    { "id": "uranium", "label": "Uranium", "type": "te", "slug": "uranium", "jp": "ウラン", "stocks": "2768/8001" },
+    { "id": "wti", "label": "Crude Oil", "type": "te", "slug": "crude-oil", "jp": "原油WTI", "stocks": "1605/1662" },
+    { "id": "brent", "label": "Brent", "type": "te", "slug": "brent-crude-oil", "jp": "原油Brent", "stocks": "1605/1662" },
+    { "id": "coal", "label": "Coal", "type": "te", "slug": "coal", "jp": "一般炭", "stocks": "1518/8053" },
+    { "id": "coking-coal", "label": "Coking Coal", "type": "te", "slug": "coking-coal", "jp": "原料炭", "stocks": "8058/8053" },
+    { "id": "naphtha", "label": "Naphtha", "type": "te", "slug": "naphtha", "jp": "ナフサ", "stocks": "5020/5019" },
+    { "id": "urea", "label": "Urea", "type": "te", "slug": "urea", "jp": "尿素", "stocks": "4031/4025" },
+    { "id": "methanol", "label": "Methanol", "type": "te", "slug": "methanol", "jp": "メタノール", "stocks": "4182" },
+    { "id": "pvc", "label": "Polyvinyl", "type": "te", "slug": "polyvinyl", "jp": "塩ビ", "stocks": "4063/4042" },
+    { "id": "lumber", "label": "Lumber", "type": "te", "slug": "lumber", "jp": "木材", "stocks": "1911/7898" },
+    { "id": "rubber", "label": "Rubber", "type": "te", "slug": "rubber", "jp": "天然ゴム", "stocks": "(受益なし=コスト圧迫シグナル)" },
+    { "id": "gold-tanaka", "label": "金(田中貴金属店頭)", "type": "tanaka", "jp": "金(国内小売)", "stocks": "5713/7456/5857" }
+  ]
+}

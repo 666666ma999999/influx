@@ -38,7 +38,11 @@ docker compose run xstock python scripts/classify_tweets.py --input output/tweet
 docker compose run xstock python scripts/check_inactive_accounts.py
 
 # X値上がり検出（日次・launchd com.influx.price-watch 22:10。手動は runner 経由）
-bash scripts/xprice_watch_run.sh   # 収集30クエリ→zスコア判定→検知時Mac通知。台帳 data/x_price_watch/
+bash scripts/xprice_watch_run.sh   # 収集36クエリ→zスコア判定→検知時Mac通知。台帳 data/x_price_watch/
+
+# B2B価格週次チェッカー + 商品名発見器（値上がりレーンの拡張・docs/price-watch-universe.md）
+docker compose run --rm xstock python scripts/price_universe_check.py   # 20系列の週次価格・閾値超え表示
+docker exec -e DISPLAY=:99 xstock-vnc python3 /app/scripts/price_watch_discover.py  # 新商品名の候補キュー生成
 
 # Grok リサーチパイプライン（.envrc 自動読み込み + docker exec ラッパー）
 scripts/run_research.sh --phase evaluate

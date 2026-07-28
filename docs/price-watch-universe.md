@@ -186,6 +186,23 @@
 - X監視への実装: configs/x_price_watch.json に gen2 系6クエリとして追加済み（2026-07-27・新ID・凍結）
 - 注意: 品薄シグナル単独では買わない（値上がり系列への波及＝価格ソースでの裏取りを待って5チェックへ）
 
+## 週次チェッカー運用（2026-07-28 稼働開始）
+
+- 実行（週1・手動）: `docker compose run --rm xstock python scripts/price_universe_check.py`
+- 対象20系列= configs/price_universe_sources.json（TE一覧ページ1リクエスト+田中金）。
+  台帳= `data/price_watch/universe_weekly.jsonl`（ok/parse_fail/error を区別・±50%跳びは suspect_jump）
+- アラート= weekly≥+5% or 4週累積≥+10%（4週累積は履歴4本蓄積後から）→ 超過系列と受益銘柄を表出力
+- ⚠列意味の教訓（2026-07-28実測）: TE個別ページと一覧ページで列構成が異なる（初回実装で weekly と
+  monthly を取り違え）。**一覧ページ（/commodities）の行を正とする**
+
+## 発見器運用（2026-07-28 稼働開始）
+
+- 実行（週1〜隔日・手動）: `docker exec -e DISPLAY=:99 xstock-vnc python3 /app/scripts/price_watch_discover.py`
+- 低閾値3クエリ（値上げ/値上がり/品薄・min_faves:20・前日窓）→ ルール抽出（既知語彙差分・複数投稿者必須・
+  数字断片除外）→ 候補キュー `data/x_price_watch/discovery_queue.jsonl`（上限20/回・通知なし）
+- LLM精製段は ANTHROPIC_API_KEY 実キー設定時のみ（現状プレースホルダ=スキップ）
+- 初回実測（7/27分・64投稿）: 「ナプキン」（8/1値上げ）「プライム」（Amazonプライム値上げ）を正しく検出
+
 ## 実装注意（週次チェッカーを作る場合）
 
 - **TradingEconomics は存在しないスラッグでも200を返す** → 実在判定は `<title>` に商品名を含むかで行う（実在確認済スラッグ31種は univ-metal-energy 調査参照）
