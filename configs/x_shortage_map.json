@@ -1877,15 +1877,6 @@
           "verified": "2026-07-28"
         },
         {
-          "code": "7593",
-          "name": "ＶＴホールディングス",
-          "layer": "trader",
-          "sign": "+",
-          "tier": "provisional",
-          "evidence": "pin=「新車・中古車の販売台数」＝台数型で note は「中古相場は在庫評価に一部」＝相場感応は限定的",
-          "verified": "2026-07-28"
-        },
-        {
           "code": "2681",
           "name": "ゲオホールディングス",
           "layer": "trader",
@@ -1932,7 +1923,19 @@
           "evidence": "pin=「トヨタ世界生産台数」＝新車生産の数量型で中古相場とは無関係"
         }
       ],
-      "group": "B-material-food-vehicle"
+      "group": "B-material-food-vehicle",
+      "dormant_beneficiaries": [
+        {
+          "code": "7593",
+          "name": "ＶＴホールディングス",
+          "layer": "trader",
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "pin=「新車・中古車の販売台数」＝台数型で note は「中古相場は在庫評価に一部」＝相場感応は限定的／同一クエリ gen1-kuruma-price 経由で new-car-delivery では sign=- になり、発火時にどちらの機序か区別できないため休眠（Codex CONFIRMED-1）",
+          "verified": "2026-07-28"
+        }
+      ],
+      "dormant_note": "／7593は新車納期遅延では損失側。クエリが両機序を分離できるようになったら復帰"
     },
     {
       "id": "new-car-delivery",

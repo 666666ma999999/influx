@@ -29,6 +29,7 @@ import argparse
 import json
 import sys
 from collections import defaultdict
+from datetime import datetime
 from pathlib import Path
 from statistics import mean, pstdev
 
@@ -54,7 +55,9 @@ def load_shortage_map() -> tuple[dict | None, str]:
             return None, f"対応表に検証エラー{len(errors)}件（銘柄付与を停止）: {errors[0][:60]}"
         return m, ""
     except Exception as exc:  # noqa: BLE001
-        return None, f"対応表を読めません: {str(exc)[:80]}"
+        # 例外の型まで出す。全部「読めません」に畳むと、一時I/O障害と実装バグを
+        # 切り分けられない（Codex NIT-8）
+        return None, f"対応表を読めません [{type(exc).__name__}]: {str(exc)[:80]}"
 
 
 def load_ledger(path: Path) -> list[dict]:
@@ -177,6 +180,13 @@ def main() -> int:
         print(f"台帳が空です: {args.ledger}")
         return 1
     target_date = args.date or max(r["date"] for r in rows)
+    # 日付判定は全部文字列比較なので、不正な --date は「発火して銘柄を出す瞬間」まで
+    # 生き延びてから落ちる。入口で弾く（Codex PLAUSIBLE-6）。
+    try:
+        datetime.strptime(target_date, "%Y-%m-%d")
+    except ValueError:
+        print(f"--date が不正です（YYYY-MM-DD で指定）: {target_date!r}")
+        return 1
 
     by_query: dict[str, list[dict]] = defaultdict(list)
     for row in rows:
@@ -208,6 +218,14 @@ def main() -> int:
     smap, smap_err = load_shortage_map()
     if smap_err:
         print(f"\n[shortage_map] WARN: {smap_err}")
+    if alerts and smap is None:
+        # 銘柄欠落のまま台帳へ書くと、(date,query_id)の重複排除で二度と補完されず
+        # 「本来出るはずの銘柄が恒久的に消えた発火」が証拠台帳に固定される（Codex CONFIRMED-4）。
+        # アラート自体は日次台帳から決定的に再計算できるので、書かずに落として再実行を促す方が安全。
+        print("\nFATAL: 対応表が使えないため、銘柄なしの発火を記録しません"
+              "（重複排除により後から補完できないため）。原因を直して再実行してください。")
+        print(f"  検知していた発火: {[a['query_id'] for a in alerts]}")
+        return 2
     if alerts and smap is not None:
         import x_shortage_map as xsm
         for a in alerts:
@@ -230,8 +248,15 @@ def main() -> int:
         for a in alerts:
             print(f"  {a['query_id']:<24} → {a.get('stocks_display', '対応表なし')}")
         # 前向き記録（受益銘柄つき。銘柄が出ない分類は理由を note に残す）
+        # 字面比較だと `./data/...` や symlink 経由の既定台帳を「別台帳」と誤判定して
+        # 記録を取りこぼす（Codex PLAUSIBLE-7）。実体パスで比較する。
+        def _same_file(a: Path, b: Path) -> bool:
+            try:
+                return a.resolve() == b.resolve()
+            except OSError:
+                return a == b
         do_forward = (args.forward == "on"
-                      or (args.forward == "auto" and args.ledger == DEFAULT_LEDGER))
+                      or (args.forward == "auto" and _same_file(args.ledger, DEFAULT_LEDGER)))
         if not do_forward:
             print(f"[forward] SKIP: 前向き記録に追記しません"
                   f"（--forward={args.forward} / ledger={args.ledger.name}）")

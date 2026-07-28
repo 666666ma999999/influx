@@ -36,6 +36,10 @@ QUERY_CONFIG_PATH = APP / "configs/x_price_watch.json"
 VALID_TYPES = {"price", "capex", "demand", "secondary", "resale", "disruption", "broad"}
 RETAIL_OK_TYPES = {"demand"}      # 小売が sign=+ を名乗れる型
 SECONDARY_OK_TYPES = {"secondary"}  # 二次流通が受益側に立てる型
+# 「銘柄を出さない型」はコード側で固定する。JSON の shortage_types[..].actionable だけを
+# 正としていると、設定1行を反転させるだけで転売プレ値が買い候補として出せてしまう
+# （Codex CONFIRMED-3: ルールとデータを同一ファイルに置いたことによる自己認可）。
+NON_ACTIONABLE_TYPES = {"resale", "disruption", "broad"}
 VALID_LAYERS = {"maker", "parts", "equipment", "material", "trader", "secondary", "user", "retail"}
 VALID_SIGNS = {"+", "-", "0"}
 VALID_TIERS = {"confirmed", "provisional", "rejected"}
@@ -71,6 +75,14 @@ def validate(m: dict | None = None, center_pin: dict | None = None,
     errors: list[str] = []
     seen_subject_ids: set[str] = set()
     covered: set[str] = set()
+    # query_id -> code -> 出現した sign の集合（同一クエリ内の符号矛盾を検出するため）
+    query_signs: dict[str, dict[str, set[str]]] = {}
+
+    for stype_name in NON_ACTIONABLE_TYPES:
+        decl = m.get("shortage_types", {}).get(stype_name, {})
+        if decl.get("actionable"):
+            errors.append(f"shortage_types.{stype_name}.actionable=true は不正"
+                          f"（この型は銘柄を出さないとコード側で固定されている）")
 
     for s in m["subjects"]:
         sid = s.get("id", "(id無し)")
@@ -118,6 +130,20 @@ def validate(m: dict | None = None, center_pin: dict | None = None,
                     errors.append(f"{sid}/{kind}: 未知の sign={b.get('sign')} (code={code})")
                 if not b.get("evidence"):
                     errors.append(f"{sid}/{kind}: code={code} に evidence が無い")
+                # 表示時に datetime.strptime へ渡る値。ここで弾かないと「検証は通るのに
+                # 発火した瞬間に落ちる」＝一番まずいタイミングで壊れる（Codex PLAUSIBLE-5）
+                if b.get("verified"):
+                    try:
+                        datetime.strptime(b["verified"], "%Y-%m-%d")
+                    except ValueError:
+                        errors.append(f"{sid}/{kind}: code={code} の verified="
+                                      f"{b['verified']!r} が YYYY-MM-DD として不正")
+                if kind == "beneficiaries" and s.get("actionable"):
+                    for q in s.get("queries", []):
+                        query_signs.setdefault(q, {}).setdefault(code, set()).add(b.get("sign"))
+                elif kind == "traps":
+                    for q in s.get("queries", []):
+                        query_signs.setdefault(q, {}).setdefault(code, set()).add(b.get("sign"))
                 if kind != "traps":
                     if b.get("tier") not in VALID_TIERS:
                         errors.append(f"{sid}/{kind}: 未知の tier={b.get('tier')} (code={code})")
@@ -136,6 +162,15 @@ def validate(m: dict | None = None, center_pin: dict | None = None,
                 elif b.get("sign") == "+":
                     errors.append(f"{sid}/traps: code={code} の sign=+ は traps に置けない")
 
+    # 同一 query_id 内で、ある銘柄が受益(+)と損失(-/0)の両方に現れるのは判定不能を意味する。
+    # 発火してもどちらの機序か区別できないため、買い候補として出してはいけない
+    # （Codex CONFIRMED-1: 新車納期遅延と中古車相場高が同一クエリに同居していた）。
+    for q, codes in query_signs.items():
+        for code, signs in codes.items():
+            if "+" in signs and len(signs) > 1:
+                errors.append(f"query={q}: code={code} が同一クエリ内で sign={sorted(signs)} と矛盾"
+                              f"（受益と損失の両方に帰属＝発火時に機序を分離できない）")
+
     missing = query_ids - covered
     if missing:
         errors.append(f"どの subject にも割り当てられていない query_id: {sorted(missing)}")
@@ -151,12 +186,28 @@ def subjects_for_query(m: dict, query_id: str) -> list[dict]:
     return [s for s in m["subjects"] if query_id in s.get("queries", [])]
 
 
+def ensure_validated(m: dict) -> None:
+    """未検証の対応表で表示経路を動かせないようにする（自己防衛）。
+
+    呼び出し側が `validate()` を通し忘れても、台帳外コードや符号違反が画面に出ることを
+    防ぐ。検証済みフラグを対応表に刻んで2回目以降は素通しする
+    （Codex CONFIRMED-2: 公開関数が「検証済みmap」という前提を強制していなかった）。
+    """
+    if m.get("_validated"):
+        return
+    errors = validate(m)
+    if errors:
+        raise ValueError(f"未検証・不正な対応表では銘柄を出せません（{len(errors)}件）: {errors[0]}")
+    m["_validated"] = True
+
+
 def cards_for_query(m: dict, query_id: str) -> list[dict]:
     """発火時に買い候補として出せるカードだけを返す。
 
     actionable な subject の sign=+ かつ confirmed/provisional のみ。
     同一銘柄が複数 subject に出た場合は、より強い tier を残して1件に畳む。
     """
+    ensure_validated(m)
     best: dict[str, dict] = {}
     for s in subjects_for_query(m, query_id):
         if not s.get("actionable"):
@@ -176,6 +227,8 @@ def display_for_query(m: dict, query_id: str, today: str) -> str:
     「銘柄が出ない」を沈黙ではなく理由つきで出すのが要点（Xで一番目立つ品薄＝転売プレ値は
     メーカー収益に届かないため、空であること自体が正しい成果物）。
     """
+    ensure_validated(m)
+    datetime.strptime(today, "%Y-%m-%d")  # 不正日付は発火時でなくここで即座に落とす
     subs = subjects_for_query(m, query_id)
     if not subs:
         return "対応表に未登録（銘柄なし）"
