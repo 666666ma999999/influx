@@ -1,17 +1,16 @@
 #!/bin/bash
-# 米国株ウォッチリスト前向き保存（第21R裁定・毎週火曜10:30・launchd）。
-# 仕様正本: tasks/us_watchlist_preregister.md §2。
+# インフルエンサー watchlist 前向き保存（毎週火曜10:30・launchd）。
+# us_forward: 第21R裁定・仕様正本 tasks/us_watchlist_preregister.md §2。
+# jp_forward: 第22R裁定・仕様正本 tasks/influencer_discovery_preregister.md §第22R。
 # rolling 14日窓・日付スナップショット（上書きしない）・sha256をreceiptsへappend。
 set -uo pipefail
 PROJECT_ROOT="$HOME/Desktop/biz/influx"
 cd "$PROJECT_ROOT" || exit 1
-ACCOUNTS="yukimamax paurooteri investramza Biz_zatukora tomoyaasakura kakatothecat Drdebuneko YasLovesTech"
+ACCOUNTS_US="yukimamax paurooteri investramza Biz_zatukora tomoyaasakura kakatothecat Drdebuneko YasLovesTech"
+ACCOUNTS_JP="ShinjukuSokai"
 RUN_DAY=$(date +%Y%m%d)
 SINCE=$(date -v-14d +%Y-%m-%d)
 UNTIL=$(date -v+1d +%Y-%m-%d)
-OUT_REL="data/influencer_candidates/us_forward/$RUN_DAY"
-RECEIPTS="data/influencer_candidates/us_forward/receipts.jsonl"
-mkdir -p "$OUT_REL" "$(dirname "$RECEIPTS")"
 
 load_key_from_zshrc() {
     local v="$1"; [ -n "${!v:-}" ] && return 0
@@ -27,19 +26,32 @@ for _ in $(seq 1 15); do
     sleep 2
 done
 
-for acc in $ACCOUNTS; do
-    docker exec -e DISPLAY=:99 -e PYTHONPYCACHEPREFIX=/tmp/pc xstock-vnc \
-        python3 /app/scripts/recollect_account.py \
-        --account "$acc" --since "$SINCE" --until "$UNTIL" --max-scrolls 40 \
-        --output-dir "/app/$OUT_REL" || echo "警告: @$acc capture失敗" >&2
-    f="$OUT_REL/$acc.json"
-    if [ -f "$f" ]; then
-        SHA=$(shasum -a 256 "$f" | awk '{print $1}')
-        N=$(python3 -c "import json;print(json.load(open('$f'))['_collection']['own_posts'])" 2>/dev/null || echo "?")
-        printf '{"run_day":"%s","account":"%s","file":"%s","sha256":"%s","own_posts":%s,"ts":"%s"}\n' \
-            "$RUN_DAY" "$acc" "$f" "$SHA" "${N:-null}" "$(date -Iseconds)" >> "$RECEIPTS"
-    fi
-    sleep 60
-done
+capture_group() {
+    local base="$1" via="$2" scrolls="$3"; shift 3
+    local out_rel="data/influencer_candidates/$base/$RUN_DAY"
+    local receipts="data/influencer_candidates/$base/receipts.jsonl"
+    mkdir -p "$out_rel" "$(dirname "$receipts")"
+    for acc in "$@"; do
+        docker exec -e DISPLAY=:99 -e PYTHONPYCACHEPREFIX=/tmp/pc xstock-vnc \
+            python3 /app/scripts/recollect_account.py \
+            --account "$acc" --since "$SINCE" --until "$UNTIL" \
+            --via "$via" --max-scrolls "$scrolls" \
+            --output-dir "/app/$out_rel" || echo "警告: @$acc capture失敗" >&2
+        local f="$out_rel/$acc.json"
+        if [ -f "$f" ]; then
+            local SHA N
+            SHA=$(shasum -a 256 "$f" | awk '{print $1}')
+            N=$(python3 -c "import json;print(json.load(open('$f'))['_collection']['own_posts'])" 2>/dev/null || echo "?")
+            printf '{"run_day":"%s","account":"%s","file":"%s","sha256":"%s","own_posts":%s,"ts":"%s"}\n' \
+                "$RUN_DAY" "$acc" "$f" "$SHA" "${N:-null}" "$(date -Iseconds)" >> "$receipts"
+        fi
+        sleep 60
+    done
+}
+
+# jp: ShinjukuSokai は from:検索が0件（検索インデックス除外・2026-07-28実測）のため
+# profile直読み。超高頻度（16投稿/2日実測）なので週次でもスクロール多め。
+capture_group us_forward search 40 $ACCOUNTS_US
+capture_group jp_forward profile 80 $ACCOUNTS_JP
 docker compose -f docker-compose.vnc.yml down
-echo "[us-watchlist] $RUN_DAY 完了"
+echo "[us-watchlist] $RUN_DAY 完了 (us+jp)"

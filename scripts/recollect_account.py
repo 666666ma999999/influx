@@ -46,6 +46,10 @@ def main() -> int:
     ap.add_argument("--since", default=None, help="YYYY-MM-DD（窓開始）")
     ap.add_argument("--until", default=None, help="YYYY-MM-DD（窓終了）")
     ap.add_argument("--max-scrolls", type=int, default=200)
+    ap.add_argument("--via", choices=("search", "profile"), default="search",
+                    help="search=from:検索（既定）/ profile=プロフィール直読み"
+                         "（検索インデックスから除外されたアカウント用。"
+                         "2026-07-28 ShinjukuSokai: from:検索0件・プロフィール直読み17件で判明）")
     ap.add_argument("--profile", default="x_profiles/maaaki")
     ap.add_argument("--stop-after-empty", type=int, default=5)
     ap.add_argument("--output-dir", default="data/influencer_candidates/recollect")
@@ -63,7 +67,11 @@ def main() -> int:
         parts.append(f"since:{args.since}")
     parts.append(f"until:{until}")
     query = " ".join(parts)
-    url = f"https://x.com/search?q={quote(query)}&src=typed_query&f=live"
+    if args.via == "profile":
+        url = f"https://x.com/{acc}"
+        query = f"profile:{acc} [{args.since or ''}..{until})"
+    else:
+        url = f"https://x.com/search?q={quote(query)}&src=typed_query&f=live"
 
     print(f"[recollect] account=@{acc} query='{query}'")
     print(f"[recollect] profile={args.profile} max_scrolls={args.max_scrolls}")
@@ -75,12 +83,26 @@ def main() -> int:
     # from:<account> 検索は本人の投稿のみを返すため、username での除外はしない。
     # （表示名に "@" を含むアカウントは collector の username 抽出が誤るため gate しない。
     #  混入した引用元カード等は account=acc とみなす＝from: の著者保証を信頼する。2026-07-24 修正）
+    # profile モードは本人以外（RT元カード等）が混入するため、tweet URL の
+    # /<acc>/status/ 照合で本人投稿だけ残し、since/until 窓もここで適用する
+    # （プロフィールページには検索窓が無いため・until は search と同じ排他側）。
+    since_ymd = (args.since or "").replace("-", "") or None
+    until_ymd = until.replace("-", "")
     posts = []
     for t in res.tweets:
         date = iso_to_ymd(t.get("posted_at") or t.get("collected_at"))
         text = (t.get("text") or "").replace("\n", " ").strip()
-        if date and text:
-            posts.append({"account": acc, "date": date, "text": text})
+        if not (date and text):
+            continue
+        if args.via == "profile":
+            turl = (t.get("url") or "").lower()
+            if f"/{acc.lower()}/status/" not in turl:
+                continue
+            if since_ymd and date < since_ymd:
+                continue
+            if date >= until_ymd:
+                continue
+        posts.append({"account": acc, "date": date, "text": text})
 
     out_dir = ROOT / args.output_dir
     out_dir.mkdir(parents=True, exist_ok=True)
