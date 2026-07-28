@@ -123,6 +123,56 @@ def parse_scfi(payload: dict) -> dict | None:
     return None
 
 
+def parse_jepx(today: str) -> dict | None:
+    """JEPXスポット（システムプライス）の日平均から週次変化率を自前計算する。
+
+    公開CSV https://www.jepx.jp/market/excel/spot_YYYY.csv（Shift-JIS・1日48コマ）。
+    value=48コマ揃った直近日の平均（円/kWh）、weekly_pct=直近7日平均÷その前7日平均。
+    年初は当年CSVだけでは14日に満たないため前年CSVも連結する。
+    列は名前でアンカーする（位置固定は禁止・TE列ズレ事故と同じ轍を踏まないため）。
+    """
+    import csv as _csv
+    import io as _io
+    from statistics import mean as _mean
+
+    year = int(today[:4])
+    daily: dict[str, list[float]] = {}
+    for y in (year, year - 1):
+        try:
+            raw = requests.get(f"https://www.jepx.jp/market/excel/spot_{y}.csv",
+                               headers={"User-Agent": UA}, timeout=60)
+            raw.raise_for_status()
+        except Exception:  # noqa: BLE001  前年分は存在しない/不要なこともある
+            if y == year:
+                raise
+            continue
+        rows = list(_csv.reader(_io.StringIO(raw.content.decode("shift_jis", errors="replace"))))
+        if not rows:
+            continue
+        try:
+            si = rows[0].index("システムプライス(円/kWh)")
+        except ValueError:
+            continue  # 列名が変わったら黙って別列を採らない
+        for r in rows[1:]:
+            if len(r) <= si or not r[0]:
+                continue
+            try:
+                daily.setdefault(r[0], []).append(float(r[si]))
+            except ValueError:
+                continue
+        if len(daily) >= 14:
+            break
+    avg = {d: _mean(v) for d, v in daily.items() if len(v) == 48}
+    days = sorted(avg)
+    if len(days) < 14:
+        return None
+    cur = _mean(avg[d] for d in days[-7:])
+    prev = _mean(avg[d] for d in days[-14:-7])
+    return {"value": round(avg[days[-1]], 2), "day_pct": None,
+            "weekly_pct": round((cur / prev - 1) * 100, 2) if prev else None,
+            "monthly_pct": None, "src_date": days[-1].replace("/", "-"), "layout": "jepx_csv"}
+
+
 def beneficiaries_display(s: dict, today: str) -> str:
     """受益カード（帰属プロトコルv2）の発火時表示。
 
@@ -186,6 +236,8 @@ def main() -> int:
                                       s["slug"], s["label"])
             elif s["type"] == "scfi":
                 parsed = parse_scfi(json.loads(fetch("https://en.sse.net.cn/currentIndex?indexName=scfi")))
+            elif s["type"] == "jepx":
+                parsed = parse_jepx(today)
             else:
                 parsed = parse_tanaka(fetch("https://gold.tanaka.co.jp/commodity/souba/"))
             if parsed is None or parsed["value"] is None:
@@ -200,6 +252,11 @@ def main() -> int:
             if parsed.get("layout") == "tanaka" and parsed.get("src_date") and \
                     parsed["src_date"] != datetime.now().strftime("%Y-%m-%d"):
                 status = "stale"
+            # JEPXは日次公表（翌日受渡分まで出る）。3日以上古い＝公開停止/取得ズレの検知
+            if parsed.get("layout") == "jepx_csv" and parsed.get("src_date") and \
+                    (datetime.strptime(today, "%Y-%m-%d")
+                     - datetime.strptime(parsed["src_date"], "%Y-%m-%d")).days > 3:
+                status = "stale"
             row = {**base, **parsed, "status": status}
             # 4週累積: 日付基準で25〜35日前の最新レコードと比較（同日再実行・実行間隔の
             # 乱れに頑健・Codex CONFIRMED-2）。該当なしなら判定しない
@@ -213,12 +270,16 @@ def main() -> int:
                      and r.get("value")]
             if cands:
                 four_w = (parsed["value"] / cands[-1]["value"] - 1) * 100
+            # 閾値は系列側で上書き可（既定は全系列共通）。電力のように平常時の変動が大きい
+            # 系列に一律+5%を当てると常時発火して使い物にならないため（JEPX実測: 週次変化の
+            # 平均絶対値13.9%・+5%だと41%の日で発火）。上書き値は series.alert に根拠つきで置く
+            th = {**alert_cfg, **s.get("alert", {})}
             trigger = []
             # weekly はサイト側の値で自前履歴と独立なので suspect_jump でも判定する（A-3）
-            if parsed.get("weekly_pct") is not None and parsed["weekly_pct"] >= alert_cfg["weekly_pct"]:
+            if parsed.get("weekly_pct") is not None and parsed["weekly_pct"] >= th["weekly_pct"]:
                 trigger.append(f"weekly {parsed['weekly_pct']:+.1f}%")
             # 4週累積は自前履歴に依存するため ok の時のみ
-            if row["status"] == "ok" and four_w is not None and four_w >= alert_cfg["four_week_pct"]:
+            if row["status"] == "ok" and four_w is not None and four_w >= th["four_week_pct"]:
                 trigger.append(f"4週累積 {four_w:+.1f}%")
             row["four_week_pct"] = round(four_w, 2) if four_w is not None else None
             row["four_week_base_date"] = cands[-1].get("date") if cands else None
