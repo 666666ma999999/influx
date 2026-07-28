@@ -123,6 +123,30 @@ def parse_scfi(payload: dict) -> dict | None:
     return None
 
 
+def beneficiaries_display(s: dict, today: str) -> str:
+    """受益カード（帰属プロトコルv2）の発火時表示。
+
+    sign=+ かつ confirmed/provisional のみ表示（rejected は買いシグナル禁止）。
+    provisional は (仮)、verified から12ヶ月超は (STALE要再確認) を付ける。
+    正カードゼロの系列は「受益者なし」＝記録のみで銘柄を後付けしない（関門B逆流防止）。
+    """
+    cards = [b for b in s.get("beneficiaries", [])
+             if b.get("sign") == "+" and b.get("tier") in ("confirmed", "provisional")]
+    if not cards:
+        return "受益者なし(TOP1000内・発火記録のみ)"
+    parts = []
+    t = datetime.strptime(today, "%Y-%m-%d")
+    for b in cards:
+        tag = "" if b["tier"] == "confirmed" else "(仮)"
+        stale = ""
+        if b.get("verified"):
+            age = (t - datetime.strptime(b["verified"], "%Y-%m-%d")).days
+            if age > 365:
+                stale = "(STALE要再確認)"
+        parts.append(f"{b['code']}{tag}{stale}")
+    return "/".join(parts)
+
+
 def load_history() -> dict[str, list[dict]]:
     hist: dict[str, list[dict]] = {}
     if LEDGER_PATH.exists():
@@ -220,7 +244,7 @@ def main() -> int:
     if alerts:
         print(f"\n🚨 閾値超え {len(alerts)} 系列:")
         for s, row, trigger in alerts:
-            print(f"  {s['jp']}（{'/'.join(trigger)}）→ 受益: {s['stocks']}")
+            print(f"  {s['jp']}（{'/'.join(trigger)}）→ 受益: {beneficiaries_display(s, today)}")
         # 前向き記録（レビューC-1対応: 発火を将来検定できる形で残す）
         try:
             import price_watch_forward as fwd

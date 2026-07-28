@@ -132,12 +132,21 @@ def record_firings(alerts: list, fire_date: str) -> int:
 
     n = 0
     for series, row, triggers in alerts:
-        codes = [to_code5(c) for c in CODE_RE.findall(series.get("stocks", ""))]
+        # 帰属プロトコルv2: 受益カードの sign=+ かつ confirmed/provisional を全件記録
+        # （仮=provisional も記録に入れる裁定 2026-07-28。rejected は買いシグナル禁止で除外）。
+        # 旧形式（stocks 自由文字列）の config にも後方互換
+        if "beneficiaries" in series:
+            code_tiers = [(to_code5(b["code"]), b.get("tier", "confirmed"))
+                          for b in series["beneficiaries"]
+                          if b.get("sign") == "+" and b.get("tier") in ("confirmed", "provisional")]
+        else:
+            code_tiers = [(to_code5(c), "confirmed")
+                          for c in CODE_RE.findall(series.get("stocks", ""))]
         stocks = []
-        for c5 in codes:
+        for c5, tier in code_tiers:
             px = close_of(c5, base_day)
             if px is not None:
-                stocks.append({"code": c5, "entry_close": px})
+                stocks.append({"code": c5, "entry_close": px, "tier": tier})
         append({
             "type": "firing", "spec_version": SPEC_VERSION,
             "fire_date": fire_date, "series_id": series["id"], "series_jp": series["jp"],
