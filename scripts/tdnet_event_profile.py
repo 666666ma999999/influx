@@ -58,7 +58,13 @@ PATTERNS = {
     "TOB意見表明": r"意見表明",
     "M&A子会社化": r"取得.*子会社化|株式.*取得.*お知らせ.*子会社",
     "MBO": r"マネジメント・バイアウト|ＭＢＯ",
+    # partial在庫の棚卸し(2026-07-29 第26R): §8-5 F22（暗号資産・トークン化＝原則A制度イベント適合で
+    # 未測定だった唯一の家系）を同一機械で記述測定する。ETF日次開示等のノイズは NOISE_EXCLUDE で除外。
+    "暗号資産・トークン化(F22)": r"ステーブルコイン|トークン化|暗号資産|仮想通貨|ブロックチェーン|Ｗｅｂ３|Web3|セキュリティ・?トークン",
 }
+
+# 表題マッチのノイズ（投信の定型日次開示・訂正）。PATTERNS適用後に除外する。
+NOISE_EXCLUDE = r"日々の開示事項|上場投信|ＥＴＦ|ETF|訂正"
 
 
 def norm_code(raw: str) -> str | None:
@@ -93,6 +99,7 @@ def main() -> int:
     a = ap.parse_args()
     events = a.events.split(",") if a.events else list(PATTERNS)
     pats = {k: re.compile(v) for k, v in PATTERNS.items() if k in events}
+    noise_rx = re.compile(NOISE_EXCLUDE)
 
     cal = mbr.load_calendar_days()
     bdays = mbr.all_business_days(cal)
@@ -121,6 +128,8 @@ def main() -> int:
             d, hh = pub[:10].replace("-", ""), int(pub[11:13])
             if d < first_bd or d > last_bd:
                 continue
+            if noise_rx.search(title):
+                continue  # 投信の定型日次開示・訂正は事象でない（2026-07-29 追加）
             for name, rx in pats.items():
                 if not rx.search(title):
                     continue
