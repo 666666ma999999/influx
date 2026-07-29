@@ -46,6 +46,7 @@ from bookmarks_keyword_digest_collect_browser import (  # noqa: E402  共有部�
 
 DEFAULT_CONFIG = APP / "configs/x_price_watch.json"
 DEFAULT_LEDGER = APP / "data/x_price_watch/ledger.jsonl"
+DEFAULT_TEXTS_DIR = APP / "data/x_price_watch/texts"
 DEFAULT_PROFILE = APP / "x_profiles/maaaki"
 
 # x_search_collect_twittora.py:88 と同一パターン（当該モジュールは未コミット変更が
@@ -91,6 +92,35 @@ def extract_status_ids(page) -> set[str]:
     return ids
 
 
+def extract_posts(page) -> dict[str, str]:
+    """カード単位で {status_id: 本文} を返す（2026-07-29 追加・本文レーン用）。
+
+    **件数(count)には使わない。** count は従来どおり extract_status_ids の distinct 数で、
+    凍結クエリの時系列を1件も変えないため。本関数は本文を拾う best-effort の追加経路で、
+    取りこぼしても count には影響しない。
+
+    スクロールのたびに呼ぶ必要がある: X は仮想リストで古いカードが DOM から消えるため、
+    ループ外で1回だけ拾うと大半の本文を取り逃す（sample_texts が抱える既知の制約）。
+    """
+    try:
+        pairs = page.eval_on_selector_all(
+            TWEET_CARD_SELECTOR,
+            """els => els.map(e => {
+                const a = e.querySelector('a:has(time)');
+                const t = e.querySelector('[data-testid="tweetText"]');
+                return [a ? a.getAttribute('href') : null, t ? t.innerText : null];
+            })""",
+        )
+    except PlaywrightError:
+        return {}
+    out: dict[str, str] = {}
+    for href, text in pairs or []:
+        m = _STATUS_ID_RE.search(href or "")
+        if m and text:
+            out[m.group(1)] = " ".join(str(text).split())
+    return out
+
+
 def sample_texts(page, limit: int = 3) -> list[str]:
     texts = page.eval_on_selector_all(
         '[data-testid="tweetText"]',
@@ -115,12 +145,14 @@ def collect_query(page, url: str, max_scrolls: int, cap_posts: int,
         raise LoginWallError(page.url)
 
     ids: set[str] = set()
+    posts: dict[str, str] = {}   # 本文（count には使わない・best-effort）
     scrolls = 0
     censored = False
     stagnant = 0  # 一時的な読み込み遅延を「自然枯渇」と誤認しないため2連続無増加で確定
     while True:
         prev_cards = page.locator(TWEET_CARD_SELECTOR).count()
         ids |= extract_status_ids(page)
+        posts.update(extract_posts(page))
         if len(ids) >= cap_posts:
             censored = True
             break
@@ -133,6 +165,7 @@ def collect_query(page, url: str, max_scrolls: int, cap_posts: int,
         if new_cards <= prev_cards:
             stagnant += 1
             ids |= extract_status_ids(page)
+            posts.update(extract_posts(page))
             if stagnant >= 2:
                 censored = False  # 2連続で新規カードなし＝自然枯渇と確定
                 break
@@ -143,13 +176,17 @@ def collect_query(page, url: str, max_scrolls: int, cap_posts: int,
         # 0件: X の empty state が出ていれば正当な0、出ていなければ疑わしい0として分離
         empty = page.locator('[data-testid="empty_state_header_text"]').count()
         status = "ok" if empty else "suspect_zero"
-        return {"count": 0, "censored": False, "scrolls": scrolls, "status": status, "samples": []}
+        return {"count": 0, "censored": False, "scrolls": scrolls, "status": status,
+                "samples": [], "posts": {}}
     return {
         "count": len(ids),
         "censored": censored,
         "scrolls": scrolls,
         "status": "ok",
         "samples": sample_texts(page),
+        # 本文は台帳(ledger.jsonl)には入れず別ファイルへ回す。台帳は件数の時系列が正本で、
+        # 本文を混ぜると1行が肥大化して既存の読み手を壊すため（2026-07-29）
+        "posts": posts,
     }
 
 
@@ -170,6 +207,8 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
     parser.add_argument("--ledger", type=Path, default=DEFAULT_LEDGER)
+    parser.add_argument("--texts-dir", type=Path, default=DEFAULT_TEXTS_DIR,
+                        help="本文の保存先ディレクトリ（日付ごとに1ファイル）")
     parser.add_argument("--profile", type=Path, default=DEFAULT_PROFILE)
     parser.add_argument("--date", help="対象UTC日 YYYY-MM-DD（省略時=直前の完結UTC日）")
     parser.add_argument("--queries", nargs="*", help="query_id で絞り込み（テスト用）")
@@ -198,6 +237,7 @@ def main() -> int:
 
     args.ledger.parent.mkdir(parents=True, exist_ok=True)
     rows: list[dict] = []
+    texts: list[dict] = []   # 本文レーン（2026-07-29 追加・台帳とは別ファイル）
     wall_hit = False
 
     with sync_playwright() as p:
@@ -237,6 +277,11 @@ def main() -> int:
                              "elapsed_sec": round(time.time() - started, 1)})
                 time.sleep(random.uniform(5.0, 10.0))
                 continue
+            # 本文は台帳から外して別ファイルへ（台帳の1行の形を変えない＝既存の読み手を壊さない）
+            posts = result.pop("posts", {})
+            for sid, txt in posts.items():
+                texts.append({"date": day, "query_id": entry["id"], "status_id": sid,
+                              "text": txt, "run_at": run_at})
             rows.append({**base, **result, "elapsed_sec": round(time.time() - started, 1)})
             print(f"[{i + 1}/{len(entries)}] {entry['id']}: count={result['count']} "
                   f"censored={result['censored']} status={result['status']}")
@@ -249,6 +294,15 @@ def main() -> int:
     with args.ledger.open("a", encoding="utf-8") as fh:
         for row in rows:
             fh.write(json.dumps(row, ensure_ascii=False) + "\n")
+
+    # 本文は日付ごとの別ファイルへ。銘柄言及の抽出（scripts/x_mention_extract.py）が読む
+    if texts:
+        tpath = args.texts_dir / f"{day}.jsonl"
+        tpath.parent.mkdir(parents=True, exist_ok=True)
+        with tpath.open("a", encoding="utf-8") as fh:
+            for t in texts:
+                fh.write(json.dumps(t, ensure_ascii=False) + "\n")
+        print(f"[texts] {len(texts)}件の本文を保存 → {tpath}")
 
     ok_rows = sum(1 for r in rows if r["status"] == "ok")
     print(f"[done] ledger={args.ledger} appended={len(rows)} ok={ok_rows} wall={wall_hit}")
