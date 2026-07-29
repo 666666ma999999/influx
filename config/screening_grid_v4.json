@@ -188,7 +188,10 @@
       ]
     }
   ],
-  "reference_only_cells": [],
+  "reference_only_cells": {
+    "_comment": "v4は既検証の近傍セルなし（5KPIとも§7でfeature別セル未検定・アンカーはv1で検証済みのため不要）",
+    "cells": []
+  },
   "screen_rules": {
     "eligibility": {
       "min_n": 50,

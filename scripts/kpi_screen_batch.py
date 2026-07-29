@@ -82,7 +82,18 @@ LIFT_N_BOOT = 1000  # 点推定のみ使用（CIは参考併記）。§6既定N_
 # 新バッチはここへの追記＝事前登録の一部。実行時に実ファイルのハッシュと照合し、
 # 不一致（=凍結後のグリッド変更）は FATAL 停止する。--grid-override（smoke用）は対象外だが、
 # その場合は --no-trials-append と --screening-ledger の併用を強制して本番台帳を保護する。
-FROZEN_GRID_HASHES = {"batch_v1": "73489b3b23a229b4"}
+FROZEN_GRID_HASHES = {
+    "batch_v1": "73489b3b23a229b4",
+    # batch_v4（2026-07-29凍結・Codex R2条件付きGO thread=019fad2d・reference_only_cellsの
+    # v1スキーマ整形後に確定。70セル=凍結後生成5KPI×状態14バケット）
+    "batch_v4": "18dba90d92d1d977",
+}
+
+
+def cell_kpi_prefix(batch_id: str) -> str:
+    """セル台帳名のprefix（Codex R2 MINOR-2: v1固定名の流用禁止）。
+    batch_v1→"screen_v1_"（後方互換・既存台帳と同一文字列）/ batch_v4→"screen_v4_"。"""
+    return f"screen_{batch_id.split('_', 1)[1]}_"
 
 # --- batch_v2t（第41周・カタログ§7-AF）専用の凍結パラメータ ------------------------------
 # グリッドスキーマがv1(population/feature/bucket)と全く異なるため、v2t用の判定ロジックは
@@ -455,7 +466,7 @@ def cell_to_ledger_record(cell: dict, batch_id: str, grid_sha: str, n_boot_used:
     return {
         "run_id": uuid.uuid4().hex,
         "ts": jq_fetch.now_jst().isoformat(),
-        "kpi_name": f"screen_v1_{cell['population']}_{cell['feature']}_{cell['bucket']}",
+        "kpi_name": f"{cell_kpi_prefix(batch_id)}{cell['population']}_{cell['feature']}_{cell['bucket']}",
         "batch_id": batch_id,
         "grid_sha256_16": grid_sha,
         "population": cell["population"],
@@ -697,7 +708,7 @@ def build_confirm_trial_records(
             {
                 "run_id": uuid.uuid4().hex,
                 "ts": jq_fetch.now_jst().isoformat(),
-                "kpi_name": f"screen_v1_{r['population']}_{r['feature']}_{r['bucket']}",
+                "kpi_name": f"{cell_kpi_prefix(grid['batch_id'])}{r['population']}_{r['feature']}_{r['bucket']}",
                 "params": params,
                 "period": {"start": confirm["period"][0], "end": confirm["period"][1]},
                 "n": r["n_confirm"],
@@ -706,7 +717,7 @@ def build_confirm_trial_records(
                 "ci_high": r["confirm_lift_ci_high"],
                 "ev": r["confirm_ev_obs"],
                 "verdict": "confirm_pass" if r["confirm_pass"] else "confirm_fail",
-                "entry_mode": "screening_batch_v1_reused_returns",
+                "entry_mode": f"screening_{grid['batch_id']}_reused_returns",
                 "regime_filter": None,
             }
         )
@@ -734,7 +745,7 @@ def build_confirm_trial_records(
         "ci_high": None,
         "ev": None,
         "verdict": "batch_meta",
-        "entry_mode": "screening_batch_v1_meta",
+        "entry_mode": f"screening_{grid['batch_id']}_meta",
         "regime_filter": None,
     }
     return cell_records, {"n_before": n_before, "n_after": n_new, "ci_level": ci_level, "meta_record": meta_record}
@@ -759,7 +770,7 @@ def write_report(
         f"# 第22周: 候補ファクトリー v1 スクリーニングレポート（batch_id={grid['batch_id']}）",
         "",
         f"生成日時: {jq_fetch.now_jst().isoformat()}",
-        f"グリッド: `{DEFAULT_GRID_PATH}` (sha256_16={grid_sha})",
+        f"グリッド: batch_id={grid['batch_id']} (sha256_16={grid_sha})",
         f"発見半期: {grid['periods']['screen']['start_month']} 〜 {grid['periods']['screen']['end_month']} / "
         f"検証半期: {grid['periods']['confirm']['start_month']} 〜 {grid['periods']['confirm']['end_month']}"
         "（historical validation・独立確認ではない）",
