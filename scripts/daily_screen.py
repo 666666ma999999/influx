@@ -1219,11 +1219,11 @@ def format_next_candidates_section(out_of_universe: list[dict], near_miss: list[
     remaining = MAX_NEXT_CANDIDATES_ROWS
     if out_of_universe:
         shown = sorted(out_of_universe, key=lambda r: (r["signal_date"], r["kpi_name"], r["code"]))[:remaining]
-        lines.append("| KPI | 銘柄コード | signal_date | 月間売買代金ランク | UL10 |")
-        lines.append("|---|---|---|---|---|")
+        lines.append("| KPI | 銘柄 | 社名 | signal_date | 月間売買代金ランク | UL10 |")
+        lines.append("|---|---|---|---|---|---|")
         for r in shown:
             rank_str = str(r["rank"]) if r["rank"] is not None else "-"
-            lines.append(f"| {r['kpi_name']} | {r['code']} | {r['signal_date']} | {rank_str} | {r['ul10']} |")
+            lines.append(f"| {r['kpi_name']} | {r['code']} | {code_name(r['code'])} | {r['signal_date']} | {rank_str} | {r['ul10']} |")
         if len(out_of_universe) > len(shown):
             lines.append(f"（他 {len(out_of_universe) - len(shown)} 件省略）")
         remaining -= len(shown)
@@ -1237,10 +1237,10 @@ def format_next_candidates_section(out_of_universe: list[dict], near_miss: list[
         lines.append(f"（{len(near_miss)}件該当・上記カテゴリで表示上限に達したため省略）")
     else:
         shown2 = sorted(near_miss, key=lambda r: (r["signal_date"], r["kpi_name"], r["code"]))[:remaining]
-        lines.append("| KPI | 銘柄コード | signal_date | 惜しい条件 | UL10 |")
-        lines.append("|---|---|---|---|---|")
+        lines.append("| KPI | 銘柄 | 社名 | signal_date | 惜しい条件 | UL10 |")
+        lines.append("|---|---|---|---|---|---|")
         for r in shown2:
-            lines.append(f"| {r['kpi_name']} | {r['code']} | {r['signal_date']} | {r['reason']} | {r['ul10']} |")
+            lines.append(f"| {r['kpi_name']} | {r['code']} | {code_name(r['code'])} | {r['signal_date']} | {r['reason']} | {r['ul10']} |")
         if len(near_miss) > len(shown2):
             lines.append(f"（他 {len(near_miss) - len(shown2)} 件省略）")
 
@@ -1435,11 +1435,11 @@ def format_confluence_section(records: list[dict], signal_date: Optional[str]) -
     if not confluent:
         lines += ["（2系統以上が合流した銘柄なし）", ""]
         return lines
-    lines.append("| 銘柄コード | 発火系統数 | 系統（KPI） |")
-    lines.append("|---|---|---|")
+    lines.append("| 銘柄 | 社名 | 発火系統数 | 系統（KPI） |")
+    lines.append("|---|---|---|---|")
     for code in sorted(confluent):
         kpis = sorted(confluent[code])
-        lines.append(f"| {code} | {len(kpis)} | {', '.join(kpis)} |")
+        lines.append(f"| {code} | {code_name(code)} | {len(kpis)} | {', '.join(kpis)} |")
     lines.append("")
     return lines
 
@@ -1632,6 +1632,32 @@ def append_run_evidence(
 # --- レポート生成 --------------------------------------------------------------------------
 
 
+_CODE_NAMES_CACHE: Optional[dict] = None
+
+
+def code_name(code: str) -> str:
+    """銘柄コード→社名（表示専用・最新月次masterから解決・不明は空文字）。
+
+    2026-07-29 ユーザー要望「銘柄がコードだけでわからない」対応。判定・台帳には一切使わない。
+    """
+    global _CODE_NAMES_CACHE
+    if _CODE_NAMES_CACHE is None:
+        names: dict[str, str] = {}
+        try:
+            files = sorted((jq_fetch.DATA_ROOT / "master").glob("*.json.gz"))
+            if files:
+                obj = jq_fetch.read_json_gz(files[-1])
+                rows = obj if isinstance(obj, list) else (obj.get("info") or obj.get("data") or [])
+                for row in rows:
+                    c = row.get("Code")
+                    if c:
+                        names[str(c)] = row.get("CoName") or ""
+        except Exception as exc:  # 表示専用のため失敗しても本線は止めない
+            print(f"WARN: 社名マスタ読込失敗（コードのみ表示で続行）: {exc}", file=sys.stderr)
+        _CODE_NAMES_CACHE = names
+    return _CODE_NAMES_CACHE.get(str(code), "")
+
+
 def write_today_report(
     new_signal_records: list[dict], records: list[dict], scoreboard: dict[str, dict],
     scan_start: Optional[str], scan_end: Optional[str], out_of_universe_counts: dict[str, int],
@@ -1661,12 +1687,21 @@ def write_today_report(
         # UL10列: 全KPI行で表示する。根拠の第17周T1(ul_fade_standalone)はチャンピオン限定
         # ではなくTOP500全体の実測（catalog §7-F）のため、証拠の適用範囲と表示範囲を一致
         # させる（"-"を安全と誤読させない・Codexレビュー④反映）。
-        lines.append("| KPI | 銘柄コード | signal_date | 想定エントリー日 | UL10 |")
-        lines.append("|---|---|---|---|---|")
+        # 2026-07-29 ユーザー要望: 銘柄単位に集約し「その銘柄にどのシグナルが出たか」を1行で
+        # 見える形に（表示のみの再構成・ledger行は従来どおりKPI×銘柄粒度で不変）。
+        by_stock: dict[tuple, list[dict]] = defaultdict(list)
         for r in new_signal_records:
-            ul10_str = format_ul10_tag(r["code"], r["signal_date"], bday_index, all_bdays)
+            by_stock[(r["code"], r["signal_date"])].append(r)
+        lines.append("| 銘柄 | 社名 | 発火シグナル | signal_date | 想定エントリー日 | UL10 |")
+        lines.append("|---|---|---|---|---|---|")
+        for (code, sd) in sorted(by_stock, key=lambda k: (-len({x["kpi_name"] for x in by_stock[k]}), k[0])):
+            rs = by_stock[(code, sd)]
+            kpi_set = sorted({x["kpi_name"] for x in rs})
+            mark = f"**{len(kpi_set)}系統** " if len(kpi_set) >= 2 else ""
+            ul10_str = format_ul10_tag(code, sd, bday_index, all_bdays)
             lines.append(
-                f"| {r['kpi_name']} | {r['code']} | {r['signal_date']} | {r['planned_entry_date']} | {ul10_str} |"
+                f"| {code} | {code_name(code)} | {mark}{', '.join(kpi_set)} | {sd} "
+                f"| {rs[0]['planned_entry_date']} | {ul10_str} |"
             )
         lines.append("")
         lines.append(UL10_FOOTNOTE)
@@ -1686,11 +1721,11 @@ def write_today_report(
     lines += ["", "## 保有中ポジション（pending_entry / open）", ""]
     active = [r for r in records if r["status"] in ("pending_entry", "open")]
     if active:
-        lines.append("| KPI | 銘柄コード | signal_date | status | entry_date | entry_price |")
-        lines.append("|---|---|---|---|---|---|")
+        lines.append("| KPI | 銘柄 | 社名 | signal_date | status | entry_date | entry_price |")
+        lines.append("|---|---|---|---|---|---|---|")
         for r in sorted(active, key=lambda r: (r["kpi_name"], r["signal_date"])):
             lines.append(
-                f"| {r['kpi_name']} | {r['code']} | {r['signal_date']} | {r['status']} | "
+                f"| {r['kpi_name']} | {r['code']} | {code_name(r['code'])} | {r['signal_date']} | {r['status']} | "
                 f"{r['entry_date'] or '-'} | {r['entry_price'] or '-'} |"
             )
     else:
