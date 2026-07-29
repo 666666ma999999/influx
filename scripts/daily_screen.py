@@ -867,6 +867,15 @@ def generate_kpi_signals(
     kpi_name = entry["kpi_name"]
     params = entry["params"]
 
+    # 修理(2026-07-29): pead_effective_end で scan_end が end_bd-1 に縮む開示反応系の分岐は、
+    # 単日走査(start_bd==end_bd)だと filtered が構造的に空になり、翌実行ではカーソル前進で
+    # start_bd がその日を追い越すため「最終走査日のシグナルが恒久的に拾われない」取りこぼしに
+    # なっていた（SUE系2週間0件の根本原因: 同窓で生成器直叩き25シグナル vs 台帳0件を実測）。
+    # filter 下限を start_bd の1営業日前へ広げ、前回実行で縮められた日を翌実行が回収する。
+    # append_new_signals は (kpi,code,signal_date) キーで冪等のため再走査でも重複しない
+    # （生成器・判定ロジックは不変。回収範囲の拡張のみ）。
+    recover_start = all_bdays[max(0, bday_index[start_bd] - 1)]
+
     if kpi_name in VOLSHOCK_FAMILY_KPI_NAMES:
         # 第11周: volshock_x_above200 は kpi_volshock_signals.py 実装済みの filter_ma200
         # (dev200符号フィルタ) をそのまま再利用する (Canonical Module原則・判定ロジックの
@@ -928,7 +937,7 @@ def generate_kpi_signals(
         )
         if df.empty:
             return df[["signal_date", "code"]] if "signal_date" in df.columns else df
-        filtered = df[(df["signal_date"] >= start_bd) & (df["signal_date"] <= end_bd)]
+        filtered = df[(df["signal_date"] >= recover_start) & (df["signal_date"] <= end_bd)]
         return filtered[["signal_date", "code"]].reset_index(drop=True)
 
     if kpi_name in SUE_FAMILY_KPI_NAMES:
@@ -942,7 +951,7 @@ def generate_kpi_signals(
         df, _diag = _generate_sue_beat_signals_cached(scan_start, scan_end, params["threshold"])
         if df.empty:
             return df[["signal_date", "code"]] if "signal_date" in df.columns else df
-        filtered = df[(df["signal_date"] >= start_bd) & (df["signal_date"] <= end_bd)]
+        filtered = df[(df["signal_date"] >= recover_start) & (df["signal_date"] <= end_bd)]
         if params.get("filter_dev200") == "above":
             # sue_x_above200限定のポストフィルタ（§7-H/§7-J: kpi_sue_champion_signals.compute_dev200
             # Canonical再利用）。kpi_nameをハードコード分岐せず、paramsにfilter_dev200="above"が
@@ -1003,7 +1012,7 @@ def generate_kpi_signals(
         df = _generate_margin_expand_signals_cached(scan_start, scan_end)
         if "signal_date" not in df.columns:
             return df
-        filtered = df[(df["signal_date"] >= start_bd) & (df["signal_date"] <= end_bd)]
+        filtered = df[(df["signal_date"] >= recover_start) & (df["signal_date"] <= end_bd)]
         return filtered[["signal_date", "code"]].reset_index(drop=True)
 
     if kpi_name == RAW_STREV_KPI_NAME:
@@ -1046,7 +1055,7 @@ def generate_kpi_signals(
         df = _generate_sales_beat_signals_cached(scan_start, scan_end, params["threshold"])
         if "signal_date" not in df.columns:
             return df
-        filtered = df[(df["signal_date"] >= start_bd) & (df["signal_date"] <= end_bd)]
+        filtered = df[(df["signal_date"] >= recover_start) & (df["signal_date"] <= end_bd)]
         return filtered[["signal_date", "code"]].reset_index(drop=True)
 
     if kpi_name == GUIDANCE_FY_STRONG_KPI_NAME:
@@ -1061,7 +1070,7 @@ def generate_kpi_signals(
         df = _generate_guidance_fy_strong_signals_cached(scan_start, scan_end, all_bdays, bday_index)
         if "signal_date" not in df.columns:
             return df
-        filtered = df[(df["signal_date"] >= start_bd) & (df["signal_date"] <= end_bd)]
+        filtered = df[(df["signal_date"] >= recover_start) & (df["signal_date"] <= end_bd)]
         return filtered[["signal_date", "code"]].reset_index(drop=True)
 
     if kpi_name == CFO_MARGIN_IMPROVE_KPI_NAME:
@@ -1076,7 +1085,7 @@ def generate_kpi_signals(
         df = kpi_round35_signals.filter_cfo_margin_improve(pairs_df)
         if "signal_date" not in df.columns:
             return df
-        filtered = df[(df["signal_date"] >= start_bd) & (df["signal_date"] <= end_bd)]
+        filtered = df[(df["signal_date"] >= recover_start) & (df["signal_date"] <= end_bd)]
         return filtered[["signal_date", "code"]].reset_index(drop=True)
 
     if kpi_name == EARNINGS_SPILLOVER_KPI_NAME:
@@ -1090,6 +1099,9 @@ def generate_kpi_signals(
         if "signal_date" not in df.columns:
             return df
         # 生成器が既に signal_date∈[start_bd,end_bd] へ限定済みだが、他分岐と同型の防御的再限定を残す。
+        # 注: この分岐は pead_effective_end を使わず生成器が start_bd で内部限定するため、
+        # recover_start 回収は効かない（Codexレビュー2026-07-29指摘で start_bd に戻した。
+        # spillover に同型欠測が観測された場合は生成器内部の走査範囲を別途修理すること）。
         filtered = df[(df["signal_date"] >= start_bd) & (df["signal_date"] <= end_bd)]
         return filtered[["signal_date", "code"]].reset_index(drop=True)
 
@@ -1446,6 +1458,9 @@ def append_new_signals(
         key = (kpi_name, row.code, row.signal_date)
         if key in existing_keys:
             continue
+        # 同一 signals_df 内の同一キー重複でも実行中に二重追記しない（Codexレビュー2026-07-29の
+        # 防御的堅牢化: existing_keys は開始時スナップショットだったため追記分を都度加える）
+        existing_keys.add(key)
         idx = bday_index[row.signal_date]
         if idx + 1 >= len(all_bdays):
             continue  # カレンダー終端（実運用では起こらない想定）
