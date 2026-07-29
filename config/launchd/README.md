@@ -26,3 +26,27 @@ P3実施を決定した場合は、このREADMEの本行を「稼働中」に更
 - `launchctl list | grep com.influx` で3ジョブの現況を随時確認できる（ロード済みならラベルが表示される）
 - ログ出力先はいずれも `~/Library/Logs/influx-<name>.log`
 - plist正本は本ディレクトリ（`config/launchd/`）。実際にlaunchdへ登録する際は`~/Library/LaunchAgents/`へ配置してから`launchctl load`する
+
+## com.influx.price-universe（週次B2B価格チェッカー）
+
+- **毎週月曜 8:30** に `scripts/price_universe_run.sh` を実行（34系列の価格取得＋発火判定）
+- 設置: `cp config/launchd/com.influx.price-universe.plist ~/Library/LaunchAgents/` →
+  `launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.influx.price-universe.plist`
+- ログ: `~/.claude/state/price-universe.{out,err}.log`
+
+**2026-07-29 の事故**: `launchctl load` でその場のパスから読み込んだだけで
+`~/Library/LaunchAgents/` に置いていなかったため、**登録が消えていた**
+（`launchctl list` にヒット0・plist も不在）。日次の `com.influx.price-watch` は
+正しく `~/Library/LaunchAgents/` にあったため生き残っていた。
+→ **plist は必ず `~/Library/LaunchAgents/` に置いてから bootstrap すること。**
+
+## xstock-vnc コンテナの扱い（常駐させない）
+
+X の収集は `xstock-vnc` コンテナが必要だが、**restart ポリシーは意図的に `no` のまま**にしている。
+実測でメモリ **1.79GiB** を占有するため、日次の数分のために常時2GB近くを使うのは割に合わない。
+
+代わりに `scripts/xprice_watch_run.sh` が**実行時にコンテナが無ければ自分で起こす**
+（最大120秒待機＋Xvfb立ち上げに15秒）。2026-07-27 と 07-29 の2回コンテナが消え、
+22:10 の自動実行が `ERROR: xstock-vnc コンテナが稼働していない` で失敗した実害への対策。
+
+常駐させたくなった場合は `docker-compose.vnc.yml` に `restart: unless-stopped` を1行足すだけ。

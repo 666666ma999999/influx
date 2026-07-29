@@ -31,9 +31,27 @@ until docker info >/dev/null 2>&1; do
   waited=$((waited + INTERVAL_SEC))
 done
 
+# コンテナが消えていたら自分で起こす（2026-07-29 追加）。
+# 常駐化(compose の restart: unless-stopped)を選ばなかったのは、実測でメモリ 1.79GiB を
+# 常時占有するため。日次の数分だけ必要なプロセスに常時2GBは割に合わない。
+# 実害の記録: 2026-07-27 と 07-29 の2回コンテナが消え、22:10 の自動実行が
+# 「ERROR: xstock-vnc コンテナが稼働していない」で失敗していた（price-watch.err.log に2行）。
 if ! docker ps --format '{{.Names}}' | grep -q '^xstock-vnc$'; then
-  echo "ERROR: xstock-vnc コンテナが稼働していない（influx で docker compose -f docker-compose.vnc.yml up -d）" >&2
-  exit 1
+  echo "xstock-vnc が停止中 → 起動する"
+  (cd "$INFLUX" && docker compose -f docker-compose.vnc.yml up -d) || true
+  waited=0
+  until docker ps --format '{{.Names}}' | grep -q '^xstock-vnc$'; do
+    if [ "$waited" -ge 120 ]; then
+      echo "ERROR: xstock-vnc を120秒待っても起動できなかった" >&2
+      exit 1
+    fi
+    sleep 5
+    waited=$((waited + 5))
+  done
+  # Xvfb(:99) と supervisord の立ち上がりを待つ。ここを待たずに docker exec すると
+  # DISPLAY が無い状態で Playwright が落ちる
+  sleep 15
+  echo "xstock-vnc を起動した（${waited}秒待機）"
 fi
 
 # --- 収集（一時的なDNS/ネットワーク障害を想定し、失敗時は5分後に1回だけ再試行） ---
