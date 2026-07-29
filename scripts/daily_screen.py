@@ -1931,6 +1931,19 @@ def main() -> int:
         overall_status="success", kpi_evidence=kpi_evidence,
         ledger_before=ledger_before, ledger_after=ledger_after,
     )
+    # pair_forward_v1（2026-07-29凍結・tasks/pair_forward_preregister.md）: 本線完了後に
+    # 独立サブプロセスで実行。専用台帳(pair_forward_ledger.jsonl)のみに書き、本線の
+    # 判定・台帳・exit codeには一切影響しない（失敗はWARNのみ）。
+    try:
+        pf = subprocess.run(
+            [sys.executable, str(PROJECT_ROOT / "scripts" / "pair_forward_scan.py")],
+            timeout=1800, check=False,
+        )
+        if pf.returncode != 0:
+            print(f"WARN: pair_forward_scan が非ゼロ終了 rc={pf.returncode}（本線には無関係）",
+                  file=sys.stderr)
+    except Exception as exc:
+        print(f"WARN: pair_forward_scan 実行失敗（本線には無関係）: {exc}", file=sys.stderr)
     return 0
 
 
