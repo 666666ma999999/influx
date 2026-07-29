@@ -92,8 +92,8 @@ def extract_status_ids(page) -> set[str]:
     return ids
 
 
-def extract_posts(page) -> dict[str, str]:
-    """カード単位で {status_id: 本文} を返す（2026-07-29 追加・本文レーン用）。
+def extract_posts(page) -> dict[str, dict]:
+    """カード単位で {status_id: {text, posted_at}} を返す（2026-07-29 追加・本文レーン用）。
 
     **件数(count)には使わない。** count は従来どおり extract_status_ids の distinct 数で、
     凍結クエリの時系列を1件も変えないため。本関数は本文を拾う best-effort の追加経路で、
@@ -107,17 +107,22 @@ def extract_posts(page) -> dict[str, str]:
             TWEET_CARD_SELECTOR,
             """els => els.map(e => {
                 const a = e.querySelector('a:has(time)');
+                const tm = e.querySelector('time');
                 const t = e.querySelector('[data-testid="tweetText"]');
-                return [a ? a.getAttribute('href') : null, t ? t.innerText : null];
+                return [a ? a.getAttribute('href') : null,
+                        t ? t.innerText : null,
+                        tm ? tm.getAttribute('datetime') : null];
             })""",
         )
     except PlaywrightError:
         return {}
-    out: dict[str, str] = {}
-    for href, text in pairs or []:
+    out: dict[str, dict] = {}
+    for href, text, posted_at in pairs or []:
         m = _STATUS_ID_RE.search(href or "")
         if m and text:
-            out[m.group(1)] = " ".join(str(text).split())
+            # posted_at は <time datetime> の ISO8601(UTC)。日中の先行/後追いを後から判定するために要る
+            # （2026-07-29: 2024年バックフィルで時刻が無く lead/lag を判定できなかった反省）
+            out[m.group(1)] = {"text": " ".join(str(text).split()), "posted_at": posted_at}
     return out
 
 
@@ -145,7 +150,7 @@ def collect_query(page, url: str, max_scrolls: int, cap_posts: int,
         raise LoginWallError(page.url)
 
     ids: set[str] = set()
-    posts: dict[str, str] = {}   # 本文（count には使わない・best-effort）
+    posts: dict[str, dict] = {}  # {status_id: {text, posted_at}}（count には使わない・best-effort）
     scrolls = 0
     censored = False
     stagnant = 0  # 一時的な読み込み遅延を「自然枯渇」と誤認しないため2連続無増加で確定
@@ -279,9 +284,10 @@ def main() -> int:
                 continue
             # 本文は台帳から外して別ファイルへ（台帳の1行の形を変えない＝既存の読み手を壊さない）
             posts = result.pop("posts", {})
-            for sid, txt in posts.items():
+            for sid, po in posts.items():
                 texts.append({"date": day, "query_id": entry["id"], "status_id": sid,
-                              "text": txt, "run_at": run_at})
+                              "text": po["text"], "posted_at": po.get("posted_at"),
+                              "run_at": run_at})
             rows.append({**base, **result, "elapsed_sec": round(time.time() - started, 1)})
             print(f"[{i + 1}/{len(entries)}] {entry['id']}: count={result['count']} "
                   f"censored={result['censored']} status={result['status']}")
