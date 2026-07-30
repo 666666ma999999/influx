@@ -473,6 +473,11 @@ def compute_scoreboard(records: list[dict]) -> dict[str, dict]:
                 "n_entry_missing": 0,
                 "n_stop_loss": 0,
                 "n_time_exit": 0,
+                # primary endpoint（§7-J凍結: 判定対象は nostop の ret・stop8は参考）。
+                # ledger の ret_net は stop8 エイリアスのため別集計する（2026-07-30 第27R A10）。
+                "n_nostop": 0,
+                "n_reach20_nostop": 0,
+                "sum_ret_nostop": 0.0,
             },
         )
         status = rec["status"]
@@ -491,10 +496,20 @@ def compute_scoreboard(records: list[dict]) -> dict[str, dict]:
             s["n_open"] += 1
         elif status == "entry_missing":
             s["n_entry_missing"] += 1
+        # primary(nostop) は status に依らず ret_nostop が確定した行だけを集計する
+        # （stop8で早期closedでも nostop は20営業日満期まで並走追跡されるため）。
+        rn = rec.get("ret_nostop")
+        if isinstance(rn, (int, float)):
+            s["n_nostop"] += 1
+            s["sum_ret_nostop"] += rn
+            if rn + measure_base_rate.ROUND_TRIP_COST >= 0.20:  # コスト後→grossへ戻して判定
+                s["n_reach20_nostop"] += 1
 
     for s in by_kpi.values():
         s["p_reach20"] = (s["n_reach20"] / s["n_closed"]) if s["n_closed"] else None
         s["ev_net"] = (s["sum_ret_net"] / s["n_closed"]) if s["n_closed"] else None
+        s["p_reach20_nostop"] = (s["n_reach20_nostop"] / s["n_nostop"]) if s["n_nostop"] else None
+        s["ev_nostop"] = (s["sum_ret_nostop"] / s["n_nostop"]) if s["n_nostop"] else None
         # 早期決済バイアス（2026-07-29 追加）: 時間切れ決済が1件も無い段階では、
         # closed に入れるのは -8% 損切りに掛かった負けだけ（勝ちは20営業日まで open のまま）。
         # ＝ P(+20%)/EV は構造的に下振れし、読むと必ず「全KPIが大負け」に見える。
@@ -524,18 +539,21 @@ def write_scoreboard_md(scoreboard: dict[str, dict], path: Path) -> None:
             "",
         ]
     lines += [
-        "| KPI | 稼働中(pending/open) | entry_missing | 確定n | P(+20%) | EV(net) | 損切り決済 | 時間切れ決済 |",
-        "|---|---|---|---|---|---|---|---|",
+        "**判定対象＝primary exit(nostop・20営業日満期)**。stop8 は §7-J 凍結どおり参考の secondary。",
+        "",
+        "| KPI | 稼働中(pending/open) | **確定n(nostop)** | **P(+20%)** | **EV(nostop)** | 参考:確定n(stop8) | 参考:EV(stop8) | 損切り | 時間切れ |",
+        "|---|---|---|---|---|---|---|---|---|",
     ]
     for kpi in sorted(scoreboard):
         s = scoreboard[kpi]
         active = f"{s['n_pending_entry']}/{s['n_open']}"
         mark = " ⚠️未成熟" if s.get("early_exit_biased") else ""
-        p20 = f"{s['p_reach20']:.1%}{mark}" if s["p_reach20"] is not None else "-"
-        ev = f"{s['ev_net']:+.2%}{mark}" if s["ev_net"] is not None else "-"
+        p20n = f"{s['p_reach20_nostop']:.1%}" if s.get("p_reach20_nostop") is not None else "-"
+        evn = f"{s['ev_nostop']:+.2%}" if s.get("ev_nostop") is not None else "-"
+        ev8 = f"{s['ev_net']:+.2%}{mark}" if s["ev_net"] is not None else "-"
         lines.append(
-            f"| {kpi} | {active} | {s['n_entry_missing']} | {s['n_closed']} | {p20} | {ev} "
-            f"| {s['n_stop_loss']} | {s['n_time_exit']} |"
+            f"| {kpi} | {active} | {s.get('n_nostop', 0)} | {p20n} | {evn} "
+            f"| {s['n_closed']} | {ev8} | {s['n_stop_loss']} | {s['n_time_exit']} |"
         )
     lines.append("")
     lines.append(
