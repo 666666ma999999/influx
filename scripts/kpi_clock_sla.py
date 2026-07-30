@@ -113,6 +113,54 @@ KPI_LABELS = {
 }
 EXIT_LABELS = {"stop_loss": "損切り", "time_exit": "期日(20営業日)", "delisted": "上場廃止"}
 
+# 表示名の3層（すべて本ファイルが正本・daily_screen が import して使う・2026-07-29 ユーザー要望）:
+#   KPI_LABELS   = 分析者向け短縮ラベル（対照/棄却済み等の位置づけ注記を含む・本スクリプトの帳票用）
+#   KPI_SHORT_JA = 非エンジニア向けの短い名前（朝レポートの表セル用）
+#   KPI_PLAIN    = 「何を見て点いたか」の1行説明（表の下の凡例用）
+KPI_SHORT_JA = {
+    "volshock_x_above200_quiet": "出来高急増(静→動)",
+    "volshock_x_above200": "出来高急増(上昇中)",
+    "volshock_5x": "出来高急増",
+    "shortcover_x_bear": "売り方の買い戻し",
+    "sue_x_above200": "利益サプライズ(上昇中)",
+    "sue_beat": "利益サプライズ",
+    "sales_beat": "売上サプライズ",
+    "guidance_fy_strong": "来期予想が強気",
+    "cfo_margin_improve": "現金創出力の改善",
+    "margin_expand_yoy": "利益率の改善",
+    "earnings_spillover": "同業の好決算で連想買い",
+    "sell_reg_trigger_rebound": "急落後の反発狙い",
+    "turnover_rank_surge": "売買代金ランク急上昇",
+    "raw_strev_entry": "下げすぎの反発狙い",
+    "gap_hold_close_strong": "窓開け上昇＋高値引け",
+    "engulf_reversal_day": "安寄り→高引けの切り返し",
+    "three_up_ignition": "3日連続の陽線",
+    "pead_gap8_vol3": "決算後の窓開け＋大商い",
+    "sh_dip_reentry": "ストップ高後の押し目",
+}
+
+KPI_PLAIN = {
+    "volshock_x_above200_quiet": "静かだった株に突然の大商い（上昇基調）",
+    "volshock_x_above200": "普段の5倍の出来高＋上昇基調",
+    "volshock_5x": "普段の5倍の出来高で上昇",
+    "shortcover_x_bear": "下げ相場での売り方の買い戻し",
+    "sue_x_above200": "決算が予想を超えた＋上昇基調",
+    "sue_beat": "決算の利益が予想を超えた",
+    "sales_beat": "決算の売上が予想を超えた",
+    "guidance_fy_strong": "来期の会社予想が強気",
+    "cfo_margin_improve": "本業の現金創出力が改善",
+    "margin_expand_yoy": "利益率が前年より改善",
+    "earnings_spillover": "同業他社の好決算による連想買い",
+    "sell_reg_trigger_rebound": "急落で規制がかかった後の反発狙い",
+    "turnover_rank_surge": "売買代金の順位が急上昇（注目が集中）",
+    "raw_strev_entry": "下げすぎた株の反発狙い",
+    "gap_hold_close_strong": "窓を開けて上昇し高値圏で引けた",
+    "engulf_reversal_day": "安く始まり高く終えた切り返し",
+    "three_up_ignition": "陽線3日連続で高値を切り上げ",
+    "pead_gap8_vol3": "決算後の窓開け上昇＋大商い",
+    "sh_dip_reentry": "ストップ高後の押し目買い",
+}
+
 # output/paper_today.md 冒頭日付の抽出パターン。scripts/daily_screen.py の
 # REPORT_TIMESTAMP_RE（daily_screen.py:105 "実行時刻: (\d{4}-\d{2}-\d{2})"）と同一定義。
 # daily_screen.py本体はKPIスクリプト群・J-Quants等の重量依存を持つためimportはせず、

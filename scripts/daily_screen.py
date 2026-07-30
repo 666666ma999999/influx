@@ -59,6 +59,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 import jq_fetch  # noqa: E402  (Canonical Module: DATA_ROOT / read_json_gz / now_jst / get_api_key / fetch_topix を再利用)
 import kpi_event_batch_signals  # noqa: E402  (Canonical Module: generate_sue_beat_signals を再利用・§7-J)
 import kpi_pead_signals  # noqa: E402  (Canonical Module: generate_pead_signals を再利用)
+import kpi_clock_sla  # noqa: E402  (Canonical Module: KPI_LABELS/KPI_PLAIN 表示ラベルを再利用・stdlibのみ)
 import kpi_round23_signals  # noqa: E402  (Canonical Module: sell_reg/turnover_rank 生成関数を再利用・§7-L/§7-Q)
 import kpi_round25_signals  # noqa: E402  (Canonical Module: raw_strev decile/cross 生成を再利用・§7-N/§7-Q)
 import kpi_round26_signals  # noqa: E402  (Canonical Module: margin_expand_yoy 生成を再利用・§7-O/§7-Q)
@@ -1439,7 +1440,8 @@ def format_confluence_section(records: list[dict], signal_date: Optional[str]) -
     lines.append("|---|---|---|---|")
     for code in sorted(confluent):
         kpis = sorted(confluent[code])
-        lines.append(f"| {code} | {code_name(code)} | {len(kpis)} | {', '.join(kpis)} |")
+        labels = ", ".join(kpi_label(k) for k in kpis)
+        lines.append(f"| {code} | {code_name(code)} | {len(kpis)} | {labels} |")
     lines.append("")
     return lines
 
@@ -1632,6 +1634,22 @@ def append_run_evidence(
 # --- レポート生成 --------------------------------------------------------------------------
 
 
+def kpi_label(kpi_name: str) -> str:
+    """表セル用の短い日本語名（表示専用・正本= kpi_clock_sla.KPI_SHORT_JA）。"""
+    return kpi_clock_sla.KPI_SHORT_JA.get(kpi_name, kpi_name)
+
+
+def kpi_legend_lines(kpi_names: set) -> list[str]:
+    """表に出たKPIだけの「何を見て点いたか」凡例（正本= kpi_clock_sla.KPI_PLAIN）。"""
+    used = [k for k in kpi_clock_sla.KPI_PLAIN if k in kpi_names]
+    if not used:
+        return []
+    lines = ["", "> [!info]- シグナルの意味（開くと各シグナルが何を見ているか）", ">"]
+    for k in used:
+        lines.append(f"> - **{kpi_label(k)}** — {kpi_clock_sla.KPI_PLAIN[k]}（内部名 `{k}`）")
+    return lines
+
+
 _CODE_NAMES_CACHE: Optional[dict] = None
 
 
@@ -1694,15 +1712,19 @@ def write_today_report(
             by_stock[(r["code"], r["signal_date"])].append(r)
         lines.append("| 銘柄 | 社名 | 発火シグナル | signal_date | 想定エントリー日 | UL10 |")
         lines.append("|---|---|---|---|---|---|")
+        used_kpis: set = set()
         for (code, sd) in sorted(by_stock, key=lambda k: (-len({x["kpi_name"] for x in by_stock[k]}), k[0])):
             rs = by_stock[(code, sd)]
             kpi_set = sorted({x["kpi_name"] for x in rs})
+            used_kpis |= set(kpi_set)
             mark = f"**{len(kpi_set)}系統** " if len(kpi_set) >= 2 else ""
+            labels = ", ".join(kpi_label(k) for k in kpi_set)
             ul10_str = format_ul10_tag(code, sd, bday_index, all_bdays)
             lines.append(
-                f"| {code} | {code_name(code)} | {mark}{', '.join(kpi_set)} | {sd} "
+                f"| {code} | {code_name(code)} | {mark}{labels} | {sd} "
                 f"| {rs[0]['planned_entry_date']} | {ul10_str} |"
             )
+        lines += kpi_legend_lines(used_kpis)
         lines.append("")
         lines.append(UL10_FOOTNOTE)
     else:
