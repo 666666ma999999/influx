@@ -137,7 +137,11 @@ def forward_reach(code: str, bdays, bidx, signal: str, last_bar: str):
         if h is not None and h >= entry * 1.2:
             touch = True
             break
-    return {"close20": exit_c / entry - 1.0 >= 0.20, "touch": touch}
+    gross = exit_c / entry - 1.0
+    # ret は本人側 net_return と同じコスト後（mentions.csv の net_return は往復コスト控除済み）。
+    # 第27R A14: EV超過（本人−対照）の下限を出すために対照のリターンも返す（2026-07-30 追加）。
+    return {"close20": gross >= 0.20, "touch": touch,
+            "ret": gross - mbr.ROUND_TRIP_COST}
 
 
 def main() -> int:
@@ -202,7 +206,7 @@ def main() -> int:
          "> 対照=同月master×同業種33×同規模(ScaleCat=時価総額3分位の代用・逸脱として明記)×",
          f"> 直前20日リターン同3分位から{N_CONTROL}銘柄seed抽出・同一執行（entry=signal+1 AdjO/20bd AdjC/touch=AdjH）。",
          f"> EV 95%CI=cluster bootstrap {N_BOOT}反復（クラスタ単位リサンプル）。seed={SEED}。", ""]
-    L.append("| account | 旧判定 | 旧n | 去重n | EV(去重) | EV95%CI | 除外EV | close20% | 対照close20% | **超過pp** | touch% | 対照touch% |")
+    L.append("| account | 旧判定 | 旧n | 去重n | EV(去重) | EV95%CI | 除外EV | close20% | 対照close20% | **超過pp** | **EV超過** | **超過の片側95%下限** |")
     L.append("|---|---|---:|---:|---:|---|---:|---:|---:|---:|---:|---:|")
 
     summary = {}
@@ -231,6 +235,7 @@ def main() -> int:
         touch_rate = sum(1 for c in clusters if c["touch"]) / n
         # matched-control
         ctrl_close, ctrl_touch, matched = [], [], 0
+        paired = []   # 第27R A14: (本人net − 対照net平均) のクラスタ対応差
         for c in clusters:
             t = c["signal"]
             if t not in bidx or bidx[t] < 21:
@@ -255,22 +260,94 @@ def main() -> int:
             matched += 1
             ctrl_close.append(sum(1 for r in res if r["close20"]) / len(res))
             ctrl_touch.append(sum(1 for r in res if r["touch"]) / len(res))
+            ctrl_ret = sum(r["ret"] for r in res) / len(res)
+            paired.append({"code": c["code"], "signal": c["signal"],
+                           "diff": c["net"] - ctrl_ret, "own": c["net"], "ctrl": ctrl_ret})
         cc = sum(ctrl_close) / len(ctrl_close) if ctrl_close else float("nan")
         ct = sum(ctrl_touch) / len(ctrl_touch) if ctrl_touch else float("nan")
         excess = (close_rate - cc) * 100 if ctrl_close else float("nan")
+        # 第27R A14: EV超過（本人−対照）の片側95%下限を cluster bootstrap（対応差のリサンプル）で。
+        # §0付記II のシステム層目標「市場超過EVの片側95%下限>0」と同じ土俵の量。
+        d_ev = d_lo = float("nan")
+        if paired:
+            diffs = [p["diff"] for p in paired]
+            d_ev = sum(diffs) / len(diffs)
+            db = []
+            for _ in range(N_BOOT):
+                s = [diffs[rng.randrange(len(diffs))] for _ in range(len(diffs))]
+                db.append(sum(s) / len(s))
+            db.sort()
+            d_lo = db[int(0.05 * N_BOOT)]      # 片側95%下限
         summary[acc] = {"n": n, "ev": ev, "ci": (ci_lo, ci_hi), "ex_ev": ex_ev,
-                        "close": close_rate, "ctrl_close": cc, "excess": excess}
+                        "close": close_rate, "ctrl_close": cc, "excess": excess,
+                        "d_ev": d_ev, "d_lo": d_lo, "paired": paired}
         L.append(f"| {acc} | {old} | {len([1 for _ in csv.DictReader(open(ROOT / ACCOUNTS[acc][0]))])} | {n} "
                  f"| {ev:+.1%} | [{ci_lo:+.1%},{ci_hi:+.1%}] | {ex_ev:+.1%} "
-                 f"| {close_rate:.0%} | {cc:.0%} | **{excess:+.1f}** | {touch_rate:.0%} | {ct:.0%} |")
+                 f"| {close_rate:.0%} | {cc:.0%} | **{excess:+.1f}** | {d_ev:+.2%} | **{d_lo:+.2%}** |")
         print(f"[rescore] @{acc}: n={n} EV={ev:+.2%} CI=[{ci_lo:+.2%},{ci_hi:+.2%}] "
-              f"close={close_rate:.0%} ctrl={cc:.0%} excess={excess:+.1f}pp (matched {matched}/{n})", flush=True)
+              f"close={close_rate:.0%} ctrl={cc:.0%} excess={excess:+.1f}pp (matched {matched}/{n}) "
+              f"| EV超過={d_ev:+.2%} 片側95%下限={d_lo:+.2%}", flush=True)
 
     L.append("")
     L.append("## 読み方")
     L.append("- **超過pp** = 本人のclose20到達率 − 同条件（業種×規模×モメンタム同3分位）銘柄の到達率。")
     L.append("  0近傍なら「銘柄選好（モメンタム）で説明でき、本人の追加情報はない」。")
+    L.append("- **EV超過** = 各コールで（本人net − 対照net平均）を取った対応差の平均。")
+    L.append("  **超過の片側95%下限** = その対応差を cluster bootstrap した下限。**§0付記II のシステム層目標"
+             "「市場超過EVの片側95%下限>0」と同じ土俵**（2026-07-30 第27R A14 で追加）。")
     L.append("- 旧判定は一律9.5%比・去重なしの器で得たもの。本表とズレる場合は本表が優先（欠陥補正後）。")
+    L.append("- ⚠️ **14人から最良を見た後の数字**（winner's curse）。多重性の粗い補正は下の注記を参照。")
+
+    # --- 第27R A案②: 勝ち組を束ねた「人ポートフォリオ」の記述（記述測定・配分は提案しない） ---
+    port_accs = [a for a, s in summary.items() if s.get("d_lo") == s.get("d_lo") and s["d_ev"] > 0]
+    port_accs = sorted(port_accs, key=lambda a: -summary[a]["d_ev"])[:3]
+    if port_accs:
+        L += ["", "## 人ポートフォリオ（束ねた記述・第27R A案②）", "",
+              f"対象=EV超過が正の上位3人: {', '.join(port_accs)}（**配分・枚数はAIから提案しない**"
+              "＝一方向ルール。ここに出すのは束ねた統計量だけ）", ""]
+        # 同一(code, signal)の重複は1コールに畳む（複数人が同じ銘柄を同日に挙げた場合）
+        merged: dict[tuple, list[float]] = defaultdict(list)
+        for a in port_accs:
+            for p in summary[a]["paired"]:
+                merged[(p["code"], p["signal"])].append(p["diff"])
+        diffs = [sum(v) / len(v) for v in merged.values()]
+        m = sum(diffs) / len(diffs)
+        db = []
+        for _ in range(N_BOOT):
+            s = [diffs[rng.randrange(len(diffs))] for _ in range(len(diffs))]
+            db.append(sum(s) / len(s))
+        db.sort()
+        p_lo = db[int(0.05 * N_BOOT)]
+        var = sum((x - m) ** 2 for x in diffs) / max(1, len(diffs) - 1)
+        sd = math.sqrt(var)
+        # 同時保有本数Nの実分布（20営業日保有・signal日を営業日indexに直して重なりを数える）
+        occ = defaultdict(int)
+        for (code, sig) in merged:
+            i = bidx.get(sig)
+            if i is None:
+                continue
+            for j in range(i + 1, min(i + 1 + HORIZON_BD, len(bdays))):
+                occ[bdays[j]] += 1
+        conc = sorted(occ.values())
+        med_n = conc[len(conc) // 2] if conc else 0
+        L += [f"- 束ねたコール数（同一銘柄×同日は1本に集約）: **{len(diffs)}本**",
+              f"- 束ねた **EV超過 = {m:+.2%}** ／ **片側95%下限 = {p_lo:+.2%}**",
+              f"- 1コールの標準偏差 σ = {sd:.1%}",
+              f"- 同時保有本数 N の実分布: 中央値 **{med_n}本** ／ 最大 {conc[-1] if conc else 0}本 "
+              f"（保有20営業日・重なりを実カウント）", ""]
+        # g(N,ρ) の記述カーブ（成長率＝μ−σ²/2 の近似・配分助言ではない）
+        L += ["### 分散の効き方（記述・g ≈ μ − σ²/2 の近似カーブ）", "",
+              "| 同時保有N | ρ=0 | ρ=0.15 | ρ=0.3 |", "|---:|---:|---:|---:|"]
+        for N in (1, 3, 6, 10, med_n if med_n not in (1, 3, 6, 10) else 20):
+            row = [f"| {N} "]
+            for rho in (0.0, 0.15, 0.3):
+                v = (sd ** 2) * (1 / N + (N - 1) * rho / N)
+                g = m - v / 2
+                row.append(f"| {g:+.2%} ")
+            L.append("".join(row) + "|")
+        L += ["", "> ρ（コール間相関）は**AI仮置き**の感度パラメータ（実測していない）。"
+              "この表は「Nを増やすとブレが減り幾何成長が改善する」構造を見るための記述であって、"
+              "**配分・枚数の推奨ではない**。1コール=20営業日の値であり年率換算もしていない。"]
     out = ROOT / "output/influencer_candidates/rescore_matched.md"
     out.write_text("\n".join(L) + "\n", encoding="utf-8")
     print(f"-> {out.relative_to(ROOT)}")
