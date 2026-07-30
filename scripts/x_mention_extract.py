@@ -36,6 +36,9 @@ import x_mention_dict as xmd  # noqa: E402
 
 TEXTS_DIR = APP / "data/x_price_watch/texts"
 MENTIONS = APP / "data/x_price_watch/mentions.jsonl"
+ALERTS_OUT = APP / "data/x_price_watch/mention_alerts.jsonl"   # 発火の証拠台帳（完了条件の判定用）
+BARS_DIR = APP / "data/jquants/bars"
+TOPIX_PATH = APP / "data/jquants/topix.json.gz"
 JST = timezone(timedelta(hours=9))
 
 SCANNED_MARK = "__scanned__"   # その日を処理した印（言及ゼロの日を台帳に残すため）
@@ -174,6 +177,47 @@ def _selftest() -> int:
     return ng
 
 
+def price_linkage(code: str, mention_date: str, horizon: int = 6) -> dict | None:
+    """言及日からの株価連動を測る（ユーザー完了条件 2026-07-30 の「連動して上がっている」の実測）。
+
+    基準日 = 言及日以前の直近営業日の終値。そこから直近の営業日までの
+    株価上昇率と、同期間の TOPIX 上昇率・超過(pt) を返す。データが無ければ None。
+    J-Quants のコードは5桁（4桁 + 末尾0）なので変換して引く。
+    """
+    import gzip
+    import glob as _glob
+    code5 = code + "0"
+    files = sorted(_glob.glob(str(BARS_DIR / "*.json.gz")))
+    if not files or not TOPIX_PATH.exists():
+        return None
+    day8 = mention_date.replace("-", "")
+    base_files = [f for f in files if Path(f).name[:8] <= day8]
+    if not base_files:
+        return None
+    after = [base_files[-1]] + [f for f in files if Path(f).name[:8] > day8][:horizon]
+
+    def close_of(f: str) -> float | None:
+        with gzip.open(f, "rt") as fh:
+            for r in json.load(fh)["data"]:
+                if r["Code"] == code5:
+                    return r.get("AdjC")
+        return None
+
+    p0, p1 = close_of(after[0]), close_of(after[-1])
+    if not p0 or not p1 or len(after) < 2:
+        return None
+    with gzip.open(TOPIX_PATH, "rt") as fh:
+        tp = {r["Date"].replace("-", ""): r["C"] for r in json.load(fh)["data"]}
+    d0, d1 = Path(after[0]).name[:8], Path(after[-1]).name[:8]
+    if d0 not in tp or d1 not in tp:
+        return None
+    stock = (p1 / p0 - 1) * 100
+    topix = (tp[d1] / tp[d0] - 1) * 100
+    return {"base_date": d0, "to_date": d1, "days": len(after) - 1,
+            "stock_pct": round(stock, 2), "topix_pct": round(topix, 2),
+            "excess_pt": round(stock - topix, 2)}
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--selftest", action="store_true", help="判定ロジックの固定テスト")
@@ -218,8 +262,38 @@ def main() -> int:
         print(f"{r['code']:<7}{r['name'][:20]:<22}{r['count']:>5}{str(mu):>7}{z:>7}  {r['verdict']}")
     alerts = [r for r in res if r["verdict"] in ("alert", "sigma0_jump")]
     if alerts:
-        names = ", ".join(f"{r['code']}{r['name']}" for r in alerts)
-        print(f"\n🚨 言及が急増した銘柄 {len(alerts)}社: {names}")
+        # 完了条件（ユーザー定義 2026-07-30）: 「今リスト（受益カード）に入っていない
+        # 取引高TOP500の銘柄で、品薄・値上がりの言及を拾い、株価が連動して上がっている」
+        # → 発火ごとに ①リスト内外・取引高順位 ②対TOPIXの連動 を機械で付け、証拠台帳へ残す
+        origin = xmd.universe_origin()
+        run_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+        print(f"\n🚨 言及が急増した銘柄 {len(alerts)}社:")
+        ALERTS_OUT.parent.mkdir(parents=True, exist_ok=True)
+        with ALERTS_OUT.open("a", encoding="utf-8") as fh:
+            for r in alerts:
+                o = origin.get(r["code"], {})
+                pl = price_linkage(r["code"], target)
+                in_list = o.get("in_beneficiaries", False)
+                tags = []
+                if o:
+                    tags.append(f"取引高{o['rank']}位")
+                tags.append("リスト内(受益カード有)" if in_list else "リスト外")
+                link = "株価データなし"
+                if pl:
+                    link = (f"{pl['base_date']}→{pl['to_date']}({pl['days']}営業日) "
+                            f"株価{pl['stock_pct']:+.1f}% / TOPIX{pl['topix_pct']:+.1f}% "
+                            f"/ 超過{pl['excess_pt']:+.1f}pt")
+                print(f"  {r['code']} {r['name']}  [{'/'.join(tags)}]")
+                print(f"     連動: {link}")
+                if not in_list and pl and pl["stock_pct"] > 0:
+                    print("     🎯 完了条件の候補: リスト外銘柄の言及急増 ＋ 株価上昇。"
+                          "本文を目視で確認してください")
+                fh.write(json.dumps({"date": target, "code": r["code"], "name": r["name"],
+                                     "count": r["count"], "z": r["z"], "verdict": r["verdict"],
+                                     "trade500": o or None, "price_linkage": pl,
+                                     "goal_candidate": bool(not in_list and pl
+                                                           and pl["stock_pct"] > 0),
+                                     "run_at": run_at}, ensure_ascii=False) + "\n")
     else:
         print("\nアラートなし")
     return 0

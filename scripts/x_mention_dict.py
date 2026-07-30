@@ -32,6 +32,10 @@ from pathlib import Path
 
 APP = Path("/app") if Path("/app/scripts").exists() else Path(__file__).resolve().parent.parent
 CENTER_PIN = APP / "data/center_pin/center_pin.jsonl"
+# 第2の供給源（2026-07-30・ユーザー完了条件対応）: 取引高TOP500のうち center_pin(時価総額TOP1000)に
+# 居ない銘柄（ニデック・フェローテック等58社）。「今リストに入っていない銘柄での検知」が完了条件のため、
+# 時価総額では小さくても売買が厚い銘柄を検知対象に含める。生成は scripts/x_trade500_universe.py
+TRADE500 = APP / "data/x_price_watch/universe_trade500.jsonl"
 
 MIN_LEN = 3          # 2文字以下の社名は一般語と衝突するため採用しない
 KATAKANA = r"ァ-ヶー"
@@ -89,20 +93,50 @@ def _boundary(v: str) -> tuple[str, str]:
     return "", ""
 
 
-def build_dict(path: Path = CENTER_PIN) -> dict[str, tuple[str, str]]:
-    """表記 -> (code, 正式名)。TOP1000台帳が唯一の供給源（関門B: 台帳外は出さない）。"""
+def build_dict(path: Path = CENTER_PIN,
+               trade500: Path = TRADE500) -> dict[str, tuple[str, str]]:
+    """表記 -> (code, 正式名)。供給源は2つの台帳のみ（関門B: 台帳外の銘柄は出ない）。
+
+    ①center_pin（時価総額TOP1000・977社） ②trade500 のうち center_pin に居ない銘柄
+    （取引高TOP500・約58社）。②の由来は universe_origin() で引ける。
+    """
     table: dict[str, tuple[str, str]] = {}
-    for line in path.read_text(encoding="utf-8").splitlines():
-        if not line.strip():
-            continue
-        r = json.loads(line)
-        for v in _variants(r["name"]):
+
+    def add(code: str, name: str) -> None:
+        for v in _variants(name):
             # 同じ表記が複数社に割り当たったら、曖昧なので両方採用しない
-            if v in table and table[v][0] != r["code"]:
+            if v in table and table[v][0] != code:
                 table[v] = ("__AMBIGUOUS__", "")
                 continue
-            table.setdefault(v, (r["code"], r["name"]))
+            table.setdefault(v, (code, name))
+
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if line.strip():
+            r = json.loads(line)
+            add(r["code"], r["name"])
+    if trade500.exists():
+        for line in trade500.read_text(encoding="utf-8").splitlines():
+            if line.strip():
+                r = json.loads(line)
+                if not r.get("in_center_pin"):
+                    add(r["code"], r["name"])
     return {k: v for k, v in table.items() if v[0] != "__AMBIGUOUS__"}
+
+
+def universe_origin(trade500: Path = TRADE500) -> dict[str, dict]:
+    """code -> {rank, in_beneficiaries, in_center_pin}（取引高TOP500の付帯情報）。
+
+    「今リスト（受益カード）に入っていない取引高TOP500での検知」が完了条件なので、
+    判定側はこれで各銘柄の立場を表示する。無ければ空 dict（機能はする）。
+    """
+    out: dict[str, dict] = {}
+    if trade500.exists():
+        for line in trade500.read_text(encoding="utf-8").splitlines():
+            if line.strip():
+                r = json.loads(line)
+                out[r["code"]] = {"rank": r["rank"], "in_beneficiaries": r["in_beneficiaries"],
+                                  "in_center_pin": r["in_center_pin"]}
+    return out
 
 
 def build_matcher(table: dict[str, tuple[str, str]]) -> list[tuple[re.Pattern, str, str, str]]:

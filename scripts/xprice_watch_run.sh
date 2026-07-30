@@ -84,4 +84,26 @@ if [ "$after" -gt "$before" ]; then
     | /usr/bin/python3 -c 'import sys,json,re; d=json.loads(sys.stdin.readline()); s=str(d.get("query_id",""))+": "+str(d.get("count",""))+"件 (z="+str(d.get("z",""))+")"; print(re.sub(r"[\"\\\\]", "", s))' 2>/dev/null || echo "詳細は alerts jsonl")
   osascript -e "display notification \"${head_txt}\" with title \"📈 X値上がり検知: ${new_count}件\"" 2>/dev/null || true
 fi
+
+# --- 銘柄言及レーン（本文→銘柄名→zスコア→株価連動。2026-07-30 追加） ---
+# ユーザー完了条件「リスト外の取引高TOP500銘柄で、品薄・値上がりの言及を拾い、株価が
+# 連動して上がっている」の自動判定。件数レーンの成否とは独立の fail-soft（rc に混ぜない）。
+MENTION_CMD=${MENTION_CMD:-"/usr/bin/python3 $INFLUX/scripts/x_mention_extract.py"}
+GOAL_LOG="$INFLUX/data/x_price_watch/mention_alerts.jsonl"
+goal_before=0
+[ -f "$GOAL_LOG" ] && goal_before=$(wc -l < "$GOAL_LOG" | tr -d ' ')
+if $MENTION_CMD --date "$TARGET_DATE"; then
+  goal_after=0
+  [ -f "$GOAL_LOG" ] && goal_after=$(wc -l < "$GOAL_LOG" | tr -d ' ')
+  if [ "$goal_after" -gt "$goal_before" ]; then
+    hit=$(tail -n $((goal_after - goal_before)) "$GOAL_LOG" \
+      | /usr/bin/python3 -c 'import sys,json
+rows=[json.loads(l) for l in sys.stdin if l.strip()]
+g=[r for r in rows if r.get("goal_candidate")]
+print(f"{len(g)}件が完了条件候補" if g else f"{len(rows)}件(リスト内/連動なし)")' 2>/dev/null || echo "詳細は mention_alerts.jsonl")
+    osascript -e "display notification \"${hit}\" with title \"🎯 銘柄言及の急増を検知\"" 2>/dev/null || true
+  fi
+else
+  echo "WARN: 銘柄言及レーンが失敗（件数レーンには影響なし）" >&2
+fi
 exit "$alert_rc"
