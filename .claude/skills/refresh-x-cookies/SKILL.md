@@ -128,7 +128,9 @@ for acc in ('kabuki666999', 'maaaki'):
 
 ## 関連ファイル
 
+以下の相対パスはすべて **influx 本体 `/Users/masaaki_nagasawa/Desktop/biz/influx/` 起点**（本スキルは worktree `influx-x-search-precision/` にも同一コピーがあるが、Cookie の保存先 `x_profiles/` は本体側にしか無い＝worktree から実行する場合も STEP 2 のとおり本体へ `cd` する）。
+
 - `scripts/import_chrome_cookies.py` — Canonical 抽出スクリプト
 - `collector/cookie_crypto.py` — `load_cookies_encrypted` / `save_cookies_encrypted`
-- `x_profiles/<account>/cookies.json` — 保存先
+- `x_profiles/<account>/cookies.json` — 保存先（**無ければ `import_chrome_cookies.py` が初回実行時に作成**）
 - `tasks/lessons.md` — 過去の Cookie 関連学び
