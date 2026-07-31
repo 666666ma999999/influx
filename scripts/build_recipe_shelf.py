@@ -79,10 +79,17 @@ def load_scoreboard(path: Path) -> dict[str, int]:
     header_seen = False
     for line in path.read_text(encoding="utf-8").splitlines():
         if re.match(r"^\|\s*KPI\s*\|", line):
-            cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
-            if "確定n" not in cells:
+            cells = [cell.strip().strip("*").strip() for cell in line.strip().strip("|").split("|")]
+            # 見出しは「確定n」「**確定n(nostop)**」等の表記揺れを許容する（完全一致だと
+            # 表示だけの改名で沈黙クラッシュする: 2026-07-30 98bd169 の実害）。
+            # 「参考:確定n(stop8)」は前置ラベル付きのため前方一致に掛からない。
+            n_candidates = [
+                index for index, cell in enumerate(cells)
+                if cell == "確定n" or cell.startswith("確定n(")
+            ]
+            if not n_candidates:
                 raise ValueError(f"{path}: KPI table has no 確定n column")
-            name_index, n_index = cells.index("KPI"), cells.index("確定n")
+            name_index, n_index = cells.index("KPI"), n_candidates[0]
             header_seen = True
             continue
         if not header_seen or not line.startswith("|") or re.match(r"^\|[-: |]+\|$", line):
