@@ -164,13 +164,20 @@ def build() -> tuple[str, dict]:
     lines.append(f"## 🌟 有力候補（過去関門を全通過した系統の発火・直近{RECENT_BDAYS}営業日）: {len(ranked_codes)}銘柄")
     lines.append("")
     if ranked_codes:
-        lines.append("| 順位 | 銘柄 | 社名 | 有力系統 | 系統数 | 参考EV(凍結in-sample) | signal_date | 状態 |")
+        lines.append("| 順位 | 銘柄 | 社名 | 有力系統 | 系統数 | 参考EV(凍結in-sample・系統別) | signal_date | 状態 |")
         lines.append("|---|---|---|---|---|---|---|---|")
         for rank, code in enumerate(ranked_codes, 1):
             rows = sorted(by_code[code], key=lambda r: r["signal_date"], reverse=True)
             kpis = sorted({r["kpi_name"] for r in rows})
-            evs = [frozen_ev(k) for k in kpis if frozen_ev(k) is not None]
-            ev_text = f"+{max(evs) * 100:.2f}%" if evs else "—"
+            # max(EV) の単独表示は winner's curse（小標本の高EVが上に見える）を招くため
+            # 系統別に EV(n) を全列挙する（2026-07-31 敵対クロスレビュー両者一致の是正）
+            ev_parts = []
+            for k in kpis:
+                ev = frozen_ev(k)
+                n = wl_by_name.get(k, {}).get("in_sample", {}).get("n")
+                if ev is not None:
+                    ev_parts.append(f"{ev * 100:+.2f}%(n={n if n is not None else '?'})")
+            ev_text = " / ".join(ev_parts) if ev_parts else "—"
             status = "エントリー前" if any(r["status"] == "pending_entry" for r in rows) else "保有中(ペーパー)"
             sig = max(r["signal_date"] for r in rows)
             lines.append(
@@ -181,6 +188,11 @@ def build() -> tuple[str, dict]:
         lines.append(
             "掲載式: 並べ替え = ①有力(promising)系統数の多い順 → ②同数なら凍結in-sample EV(なし)最大値の高い順。"
             "EVは新規推定ではなく config/paper_watchlist.json 凍結値の引用（前向き未確定・参考値）。"
+        )
+        lines.append("")
+        lines.append(
+            "⚠️ EVは**点推定のみ・CI未付与**（小さいnほど不確か。例: n=73のEVはn=2460より大きく外れうる）。"
+            "同一銘柄の複数系統は同一の決算開示に由来しうるため、系統数は独立な証拠の数ではない。"
         )
     else:
         lines.append(f"（直近{RECENT_BDAYS}営業日に有力系統の発火なし）")
