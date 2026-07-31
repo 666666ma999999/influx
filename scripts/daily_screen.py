@@ -1935,16 +1935,21 @@ def main() -> int:
     scoreboard = paper_eval.compute_scoreboard(records)
     paper_eval.write_scoreboard_md(scoreboard, paper_eval.SCOREBOARD_PATH)
 
-    # レシピ棚を再生成（2026-07-22 保守追加・scoreboard更新直後に前向きnを反映）。
-    # 読み取り専用の結合レポート（output/recipe_shelf.md + vaultミラー生成のみ・台帳/state無干渉）。
-    # 非致死: 棚生成失敗は本番スクリーンの実行・終了コードに影響させない（§7-AG非介入と同型）。
-    try:
-        subprocess.run(
-            [sys.executable, str(Path(__file__).parent / "build_recipe_shelf.py")],
-            check=False, timeout=120,
-        )
-    except Exception as e:  # noqa: BLE001 (非致死: 本番スクリーン継続を最優先)
-        print(f"WARN: recipe_shelf 生成に失敗（本処理は継続）: {e}", file=sys.stderr)
+    # 表示層（配信ループ）を再生成: レシピ棚 + 本日レコメンド（scoreboard更新直後に前向きnを反映）。
+    # 読み取り専用の結合レポート（output/*.md + vaultミラー生成のみ・台帳/state無干渉）。
+    # 非致死: 生成失敗は本番スクリーンの実行・終了コードに影響させないが、失敗を握り潰さず
+    # 稼働状況セクションと通知に必ず出す（2026-07-31 敵対レビュー指摘1/9: 沈黙クラッシュの再発防止）。
+    display_build_status: dict[str, str] = {}
+    for builder in ("build_recipe_shelf.py", "build_daily_reco.py"):
+        try:
+            proc = subprocess.run(
+                [sys.executable, str(Path(__file__).parent / builder)],
+                check=False, timeout=120,
+            )
+            display_build_status[builder] = "OK" if proc.returncode == 0 else f"⚠️ 失敗(exit={proc.returncode})"
+        except Exception as e:  # noqa: BLE001 (非致死: 本番スクリーン継続を最優先)
+            display_build_status[builder] = f"⚠️ 失敗({e})"
+            print(f"WARN: {builder} 生成に失敗（本処理は継続）: {e}", file=sys.stderr)
 
     watchlist_by_name = {e["kpi_name"]: e for e in watchlist}
     recent_signals = update_recent_signals_cache(
@@ -1960,6 +1965,13 @@ def main() -> int:
     operational_context_lines += format_cookie_age_lines()
     operational_context_lines += format_margin_freshness_lines(jq_fetch.DATA_ROOT / "margin")
     operational_context_lines += format_jsf_gap_check_lines()
+    # 表示層生成の成否を稼働状況に常時掲示（表示専用・沈黙クラッシュ検知欄）
+    operational_context_lines.append(
+        "- 表示層生成: " + " / ".join(
+            f"{name.removeprefix('build_').removesuffix('.py')}={status}"
+            for name, status in display_build_status.items()
+        )
+    )
     operational_context_lines.append("")
 
     write_today_report(
@@ -1978,6 +1990,29 @@ def main() -> int:
     # vault転写はstate保存(=ジョブ完了境界)の後に置く: vault側I/O詰まりや強制終了で
     # last_screened_dateが失われ翌日に二重走査になるのを防ぐ(Codexレビュー⑤反映)
     sync_vault_mirror()
+
+    # macOS通知（表示専用・失敗しても本処理に影響なし）。周辺3runner（price_universe/
+    # xprice_watch/xbuzz_tracer）と同作法。本命スクリーンだけ通知が無い非対称の解消
+    # （2026-07-31 敵対レビュー指摘3・両者一致）。
+    try:
+        failures = [n for n, s in display_build_status.items() if s != "OK"]
+        if failures:
+            note = f"⚠️ 表示層生成失敗: {', '.join(failures)}"
+        else:
+            summary = json.loads((PROJECT_ROOT / "output/daily_reco_summary.json").read_text(encoding="utf-8"))
+            top = summary.get("top") or []
+            top_text = f"（1位 {top[0]['name'] or top[0]['code']}×{top[0]['n_kpis']}系統）" if top else ""
+            note = (
+                f"有力{summary.get('reco_count', 0)}銘柄{top_text} / 実戦投入可0本 / "
+                f"初回読み取り {summary.get('first_read_date', '未定')}"
+            )
+        subprocess.run(
+            ["osascript", "-e",
+             f'display notification "{note}" with title "influx 朝スクリーン" subtitle "ペーパー提案（正式合格前）"'],
+            check=False, timeout=15,
+        )
+    except Exception as e:  # noqa: BLE001 (通知失敗は無視・本処理に影響させない)
+        print(f"WARN: 通知送信に失敗（本処理は継続）: {e}", file=sys.stderr)
 
     # §6付記II A節: 本番実行1回分のrun-summaryを証跡基盤へ記録する（最後・ジョブ完了境界の後）。
     end_idx = bday_index[end_bd]
