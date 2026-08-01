@@ -3002,13 +3002,15 @@
     },
     {
       "id": "coffee-cacao",
-      "label": "コーヒー豆・カカオ",
+      "label": "コーヒー・カカオ・チョコ（値上げ）",
       "queries": [
-        "gen1-coffee-cacao"
+        "gen1-coffee-cacao",
+        "gen3-coffee",
+        "gen3-choco"
       ],
       "shortage_type": "price",
       "actionable": false,
-      "reason": "国際相場は日次公表だが日本株では大半が買い手であり、カカオ高で代替油脂(CBE)需要が伸びる不二製油だけが構造的な受益。",
+      "reason": "国際相場は日次公表だが日本株では大半が買い手であり、カカオ高で代替油脂(CBE)需要が伸びる不二製油だけが構造的な受益。／2026-08-01: 実測でコーヒー59件・チョコ36件が既存語の外にあったため gen3 2本を追加接続。銘柄検知は言及レーンが担う",
       "lag_note": "8〜26週（買い付けヘッジで期ずれ・値上げ浸透は半年遅行）",
       "beneficiaries": [],
       "traps": [
@@ -4763,6 +4765,39 @@
       "beneficiaries": [],
       "traps": [],
       "group": "G3-corporate"
+    },
+    {
+      "id": "genyu",
+      "label": "原油（消費者可視の高騰言及）",
+      "queries": [
+        "gen3-genyu"
+      ],
+      "shortage_type": "price",
+      "actionable": true,
+      "reason": "実測44件。価格の正本はB2B系列（wti/brent・週次）で、本クエリはX側の初動検知。受益はB2B側の確証カード（E1=会社が油価感応度を開示）を流用。決算2関門（セグメント30%×正味）は未実施のため tier=provisional に落として流用する",
+      "lag_note": "§16の実測は半導体のみ。原油→株のラグは未実測",
+      "beneficiaries": [
+        {
+          "code": "1605",
+          "name": "ＩＮＰＥＸ",
+          "layer": "trader",
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "E1:油価感応度を決算資料で開示 [流用:series=wti/brent]。決算2関門未実施のため仮",
+          "verified": "2026-08-01"
+        },
+        {
+          "code": "1662",
+          "name": "石油資源開発",
+          "layer": "trader",
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "E2:油ガス生産が主業 [流用:series=wti/brent]。決算2関門未実施のため仮",
+          "verified": "2026-08-01"
+        }
+      ],
+      "traps": [],
+      "group": "G3-energy"
     }
   ],
   "actionable_rule": "subject.actionable = shortage_types[type].actionable かつ beneficiaries が非空。型が対象でも TOP1000内に受益銘柄が居なければ非対象（無理に銘柄を立てない）",

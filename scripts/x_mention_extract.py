@@ -66,6 +66,7 @@ def extract_day(day: str, matcher, codes: set[str]) -> list[dict]:
     if not path.exists():
         return []
     seen: set[tuple[str, str]] = set()   # (status_id, code) の重複排除（再実行での二重計上防止）
+    seen_text: set[tuple[str, str]] = set()  # (本文冒頭60字, code) — bot 対策
     per: Counter = Counter()
     n_posts = 0
     for line in path.read_text(encoding="utf-8").splitlines():
@@ -81,6 +82,13 @@ def extract_day(day: str, matcher, codes: set[str]) -> list[dict]:
             if key in seen:
                 continue
             seen.add(key)
+            # 同一文面の繰り返し（別status_idのbot広告）は1日1回しか数えない。
+            # 実例 2026-07-31: 「Amazon直販 ━ 人気過ぎて品薄の商品が入荷 『タカラトミー…』」が
+            # 同一文面×3投稿でタカラトミー8件の中身を水増ししていた
+            tkey = (" ".join(r.get("text", "").split())[:60], m["code"])
+            if tkey in seen_text:
+                continue
+            seen_text.add(tkey)
             per[(m["code"], m["name"], r.get("query_id", ""))] += 1
     run_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
     out = [{"date": day, "code": c, "name": n, "query_id": q, "count": v,

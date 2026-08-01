@@ -271,6 +271,24 @@
    "q": "価格改定",
    "min_faves": 10,
    "lane": "corporate"
+  },
+  {
+   "id": "gen3-coffee",
+   "q": "コーヒー (値上げ OR 高騰)",
+   "min_faves": 10,
+   "lane": "food"
+  },
+  {
+   "id": "gen3-genyu",
+   "q": "原油 (高騰 OR 値上がり OR 上昇)",
+   "min_faves": 10,
+   "lane": "energy"
+  },
+  {
+   "id": "gen3-choco",
+   "q": "(チョコ OR ココア) (値上げ OR 高騰)",
+   "min_faves": 0,
+   "lane": "food"
   }
  ]
 }
