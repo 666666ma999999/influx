@@ -4798,6 +4798,48 @@
       ],
       "traps": [],
       "group": "G3-energy"
+    },
+    {
+      "id": "naphtha-x",
+      "label": "ナフサ（石化原料・値上げ連鎖の川上）",
+      "queries": [
+        "gen3-naphtha"
+      ],
+      "shortage_type": "price",
+      "actionable": false,
+      "reason": "実測24件。ナフサは§0の符号事故ポイントに明記のとおり石化のコスト側（スプレッドの分母のみ）で、上昇を買いシグナルにできないため銘柄は出さない。TDB調査ではナフサ高→トレー・フィルム→食品値上げの連鎖が2026年8月の2,311品目値上げの主因＝食品値上げ系クエリの先行指標として観測する",
+      "lag_note": "",
+      "beneficiaries": [],
+      "traps": [],
+      "group": "G3-material"
+    },
+    {
+      "id": "reitou-shokuhin",
+      "label": "冷凍食品（値上げ・ステルス値上げ）",
+      "queries": [
+        "gen3-reitou"
+      ],
+      "shortage_type": "price",
+      "actionable": false,
+      "reason": "実測19件（ステルス値上げの消費者言及）。受益候補ニチレイ(2871)は正味検証で却下済み（値上げ効果が原材料高で相殺・§16f）、味の素(2802)は確証だが冷凍食品での紐付けは未検証のためカード無し。銘柄検知は言及レーンが担う",
+      "lag_note": "",
+      "beneficiaries": [],
+      "traps": [],
+      "group": "G3-food"
+    },
+    {
+      "id": "ham-sausage",
+      "label": "ハム・ソーセージ（食肉製品の値上げ）",
+      "queries": [
+        "gen3-ham"
+      ],
+      "shortage_type": "price",
+      "actionable": false,
+      "reason": "実測12件＋TDB調査で2026年8月の値上げ最多カテゴリ（加工食品1,419品目の筆頭が食肉製品）。受益候補は日本ハム(2282)・伊藤ハム米久(2296)等だが決算2関門未実施のためカード無し（食品値上げは正味マイナスが多発した実測§16fに留意）。銘柄検知は言及レーンが担う",
+      "lag_note": "",
+      "beneficiaries": [],
+      "traps": [],
+      "group": "G3-food"
     }
   ],
   "actionable_rule": "subject.actionable = shortage_types[type].actionable かつ beneficiaries が非空。型が対象でも TOP1000内に受益銘柄が居なければ非対象（無理に銘柄を立てない）",

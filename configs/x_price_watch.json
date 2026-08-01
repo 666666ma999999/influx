@@ -289,6 +289,24 @@
    "q": "(チョコ OR ココア) (値上げ OR 高騰)",
    "min_faves": 0,
    "lane": "food"
+  },
+  {
+   "id": "gen3-naphtha",
+   "q": "ナフサ (高騰 OR 上昇)",
+   "min_faves": 0,
+   "lane": "material"
+  },
+  {
+   "id": "gen3-reitou",
+   "q": "冷凍食品 (値上げ OR 高騰)",
+   "min_faves": 0,
+   "lane": "food"
+  },
+  {
+   "id": "gen3-ham",
+   "q": "(ハム OR ソーセージ) (値上げ OR 高騰)",
+   "min_faves": 0,
+   "lane": "food"
   }
  ]
 }
