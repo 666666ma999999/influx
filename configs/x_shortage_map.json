@@ -4840,6 +4840,34 @@
       "beneficiaries": [],
       "traps": [],
       "group": "G3-food"
+    },
+    {
+      "id": "neage-rush",
+      "label": "値上げラッシュ（波の総量を測るメタ語）",
+      "queries": [
+        "gen3-neage-rush"
+      ],
+      "shortage_type": "broad",
+      "actionable": false,
+      "reason": "実測75件。既存の『値上げ』クエリは min_faves:100 の縛りで小規模投稿を取りこぼしており、『値上げラッシュ』は波の言説そのものを縛りなしで測る。主題が特定できないため銘柄は出さず、個別企業名は本文から言及レーンが抽出する",
+      "lag_note": "",
+      "beneficiaries": [],
+      "traps": [],
+      "group": "G3-meta"
+    },
+    {
+      "id": "pan",
+      "label": "パン（値上げ・品薄）",
+      "queries": [
+        "gen3-pan"
+      ],
+      "shortage_type": "price",
+      "actionable": false,
+      "reason": "実測31件（一部は熊本地震の店頭品薄文脈）。受益候補の山崎製パンは正味検証で格下げ済み（悪化要因1位は小麦でなく卵△41億円・§16f）のためカード無し。銘柄検知は言及レーンが担う",
+      "lag_note": "",
+      "beneficiaries": [],
+      "traps": [],
+      "group": "G3-food"
     }
   ],
   "actionable_rule": "subject.actionable = shortage_types[type].actionable かつ beneficiaries が非空。型が対象でも TOP1000内に受益銘柄が居なければ非対象（無理に銘柄を立てない）",

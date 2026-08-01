@@ -307,6 +307,18 @@
    "q": "(ハム OR ソーセージ) (値上げ OR 高騰)",
    "min_faves": 0,
    "lane": "food"
+  },
+  {
+   "id": "gen3-neage-rush",
+   "q": "値上げラッシュ",
+   "min_faves": 0,
+   "lane": "generic"
+  },
+  {
+   "id": "gen3-pan",
+   "q": "パン (値上げ OR 品薄)",
+   "min_faves": 0,
+   "lane": "food"
   }
  ]
 }
