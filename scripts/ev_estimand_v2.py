@@ -33,6 +33,13 @@ RESULTS_PATH = REPO / "tasks/ev_estimand_v2_results.md"
 AMENDMENT_DATE = "2026-08-01"  # R4 凍結日
 EXITS = {"none": ("ret", 0.003), "stop8": ("ret_stop8", 0.0)}  # R4 §3 コスト規約（stop8は控除済み）
 
+# returns.csv が kpi_name と別名ディレクトリにある系統の対応（正誤訂正 2026-08-01・実測検証済み）。
+# pead_gap8_vol3: 初回実行時に no_returns_csv と判定したのは名前一致検索の見落としで、実体は
+# defer3 変種ディレクトリに存在（watchlist の defer_entry=true/max_defer_bdays=3 と整合・
+# in_universe n=666 と pooled ev_stop8=0.0145 が凍結値と完全一致することを照合済み）。
+# 欠測規則（R4 §7）自体は不変更——「csv不在」という事実認定の訂正であり、結果を見ての規則変更ではない。
+RETURNS_ALIASES = {"pead_gap8_vol3": "pead_gap8_vol3_defer3"}
+
 
 def sha256_file(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
@@ -42,7 +49,7 @@ def compute_entry(kpi_name: str) -> tuple[dict, dict]:
     """1系統の estimand_v2 dict と、比較表用の中間値を返す。"""
     base = {"amendment_date": AMENDMENT_DATE,
             "computed_at": dt.datetime.now().astimezone().isoformat(timespec="seconds")}
-    csv_path = REPO / "output/kpi" / kpi_name / "returns.csv"
+    csv_path = REPO / "output/kpi" / RETURNS_ALIASES.get(kpi_name, kpi_name) / "returns.csv"
     if not csv_path.exists():
         return {**base, "status": "not_computed", "reason": "no_returns_csv"}, {}
     df = pd.read_csv(csv_path)
@@ -78,12 +85,17 @@ def strip_estimand_v2(obj: dict) -> dict:
 
 
 def atomic_write_with_invariant(new_obj: dict, old_obj: dict) -> None:
-    """R4 §6: estimand_v2 除去後の構造・値が旧と完全一致する場合のみ os.replace。"""
-    if strip_estimand_v2(new_obj) != old_obj:
+    """R4 §6: estimand_v2 除去後の構造・値が旧と完全一致する場合のみ os.replace。
+
+    旧側も strip して比較する（再実行時は旧ファイルに前回の estimand_v2 が既に載っているため。
+    保証内容は不変: estimand_v2 以外のいかなる構造/値も変化しない）。
+    """
+    old_stripped = strip_estimand_v2(old_obj)
+    if strip_estimand_v2(new_obj) != old_stripped:
         raise RuntimeError("不変条件違反: estimand_v2 以外の構造/値が変化するため書込みを拒否")
     content = json.dumps(new_obj, ensure_ascii=False, indent=2) + "\n"
     reparsed = json.loads(content)
-    if strip_estimand_v2(reparsed) != old_obj:
+    if strip_estimand_v2(reparsed) != old_stripped:
         raise RuntimeError("不変条件違反(再読込後): 書込みを拒否")
     fd, tmp = tempfile.mkstemp(prefix=".paper_watchlist.", dir=WATCHLIST_PATH.parent)
     try:

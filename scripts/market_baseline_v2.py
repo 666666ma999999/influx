@@ -26,6 +26,7 @@ SCRIPTS = Path(__file__).resolve().parent
 REPO = SCRIPTS.parent
 sys.path.insert(0, str(SCRIPTS))
 
+from ev_estimand_v2 import RETURNS_ALIASES  # noqa: E402  (別名ディレクトリ対応の正本を共有)
 from kpi_event_study import ev_v2_summary  # noqa: E402
 
 BASE_PATH = REPO / "output/base_rate/returns_w21.csv.gz"
@@ -41,6 +42,7 @@ KPI_NAMES = [
     "margin_expand_yoy", "raw_strev_entry", "gap_hold_close_strong",
     "engulf_reversal_day", "three_up_ignition", "sales_beat",
     "guidance_fy_strong", "cfo_margin_improve", "earnings_spillover",
+    "pead_gap8_vol3",  # 2026-08-01 正誤訂正でv2算出可能に（returns実体=defer3別名・参照系統）
 ]
 
 
@@ -83,7 +85,7 @@ def main() -> None:
 
     rows = []
     for kpi in KPI_NAMES:
-        path = REPO / "output/kpi" / kpi / "returns.csv"
+        path = REPO / "output/kpi" / RETURNS_ALIASES.get(kpi, kpi) / "returns.csv"
         df = pd.read_csv(path)
         df = df[df["in_universe"].astype(str) == "True"]
         cells = [kpi]

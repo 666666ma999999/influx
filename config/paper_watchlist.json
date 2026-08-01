@@ -28,7 +28,7 @@
         "ev_none": 0.0057,
         "estimand_v2": {
           "amendment_date": "2026-08-01",
-          "computed_at": "2026-08-01T11:25:02+09:00",
+          "computed_at": "2026-08-01T13:58:38+09:00",
           "status": "computed",
           "method": "two-stage month-equal, month-block bootstrap, one-sided 95% primary",
           "n_boot": 2000,
@@ -98,7 +98,7 @@
         "note": "§6判定はNG（ev_stop8=-0.33%<3%閾値・avg_monthly_n=2.47<5）だがEV(なし)+1.12%はvolshock_5x無印のEV(なし)+0.57%を上回るため前向き観察対象に追加",
         "estimand_v2": {
           "amendment_date": "2026-08-01",
-          "computed_at": "2026-08-01T11:25:06+09:00",
+          "computed_at": "2026-08-01T13:58:42+09:00",
           "status": "computed",
           "method": "two-stage month-equal, month-block bootstrap, one-sided 95% primary",
           "n_boot": 2000,
@@ -165,7 +165,7 @@
         "note": "第13周A(scripts/kpi_volshock_v2_amplifiers.py・output/kpi/volshock_v2_amplifiers/report.md)。volshock_x_above200(n=180)のquiet_ratio>=1.2分割セル。EV(なし)+3.48%はvolshock_x_above200のEV(なし)+1.12%を大幅に上回るが、n=73・月約1件は§6のMIN_N=100/MIN_AVG_MONTHLY_SIGNALS=5に対し検出力不足で正式合否判定の対象外（pendingのまま前向き観察に回す）",
         "estimand_v2": {
           "amendment_date": "2026-08-01",
-          "computed_at": "2026-08-01T11:25:10+09:00",
+          "computed_at": "2026-08-01T13:58:47+09:00",
           "status": "not_computed",
           "reason": "no_returns_csv"
         }
@@ -205,7 +205,7 @@
         "note": "運用開始ライン(EV>=+1%)未達で見送り確定済みだが方向観察として継続",
         "estimand_v2": {
           "amendment_date": "2026-08-01",
-          "computed_at": "2026-08-01T11:25:10+09:00",
+          "computed_at": "2026-08-01T13:58:47+09:00",
           "status": "computed",
           "method": "two-stage month-equal, month-block bootstrap, one-sided 95% primary",
           "n_boot": 2000,
@@ -254,9 +254,25 @@
         "ev_stop8": 0.0145,
         "estimand_v2": {
           "amendment_date": "2026-08-01",
-          "computed_at": "2026-08-01T11:25:13+09:00",
-          "status": "not_computed",
-          "reason": "no_returns_csv"
+          "computed_at": "2026-08-01T13:58:49+09:00",
+          "status": "computed",
+          "method": "two-stage month-equal, month-block bootstrap, one-sided 95% primary",
+          "n_boot": 2000,
+          "seed": 42,
+          "n_used_none": 666,
+          "n_excluded_nonfinite_none": 0,
+          "months_spanned_none": 66,
+          "ev_none_v2": 0.009142685201720221,
+          "ev_none_ci1s_low": -0.010153916932675902,
+          "ev_none_ci95_low": -0.013204996159008196,
+          "ev_none_ci95_high": 0.03250016560719587,
+          "n_used_stop8": 666,
+          "n_excluded_nonfinite_stop8": 0,
+          "months_spanned_stop8": 66,
+          "ev_stop8_v2": 0.014532235576986177,
+          "ev_stop8_ci1s_low": -0.0018286640497338525,
+          "ev_stop8_ci95_low": -0.0047133260495343336,
+          "ev_stop8_ci95_high": 0.03412824959442683
         }
       },
       "holdout_observation": {
@@ -301,7 +317,7 @@
         "ev_none": 0.0188,
         "estimand_v2": {
           "amendment_date": "2026-08-01",
-          "computed_at": "2026-08-01T11:25:13+09:00",
+          "computed_at": "2026-08-01T13:58:53+09:00",
           "status": "not_computed",
           "reason": "no_returns_csv"
         }
@@ -333,7 +349,7 @@
         "ev_none": 0.0146,
         "estimand_v2": {
           "amendment_date": "2026-08-01",
-          "computed_at": "2026-08-01T11:25:13+09:00",
+          "computed_at": "2026-08-01T13:58:53+09:00",
           "status": "computed",
           "method": "two-stage month-equal, month-block bootstrap, one-sided 95% primary",
           "n_boot": 2000,
@@ -386,7 +402,7 @@
         "note": "§7-L T2（AdjL(D)<=AdjC(D-1)×0.90）。lift CI下限2.136で第28周採用5本の最上位。前向き観察で最終判定（§7-Q固定ファミリーS=5・α=0.005[陣別alpha-spending・§7-T改定=第1陣0.025/5]順次判定）",
         "estimand_v2": {
           "amendment_date": "2026-08-01",
-          "computed_at": "2026-08-01T11:25:17+09:00",
+          "computed_at": "2026-08-01T13:58:58+09:00",
           "status": "computed",
           "method": "two-stage month-equal, month-block bootstrap, one-sided 95% primary",
           "n_boot": 2000,
@@ -444,7 +460,7 @@
         "note": "§2-E ストップ高：初押し再上昇（第15周T4）。lift CI下限1.871で第28周採用5本の第2位。EV(なし)-0.96%・最善exit=stop10で-0.30%だがlift順位規則のみで選定（EVによる事後選択回避）＝純観察。前向き観察で最終判定（§7-Q固定ファミリーS=5・α=0.005[陣別alpha-spending・§7-T改定=第1陣0.025/5]順次判定）",
         "estimand_v2": {
           "amendment_date": "2026-08-01",
-          "computed_at": "2026-08-01T11:25:22+09:00",
+          "computed_at": "2026-08-01T13:59:03+09:00",
           "status": "computed",
           "method": "two-stage month-equal, month-block bootstrap, one-sided 95% primary",
           "n_boot": 2000,
@@ -500,7 +516,7 @@
         "note": "§7-L T1（rank(D-20)>=301 かつ rank(D)<=100 かつ 当日陽線・母集団=PIT月末masterのProdCat=011∩Va>0）。lift CI下限1.820で第28周採用5本の第3位。EV(なし)-0.80%だがlift順位規則のみで選定＝純観察。前向き観察で最終判定（§7-Q固定ファミリーS=5・α=0.005[陣別alpha-spending・§7-T改定=第1陣0.025/5]順次判定）",
         "estimand_v2": {
           "amendment_date": "2026-08-01",
-          "computed_at": "2026-08-01T11:25:26+09:00",
+          "computed_at": "2026-08-01T13:59:07+09:00",
           "status": "computed",
           "method": "two-stage month-equal, month-block bootstrap, one-sided 95% primary",
           "n_boot": 2000,
@@ -555,7 +571,7 @@
         "note": "§7-O T1（OPM_q−OPM_qYoY>=+2.0pt かつ S_q>S_qYoY・as-of構築・反応日Gエントリー）。lift CI下限1.301で第28周採用5本の第4位。fins系走査終端ガード(pead_effective_end)を適用。前向き観察で最終判定（§7-Q固定ファミリーS=5・α=0.005[陣別alpha-spending・§7-T改定=第1陣0.025/5]順次判定）",
         "estimand_v2": {
           "amendment_date": "2026-08-01",
-          "computed_at": "2026-08-01T11:25:31+09:00",
+          "computed_at": "2026-08-01T13:59:12+09:00",
           "status": "computed",
           "method": "two-stage month-equal, month-block bootstrap, one-sided 95% primary",
           "n_boot": 2000,
@@ -610,7 +626,7 @@
         "note": "§7-N T4（TOPIX 1ファクター残差の素の-r[t-1]スコア上位decile新規入り・月次）。lift CI下限1.016で第28周採用5本の第5位（リバーサル家族の代表・strev_20dは除外）。前向き観察で最終判定（§7-Q固定ファミリーS=5・α=0.005[陣別alpha-spending・§7-T改定=第1陣0.025/5]順次判定）",
         "estimand_v2": {
           "amendment_date": "2026-08-01",
-          "computed_at": "2026-08-01T11:25:35+09:00",
+          "computed_at": "2026-08-01T13:59:16+09:00",
           "status": "computed",
           "method": "two-stage month-equal, month-block bootstrap, one-sided 95% primary",
           "n_boot": 2000,
@@ -666,7 +682,7 @@
         "note": "§7-R T3（AdjO≥前日AdjC×1.03 ∩ AdjC≥AdjO ∩ close位置≥0.8 ∩ 窓埋めなし ∩ Va≥20日平均×2）。lift CI下限1.898で§7-T機械選定の採用3本の第1位。EV(なし)-0.32%[CI -2.13%,+1.38%]・一次結論rejected（+20%ゴール不発）だがlift CI下限が§7-Q規則水準を超えるため純観察で前向き再現確認。avg_monthly_signalsはn/73ヶ月の導出値",
         "estimand_v2": {
           "amendment_date": "2026-08-01",
-          "computed_at": "2026-08-01T11:25:38+09:00",
+          "computed_at": "2026-08-01T13:59:19+09:00",
           "status": "computed",
           "method": "two-stage month-equal, month-block bootstrap, one-sided 95% primary",
           "n_boot": 2000,
@@ -722,7 +738,7 @@
         "note": "§7-S T3（AdjO<前日AdjC×0.99 ∩ AdjC>前日AdjC ∩ AdjC>AdjO ∩ close位置≥0.7 ∩ Va≥20日平均×1.5・第29周T3と同一品質ガード）。lift CI下限1.162で§7-T機械選定の採用3本の第2位。EV(なし)+0.13%[CI -1.26%,+1.28%]・一次結論inconclusive。avg_monthly_signalsはn/73ヶ月の導出値",
         "estimand_v2": {
           "amendment_date": "2026-08-01",
-          "computed_at": "2026-08-01T11:25:43+09:00",
+          "computed_at": "2026-08-01T13:59:23+09:00",
           "status": "computed",
           "method": "two-stage month-equal, month-block bootstrap, one-sided 95% primary",
           "n_boot": 2000,
@@ -778,7 +794,7 @@
         "note": "§7-S T1（D-2〜Dの3連陽線∩高値/終値切り上げ∩3日合計Va≥20日平均×3×1.5・初回性=終点D-5〜D-1で完全T1未成立）。lift CI下限1.136で§7-T機械選定の採用3本の第3位。EV(なし)-0.45%[CI -1.75%,+0.76%]・一次結論rejected。EV負のためlift順位規則のみで選定＝純観察。avg_monthly_signalsはn/73ヶ月の導出値",
         "estimand_v2": {
           "amendment_date": "2026-08-01",
-          "computed_at": "2026-08-01T11:25:47+09:00",
+          "computed_at": "2026-08-01T13:59:28+09:00",
           "status": "computed",
           "method": "two-stage month-equal, month-block bootstrap, one-sided 95% primary",
           "n_boot": 2000,
@@ -832,7 +848,7 @@
         "note": "§7-V T3（売上高が直前会社予想を+5%以上上回った開示・kpi_event_batch_signals.generate_sue_beat_signalsと完全同型のas-of機構。2Q開示=Sales対FSales2Q / FY開示=Sales対FSales・直前予想≤0除外・遡り365暦日上限・15:00/15:30境界）。探索的一次結論ラベル導入（第18周）以来初のpromising＝§0枠S運用開始ライン充足（lift CI下限1.27>1.2・EV(stop8)+1.98%≥+1%・年約46件≥6件）。SUE(sue_beat)とのJaccard0.159で重複小・SUE非重複群(n=124・lift2.94・EV+3.37%[CIは0を含む])は別軸の可能性を示唆。avg_monthly_signalsはn/73ヶ月の導出値（≒46件/年）",
         "estimand_v2": {
           "amendment_date": "2026-08-01",
-          "computed_at": "2026-08-01T11:25:52+09:00",
+          "computed_at": "2026-08-01T13:59:33+09:00",
           "status": "computed",
           "method": "two-stage month-equal, month-block bootstrap, one-sided 95% primary",
           "n_boot": 2000,
@@ -885,7 +901,7 @@
         "note": "§7-X T1（FY開示でNxFSales/Sales−1≥+10% ∩ 両者>0 ∩ 変則決算ガード[CurFY/NxtFY期間長365±8日 ∩ 1≤NxtFYSt−CurFYEn≤8暦日]・レコード自身のフィールドのみ・as-of不要・同日複数(Code,CurFYEn)は最新1件・シグナル日=反応日G）。第35周でpromising（88試行中2例目・§0枠S/枠F両運用開始ライン充足: lift CI下限2.04>1.2・EV(なし)CI下限+0.33%>0・EV(stop8)+2.68%≥+1%・月約9.4件≥枠F型月5件）。beat系とのJaccard≤0.075で独立軸。avg_monthly_signalsはn/73ヶ月の導出値（≒112件/年）",
         "estimand_v2": {
           "amendment_date": "2026-08-01",
-          "computed_at": "2026-08-01T11:25:55+09:00",
+          "computed_at": "2026-08-01T13:59:37+09:00",
           "status": "computed",
           "method": "two-stage month-equal, month-block bootstrap, one-sided 95% primary",
           "n_boot": 2000,
@@ -938,7 +954,7 @@
         "note": "§7-X T2（2Q/FY開示でレコード自身のCFO/Sales[累計]が前年同期比+3pt以上改善 ∩ 増収 ∩ 当期・前年ともSales>0 ∩ CFO有効。前年同期照合は§7-O様式[同一period_type・CurFYEn年-1・CurPerEn当年365±8日前・累計期間長差≤7日・Scope×Standard一致・開示日365日上限は不適用]）。第35周で枠S運用開始ラインをフル精度で充足（lift CI下限1.2141>1.2の境界近傍・EV(stop8)+1.42%≥+1%・月約10.3件）＝機械適用ゆえ採用=入場判定であり効果確定ではない。EV(なし)+1.44%[CI下限−0.75%は0を含む]。avg_monthly_signalsはn/73ヶ月の導出値（≒123件/年）",
         "estimand_v2": {
           "amendment_date": "2026-08-01",
-          "computed_at": "2026-08-01T11:26:00+09:00",
+          "computed_at": "2026-08-01T13:59:41+09:00",
           "status": "computed",
           "method": "two-stage month-equal, month-block bootstrap, one-sided 95% primary",
           "n_boot": 2000,
@@ -991,7 +1007,7 @@
         "note": "§7-AA T2（営業日Dに同一S33業種[D時点master・普通株ProdCat011・leader除外]の他銘柄がsales_beat条件[§7-V凍結値]を満たす開示を行った[反応日=D]とき、同業種で当該会計期を未発表の銘柄。未発表判定3条件[(i)候補as-of最新開示のCurFYEn==leaderのCurFYEn / (ii)leader2Qなら候補最新開示段階1Q以前・FYなら3Q以前 / (iii)同一(Code,CurFYEn,period_type)開示がreaction_day基準でD以前に不存在] ∩ AdjC(D)/AdjC(D-1)−1∈[-1%,+2%]。候補×Dは1回・シグナル確定=D終値・エントリー=D+1寄付）。第38周で枠F運用開始ライン充足（月平均33.4件≥5・EV(なし)CI下限+0.159%>0・lift1.312>1.0）＝機械適用ゆえ採用=入場判定であり効果確定ではない。枠SはliftCI下限1.002<1.2で非充足。Codex56 MAJOR是正（反応日境界ガード欠如→開示走査1営業日前倒し+signal_date明示限定でT2再実行・副次効果でstart側取りこぼし+6本回収しn2440→2460）。sector_sympathyとのJaccard0.00198で独立軸。avg_monthly_signalsはn/73.7ヶ月相当の導出値（月33.4件）",
         "estimand_v2": {
           "amendment_date": "2026-08-01",
-          "computed_at": "2026-08-01T11:26:04+09:00",
+          "computed_at": "2026-08-01T13:59:45+09:00",
           "status": "computed",
           "method": "two-stage month-equal, month-block bootstrap, one-sided 95% primary",
           "n_boot": 2000,
