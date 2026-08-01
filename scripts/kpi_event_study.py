@@ -461,6 +461,24 @@ def _pooled_ev(month_list: list[str], grouped: dict[str, pd.DataFrame], ev_colum
     return sum(vals) / len(vals) - cost
 
 
+def _month_equal_ev(month_list: list[str], grouped: dict[str, "pd.DataFrame"], ev_column: str, cost: float) -> Optional[float]:
+    """two-stage（月等ウェイト）EV: 各月の月内平均を先に取り、そのグランド平均 - cost を返す。
+
+    EV estimand v2（tasks/ev_estimand_v2_preregister.md R4・2026-08-01 Codex GO）の計算部品。
+    month_list はブートストラップ再標本（重複可）——重複月はその月平均が重複回数ぶん算入される
+    （月ブロック復元抽出の two-stage estimand として整合）。
+    """
+    month_means: list[float] = []
+    for m in month_list:
+        g = grouped.get(m)
+        if g is None or len(g) == 0:
+            continue
+        month_means.append(float(g[ev_column].mean()))
+    if not month_means:
+        return None
+    return sum(month_means) / len(month_means) - cost
+
+
 def bootstrap_ev_ci(
     in_universe_df: pd.DataFrame,
     ev_column: str = "ret",
@@ -468,6 +486,7 @@ def bootstrap_ev_ci(
     n_boot: int = N_BOOTSTRAP,
     seed: int = BOOTSTRAP_SEED,
     ci_level: float = 0.95,
+    month_equal_weight: bool = False,
 ) -> dict:
     """月次ブロック・ブートストラップでEV（mean(ev_column) - cost）の点推定とCIを算出する。
 
@@ -493,13 +512,16 @@ def bootstrap_ev_ci(
     if not all_months:
         return {"point_ev": None, "ci_low": None, "ci_high": None, "n_boot_valid": 0}
 
-    point_ev = _pooled_ev(all_months, grouped, ev_column, cost)
+    # month_equal_weight=True は EV estimand v2（月等ウェイト two-stage）。既定 False は
+    # v1（シグナル数加重プール平均）で挙動完全不変（tests/fixtures/bootstrap_ev_ci_v1_expected.json で回帰検証）。
+    estimand = _month_equal_ev if month_equal_weight else _pooled_ev
+    point_ev = estimand(all_months, grouped, ev_column, cost)
 
     rng = np.random.default_rng(seed)
     boot_evs = []
     for _ in range(n_boot):
         sample_months = rng.choice(all_months, size=len(all_months), replace=True).tolist()
-        ev_b = _pooled_ev(sample_months, grouped, ev_column, cost)
+        ev_b = estimand(sample_months, grouped, ev_column, cost)
         if ev_b is not None:
             boot_evs.append(ev_b)
 
@@ -513,6 +535,66 @@ def bootstrap_ev_ci(
         "ci_high": float(ci_high),
         "n_boot_valid": len(boot_evs),
     }
+
+
+# --- EV estimand v2（tasks/ev_estimand_v2_preregister.md R4 凍結・2026-08-01 Codex GO） ---
+
+EV_V2_N_BOOT = 2000  # R4 §2 凍結値（変更は v3 再事前登録）
+EV_V2_METHOD = "two-stage month-equal, month-block bootstrap, one-sided 95% primary"
+
+
+def ev_v2_summary(in_universe_df: pd.DataFrame, ev_column: str, cost: float) -> dict:
+    """EV estimand v2 の計算正本（R4 §5 機械層・Dual-Path禁止）。
+
+    台帳書込み（scripts/ev_estimand_v2.py）と改定日以降の新規陣入り判定は本関数のみを使う。
+    有限値のみ使用（NaN/inf は除外し件数を返す）。除外後0件は status で返す（fail-closed）。
+
+    Returns:
+        dict: {status, n_used, n_excluded_nonfinite, months_spanned,
+               ev_v2, ci1s_low, ci95_low, ci95_high}（status!="computed" 時は件数系のみ）
+    """
+    if ev_column not in in_universe_df.columns:
+        return {"status": "not_computed", "reason": "missing_columns"}
+    finite = in_universe_df[np.isfinite(in_universe_df[ev_column])]
+    n_excluded = len(in_universe_df) - len(finite)
+    if len(finite) == 0:
+        return {"status": "not_computed",
+                "reason": "empty_after_nonfinite_filter" if len(in_universe_df) else "empty_after_in_universe_filter",
+                "n_excluded_nonfinite": n_excluded}
+    one_sided = bootstrap_ev_ci(finite, ev_column=ev_column, cost=cost,
+                                n_boot=EV_V2_N_BOOT, seed=BOOTSTRAP_SEED,
+                                ci_level=0.90, month_equal_weight=True)
+    two_sided = bootstrap_ev_ci(finite, ev_column=ev_column, cost=cost,
+                                n_boot=EV_V2_N_BOOT, seed=BOOTSTRAP_SEED,
+                                ci_level=0.95, month_equal_weight=True)
+    return {
+        "status": "computed",
+        "n_used": int(len(finite)),
+        "n_excluded_nonfinite": int(n_excluded),
+        "months_spanned": int(finite["month"].nunique()),
+        "ev_v2": one_sided["point_ev"],
+        "ci1s_low": one_sided["ci_low"],
+        "ci95_low": two_sided["ci_low"],
+        "ci95_high": two_sided["ci_high"],
+    }
+
+
+def admission_ev(entry: dict) -> dict:
+    """watchlist エントリから estimand_v2 を取り出す唯一の読取口（R4 §5 機械層）。
+
+    estimand_v2 が無い / status!="computed" なら例外（v1 EV への silent fallback 禁止）。
+    改定日以降の新規陣入り判定は本アクセサ経由を必須とする。
+
+    Raises:
+        ValueError: estimand_v2 未付与または未算出のエントリを参照した場合。
+    """
+    ev2 = (entry.get("in_sample") or {}).get("estimand_v2")
+    if not isinstance(ev2, dict) or ev2.get("status") != "computed":
+        raise ValueError(
+            f"estimand_v2 が未算出のため admission EV を返せません（v1へのfallback禁止）: "
+            f"{entry.get('kpi_name')!r} status={None if not isinstance(ev2, dict) else ev2.get('status')!r}"
+        )
+    return ev2
 
 
 # --- 集計・合格判定 ------------------------------------------------------------
