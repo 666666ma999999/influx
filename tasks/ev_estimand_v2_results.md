@@ -1,10 +1,10 @@
 # EV estimand v2 — v1→v2 比較表（生成物・判定不使用）
 
-- 生成時刻: 2026-08-01T13:59:49+09:00
+- 生成時刻: 2026-08-01T14:15:58+09:00
 - 事前登録本文SHA256（算出前凍結）: `414947d5fabf79254d8998a879dbc33d5312cf99916a71b15acb7e83c584bc1e`
-- watchlist 書込み前SHA256: `b4a03116357d3a76…`
-- 算出: 17系統 / 未算出: 2系統（理由コード付き）
-- 入力hash（returns.csv sha256先頭16桁）: volshock_5x: ca8afb92a8597f18; volshock_x_above200: 02157f99014fbaeb; shortcover_x_bear: d1dc18583d40218a; pead_gap8_vol3: 0f623b04413295b8; sue_beat: 0916e203900efb52; sell_reg_trigger_rebound: 525796ff9f0f9e84; sh_dip_reentry: 6ae5b5d46aed9ed8; turnover_rank_surge: 5210acd82527edd6; margin_expand_yoy: 3b62c77391392286; raw_strev_entry: c1906730ca6f34ca; gap_hold_close_strong: 3635d9d45c862486; engulf_reversal_day: 09f2d5e2661ee74c; three_up_ignition: d5340e6b61e21857; sales_beat: 73249023e4ef4e42; guidance_fy_strong: ef0dc5f63024c961; cfo_margin_improve: 0a2800e924cb7fbc; earnings_spillover: c382329dcfc1046a
+- watchlist 書込み前SHA256: `25f715c865c72bf9…`
+- 算出: 19系統 / 未算出: 0系統（理由コード付き）
+- 入力hash（returns.csv sha256先頭16桁）: volshock_5x: ca8afb92a8597f18; volshock_x_above200: 02157f99014fbaeb; volshock_x_above200_quiet: d93228b06f8711ee; shortcover_x_bear: d1dc18583d40218a; pead_gap8_vol3: 0f623b04413295b8; sue_x_above200: a504e23b8389a7ea; sue_beat: 0916e203900efb52; sell_reg_trigger_rebound: 525796ff9f0f9e84; sh_dip_reentry: 6ae5b5d46aed9ed8; turnover_rank_surge: 5210acd82527edd6; margin_expand_yoy: 3b62c77391392286; raw_strev_entry: c1906730ca6f34ca; gap_hold_close_strong: 3635d9d45c862486; engulf_reversal_day: 09f2d5e2661ee74c; three_up_ignition: d5340e6b61e21857; sales_beat: 73249023e4ef4e42; guidance_fy_strong: ef0dc5f63024c961; cfo_margin_improve: 0a2800e924cb7fbc; earnings_spillover: c382329dcfc1046a
 
 v1=凍結点推定（プール平均）/ v2=月等ウェイト two-stage / ci1s=片側95%下限（正）。コスト規約: none=0.003控除・stop8=控除済み0。
 
@@ -12,10 +12,10 @@ v1=凍結点推定（プール平均）/ v2=月等ウェイト two-stage / ci1s=
 |---|---|---|---|---|---|---|---|---|
 | volshock_5x | +0.57% | -0.03% | -2.06% | -0.75% | -0.88% | -2.40% | 292 | 71 |
 | volshock_x_above200 | +1.12% | +1.00% | -1.44% | -0.33% | +0.10% | -1.85% | 180 | 61 |
-| volshock_x_above200_quiet | — | 未算出 (no_returns_csv) | — | — | 未算出 | — | — | — |
+| volshock_x_above200_quiet | +3.48% | +2.18% | -2.61% | — | +0.13% | -3.24% | 73 | 45 |
 | shortcover_x_bear | — | -0.28% | -2.10% | +0.04% | -0.02% | -1.22% | 1639 | 38 |
 | pead_gap8_vol3 | — | +0.91% | -1.02% | +1.45% | +1.45% | -0.18% | 666 | 66 |
-| sue_x_above200 | — | 未算出 (no_returns_csv) | — | — | 未算出 | — | — | — |
+| sue_x_above200 | +1.88% | +1.67% | -0.56% | — | +1.56% | -0.38% | 516 | 55 |
 | sue_beat | +1.46% | +0.95% | -0.82% | — | +1.03% | -0.37% | 818 | 64 |
 | sell_reg_trigger_rebound | +0.26% | -0.86% | -2.42% | — | -1.06% | -1.92% | 2943 | 73 |
 | sh_dip_reentry | -0.96% | -0.04% | -3.97% | — | -0.82% | -3.79% | 246 | 65 |
@@ -34,7 +34,7 @@ v1=凍結点推定（プール平均）/ v2=月等ウェイト two-stage / ci1s=
 
 ## 市場超過EV v2（同一執行・月ペア差・記述専用）
 
-- 生成時刻: 2026-08-01T14:00:23+09:00 / ベースライン源: `output/base_rate/returns_w21.csv.gz`（凍結値= `output/base_rate/market_baseline_v2.json`）
+- 生成時刻: 2026-08-01T14:15:58+09:00 / ベースライン源: `output/base_rate/returns_w21.csv.gz`（凍結値= `output/base_rate/market_baseline_v2.json`）
 - 市場保有ベースライン v2（全期間 201608-202605）: none +0.59% [下限-0.12%] / stop8 +0.22% [下限-0.37%]
 - 同（in-sample窓 201611-202211）: none +0.34% [下限-0.67%] / stop8 +0.09% [下限-0.70%]
 
@@ -60,5 +60,7 @@ v1=凍結点推定（プール平均）/ v2=月等ウェイト two-stage / ci1s=
 | cfo_margin_improve | +0.61% [下限-1.41%] (59月) | +0.83% [下限-0.78%] (59月) |
 | earnings_spillover | +2.22% [下限+0.18%] (52月) | +1.54% [下限-0.12%] (52月) |
 | pead_gap8_vol3 | +0.43% [下限-1.40%] (65月) | +1.12% [下限-0.48%] (65月) |
+| sue_x_above200 | +0.96% [下限-1.36%] (54月) | +1.21% [下限-0.73%] (54月) |
+| volshock_x_above200_quiet | +2.31% [下限-2.11%] (45月) | +0.41% [下限-2.92%] (45月) |
 
 <!-- market_baseline_v2:end -->

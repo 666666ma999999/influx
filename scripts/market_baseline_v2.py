@@ -43,6 +43,7 @@ KPI_NAMES = [
     "engulf_reversal_day", "three_up_ignition", "sales_beat",
     "guidance_fy_strong", "cfo_margin_improve", "earnings_spillover",
     "pead_gap8_vol3",  # 2026-08-01 正誤訂正でv2算出可能に（returns実体=defer3別名・参照系統）
+    "sue_x_above200", "volshock_x_above200_quiet",  # 2026-08-01 derive_missing_returns.py 導出（凍結n/EV照合ゲート付き）
 ]
 
 
