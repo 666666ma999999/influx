@@ -175,3 +175,9 @@
 - 症状2: Docker 3 並列で各コンテナ約2.84GB × 3 > Docker Desktop 割当7.65GB → exit 137(OOMキル)。並列度はメモリ割当から逆算が必要
 - 対処: (1) 長時間ジョブは `> log 2>&1` の直接リダイレクトにして exit code を保存 (2) 完了判定は通知でなく**成果物の実在**（report.md/台帳行）で行う (3) 重い Docker ジョブは逐次 or 2並列まで（docker stats で実測してから決める）
 - 検知: 「completed 通知なのに台帳/レポートが無い」は本パターンをまず疑う
+
+## 2026-08-01: Cookie再取得でラベル通りに抽出したら別人（@twittora_）だった — ハンドル照合ゲートが検出・ただし旧合鍵は上書き消失
+- 症状: スキル記載の成功実績「Profile 2 → kabuki666999」を根拠に masa-2 の Chrome Profile 2 から抽出 → Docker側ハンドル照合で実体が @twittora_ と判明（identity-verify-before-use の実害3例目・maaaki 7/23事故と同型）。masa-2 の全プロフィール（Default/Profile 2）とも X ログインは twittora_ で、kabuki666999 のログインは現存しない
+- 実害: import_chrome_cookies.py はバックアップを取らず上書きするため、旧 kabuki 合鍵（7/12取得）が復元不可で消失（gitignore域・TimeMachineなし）。※旧合鍵も同じ Profile 2 由来なら以前から twittora_ だった可能性あり（未確認・要データ帰属調査）
+- 対処: (1) 誤合鍵は隔離 `cookies.json.WRONG_ACCOUNT_twittora_20260801`（削除しない・沈黙誤収集より可視故障） (2) `x_profiles/kabuki666999/expected_account.json` 新設（maaaki と同じガード） (3) スキルに「抽出→保存の前にハンドル照合」を必須手順化
+- 再発防止の型: 抽出は必ず〈プロフィール実測→抽出→**ハンドル照合（AppTabBar_Profile_Link href）**→OKなら保存先へ、NGなら隔離〉。成功実績のプロフィール対応は Mac ごとに別物（ラベル・過去実績を信用しない）

@@ -57,6 +57,11 @@ python3 scripts/import_chrome_cookies.py --chrome-profile "Default"   --account 
 
 ---
 
+## STEP 2.5: ハンドル照合（必須・2026-08-01 事故で追加）
+
+保存した cookies.json が**本当にそのアカウントか**を、STEP 3 の Docker テストに `AppTabBar_Profile_Link` の href 読み取りを加えて照合する（`/kabuki666999` 等が返ること）。**不一致なら即 `cookies.json.WRONG_ACCOUNT_<実ハンドル>_<日付>` に隔離**（上書き運用のためバックアップは存在しない＝照合前に旧ファイルを信じて消さない）。
+実害: 2026-08-01 masa-2 で「Profile 2 → kabuki666999」の成功実績どおり抽出したら実体が @twittora_（プロフィール対応は **Mac ごとに別物**。下の成功実績は MASA 時代のもので masa-2 には適用不可）。照合の正本ガード= `x_profiles/<account>/expected_account.json`。
+
 ## STEP 3: 検証
 
 ```bash
