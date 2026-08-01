@@ -53,7 +53,9 @@
       "label": "メモリ/DRAM/DDR5",
       "queries": [
         "gen1-memori-kotou",
-        "gen1-ddr5-price"
+        "gen1-ddr5-price",
+        "gen3-handotai",
+        "gen3-hbm"
       ],
       "shortage_type": "price",
       "actionable": true,
@@ -522,7 +524,8 @@
       "id": "nand-ssd",
       "label": "NAND/SSD",
       "queries": [
-        "gen1-ssd-price"
+        "gen1-ssd-price",
+        "gen3-handotai"
       ],
       "shortage_type": "price",
       "actionable": true,
@@ -1001,7 +1004,8 @@
       "id": "cpu-logic",
       "label": "CPU/ロジック半導体",
       "queries": [
-        "gen1-cpu-price"
+        "gen1-cpu-price",
+        "gen3-handotai"
       ],
       "shortage_type": "capex",
       "actionable": true,
@@ -4703,6 +4707,62 @@
       "beneficiaries": [],
       "traps": [],
       "group": "C-consumer-broad-disruption"
+    },
+    {
+      "id": "seiriyouhin",
+      "label": "生理用品・紙おむつ（値上げ・品薄）",
+      "queries": [
+        "gen3-seiriyouhin"
+      ],
+      "shortage_type": "price",
+      "actionable": false,
+      "reason": "発見器の第1候補（ナプキン・6投稿者・1.4万いいね）と実測12件で採用した消費財レーン。受益候補はユニ・チャーム(8113)・大王製紙(3880)・王子HD(3861)だが、決算2関門（セグメント営業利益比30%以上×売値と原価の正味プラス）が未実施のためカード無し＝銘柄は出さない。銘柄検知は言及レーン（本文からの直接抽出）が担う",
+      "lag_note": "",
+      "beneficiaries": [],
+      "traps": [],
+      "group": "G3-daily"
+    },
+    {
+      "id": "kami-seihin",
+      "label": "紙製品（トイレットペーパー・ティッシュ）",
+      "queries": [
+        "gen3-kami-seihin"
+      ],
+      "shortage_type": "price",
+      "actionable": false,
+      "reason": "実測9件（値上げ文脈）。熊本地震の日本製紙八代工場被災で供給側の変化が起きうる局面。受益候補は王子HD(3861)・日本製紙(3863)だが決算2関門未実施のためカード無し。銘柄検知は言及レーンが担う",
+      "lag_note": "",
+      "beneficiaries": [],
+      "traps": [],
+      "group": "G3-daily"
+    },
+    {
+      "id": "gasoline",
+      "label": "ガソリン（店頭価格）",
+      "queries": [
+        "gen3-gasoline"
+      ],
+      "shortage_type": "price",
+      "actionable": false,
+      "reason": "実測16件。§0で石油元売3社（ENEOS/出光/コスモ）=原油高の在庫評価益で◎判定済みだが、決算2関門の実読が未実施のためカード無し。既存B2B系列（crude-oil/brent）が価格の正本で、本クエリは消費者可視の初動検知＋言及レーンの入力を担う",
+      "lag_note": "",
+      "beneficiaries": [],
+      "traps": [],
+      "group": "G3-energy"
+    },
+    {
+      "id": "kakaku-kaitei",
+      "label": "価格改定（企業の値上げ発表）",
+      "queries": [
+        "gen3-kakaku-kaitei"
+      ],
+      "shortage_type": "broad",
+      "actionable": false,
+      "reason": "実測13件。『どの企業か』は投稿本文に社名が出るため、クエリに銘柄を固定せず言及レーン（1,012社辞書）が本文から直接抽出する。price_set型64社の値上げ浸透を拾う入口",
+      "lag_note": "",
+      "beneficiaries": [],
+      "traps": [],
+      "group": "G3-corporate"
     }
   ],
   "actionable_rule": "subject.actionable = shortage_types[type].actionable かつ beneficiaries が非空。型が対象でも TOP1000内に受益銘柄が居なければ非対象（無理に銘柄を立てない）",
