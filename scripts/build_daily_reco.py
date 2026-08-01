@@ -164,19 +164,23 @@ def build() -> tuple[str, dict]:
     lines.append(f"## 🌟 有力候補（過去関門を全通過した系統の発火・直近{RECENT_BDAYS}営業日）: {len(ranked_codes)}銘柄")
     lines.append("")
     if ranked_codes:
-        lines.append("| 順位 | 銘柄 | 社名 | 有力系統 | 系統数 | 参考EV(凍結in-sample・系統別) | signal_date | 状態 |")
+        lines.append("| 順位 | 銘柄 | 社名 | 有力系統 | 系統数 | 参考EV(凍結v2・nostop・系統別) | signal_date | 状態 |")
         lines.append("|---|---|---|---|---|---|---|---|")
         for rank, code in enumerate(ranked_codes, 1):
             rows = sorted(by_code[code], key=lambda r: r["signal_date"], reverse=True)
             kpis = sorted({r["kpi_name"] for r in rows})
-            # max(EV) の単独表示は winner's curse（小標本の高EVが上に見える）を招くため
-            # 系統別に EV(n) を全列挙する（2026-07-31 敵対クロスレビュー両者一致の是正）
+            # EV estimand v2（§6付記IV凍結・月等ウェイト）の点推定と片側95%下限を系統別に全列挙。
+            # v2未算出の系統は「v2未算出」と明示（旧v1値で埋めない＝欠測の偽装禁止・A2レビュー指摘）
             ev_parts = []
             for k in kpis:
-                ev = frozen_ev(k)
-                n = wl_by_name.get(k, {}).get("in_sample", {}).get("n")
-                if ev is not None:
-                    ev_parts.append(f"{ev * 100:+.2f}%(n={n if n is not None else '?'})")
+                ev2 = wl_by_name.get(k, {}).get("in_sample", {}).get("estimand_v2") or {}
+                if ev2.get("status") == "computed":
+                    ev_parts.append(
+                        f"{ev2['ev_none_v2'] * 100:+.2f}%[下限{ev2['ev_none_ci1s_low'] * 100:+.2f}%]"
+                        f"(n={ev2['n_used_none']})"
+                    )
+                else:
+                    ev_parts.append("v2未算出")
             ev_text = " / ".join(ev_parts) if ev_parts else "—"
             status = "エントリー前" if any(r["status"] == "pending_entry" for r in rows) else "保有中(ペーパー)"
             sig = max(r["signal_date"] for r in rows)
@@ -191,7 +195,9 @@ def build() -> tuple[str, dict]:
         )
         lines.append("")
         lines.append(
-            "⚠️ EVは**点推定のみ・CI未付与**（小さいnほど不確か。例: n=73のEVはn=2460より大きく外れうる）。"
+            "⚠️ EVは estimand v2（月等ウェイト・§6付記IV凍結・catalog正本）。[下限]=片側95%下限で、"
+            "**現状は最良系統でも下限が0を下回る**＝in-sampleの証拠はまだ弱いという正直な表示。"
+            "順位は従来どおり①系統数②v1凍結EV（v2未算出系統の欠測バイアスを避けるため順位規則は不変・表示のみv2）。"
             "同一銘柄の複数系統は同一の決算開示に由来しうるため、系統数は独立な証拠の数ではない。"
         )
     else:
