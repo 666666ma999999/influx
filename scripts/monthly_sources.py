@@ -60,9 +60,13 @@ def parse_jmtba(txt: str) -> dict | None:
     d = re.search(r"(20\d{2})年(\d{1,2})月分", txt)
     if not d:
         return None
+    # 表ヘッダ「… 前月比 前年同月比 …」以降にスコープする（PDF全体の先頭3数値行に
+    # 依存すると、前段に同形式の行が増えたとき誤採取しうる・Codex S-6）
+    hdr = re.search(r"前月比\s+前年同月比", txt)
+    scope = txt[hdr.start():] if hdr else txt
     rows = re.findall(
         r"^(?:うち内需|うち外需)?\s*([0-9][0-9,]{3,})\s+([0-9]+\.[0-9])\s+([0-9]+\.[0-9])\s+"
-        r"([0-9][0-9,]{3,})\s+([0-9]+\.[0-9])\s*$", txt, re.M)
+        r"([0-9][0-9,]{3,})\s+([0-9]+\.[0-9])\s*$", scope, re.M)
     if len(rows) < 3:
         return None
     total, naiju, gaiju = (_num(r[0]) for r in rows[:3])
@@ -95,13 +99,19 @@ def parse_seaj(txt: str) -> dict | None:
         return None
 
     def pct(label: str) -> float | None:
-        m = re.search(label + r"\s*([0-9]+(?:\.[0-9]+)?)\s*[%％]\s*(増|減)", txt)
+        m = re.search(label + r"[\s　]*[＋+]?\s*([0-9]+(?:\.[0-9]+)?)\s*[%％]\s*(増|減)", txt)
         if not m:
             return None
         return round(float(m.group(1)) * (1 if m.group(2) == "増" else -1), 2)
 
+    yoy = pct("前年同月比")
+    if yoy is None:
+        # SEAJ の発火経路は前年同月比だけ（前月比は無効化済み）。表記変更で yoy が取れない
+        # まま status=ok を返すと系列が**黙って永久沈黙**するため、fail-closed で parse_fail
+        # に倒して要確認リストに出す（Codex S-7）
+        return None
     return {"value": _num(d.group(3)), "day_pct": None, "weekly_pct": None,
-            "monthly_pct": pct("前月比"), "yoy_pct": pct("前年同月比"),
+            "monthly_pct": pct("前月比"), "yoy_pct": yoy,
             "src_date": f"{d.group(1)}-{int(d.group(2)):02d}", "layout": "seaj_pdf_v1"}
 
 
@@ -216,9 +226,12 @@ def parse_tamago(html: str) -> dict | None:
     形式。各行が <th>N月</th> + 年数ぶんの <td>。未到来月は td が空。
     """
     i = html.find('id="tokyo"')
-    if i >= 0:
-        end = html.find('id="osaka"', i)
-        html = html[i:end if end > 0 else len(html)]
+    if i < 0:
+        # 東京アンカーが無いまま続行すると4都市の表を同じ年月キーへ流し込み、
+        # HTML上で後にある都市の値が東京値を静かに上書きする（Codex C-2）。即 fail-closed
+        return None
+    end = html.find('id="osaka"', i)
+    html = html[i:end if end > 0 else len(html)]
     years = [int(y) for y in re.findall(
         r"<th[^>]*>\s*(20\d{2})\s*(?:<span[^>]*>年</span>|年)?\s*</th>", html)]
     if not years:
@@ -259,31 +272,54 @@ _MAFF_LIST = "https://www.maff.go.jp/j/seisan/keikaku/soukatu/aitaikakaku.html"
 def parse_rice(csv_text: str) -> dict | None:
     """相対取引価格CSVから全銘柄平均価格（円/60kg）とMoM/YoYを採る。
 
-    ヘッダ（2026-08-02 実測）: 「8年5月_価格（7年産米）」等＝令和表記。列は
-    [産地, 銘柄, 当月価格, 当月数量, 年産平均, 前年産平均, 対前年比, 前月価格, 対前月比,
-     前年同月価格, 対前年比, ...]。値の行は「全銘柄平均価格、合計数量」。比は指数（99%=−1%）。
+    ヘッダ（2026-08-02 実測）: 「8年5月_価格（7年産米）」等＝令和表記。値の行は
+    「全銘柄平均価格、合計数量」。比は指数（99%=−1%）。
+    列は**ヘッダ名で解決する**（固定位置 r[2]/r[8]/r[10] は列の挿入・並べ替えで別の数値を
+    status=ok のまま採る静かな汚染経路になる・Codex C-1）。月列「<令和y>年<m>月_価格」を
+    全部拾い、最大＝当月(value)・当月-1ヶ月＝前月・前年同月＝前年と解決し、比率は各価格列の
+    **直後セルのヘッダ名**（対前月比/対前年比）を確認できた時だけ採る（確認できなければ
+    None のまま＝発火しない）。
     """
     rows = list(csv.reader(io.StringIO(csv_text.lstrip("﻿"))))
     if not rows:
         return None
-    d = re.search(r"(\d{1,2})年(\d{1,2})月_価格", rows[0][2] if len(rows[0]) > 2 else "")
-    if not d:
+    hdr = rows[0]
+    month_cols: dict[tuple[int, int], int] = {}
+    for i, h in enumerate(hdr):
+        m = re.match(r"(\d{1,2})年(\d{1,2})月_価格", h)
+        if m:
+            month_cols.setdefault((int(m.group(1)), int(m.group(2))), i)
+    if not month_cols:
         return None
-    year = 2018 + int(d.group(1))  # 令和y年 → 西暦
-    src = f"{year}-{int(d.group(2)):02d}"
-    for r in rows:
-        if r and r[0].startswith("全銘柄平均"):
-            try:
-                value = _num(r[2])
-                mom = _num(r[8].rstrip("%％")) - 100 if len(r) > 8 and r[8] else None
-                yoy = _num(r[10].rstrip("%％")) - 100 if len(r) > 10 and r[10] else None
-            except (ValueError, IndexError):
-                return None
-            return {"value": value, "day_pct": None, "weekly_pct": None,
-                    "monthly_pct": round(mom, 2) if mom is not None else None,
-                    "yoy_pct": round(yoy, 2) if yoy is not None else None,
-                    "src_date": src, "layout": "rice_csv_v1"}
-    return None
+    cur = max(month_cols)  # (令和y, m) のタプル比較で最新月
+    y, mth = cur
+    prev_m = (y, mth - 1) if mth > 1 else (y - 1, 12)
+    prev_y = (y - 1, mth)
+    vrow = next((r for r in rows if r and r[0].startswith("全銘柄平均")), None)
+    if not vrow:
+        return None
+
+    def cell(i: int | None) -> str:
+        return vrow[i] if i is not None and i < len(vrow) else ""
+
+    def pct_after(key: tuple[int, int], label: str) -> float | None:
+        i = month_cols.get(key)
+        if i is None or i + 1 >= len(hdr) or not hdr[i + 1].startswith(label):
+            return None
+        c = cell(i + 1)
+        try:
+            return round(_num(c.rstrip("%％")) - 100, 2) if c else None
+        except ValueError:
+            return None
+
+    try:
+        value = _num(cell(month_cols[cur]))
+    except ValueError:
+        return None
+    return {"value": value, "day_pct": None, "weekly_pct": None,
+            "monthly_pct": pct_after(prev_m, "対前月比"),
+            "yoy_pct": pct_after(prev_y, "対前年比"),
+            "src_date": f"{2018 + y}-{mth:02d}", "layout": "rice_csv_v1"}
 
 
 def fetch_rice() -> dict | None:
@@ -384,12 +420,18 @@ def _selftest() -> int:  # noqa: C901
     chk("miki 賃料/▲=マイナス/空室率", bool(mi) and mi["value"] == 22993.0
         and abs(mi["monthly_pct"] - (-0.64)) < 0.01 and mi.get("vacancy_pct") == 1.99)
 
-    ta = parse_tamago("<tr><th>年</th><th>2025年</th><th>2026年</th></tr>"
-                      "<tr><th>6月</th><td>240</td><td>290</td></tr>"
-                      "<tr><th>7月</th><td>250</td><td>303</td></tr>"
-                      "<tr><th>8月</th><td>260</td><td></td></tr>")
-    chk("tamago 最新月/MoM/YoY", bool(ta) and ta["value"] == 303.0 and ta["src_date"] == "2026-07"
+    tokyo_tbl = ('<div id="tokyo"><tr><th>2025<span>年</span></th><th>2026<span>年</span></th></tr>'
+                 "<tr><th>6月</th><td>240</td><td>290</td></tr>"
+                 "<tr><th>7月</th><td>250</td><td>303</td></tr>"
+                 "<tr><th>8月</th><td>260</td><td></td></tr></div>"
+                 '<div id="osaka"><tr><th>2026<span>年</span></th></tr>'
+                 "<tr><th>7月</th><td>999</td></tr></div>")
+    ta = parse_tamago(tokyo_tbl)
+    chk("tamago 最新月/MoM/YoY・大阪表を読まない", bool(ta) and ta["value"] == 303.0
+        and ta["src_date"] == "2026-07"
         and abs(ta["monthly_pct"] - 4.48) < 0.01 and abs(ta["yoy_pct"] - 21.2) < 0.01)
+    chk("tamago 東京アンカー無し→None（他都市値の上書き防止）",
+        parse_tamago("<table><th>2026年</th><tr><th>7月</th><td>999</td></tr></table>") is None)
 
     rice_csv = ("産地,品種銘柄,8年5月_価格（7年産米）,8年5月_数量,年産平均,前年産平均,対前年比,"
                 "8年4月_価格,対前月比,7年5月_価格,対前年比\n"
@@ -398,6 +440,21 @@ def _selftest() -> int:  # noqa: C901
     ri = parse_rice(rice_csv)
     chk("rice 全銘柄平均/令和→西暦/比→%", bool(ri) and ri["value"] == 33164.0
         and ri["src_date"] == "2026-05" and ri["monthly_pct"] == -1.0 and ri["yoy_pct"] == 20.0)
+    # 列挿入への頑健性（ヘッダ名で解決・Codex C-1）: 先頭側に列を1本挿しても正しい値を採る
+    rice_csv2 = ("産地,品種銘柄,備考,8年5月_価格（7年産米）,8年5月_数量,年産平均,前年産平均,対前年比,"
+                 "8年4月_価格,対前月比,7年5月_価格,対前年比\n"
+                 '全銘柄平均価格、合計数量,,メモ,"33,164","53,817","35,812","25,179",142%,'
+                 '"33,447",99%,"27,649",120%\n')
+    ri = parse_rice(rice_csv2)
+    chk("rice 列挿入でも正しい列を解決", bool(ri) and ri["value"] == 33164.0
+        and ri["monthly_pct"] == -1.0 and ri["yoy_pct"] == 20.0)
+    # 比率列のヘッダ名が期待と違えば比を採らない（誤発火しない・値の記録は続く）
+    ri = parse_rice(rice_csv.replace("対前月比", "対前月差"))
+    chk("rice 比ヘッダ不一致→比None", bool(ri) and ri["value"] == 33164.0
+        and ri["monthly_pct"] is None)
+    # SEAJ: 唯一の発火経路（前年同月比）が取れない文面は fail-closed（Codex S-7）
+    chk("seaj 前年同月比欠落→None",
+        parse_seaj("2026 年 6 月度の販売高は 513,610 百万円 前月比 2.4％減 だった。") is None)
 
     print(f"[selftest] {'FAIL: ' + ', '.join(fails) if fails else 'all ok'}")
     return 1 if fails else 0

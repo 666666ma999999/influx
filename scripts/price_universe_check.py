@@ -537,6 +537,10 @@ def main() -> int:
                 print(f"[parse_fail] {s['id']}")
                 continue
             prev = [r for r in history.get(s["id"], []) if r.get("status") == "ok"]
+            # 台帳の**追記順**でなく日付順で比較する。種まき（seed-official）は過去日付を
+            # 後から追記するため、追記順のままだと prev[-1] が古い種になり、50%超の差で
+            # 現在値が suspect_jump → 以後 ok 行が増えず永久 suspect のループに入る（Codex S-11）
+            prev.sort(key=lambda r: (r.get("date", ""), r.get("run_at", "")))
             # 比率ベースの跳び検知はゼロ近傍を跨ぐスプレッドでは常時発動するため絶対値で見る
             if s["type"] == "spread":
                 suspect = bool(prev and prev[-1].get("value") is not None and
@@ -667,15 +671,24 @@ def main() -> int:
                 # 月次系列（米・卵など）は週次実行で同じ公表月の行が繰り返し貯まるため、
                 # src_date で 1公表月=1点 に間引いてから判定する。間引かないと
                 # 「直近4記録単調下落」が同値の並びで永久に成立せず、レーンが沈黙する
-                # （2026-08-02 波2で月次ピークアウト系列を新設した際の適合）
+                # （2026-08-02 波2で月次ピークアウト系列を新設した際の適合）。
+                # さらに判定は「新しい公表月を初めて見た週」だけ行う（Codex C-3/C-4/C-5）:
+                #   ①既出の公表月＝成立状態が続くと毎週再発火する ②サイトが旧月へ巻き戻った
+                #   場合＝旧月値と未来側履歴が混ざった判定になる ③src_date無し＝契約崩れ、
+                #   のいずれも判定しない（fail-closed。値の記録は続く）
+                judge = True
                 if s.get("cadence") == "monthly":
+                    sd = row.get("src_date")
+                    seen_months_po = {r.get("src_date") for r in past if r.get("src_date")}
                     by_src: dict[str, dict] = {}
                     for r in hist_ok:
                         if r.get("src_date"):
                             by_src[r["src_date"]] = r
                     hist_ok = sorted(by_src.values(), key=lambda r: r["src_date"])
                     past = hist_ok[:-1]
-                if len(past) >= 8:   # 判定には過去8本（週次≒2か月/月次=8公表月）が必要。当日分は数えない
+                    if not sd or sd in seen_months_po or sd != max(by_src):
+                        judge = False
+                if judge and len(past) >= 8:   # 過去8本（週次≒2か月/月次=8公表月）必要。当日分は数えない
                     peak = max(r["value"] for r in hist_ok)
                     drop = (row["value"] / peak - 1) * 100
                     last5 = [r["value"] for r in hist_ok[-5:]]
