@@ -43,8 +43,8 @@ bash scripts/xprice_watch_run.sh   # 収集36クエリ→zスコア判定→検�
 python3 scripts/x_shortage_map.py  # 対応表の自己検証（関門B・符号・網羅。NGなら銘柄付与は自動停止）
 # 品薄の7分類と「なぜ転売プレ値では銘柄を出さないか」は docs/price-watch-universe.md §16a が正本
 
-# B2B価格チェッカー（33系列・launchd com.influx.price-universe 毎週月8:30。手動は runner 経由）
-bash scripts/price_universe_run.sh   # Docker待機→33系列取得→発火/取得低下をMac通知
+# B2B価格チェッカー（42系列・launchd com.influx.price-universe 毎週月8:30。手動は runner 経由）
+bash scripts/price_universe_run.sh   # Docker待機→42系列取得→発火/取得低下をMac通知
 docker compose run --rm xstock python scripts/price_universe_check.py   # 素の実行（通知なし）
 docker exec -e DISPLAY=:99 xstock-vnc python3 /app/scripts/price_watch_discover.py  # 新商品名の候補キュー生成
 docker compose run --rm xstock python scripts/price_watch_forward.py --eval          # 発火の前向き記録を評価（8/15週後）

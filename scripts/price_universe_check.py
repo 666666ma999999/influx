@@ -106,6 +106,71 @@ def parse_tanaka(html: str) -> dict | None:
             "weekly_pct": None, "monthly_pct": None, "src_date": src_date, "layout": "tanaka"}
 
 
+def parse_uss(html: str) -> dict | None:
+    """USS公式IRの月次データ表（HTML直）から最新完全月の成約車両単価（千円/台）を採る。
+
+    表は1行=1ヶ月・14セル固定（月／開催回数 当期・前期／出品 実績・前年・前年比／
+    成約 実績・前年・前年比／成約率 実績・前年／単価 実績・前年・前年比）を実測（2026-08-02）。
+    未発表月は空セル14個の行として存在する。
+    罠: 月名ヘッダ行が全角数字「５月」で、正規表現 \\d は全角にもマッチするため
+    月名は ASCII 数字に限定し、さらに単価実績セルが数値の行だけを完全月として扱う。
+    前月比は開催構成（GW・決算期）の季節性で±7%動くため判定に使わず（config 側で無効化）、
+    判定は表が直接持つ前年同月比（yoy_pct）を使う。会計年度は「YYYY年3月期」表記から
+    4〜12月=前年・1〜3月=当年に展開して src_date（YYYY-MM）にする。
+    """
+    fy = re.search(r"(\d{4})年.?3月期", html)
+    if not fy:
+        return None
+    fy_end = int(fy.group(1))
+    rows = []
+    for tr in re.finditer(r"<tr[^>]*>(.*?)</tr>", html, re.S):
+        cells = [" ".join(strip_tags(c).split()) for c in
+                 re.findall(r"<t[dh][^>]*>(.*?)</t[dh]>", tr.group(1), re.S)]
+        if len(cells) != 14 or not re.match(r"^[0-9]{1,2}月$", cells[0]):
+            continue
+        nums = []
+        for c in cells[1:]:
+            m = re.search(r"([0-9][0-9,]*(?:\.[0-9]+)?)", c.replace("*", ""))
+            nums.append(float(m.group(1).replace(",", "")) if m else None)
+        # nums: [開催当期,開催前期,出品実績,出品前年,出品比,成約実績,成約前年,成約比,
+        #        成約率実績,成約率前年,単価実績,単価前年,単価前年比]
+        if nums[10] is not None:
+            month = int(cells[0].rstrip("月"))
+            year = fy_end - 1 if month >= 4 else fy_end
+            rows.append({"ym": f"{year}-{month:02d}", "tanka": nums[10], "yoy_raw": nums[12]})
+    if not rows:
+        return None
+    cur = rows[-1]
+    mom = (cur["tanka"] / rows[-2]["tanka"] - 1) * 100 if len(rows) >= 2 else None
+    yoy = cur["yoy_raw"] - 100 if cur["yoy_raw"] is not None else None
+    return {"value": cur["tanka"], "day_pct": None, "weekly_pct": None,
+            "monthly_pct": round(mom, 2) if mom is not None else None,
+            "yoy_pct": round(yoy, 2) if yoy is not None else None,
+            "src_date": cur["ym"], "layout": "uss_monthly_v1"}
+
+
+def parse_yuyutei(html: str) -> dict | None:
+    """遊々亭のポケカSAR販売検索（静的HTML）から販売価格の中央値（円）を採る。
+
+    card-product ブロック1件につき <strong>N,NNN 円</strong> が1つ（2026-08-02 実測 261/261件・
+    1ページ完結）。個票でなく中央値を系列にするのは、新弾追加・売り切れで母集団が動いても
+    代表値が壊れないようにするため。件数はレイアウト変更・検索仕様変更の検知用に n_items で
+    毎回記録し、50件未満は市場縮小とパース破損を区別できないため値を返さない（parse_fail）。
+    """
+    prices = []
+    for block in html.split("card-product")[1:]:
+        m = re.search(r"<strong[^>]*>\s*([0-9][0-9,]*)\s*円", block)
+        if m:
+            prices.append(int(m.group(1).replace(",", "")))
+    if len(prices) < 50:
+        return None
+    prices.sort()
+    n = len(prices)
+    med = float(prices[n // 2]) if n % 2 else (prices[n // 2 - 1] + prices[n // 2]) / 2
+    return {"value": med, "day_pct": None, "weekly_pct": None, "monthly_pct": None,
+            "n_items": n, "src_date": "", "layout": "yuyutei_sar_v1"}
+
+
 def parse_scfi(payload: dict) -> dict | None:
     """SCFI総合指数（en.sse.net.cn の週次JSON API・2026-07-28 実測スキーマ）。
 
@@ -440,6 +505,11 @@ def main() -> int:
                 parsed = tokyosteel_scrap.fetch_tokyosteel_scrap(today)
             elif s["type"] == "tanaka":
                 parsed = parse_tanaka(fetch("https://gold.tanaka.co.jp/commodity/souba/"))
+            elif s["type"] == "uss":
+                parsed = parse_uss(fetch("https://www.ussnet.co.jp/ir/library/monthly/index.html"))
+            elif s["type"] == "yuyutei":
+                parsed = parse_yuyutei(
+                    fetch("https://yuyu-tei.jp/sell/poc/s/search?search_word=&rare=SAR"))
             else:
                 # 未知の type を既存パーサへ流すと別サイトの値を静かに記録する。
                 # 型を増やしたら分岐も足す（fail-fast・Codex軽微指摘）
@@ -531,6 +601,13 @@ def main() -> int:
                 if parsed.get("src_date") not in prev_months and mo is not None \
                         and mo >= th.get("monthly_pct", 1.0):
                     trigger.append(f"前月比 {mo:+.2f}%({parsed['src_date']}公表)")
+                # USS等、前月比が季節性で使えない月次系列は表側の前年同月比で判定する
+                # （既定999=無効。系列側 alert.yoy_pct の明示があるときだけ働く。
+                # 同じ公表月で毎週鳴らない条件は前月比と同一）
+                yy = parsed.get("yoy_pct")
+                if parsed.get("src_date") not in prev_months and yy is not None \
+                        and yy >= th.get("yoy_pct", 999.0):
+                    trigger.append(f"前年同月比 {yy:+.2f}%({parsed['src_date']}分)")
             else:
                 # weekly はサイト側の値なら自前履歴と独立なので suspect_jump でも判定する（A-3）。
                 # 自前算出（weekly_src=self）は履歴依存なので four_week と同じく ok の時のみ
