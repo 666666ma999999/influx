@@ -550,7 +550,8 @@ def main() -> int:
             #   条件 = 履歴高値から peakout_drop_pct(既定15%)以上下 かつ 直近4記録が単調下落。
             # 履歴が8本（週次≒2か月）貯まるまでは判定しない（高値の基準が浅すぎるため）。
             if s.get("peakout") and row["status"] == "ok":
-                past = [r for r in prev if r.get("value")]
+                past = sorted([r for r in prev if r.get("value")],
+                              key=lambda r: (r.get("date", ""), r.get("run_at", "")))
                 hist_ok = past + [row]
                 if len(past) >= 8:   # 判定には過去8本（週次≒2か月）が必要。当日分は数えない
                     peak = max(r["value"] for r in hist_ok)
