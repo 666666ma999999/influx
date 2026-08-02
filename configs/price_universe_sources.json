@@ -1078,6 +1078,272 @@
           "reason": "利益の大半が米国電炉・国内建値と乖離"
         }
       ]
+    },
+    {
+      "id": "wheat",
+      "label": "Wheat",
+      "type": "te",
+      "slug": "wheat",
+      "jp": "小麦",
+      "driver": "小麦（食品の原材料・コスト側）",
+      "peakout": true,
+      "note": "食品株の『原材料ピークアウト』検知専用（2026-08-02 新設）。上昇アラートは出さない（食品にとって上昇はコスト増・受益者はTOP1000に不在）。ピークアウト=履歴高値から-15%以上かつ4週連続下落で、cost_relief_for の銘柄に原価圧力反転を通知。正本= docs/price-watch-universe.md §16j",
+      "alert": {
+        "weekly_pct": 999.0,
+        "four_week_pct": 999.0
+      },
+      "beneficiaries": [],
+      "cost_relief_for": [
+        {
+          "code": "2001",
+          "name": "ニップン"
+        },
+        {
+          "code": "2002",
+          "name": "日清製粉グループ本社"
+        },
+        {
+          "code": "2212",
+          "name": "山崎製パン"
+        },
+        {
+          "code": "2801",
+          "name": "キッコーマン"
+        },
+        {
+          "code": "2875",
+          "name": "東洋水産"
+        },
+        {
+          "code": "2897",
+          "name": "日清食品ホールディングス"
+        }
+      ]
+    },
+    {
+      "id": "sugar",
+      "label": "Sugar",
+      "type": "te",
+      "slug": "sugar",
+      "jp": "砂糖",
+      "driver": "砂糖（食品の原材料・コスト側）",
+      "peakout": true,
+      "note": "食品株の『原材料ピークアウト』検知専用（2026-08-02 新設）。上昇アラートは出さない（食品にとって上昇はコスト増・受益者はTOP1000に不在）。ピークアウト=履歴高値から-15%以上かつ4週連続下落で、cost_relief_for の銘柄に原価圧力反転を通知。正本= docs/price-watch-universe.md §16j",
+      "alert": {
+        "weekly_pct": 999.0,
+        "four_week_pct": 999.0
+      },
+      "beneficiaries": [],
+      "cost_relief_for": [
+        {
+          "code": "2109",
+          "name": "ＤＭ三井製糖"
+        },
+        {
+          "code": "2206",
+          "name": "江崎グリコ"
+        },
+        {
+          "code": "2212",
+          "name": "山崎製パン"
+        },
+        {
+          "code": "2269",
+          "name": "明治ホールディングス"
+        },
+        {
+          "code": "2579",
+          "name": "コカ・コーラ　ボトラーズジャパンホールディングス"
+        },
+        {
+          "code": "2587",
+          "name": "サントリービバレッジ＆フード"
+        },
+        {
+          "code": "2802",
+          "name": "味の素"
+        }
+      ]
+    },
+    {
+      "id": "palm-oil",
+      "label": "Palm Oil",
+      "type": "te",
+      "slug": "palm-oil",
+      "jp": "パーム油",
+      "driver": "パーム油（食品の原材料・コスト側）",
+      "peakout": true,
+      "note": "食品株の『原材料ピークアウト』検知専用（2026-08-02 新設）。上昇アラートは出さない（食品にとって上昇はコスト増・受益者はTOP1000に不在）。ピークアウト=履歴高値から-15%以上かつ4週連続下落で、cost_relief_for の銘柄に原価圧力反転を通知。正本= docs/price-watch-universe.md §16j",
+      "alert": {
+        "weekly_pct": 999.0,
+        "four_week_pct": 999.0
+      },
+      "beneficiaries": [],
+      "cost_relief_for": [
+        {
+          "code": "2001",
+          "name": "ニップン"
+        },
+        {
+          "code": "2201",
+          "name": "森永製菓"
+        },
+        {
+          "code": "2212",
+          "name": "山崎製パン"
+        },
+        {
+          "code": "2269",
+          "name": "明治ホールディングス"
+        },
+        {
+          "code": "2607",
+          "name": "不二製油"
+        },
+        {
+          "code": "2802",
+          "name": "味の素"
+        },
+        {
+          "code": "2810",
+          "name": "ハウス食品グループ本社"
+        },
+        {
+          "code": "2871",
+          "name": "ニチレイ"
+        },
+        {
+          "code": "2875",
+          "name": "東洋水産"
+        },
+        {
+          "code": "2897",
+          "name": "日清食品ホールディングス"
+        }
+      ]
+    },
+    {
+      "id": "coffee",
+      "label": "Coffee",
+      "type": "te",
+      "slug": "coffee",
+      "jp": "コーヒー豆",
+      "driver": "コーヒー豆（食品の原材料・コスト側）",
+      "peakout": true,
+      "note": "食品株の『原材料ピークアウト』検知専用（2026-08-02 新設）。上昇アラートは出さない（食品にとって上昇はコスト増・受益者はTOP1000に不在）。ピークアウト=履歴高値から-15%以上かつ4週連続下落で、cost_relief_for の銘柄に原価圧力反転を通知。正本= docs/price-watch-universe.md §16j",
+      "alert": {
+        "weekly_pct": 999.0,
+        "four_week_pct": 999.0
+      },
+      "beneficiaries": [],
+      "cost_relief_for": [
+        {
+          "code": "2502",
+          "name": "アサヒグループホールディングス"
+        },
+        {
+          "code": "2503",
+          "name": "キリンホールディングス"
+        },
+        {
+          "code": "2587",
+          "name": "サントリービバレッジ＆フード"
+        },
+        {
+          "code": "2593",
+          "name": "伊藤園"
+        },
+        {
+          "code": "2802",
+          "name": "味の素"
+        }
+      ]
+    },
+    {
+      "id": "soybeans",
+      "label": "Soybeans",
+      "type": "te",
+      "slug": "soybeans",
+      "jp": "大豆",
+      "driver": "大豆（食品の原材料・コスト側）",
+      "peakout": true,
+      "note": "食品株の『原材料ピークアウト』検知専用（2026-08-02 新設）。上昇アラートは出さない（食品にとって上昇はコスト増・受益者はTOP1000に不在）。ピークアウト=履歴高値から-15%以上かつ4週連続下落で、cost_relief_for の銘柄に原価圧力反転を通知。正本= docs/price-watch-universe.md §16j",
+      "alert": {
+        "weekly_pct": 999.0,
+        "four_week_pct": 999.0
+      },
+      "beneficiaries": [],
+      "cost_relief_for": [
+        {
+          "code": "2503",
+          "name": "キリンホールディングス"
+        },
+        {
+          "code": "2607",
+          "name": "不二製油"
+        },
+        {
+          "code": "2801",
+          "name": "キッコーマン"
+        },
+        {
+          "code": "2802",
+          "name": "味の素"
+        },
+        {
+          "code": "2810",
+          "name": "ハウス食品グループ本社"
+        },
+        {
+          "code": "2897",
+          "name": "日清食品ホールディングス"
+        }
+      ]
+    },
+    {
+      "id": "milk",
+      "label": "Milk",
+      "type": "te",
+      "slug": "milk",
+      "jp": "乳価(米先物)",
+      "driver": "乳価(米先物)（食品の原材料・コスト側）",
+      "peakout": true,
+      "note": "食品株の『原材料ピークアウト』検知専用（2026-08-02 新設）。上昇アラートは出さない（食品にとって上昇はコスト増・受益者はTOP1000に不在）。ピークアウト=履歴高値から-15%以上かつ4週連続下落で、cost_relief_for の銘柄に原価圧力反転を通知。正本= docs/price-watch-universe.md §16j",
+      "alert": {
+        "weekly_pct": 999.0,
+        "four_week_pct": 999.0
+      },
+      "beneficiaries": [],
+      "cost_relief_for": [
+        {
+          "code": "2201",
+          "name": "森永製菓"
+        },
+        {
+          "code": "2206",
+          "name": "江崎グリコ"
+        },
+        {
+          "code": "2212",
+          "name": "山崎製パン"
+        },
+        {
+          "code": "2264",
+          "name": "森永乳業"
+        },
+        {
+          "code": "2269",
+          "name": "明治ホールディングス"
+        },
+        {
+          "code": "2270",
+          "name": "雪印メグミルク"
+        },
+        {
+          "code": "2802",
+          "name": "味の素"
+        }
+      ]
     }
   ],
   "_monthly_lane": "月次レーン(cadence=monthly・2026-07-28新設): 月次統計は刻みが0.1〜0.5%/月で週次閾値では永久に鳴らないため前月比を専用閾値で見る。同じ公表月では再発火しない。**銘柄を鳴らさない環境指標レーン**=マクロ集計値を個社に紐付けるのは帰属プロトコル§0bの1ホップ制限に反するため beneficiaries は空。用途は price_set型64社(加工食品24/SIer19等)の追い風・向かい風の背景判断。"

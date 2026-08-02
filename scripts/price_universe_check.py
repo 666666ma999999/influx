@@ -542,6 +542,30 @@ def main() -> int:
                     trigger.append(f"4週累積 {four_w:+.1f}%")
             row["four_week_pct"] = round(four_w, 2) if four_w is not None else None
             row["four_week_base_date"] = cands[-1].get("date") if cands else None
+
+            # 原材料ピークアウト検知（2026-08-02 新設・食品の「原価圧力の反転」レーン）。
+            # 食品株は値上げでは上がらず、原材料が落ち着いた後に値上げ効果が残った期に上がる
+            # （実測: 森永乳業 単価+185億 vs 原料△92億=正味+93億の期が増益・§16f）。
+            # そこでコスト側系列（peakout=true）は上昇でなく「山を越えた」ことを検知する:
+            #   条件 = 履歴高値から peakout_drop_pct(既定15%)以上下 かつ 直近4記録が単調下落。
+            # 履歴が8本（週次≒2か月）貯まるまでは判定しない（高値の基準が浅すぎるため）。
+            if s.get("peakout") and row["status"] == "ok":
+                past = [r for r in prev if r.get("value")]
+                hist_ok = past + [row]
+                if len(past) >= 8:   # 判定には過去8本（週次≒2か月）が必要。当日分は数えない
+                    peak = max(r["value"] for r in hist_ok)
+                    drop = (row["value"] / peak - 1) * 100
+                    last5 = [r["value"] for r in hist_ok[-5:]]
+                    falling4 = all(last5[i] > last5[i + 1] for i in range(len(last5) - 1))
+                    row["peak_value"], row["drop_from_peak_pct"] = peak, round(drop, 1)
+                    if drop <= -th.get("peakout_drop_pct", 15.0) and falling4:
+                        relief = "/".join(f"{c['code']}{c['name'][:6]}"
+                                          for c in s.get("cost_relief_for", [])[:8])
+                        trigger.append(f"PEAKOUT 高値比{drop:+.1f}%・4週連続下落")
+                        row["peakout_fired"] = True
+                        print(f"  📉→📈 原材料ピークアウト: {s['jp']} 高値比{drop:+.1f}% "
+                              f"→ 原価圧力の反転候補: {relief}")
+
             rows.append(row)
             if trigger:
                 alerts.append((s, row, trigger))
@@ -561,14 +585,24 @@ def main() -> int:
     print(f"\n[done] {ok}/{len(rows)} ok → {LEDGER_PATH}")
     if bad:
         print(f"⚠️ 要確認 {len(bad)} 件: " + ", ".join(f"{r['id']}({r['status']})" for r in bad))
-    if alerts:
-        print(f"\n🚨 閾値超え {len(alerts)} 系列:")
-        for s, row, trigger in alerts:
+    # ピークアウト発火は「値上がり受益」の前向き検定（n>=100・事前登録）に混ぜない。
+    # レーンが違う発火を同じ台帳に入れると検定の分母が汚れる（言及レーンと同じ裁定 2026-07-31）
+    rise_alerts = [(s, r, t) for s, r, t in alerts if not r.get("peakout_fired")]
+    peak_alerts = [(s, r, t) for s, r, t in alerts if r.get("peakout_fired")]
+    if peak_alerts:
+        print(f"\n📉→📈 原材料ピークアウト {len(peak_alerts)} 系列（原価圧力の反転・食品レーン）:")
+        for s, row, trigger in peak_alerts:
+            relief = "/".join(f"{c['code']}{c['name'][:6]}" for c in s.get("cost_relief_for", []))
+            print(f"  {s['jp']}（{'/'.join(trigger)}）→ 反転候補: {relief or 'なし'}")
+            print("    ※次の四半期ブリッジ（scripts/food_bridge_fetch.py）で正味プラス転換を確認してから判断")
+    if rise_alerts:
+        print(f"\n🚨 閾値超え {len(rise_alerts)} 系列:")
+        for s, row, trigger in rise_alerts:
             print(f"  {s['jp']}（{'/'.join(trigger)}）→ 受益: {beneficiaries_display(s, today)}")
         # 前向き記録（レビューC-1対応: 発火を将来検定できる形で残す）
         try:
             import price_watch_forward as fwd
-            fwd.record_firings(alerts, today)
+            fwd.record_firings(rise_alerts, today)
         except Exception as exc:  # noqa: BLE001  記録失敗で本処理を落とさない
             print(f"[forward] WARN: 前向き記録に失敗: {str(exc)[:100]}")
     else:
