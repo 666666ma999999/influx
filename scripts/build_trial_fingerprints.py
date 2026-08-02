@@ -573,6 +573,19 @@ CURATED_ENTRIES: list[dict[str, Any]] = [
     # --- source=avoidance: 回避ルール・教訓（複数試行の結果から確定した「触るな」知見） ---
     {
         "source": "avoidance",
+        "name": "自社株買い決議は+20%逆方向",
+        "family": "自社株買い",
+        "entry_condition": "TDnet表題マッチ「自己株式取得に係る事項の決定/市場買付/立会外買付」の開示イベント買い（サイズ不問）",
+        "universe": "TOP500",
+        "period_tested": "2016-07〜2026-07（記述測定・事前登録なし）",
+        "verdict": "avoid",
+        "keywords": _keywords_for("自社株買い", ["自己株式", "buyback", "ToSTNeT", "下支え"]),
+        "ref": "catalog:128（2026-08-02 記述測定: TOP500 n=1,148・+20%到達2.5%=ベース9.5%の約1/4・"
+        "EV+0.96%は中央値+0.72%の下支え型＝急騰と逆方向。サイズ≥3%条件は本文数値要のため未検証だが"
+        "無条件版1/4から回復見込み薄・output/tdnet/event_profile.md）",
+    },
+    {
+        "source": "avoidance",
         "name": "GC逆指標",
         "family": "MA/GC",
         "entry_condition": "移動平均線クロス／奪回系シグナル全般（ゴールデンクロス25/75日・200日線奪回）の買い",
