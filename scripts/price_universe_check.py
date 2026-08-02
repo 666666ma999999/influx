@@ -122,7 +122,7 @@ def parse_uss(html: str) -> dict | None:
     if not fy:
         return None
     fy_end = int(fy.group(1))
-    rows = []
+    rows: dict[str, dict] = {}  # ym → {tanka, yoy_raw}（重複年月の衝突検知のため辞書）
     for tr in re.finditer(r"<tr[^>]*>(.*?)</tr>", html, re.S):
         cells = [" ".join(strip_tags(c).split()) for c in
                  re.findall(r"<t[dh][^>]*>(.*?)</t[dh]>", tr.group(1), re.S)]
@@ -137,16 +137,25 @@ def parse_uss(html: str) -> dict | None:
         if nums[10] is not None:
             month = int(cells[0].rstrip("月"))
             year = fy_end - 1 if month >= 4 else fy_end
-            rows.append({"ym": f"{year}-{month:02d}", "tanka": nums[10], "yoy_raw": nums[12]})
+            ym = f"{year}-{month:02d}"
+            # 同一年月が異なる値で2回現れる＝ページに過去年度表が併載された等の構造変化
+            # （会計年度regexは先頭1件しか見ないため過去表の月に誤った年を当ててしまう）。
+            # 静かに誤値を採らず parse_fail に倒す（Codex S-3・安全側）
+            if ym in rows and rows[ym]["tanka"] != nums[10]:
+                return None
+            rows[ym] = {"tanka": nums[10], "yoy_raw": nums[12]}
     if not rows:
         return None
-    cur = rows[-1]
-    mom = (cur["tanka"] / rows[-2]["tanka"] - 1) * 100 if len(rows) >= 2 else None
+    cur_ym = max(rows)  # DOM順でなく年月の最大で「最新」を決める（表の並び順に依存しない）
+    cur = rows[cur_ym]
+    y, mth = map(int, cur_ym.split("-"))
+    prev_ym = f"{y - 1}-12" if mth == 1 else f"{y}-{mth - 1:02d}"
+    mom = (cur["tanka"] / rows[prev_ym]["tanka"] - 1) * 100 if prev_ym in rows else None
     yoy = cur["yoy_raw"] - 100 if cur["yoy_raw"] is not None else None
     return {"value": cur["tanka"], "day_pct": None, "weekly_pct": None,
             "monthly_pct": round(mom, 2) if mom is not None else None,
             "yoy_pct": round(yoy, 2) if yoy is not None else None,
-            "src_date": cur["ym"], "layout": "uss_monthly_v1"}
+            "src_date": cur_ym, "layout": "uss_monthly_v1"}
 
 
 def parse_yuyutei(html: str) -> dict | None:
@@ -159,6 +168,10 @@ def parse_yuyutei(html: str) -> dict | None:
     """
     prices = []
     for block in html.split("card-product")[1:]:
+        # 商品詳細への href が無いブロックは、CSS/JS等が偶然 card-product を含んだだけの
+        # 可能性があるため数えない（Codex S-5・非商品ブロックの価格混入防止）
+        if "/sell/poc/card/" not in block:
+            continue
         m = re.search(r"<strong[^>]*>\s*([0-9][0-9,]*)\s*円", block)
         if m:
             prices.append(int(m.group(1).replace(",", "")))
@@ -567,6 +580,15 @@ def main() -> int:
                     four_w_abs = round(parsed["value"] - cands[-1]["value"], 2)
                 else:
                     four_w = (parsed["value"] / cands[-1]["value"] - 1) * 100
+                # 組成ジャンプガード（Codex C-1・遊々亭SAR）: 中央値は「同一カード集合の価格」
+                # ではなく「その時点の検索結果の中央値」なので、比較基準と件数が2%超違う時は
+                # 新弾追加・売り切れ等の母集団変化と価格変動を区別できない。判定から外す
+                # （値と n_items の記録は続ける＝台帳で組成変化そのものは追える）
+                if parsed.get("layout") == "yuyutei_sar_v1" and four_w is not None:
+                    bn = cands[-1].get("n_items")
+                    if not bn or abs(parsed["n_items"] - bn) / bn > 0.02:
+                        four_w = None
+                        row["four_week_note"] = "mix_change"
             # サイト側が週次%を出さない系列（田中貴金属・BDI個別ページ等）は自前履歴から算出する
             # （P0-②・2026-07-28。これが無いと weekly が永久に None で発火経路が4週累積だけになる）。
             # 自前履歴依存なので four_week と同じく status==ok の時のみ判定に使う。
@@ -579,6 +601,11 @@ def main() -> int:
                 if wk_cands:
                     row["weekly_pct"] = round((parsed["value"] / wk_cands[-1]["value"] - 1) * 100, 2)
                     row["weekly_src"] = "self"  # サイト提供値と自前計算値を混同しないための出所印
+                    # 組成ジャンプガード（Codex C-1）: 週次も基準週と件数2%超の差なら判定無効
+                    if parsed.get("layout") == "yuyutei_sar_v1":
+                        bn = wk_cands[-1].get("n_items")
+                        if not bn or abs(parsed["n_items"] - bn) / bn > 0.02:
+                            row["weekly_pct"], row["weekly_src"] = None, "mix_change"
             # 閾値は系列側で上書き可（既定は全系列共通）。電力のように平常時の変動が大きい
             # 系列に一律+5%を当てると常時発火して使い物にならないため（JEPX実測: 週次変化の
             # 平均絶対値13.9%・+5%だと41%の日で発火）。上書き値は series.alert に根拠つきで置く
@@ -596,17 +623,19 @@ def main() -> int:
                 # 月次レーン: 週次の閾値体系（週+5%等）は月次統計の刻み（0.1〜0.5%/月）に
                 # 対して大きすぎて永久に鳴らない。前月比を専用閾値で見る。
                 # かつ**同じ月の値で毎週鳴らない**よう、前回記録と同じ公表月なら判定しない
+                # 月次判定は status==ok の時のみ（suspect_jump＝50%跳びの取得値で発火して
+                # forward台帳を汚染しない。weekly_src=self/4週累積と同じ安全規約・Codex C-2）
                 prev_months = {r.get("src_date") for r in prev if r.get("src_date")}
                 mo = parsed.get("monthly_pct")
-                if parsed.get("src_date") not in prev_months and mo is not None \
-                        and mo >= th.get("monthly_pct", 1.0):
+                if row["status"] == "ok" and parsed.get("src_date") not in prev_months \
+                        and mo is not None and mo >= th.get("monthly_pct", 1.0):
                     trigger.append(f"前月比 {mo:+.2f}%({parsed['src_date']}公表)")
                 # USS等、前月比が季節性で使えない月次系列は表側の前年同月比で判定する
-                # （既定999=無効。系列側 alert.yoy_pct の明示があるときだけ働く。
+                # （系列側 alert.yoy_pct を明示したときだけ働く＝キー存在で判定・Codex NIT-6。
                 # 同じ公表月で毎週鳴らない条件は前月比と同一）
                 yy = parsed.get("yoy_pct")
-                if parsed.get("src_date") not in prev_months and yy is not None \
-                        and yy >= th.get("yoy_pct", 999.0):
+                if row["status"] == "ok" and "yoy_pct" in th and yy is not None \
+                        and parsed.get("src_date") not in prev_months and yy >= th["yoy_pct"]:
                     trigger.append(f"前年同月比 {yy:+.2f}%({parsed['src_date']}分)")
             else:
                 # weekly はサイト側の値なら自前履歴と独立なので suspect_jump でも判定する（A-3）。
@@ -688,5 +717,66 @@ def main() -> int:
     return 0 if ok > 0 else 1
 
 
+def _selftest() -> int:
+    """USS/遊々亭パーサの境界回帰テスト（Codex NIT-7）。ネットワーク不要・fixtures内蔵。
+
+    実行: python scripts/price_universe_check.py --selftest
+    """
+    fails = []
+
+    def chk(name: str, cond: bool) -> None:
+        print(("  ok " if cond else "  NG ") + name)
+        if not cond:
+            fails.append(name)
+
+    def uss_html(month_rows: list, fy: str = "2027") -> str:
+        trs = "".join("<tr>" + "".join(f"<td>{c}</td>" for c in r) + "</tr>"
+                      for r in month_rows)
+        return f"{fy}年3月期 <table>{trs}</table>"
+
+    def mrow(name: str, tanka: str = "", yoy: str = "") -> list:
+        base = [name] + [""] * 13
+        if tanka:
+            base[1:14] = ["79", "80", "348,991", "327,914", "106.4%", "224,073",
+                          "200,476", "111.8%", "64.2%", "61.1%", tanka, "1,065", yoy]
+        return base
+
+    # 1) 通常: 完全月2つ＋未発表空行＋全角月名の14セル数値行（＝除外されるべき）
+    u = parse_uss(uss_html([mrow("4月", "1,221", "114.6%"), mrow("5月", "1,310", "110.6%"),
+                            mrow("6月"), mrow("５月", "9,999", "999.9%")]))
+    chk("uss 最新完全月=5月・全角行除外", bool(u) and u["src_date"] == "2026-05"
+        and u["value"] == 1310.0)
+    chk("uss 前月比自前計算", bool(u) and abs(u["monthly_pct"] - 7.29) < 0.02)
+    chk("uss 前年比=表の値-100", bool(u) and u["yoy_pct"] == 10.6)
+    # 2) 年度境界: 「2027年3月期」の1月は2027年
+    u = parse_uss(uss_html([mrow("1月", "1,300", "105.0%")]))
+    chk("uss 1月→2027-01", bool(u) and u["src_date"] == "2027-01")
+    # 3) 同一年月が別値で重複（過去年度表の併載など）→ 静かに誤値を採らず parse_fail
+    u = parse_uss(uss_html([mrow("4月", "1,221", "114.6%"), mrow("4月", "1,999", "100.0%")]))
+    chk("uss 年月衝突→None", u is None)
+
+    def card(price: int) -> str:
+        return ('card-product<a href="https://yuyu-tei.jp/sell/poc/card/m06/1"></a>'
+                f"<strong>{price:,} 円</strong>")
+
+    # 4) 中央値の偶奇
+    y = parse_yuyutei("".join(card(p) for p in [100] * 30 + [200] * 30))
+    chk("yuyu 偶数中央値=150", bool(y) and y["value"] == 150.0 and y["n_items"] == 60)
+    y = parse_yuyutei("".join(card(p) for p in [100] * 30 + [200] * 31))
+    chk("yuyu 奇数中央値=200", bool(y) and y["value"] == 200.0)
+    # 5) 49件は市場縮小とパース破損を区別できないため None・50件は ok
+    chk("yuyu 49件→None", parse_yuyutei("".join(card(100) for _ in range(49))) is None)
+    chk("yuyu 50件→ok", parse_yuyutei("".join(card(100) for _ in range(50))) is not None)
+    # 6) 商品hrefの無いブロック（CSS等の偶然の card-product）は数えない
+    y = parse_yuyutei("".join(card(100) for _ in range(50))
+                      + "card-product<strong>9,999 円</strong>")
+    chk("yuyu 非商品ブロック除外", bool(y) and y["n_items"] == 50)
+
+    print(f"[selftest] {'FAIL: ' + ', '.join(fails) if fails else 'all ok'}")
+    return 1 if fails else 0
+
+
 if __name__ == "__main__":
+    if "--selftest" in sys.argv:
+        sys.exit(_selftest())
     sys.exit(main())
