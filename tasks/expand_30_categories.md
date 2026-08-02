@@ -13,17 +13,23 @@ plan: docs/price-watch-universe.md が正本（§16l の次として拡張を記
 
 ## 波と進捗
 
-- [ ] 波1: TE結線3本（corn=飼料ピークアウト・salmon=水産・lithium=参考）
-- [ ] 波1カード: 水産3社（極洋1301/ニッスイ1332/Umios1333）決算実読 → SubAgent
-- [ ] 波2: 正URL調査（日工会・SEMI/SEAJ・自工会・三鬼・JA全農たまご・農水省米・JNTO）→ SubAgent
-- [ ] 波2実装: 機械可読と判明した源から月次パーサ（cadence=monthly 既存レーン）
-- [ ] 波2カード: 上位2〜3社×カテゴリ（訪日は21社中、装置は裁定待ちレーンと整合させる）
+- [x] 波1: TE結線3本（corn=飼料ピークアウト・salmon=水産・lithium=参考）→ 44/45 ok・commit済（2026-08-02）
+- [x] 波1カード: 水産3社実読→受益はニッスイのみ(仮)・極洋/Umios rejected（2026-08-02）
+- [x] 波2: 正URL調査 7/7源◎（SubAgent・詳細= docs §16m）
+- [x] 波2実装: monthly_sources.py 新設（7 fetch+parse・selftest 7件）＋checker分岐＋月次peakout間引き
+      ＋pypdf追加（イメージ再ビルド済み）＋卵66ヶ月/米3ヶ月種まき → 51/52 ok・**初回発火2件**
+      （工作機械+52.8%/装置+26.9%→前向き記録・評価9/30と11/20）（2026-08-02）
+- [x] 波2カード: 8社実読（confirmed3/provisional5・詳細= docs §16m）＋SEAJは装置カード流用
+- [ ] 波2追加候補（作業中に発見・2026-08-02）: 畜産相場の**売り側**（日本ハム2282=自社生産で相場高増益・S Foods2292=枝肉相場直結、center_pin実読）。源候補=東京都中央卸売市場 月次明細xlsx（https://www.shijou.metro.tokyo.lg.jp/torihiki/geppo/ の s<YYYYMM>meisai_<公表日> リンク・一覧頁から最新を辿る・食肉/水産の品目別単価。xlsx読取に openpyxl 要否を確認）
 - [ ] 波3: 8/8死に筆整理後、空き枠に DRAM/NAND・MLCC・銀（需給構造変化型のみ）
 - [ ] 各バッチで commit・実装完了後 Codex 敵対レビュー
 
 ## Session Handoff
 
-- 2026-08-02: 裁定C受領。task 起票・SubAgent 2本発進・波1着手。
+- 2026-08-02: 裁定C受領。task 起票・SubAgent 3本（水産カード/波2源調査/波2カード8社）全完了。
+  波1+波2実装済み＝42→52系列・カテゴリ実質15→26相当。残= 波2追加候補（畜産売り側=東京都
+  中央卸売市場xlsx）・波3（8/8死に筆整理後のX枠: DRAM/NAND・MLCC・銀）・Codexレビュー(波2分)。
+  米のピークアウトは8公表月に2027-01到達見込み（種3ヶ月のみ）。
 
 ## 制約（既決の再掲・破らない）
 

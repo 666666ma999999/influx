@@ -12,3 +12,4 @@ plotly>=5.18
 Pillow>=10.0
 openpyxl>=3.1
 requests>=2.31  # price_universe_check の明示依存（2026-07-28・暗黙依存の明文化）
+pypdf>=4.0  # 波2月次PDF源（日工会/SEAJ）のテキスト化・monthly_sources.py（2026-08-02）

@@ -523,6 +523,11 @@ def main() -> int:
             elif s["type"] == "yuyutei":
                 parsed = parse_yuyutei(
                     fetch("https://yuyu-tei.jp/sell/poc/s/search?search_word=&rare=SAR"))
+            elif s["type"] in ("jmtba", "seaj", "jama", "miki", "tamago", "rice", "jnto"):
+                # 波2の月次データ源（30カテゴリ拡張・2026-08-02）。取得実装と fixtures は
+                # monthly_sources.py に分離。type名 → fetch_<type>() の明示対応（allowlist方式）
+                import monthly_sources
+                parsed = getattr(monthly_sources, "fetch_" + s["type"])()
             else:
                 # 未知の type を既存パーサへ流すと別サイトの値を静かに記録する。
                 # 型を増やしたら分岐も足す（fail-fast・Codex軽微指摘）
@@ -659,7 +664,18 @@ def main() -> int:
                 past = sorted([r for r in prev if r.get("value")],
                               key=lambda r: (r.get("date", ""), r.get("run_at", "")))
                 hist_ok = past + [row]
-                if len(past) >= 8:   # 判定には過去8本（週次≒2か月）が必要。当日分は数えない
+                # 月次系列（米・卵など）は週次実行で同じ公表月の行が繰り返し貯まるため、
+                # src_date で 1公表月=1点 に間引いてから判定する。間引かないと
+                # 「直近4記録単調下落」が同値の並びで永久に成立せず、レーンが沈黙する
+                # （2026-08-02 波2で月次ピークアウト系列を新設した際の適合）
+                if s.get("cadence") == "monthly":
+                    by_src: dict[str, dict] = {}
+                    for r in hist_ok:
+                        if r.get("src_date"):
+                            by_src[r["src_date"]] = r
+                    hist_ok = sorted(by_src.values(), key=lambda r: r["src_date"])
+                    past = hist_ok[:-1]
+                if len(past) >= 8:   # 判定には過去8本（週次≒2か月/月次=8公表月）が必要。当日分は数えない
                     peak = max(r["value"] for r in hist_ok)
                     drop = (row["value"] / peak - 1) * 100
                     last5 = [r["value"] for r in hist_ok[-5:]]

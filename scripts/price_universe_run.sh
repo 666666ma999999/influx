@@ -9,10 +9,10 @@ MAX_WAIT_SEC=${MAX_WAIT_SEC:-300}
 INTERVAL_SEC=${INTERVAL_SEC:-30}
 INFLUX="$HOME/Desktop/biz/influx"
 OUT=$(mktemp -t price_universe_run)
-# 系列の健全性しきい値: 42系列中これを下回る ok 数ならソース側の異常として通知する
-# （2026-08-02 34→42系列化に追随して 20→34 へ。週次の stale 1〜2件＋単発失敗を許容しつつ
+# 系列の健全性しきい値: 52系列中これを下回る ok 数ならソース側の異常として通知する
+# （2026-08-02 30カテゴリ拡張で 34→52系列。週次の stale 1〜2件＋単発失敗を許容しつつ
 #   TE一覧レイアウト変更のような広域破損は確実に鳴る水準）
-MIN_OK=${MIN_OK:-34}
+MIN_OK=${MIN_OK:-42}
 
 cleanup() { rm -f "$OUT"; }
 trap cleanup EXIT
