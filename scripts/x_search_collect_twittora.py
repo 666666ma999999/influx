@@ -99,6 +99,7 @@ JA_SPLIT_QUERIES = [
     "インプレッション 伸びない",
     "コンテキスト 消える",
     "Fable プロンプト",
+    "Claude Code 公式",
 ]
 
 _STATUS_ID_RE = re.compile(r"/status/(\d+)")
