@@ -86,6 +86,14 @@ JA_SPLIT_QUERIES = [
     "Claude Code 新機能 アップデート",
     "Obsidian 第二の脳 Claude",
     "Fable オーケストレーション",
+    # gen3 日本語6本（2026-08-03 敵対レビューA指摘: JA別窓に未登録だと旧クエリだけが
+    # min_faves:20 の低floor窓を持ち、新クエリは50の1窓のみ＝floor不公平の測定バイアス）
+    "launchd 止まってた",
+    "CLAUDE.md 守らない",
+    "Claude hooks 誤検知",
+    "Claude 出力 テンプレ",
+    "AIエージェント 承認 フロー",
+    "Claude Code 引き継ぎ",
 ]
 
 _STATUS_ID_RE = re.compile(r"/status/(\d+)")

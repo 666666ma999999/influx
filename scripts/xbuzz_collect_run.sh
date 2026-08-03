@@ -46,9 +46,19 @@ if ! docker ps --format '{{.Names}}' | grep -q '^xstock-vnc$'; then
   exit 1
 fi
 
+# 2026-08-03 22時台の実測: コンテナを自動起動した直後の docker exec は
+# TargetClosedError（ブラウザ即死）で落ちる（20:30 実走 rows:0 crash・fxnia 11:04 と同型）。
+# Xvfb/環境の温まり待ち＋失敗時1回だけ再試行（tracer の1リトライ前例と同型・有界）。
+sleep 20
 docker exec -e DISPLAY=:99 xstock-vnc python3 /app/scripts/x_search_collect_twittora.py --days 7
 rc=$?
-[ "$rc" -ne 0 ] && notify "X収集 失敗: 収集スクリプトが exit $rc"
+if [ "$rc" -ne 0 ]; then
+  echo "収集 exit $rc → 60秒待って1回だけ再試行（ブラウザ即死の一過性対策）"
+  sleep 60
+  docker exec -e DISPLAY=:99 xstock-vnc python3 /app/scripts/x_search_collect_twittora.py --days 7
+  rc=$?
+fi
+[ "$rc" -ne 0 ] && notify "X収集 失敗: 収集スクリプトが exit $rc（再試行込み）"
 TODAY=$(date +%Y-%m-%d)
 VAULT_RAW="$HOME/Documents/Obsidian Vault/.raw"
 SRC="$HOME/Desktop/biz/influx/output/grok_twittora/grok-twittora-$TODAY.jsonl"
