@@ -94,6 +94,10 @@ JA_SPLIT_QUERIES = [
     "Claude 出力 テンプレ",
     "AIエージェント 承認 フロー",
     "Claude Code 引き継ぎ",
+    # gen4 日本語3本（2026-08-03・ブックマーク9クラスタ由来2本+症状語1本）
+    "Claude Code トークン節約",
+    "インプレッション 伸びない",
+    "コンテキスト 消える",
 ]
 
 _STATUS_ID_RE = re.compile(r"/status/(\d+)")
