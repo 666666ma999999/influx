@@ -526,6 +526,23 @@ def main() -> int:
         run_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
         print(f"\n🚨 言及が急増した銘柄 {len(alerts)}社:")
         ALERTS_OUT.parent.mkdir(parents=True, exist_ok=True)
+        # 同じ (対象日, 銘柄) は1回しか記録しない。発火台帳は完了条件の**証拠**であり
+        # w5/w20 の固定窓評価もこの行を数えるため、同日再実行（手動の前倒し実行と
+        # 22:10 の定時実行が同じ対象日を判定する等）で二重計上されると検定が壊れる。
+        # 件数レーン price_watch_alert の (date, query_id) 重複排除と同じ規約
+        # （2026-08-03 追加。それ以前は append のみで重複しうる状態だった）
+        already = set()
+        if ALERTS_OUT.exists():
+            for line in ALERTS_OUT.read_text(encoding="utf-8").splitlines():
+                if line.strip():
+                    try:
+                        prev = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
+                    already.add((prev.get("date"), prev.get("code")))
+        n_dup = sum(1 for r in alerts if (target, r["code"]) in already)
+        if n_dup:
+            print(f"  （うち {n_dup} 件は記録済みのため台帳へは追記しない）")
         with ALERTS_OUT.open("a", encoding="utf-8") as fh:
             for r in alerts:
                 o = origin.get(r["code"], {})
@@ -545,6 +562,8 @@ def main() -> int:
                 if not in_list and pl and pl["stock_pct"] > 0:
                     print("     🎯 完了条件の候補: リスト外銘柄の言及急増 ＋ 株価上昇。"
                           "本文を目視で確認してください")
+                if (target, r["code"]) in already:
+                    continue   # 既に記録済み（同日再実行）＝台帳は不変に保つ
                 fh.write(json.dumps({"date": target, "code": r["code"], "name": r["name"],
                                      "count": r["count"], "z": r["z"], "verdict": r["verdict"],
                                      "trade500": o or None, "price_linkage": pl,
