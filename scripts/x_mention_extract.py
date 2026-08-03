@@ -26,6 +26,7 @@ import json
 import sys
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta, timezone
+from functools import lru_cache
 from pathlib import Path
 from statistics import mean, pstdev
 
@@ -35,6 +36,7 @@ sys.path.insert(0, str(APP / "scripts"))
 import x_mention_dict as xmd  # noqa: E402
 
 TEXTS_DIR = APP / "data/x_price_watch/texts"
+LEDGER = APP / "data/x_price_watch/ledger.jsonl"   # 収集台帳（どの実行がcleanかの正本）
 MENTIONS = APP / "data/x_price_watch/mentions.jsonl"
 ALERTS_OUT = APP / "data/x_price_watch/mention_alerts.jsonl"   # 発火の証拠台帳（完了条件の判定用）
 BARS_DIR = APP / "data/jquants/bars"
@@ -60,30 +62,94 @@ EVAL_WINDOWS_BD = {"w5": 5, "w20": 20}
 MIN_COUNT_FOR_ALERT = 3
 
 
-def canonical_run(rows: list[dict]) -> tuple[list[dict], int]:
-    """同じUTC日を複数回収集していたら、**最後の run_at の1回分**だけを返す。
+_EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
+
+
+def _run_time(run_at: str) -> datetime:
+    """run_at を時刻として比較できる形にする。
+
+    文字列 max はタイムゾーン表記の揺れで壊れる（"…T13:00+09:00"(=04:00Z) が
+    "…T05:00+00:00" より辞書順で後になる）。解釈できない値は最古扱いにして、
+    まともな run_at を持つ実行に必ず負けるようにする。
+    """
+    try:
+        dt = datetime.fromisoformat(str(run_at).replace("Z", "+00:00"))
+    except (ValueError, TypeError):
+        return _EPOCH
+    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+
+
+@lru_cache(maxsize=1)
+def run_quality() -> dict[tuple[str, str], int]:
+    """収集台帳から (対象日, run_at) → **clean に成功したクエリ数** を作る。
+
+    clean の定義は件数レーン（price_watch_alert.judge）と同一
+    （status=="ok" かつ censored でない かつ count が None でない）。
+    どの実行がその日の代表かを決めるのに使う＝両レーンで同じ「品質」定義を共有する。
+    """
+    idx: dict[tuple[str, str], int] = {}
+    if not LEDGER.exists():
+        return idx
+    for line in LEDGER.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        try:
+            r = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if r.get("status") == "ok" and not r.get("censored") and r.get("count") is not None:
+            key = (r.get("date", ""), r.get("run_at", ""))
+            idx[key] = idx.get(key, 0) + 1
+    return idx
+
+
+def canonical_run(rows: list[dict], quality: dict[str, int] | None = None
+                  ) -> tuple[list[dict], int, str]:
+    """同じUTC日を複数回収集していたら、**その日の代表となる1回分**だけを返す。
 
     texts/<day>.jsonl は収集のたび追記されるため、同じ日を手動で追加収集すると
     全実行の**和集合**が入る。status_id の重複は extract_day の seen が落とすが、
     X検索は毎回違う部分集合を返すので和集合は母集団そのものが膨らみ、
     **その日だけ言及数が水増しされてベースラインが歪む**（実測 2026-07-31: 5回収集で
-    本文2007行→言及125件。最後の1回だけなら1053行→94件＝+33%の水増し）。
+    本文2007行→言及125件。代表1回だけなら1053行→94件＝+33%の水増し）。
+    zスコアは「今日 vs 過去14日」の比較なので、日ごとに収集回数が違うと判定が壊れる。
+    取りこぼしより**日間の比較可能性**を優先する。
 
-    件数レーン（price_watch_alert.judge の by_date）が「同一 date は最後の clean 行だけ採る」
-    のと同じ規約に揃える＝1日1標本。取りこぼしより日間比較可能性を優先する
-    （zスコアは「今日 vs 過去14日」の比較なので、日ごとに収集回数が違うと判定が壊れる）。
+    代表の選び方＝**網羅クエリ数の多い実行**（同数なら後の実行）。時刻だけで「最後」を
+    採ってはいけない: collector は `--queries` で一部クエリだけの実行を正式に許可しており
+    （price_watch_collect.py の --queries）、完全実行の後に2クエリだけの手動実行があると
+    最後を採る規約では**残り48クエリを丸ごと言及ゼロとして記録**してしまう。実データにも
+    2026-07-31 に「42クエリ完全 → 3 → 3 → 2 → 50クエリ完全」の並びが実在する（Codex指摘）。
+    網羅数は収集台帳の clean 定義（run_quality）で測り、台帳に対応が無ければ texts 側の
+    distinct query_id で代用する。
 
-    run_at を持たない行が1つでもあれば畳まない（古い形式の texts を静かに捨てないため）。
-    戻り値: (採用する行, 捨てた行数)
+    run_at を持たない行が1つでもあれば畳まない（古い形式の texts を静かに捨てないため。
+    ただし複数実行が混在していれば警告を返す＝黙って和集合に戻らない）。
+    戻り値: (採用する行, 捨てた行数, 経緯の1行説明)
     """
-    if not rows or any(not r.get("run_at") for r in rows):
-        return rows, 0
-    runs = {r["run_at"] for r in rows}
-    if len(runs) <= 1:
-        return rows, 0
-    latest = max(runs)
-    kept = [r for r in rows if r["run_at"] == latest]
-    return kept, len(rows) - len(kept)
+    if not rows:
+        return rows, 0, ""
+    if any(not r.get("run_at") for r in rows):
+        n_runs = len({r.get("run_at", "") for r in rows})
+        note = ("run_at 欠損行があるため畳まない（古い形式の texts）"
+                + ("／⚠️複数実行が混在＝この日は水増しの可能性あり" if n_runs > 1 else ""))
+        return rows, 0, note
+    by_run: dict[str, list[dict]] = {}
+    for r in rows:
+        by_run.setdefault(r["run_at"], []).append(r)
+    if len(by_run) <= 1:
+        return rows, 0, ""
+
+    def coverage(run: str) -> int:
+        if quality and run in quality:
+            return quality[run]
+        return len({r.get("query_id", "") for r in by_run[run]})
+
+    best = max(by_run, key=lambda run: (coverage(run), _run_time(run)))
+    others = "／".join(f"{r[11:16]}={coverage(r)}ク" for r in sorted(by_run) if r != best)
+    note = (f"{len(by_run)}回の収集を検出 → 網羅{coverage(best)}クエリの回"
+            f"(run_at={best})を代表に採用（他: {others}）")
+    return by_run[best], len(rows) - len(by_run[best]), note
 
 
 def extract_day(day: str, matcher, codes: set[str]) -> list[dict]:
@@ -97,10 +163,12 @@ def extract_day(day: str, matcher, codes: set[str]) -> list[dict]:
     n_posts = 0
     rows = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()
             if line.strip()]
-    rows, dropped = canonical_run(rows)
-    if dropped:
-        # 何を捨てたかを必ず出す（黙って母集団を変えない）
-        print(f"[{day}] 同日複数回収集を検出 → 最後の1回のみ採用（{dropped}行を判定から除外）")
+    q_all = run_quality()
+    quality = {run_at: n for (d, run_at), n in q_all.items() if d == day}
+    rows, dropped, note = canonical_run(rows, quality)
+    if note:
+        # 何を捨てたか・なぜその回を選んだかを必ず出す（黙って母集団を変えない）
+        print(f"[{day}] {note}" + (f"／{dropped}行を判定から除外" if dropped else ""))
     for r in rows:
         n_posts += 1
         ms = xmd.find_mentions(r.get("text", ""), matcher, codes)
@@ -222,18 +290,39 @@ def _selftest() -> int:
     ng0 = 0 if ok_guard else 1
 
     # 同日複数回収集の畳み込み（2026-08-03 新設・実測 7/31 の +33% 水増しの再発防止）
-    multi = ([{"status_id": f"a{i}", "run_at": "2026-08-01T02:14"} for i in range(3)]
-             + [{"status_id": f"b{i}", "run_at": "2026-08-01T13:10"} for i in range(2)])
-    kept, dropped = canonical_run(multi)
-    ok_c1 = len(kept) == 2 and dropped == 3 and all(r["run_at"] == "2026-08-01T13:10" for r in kept)
-    single = [{"status_id": "a", "run_at": "2026-08-01T13:10"}]
-    ok_c2 = canonical_run(single) == (single, 0)
-    legacy = [{"status_id": "a"}, {"status_id": "b", "run_at": "2026-08-01T13:10"}]
-    ok_c3 = canonical_run(legacy) == (legacy, 0)   # run_at 欠損が混ざるなら畳まない
-    ok_c4 = canonical_run([]) == ([], 0)
-    for ok, why in ((ok_c1, "複数回収集は最後のrun_atだけ採る"), (ok_c2, "単一実行は素通し"),
-                    (ok_c3, "run_at欠損混在は畳まない（古いtextsを捨てない）"),
-                    (ok_c4, "空入力")):
+    def mk_run(run_at, queries):
+        return [{"status_id": f"{run_at}-{q}-{i}", "run_at": run_at, "query_id": q}
+                for q in queries for i in range(2)]
+
+    A = "2026-08-01T02:14:00+00:00"   # 完全実行（10クエリ）
+    B = "2026-08-01T13:10:00+00:00"   # 後から来た部分実行（2クエリ）
+    full_then_partial = mk_run(A, [f"q{i}" for i in range(10)]) + mk_run(B, ["q0", "q1"])
+    kept, dropped, _ = canonical_run(full_then_partial)
+    # 【Codex CONFIRMED-1】時刻だけで「最後」を採ると、部分実行が完全実行を潰し
+    # 残り8クエリが言及ゼロとして記録される。網羅数で選べば完全実行が残る
+    ok_c1 = all(r["run_at"] == A for r in kept) and len(kept) == 20 and dropped == 4
+    # 網羅が同数なら後の実行を採る
+    same_cov = mk_run(A, ["q0", "q1"]) + mk_run(B, ["q0", "q1"])
+    ok_c2 = all(r["run_at"] == B for r in canonical_run(same_cov)[0])
+    # 台帳の clean 数（quality）が texts の見かけより優先される
+    ok_c3 = all(r["run_at"] == B for r in
+                canonical_run(full_then_partial, {A: 1, B: 40})[0])
+    # タイムゾーン表記が混ざっても時刻として比較する（文字列maxなら誤判定するケース）
+    tz = mk_run("2026-08-01T13:00:00+09:00", ["q0"]) + mk_run("2026-08-01T05:00:00+00:00", ["q1"])
+    ok_c4 = all(r["run_at"] == "2026-08-01T05:00:00+00:00" for r in canonical_run(tz)[0])
+    single = [{"status_id": "a", "run_at": B, "query_id": "q0"}]
+    ok_c5 = canonical_run(single)[:2] == (single, 0)
+    legacy = [{"status_id": "a"}, {"status_id": "b", "run_at": B}]
+    lk, ld, lnote = canonical_run(legacy)
+    ok_c6 = (lk, ld) == (legacy, 0) and "⚠️" in lnote   # 畳まないが警告は出す
+    ok_c7 = canonical_run([])[:2] == ([], 0)
+    for ok, why in ((ok_c1, "部分実行が完全実行を潰さない（網羅数で選ぶ）"),
+                    (ok_c2, "網羅同数なら後の実行"),
+                    (ok_c3, "台帳のclean数が優先される"),
+                    (ok_c4, "TZ表記が混ざっても時刻で比較"),
+                    (ok_c5, "単一実行は素通し"),
+                    (ok_c6, "run_at欠損混在は畳まず警告（古いtextsを捨てない）"),
+                    (ok_c7, "空入力")):
         print(f"  {'OK ' if ok else 'NG '} 同日畳み込み: {why}")
         ng0 += not ok
 
@@ -403,6 +492,13 @@ def main() -> int:
         print("（日次収集 price_watch_collect.py を1回でも回すと作られます）")
         return 1
     targets = days if args.rebuild else [args.date or days[-1]]
+    if args.rebuild and ALERTS_OUT.exists():
+        # 過去日を作り直しても発火台帳は追記専用で、判定するのは最終日だけ（前向き記録の
+        # 不可逆性を守る設計）。よって「再計算で消えた過去の発火」が台帳に残り続けうる。
+        # 黙って不整合を作らないため、rebuild 時に必ず知らせる（Codex CONFIRMED-3）
+        print(f"⚠️  {ALERTS_OUT.name} が既に存在します。--rebuild は mentions を作り直しますが、"
+              "過去の発火記録は再整合しません（前向き記録は追記専用）。\n"
+              "    再計算で判定が変わった日がある場合は、発火台帳と突き合わせて手で確認してください。")
 
     for day in targets:
         rows = extract_day(day, matcher, codes)
