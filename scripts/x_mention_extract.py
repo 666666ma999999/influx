@@ -60,6 +60,32 @@ EVAL_WINDOWS_BD = {"w5": 5, "w20": 20}
 MIN_COUNT_FOR_ALERT = 3
 
 
+def canonical_run(rows: list[dict]) -> tuple[list[dict], int]:
+    """同じUTC日を複数回収集していたら、**最後の run_at の1回分**だけを返す。
+
+    texts/<day>.jsonl は収集のたび追記されるため、同じ日を手動で追加収集すると
+    全実行の**和集合**が入る。status_id の重複は extract_day の seen が落とすが、
+    X検索は毎回違う部分集合を返すので和集合は母集団そのものが膨らみ、
+    **その日だけ言及数が水増しされてベースラインが歪む**（実測 2026-07-31: 5回収集で
+    本文2007行→言及125件。最後の1回だけなら1053行→94件＝+33%の水増し）。
+
+    件数レーン（price_watch_alert.judge の by_date）が「同一 date は最後の clean 行だけ採る」
+    のと同じ規約に揃える＝1日1標本。取りこぼしより日間比較可能性を優先する
+    （zスコアは「今日 vs 過去14日」の比較なので、日ごとに収集回数が違うと判定が壊れる）。
+
+    run_at を持たない行が1つでもあれば畳まない（古い形式の texts を静かに捨てないため）。
+    戻り値: (採用する行, 捨てた行数)
+    """
+    if not rows or any(not r.get("run_at") for r in rows):
+        return rows, 0
+    runs = {r["run_at"] for r in rows}
+    if len(runs) <= 1:
+        return rows, 0
+    latest = max(runs)
+    kept = [r for r in rows if r["run_at"] == latest]
+    return kept, len(rows) - len(kept)
+
+
 def extract_day(day: str, matcher, codes: set[str]) -> list[dict]:
     """1日分の本文から (code, query_id) 別の言及数を作る。"""
     path = TEXTS_DIR / f"{day}.jsonl"
@@ -69,10 +95,13 @@ def extract_day(day: str, matcher, codes: set[str]) -> list[dict]:
     seen_text: set[tuple[str, str]] = set()  # (本文冒頭60字, code) — bot 対策
     per: Counter = Counter()
     n_posts = 0
-    for line in path.read_text(encoding="utf-8").splitlines():
-        if not line.strip():
-            continue
-        r = json.loads(line)
+    rows = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()
+            if line.strip()]
+    rows, dropped = canonical_run(rows)
+    if dropped:
+        # 何を捨てたかを必ず出す（黙って母集団を変えない）
+        print(f"[{day}] 同日複数回収集を検出 → 最後の1回のみ採用（{dropped}行を判定から除外）")
+    for r in rows:
         n_posts += 1
         ms = xmd.find_mentions(r.get("text", ""), matcher, codes)
         if len({m["code"] for m in ms}) > MAX_CODES_PER_POST:
@@ -191,6 +220,22 @@ def _selftest() -> int:
     print(f"  {'OK ' if ok_guard else 'NG '} 羅列ガード: 羅列投稿={n_list}銘柄(>{MAX_CODES_PER_POST}で除外) "
           f"/ 通常投稿={n_norm}銘柄(採用)")
     ng0 = 0 if ok_guard else 1
+
+    # 同日複数回収集の畳み込み（2026-08-03 新設・実測 7/31 の +33% 水増しの再発防止）
+    multi = ([{"status_id": f"a{i}", "run_at": "2026-08-01T02:14"} for i in range(3)]
+             + [{"status_id": f"b{i}", "run_at": "2026-08-01T13:10"} for i in range(2)])
+    kept, dropped = canonical_run(multi)
+    ok_c1 = len(kept) == 2 and dropped == 3 and all(r["run_at"] == "2026-08-01T13:10" for r in kept)
+    single = [{"status_id": "a", "run_at": "2026-08-01T13:10"}]
+    ok_c2 = canonical_run(single) == (single, 0)
+    legacy = [{"status_id": "a"}, {"status_id": "b", "run_at": "2026-08-01T13:10"}]
+    ok_c3 = canonical_run(legacy) == (legacy, 0)   # run_at 欠損が混ざるなら畳まない
+    ok_c4 = canonical_run([]) == ([], 0)
+    for ok, why in ((ok_c1, "複数回収集は最後のrun_atだけ採る"), (ok_c2, "単一実行は素通し"),
+                    (ok_c3, "run_at欠損混在は畳まない（古いtextsを捨てない）"),
+                    (ok_c4, "空入力")):
+        print(f"  {'OK ' if ok else 'NG '} 同日畳み込み: {why}")
+        ng0 += not ok
 
     cases = [
         ({"2026-07-29": 1}, "ok", "ゼロ続きの後の1件では鳴らない（鳴りすぎ防止）"),
