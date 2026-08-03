@@ -50,6 +50,15 @@ DEFAULT_QUERIES = [
     "Obsidian 第二の脳 Claude",  # c-0d17bd8e: Obsidian×AI知識管理（既存10本に完全な空白領域）
     "NotebookLM Codex 文字起こし",  # c-49c1862f: Claude以外のAIツール（非エンジニア向け画像/動画/文字起こし）
     "Opus Fable Codex 使い分け",  # proposals: モデル使い分け・メタプロンプト（既存"Cursor vs Claude"はIDE比較でモデル比較とは別軸）
+    # gen3追加 2026-08-03（敵対レビュー一致指摘: 落選8件中6件が「環境に適用先が無い」＝
+    # 既存クエリが一般AI話題を拾っている。束台帳 collection-bundles.json の困りごと定義から逆生成し、
+    # 発話数の多い束＝本人が実際に困っている領域に検索を寄せる。効果は当たり方の実測後に判定）
+    "Claude Code 定期実行 launchd cron",   # C09(68) 止まった自動処理に気づく仕組み
+    "CLAUDE.md 指示 守らない 効かない",     # C06(117) 書いた指示が効かない
+    "Claude Code hook 誤検知 暴発",         # C08(46) hook の誤検知
+    "AI レポート テンプレ 統一 フォーマット",  # C16(497) 報告形式の毎回ブレ（最大束）
+    "Claude Code 承認 自動化 どこまで任せる",  # C15(136) 承認の線引き
+    "Claude Code セッション 引き継ぎ 記憶",   # C07(284) 文脈が消える
 ]
 
 DEFAULT_MIN_LIKES = 50

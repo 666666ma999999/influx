@@ -63,7 +63,10 @@ import normalize_master_posts  # syndication救済・翻訳/切断正規化を�
 
 JST = timezone(timedelta(hours=9))
 TWEET_CARD_SELECTOR = '[data-testid="tweet"]'
-MAX_SCROLLS = 5
+# 2026-08-03: 空本文率37%（7/26 実測・警告閾値20%超）の主因を DOM の遅延レンダリングと判断し
+# 5→8 に引き上げ（敵対レビュー一致指摘）。ループは per_query 到達か新規カード枯渇で早期break
+# するため、当たりが薄いクエリでの追加コストは限定的。待機の主体は QUERY_PACING 側のまま。
+MAX_SCROLLS = 8
 QUERY_PACING = (20.0, 40.0)  # クエリ間の待機（アカウント保護・秒）
 
 # P3: 日本語比重の高いクエリ（lang:ja 別窓で追加収集する）
@@ -348,7 +351,9 @@ def main() -> int:
     ap.add_argument("--per-query", type=int, default=8)
     ap.add_argument("--no-ja-split", action="store_true", help="lang:ja 別窓を無効化")
     ap.add_argument("--refetch-cap", type=int, default=8, help="空本文の個別再取得の上限件数")
-    ap.add_argument("--syndication-cap", type=int, default=50,
+    # 2026-08-03: 50→120（7/26 実測は空本文29件に対し救済1件＝3%。cap が律速でない可能性も
+    # あるが、上げ幅のコストは syndication 個別取得の回数のみで安全側）。
+    ap.add_argument("--syndication-cap", type=int, default=120,
                     help="syndication API での空本文救済の上限件数（無認証・refetch-capとは別枠）")
     ap.add_argument("--profile", default="x_profiles/maaaki")
     ap.add_argument("--output-dir", default="/app/output/grok_twittora")

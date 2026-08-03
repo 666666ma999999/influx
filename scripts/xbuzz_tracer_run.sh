@@ -24,6 +24,13 @@ if [ "$rc" -ne 0 ]; then
   rc=$?
 fi
 
+# 2026-08-03 追加（敵対レビュー2件一致）: tracer 出力を vault へ複製し、週次提案カードの
+# 入力に載せる。tracer は日次2-3回・週272件・grok コーパスとの重複0.7%でほぼ全部が新規。
+# 手口は xbuzz_collect_run.sh 末尾の cp と同一（runner の extra_dir が単一のため vault 経由が必要）。
+TRACER_SRC="$HOME/Desktop/biz/influx/output/x_tracer/tracer-$(date +%Y-%m-%d).jsonl"
+VAULT_RAW="$HOME/Documents/Obsidian Vault/.raw"
+[ -s "$TRACER_SRC" ] && cp "$TRACER_SRC" "$VAULT_RAW/x-tracer-$(date +%Y-%m-%d).jsonl" 2>/dev/null || true
+
 after=0
 [ -f "$ALERTS" ] && after=$(wc -l < "$ALERTS" | tr -d ' ')
 

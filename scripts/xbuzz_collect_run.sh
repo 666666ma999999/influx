@@ -9,6 +9,9 @@ set -u
 MAX_WAIT_SEC=${MAX_WAIT_SEC:-300}
 INTERVAL_SEC=${INTERVAL_SEC:-30}
 
+# 2026-08-03 追加: 失敗が err.log にしか残らず8日間気づかれなかったため通知を出す
+notify() { osascript -e "display notification \"$1\" with title \"X収集 週次\"" 2>/dev/null || true; }
+
 # 2026-07-26 ユーザー許可: daemon 未起動なら Docker Desktop をバックグラウンド起動してから待つ
 # （-g=前面に出さない・-a=アプリ名指定。起動失敗しても従来どおり待機ループ→タイムアウト exit 1）
 if ! docker info >/dev/null 2>&1; then
@@ -27,15 +30,25 @@ until docker info >/dev/null 2>&1; do
   waited=$((waited + INTERVAL_SEC))
 done
 
-# 2026-07-26: daemonは生きているがコンテナが停止しているケースを即失敗で可視化
-# （前例= make_article cron_metrics_snapshot.sh の xstock-vnc 稼働チェック）
+# 2026-08-03: コンテナ停止時に「即失敗」していたため 7/27 の失敗が8日間放置され、
+# 実効収集が平均18日に1回まで落ちていた（敵対レビュー実測）。up -d を1回試してから再判定する。
 if ! docker ps --format '{{.Names}}' | grep -q '^xstock-vnc$'; then
-  echo "ERROR: xstock-vnc コンテナが稼働していない（influx で docker compose -f docker-compose.vnc.yml up -d）" >&2
+  echo "xstock-vnc 停止 → docker compose up -d を試行"
+  (cd "$HOME/Desktop/biz/influx" && docker compose -f docker-compose.vnc.yml up -d) || true
+  for _ in $(seq 1 12); do
+    docker ps --format '{{.Names}}' | grep -q '^xstock-vnc$' && break
+    sleep 5
+  done
+fi
+if ! docker ps --format '{{.Names}}' | grep -q '^xstock-vnc$'; then
+  echo "ERROR: xstock-vnc コンテナを起動できなかった（influx で docker compose -f docker-compose.vnc.yml up -d）" >&2
+  notify "X収集 失敗: xstock-vnc を起動できず"
   exit 1
 fi
 
 docker exec -e DISPLAY=:99 xstock-vnc python3 /app/scripts/x_search_collect_twittora.py --days 7
 rc=$?
+[ "$rc" -ne 0 ] && notify "X収集 失敗: 収集スクリプトが exit $rc"
 TODAY=$(date +%Y-%m-%d)
 VAULT_RAW="$HOME/Documents/Obsidian Vault/.raw"
 SRC="$HOME/Desktop/biz/influx/output/grok_twittora/grok-twittora-$TODAY.jsonl"
