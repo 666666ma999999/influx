@@ -574,11 +574,8 @@
       "beneficiaries": [
         {
           "code": "2607",
-          "btype": 4,
-          "sign": "+",
-          "tier": "confirmed",
-          "evidence": "E1:会社開示でカカオ双方向感応(高騰→代替油脂CBE需要増)",
-          "verified": "2026-07-28"
+          "tier": "rejected",
+          "reason": "決算実読2026-08-03(FY26/3): 業務用チョコ営利構成比6.6%<10% ∩ 会社が『カカオ豆価格の安定・関連費用減少』を増益要因と明記=符号逆(関門A)。docs§11正味検証(07-29)の却下裁定をconfigへ伝播"
         }
       ]
     },
@@ -826,27 +823,18 @@
       "beneficiaries": [
         {
           "code": "4183",
-          "btype": 1,
-          "sign": "+",
-          "tier": "provisional",
-          "evidence": "center_pin台帳: pin_type=spread「基盤素材の対ナフサスプレッド」sign=+。E2(有報セグメント利益比)未取得",
-          "verified": "2026-07-28"
+          "tier": "rejected",
+          "reason": "決算実読2026-08-03: B&GM営利△184億(構成比△18.4%)。交易条件△98億で単価主導は確定だが利益の中心でなく、ナフサ下落期は在庫評価損で符号反転(関門D)"
         },
         {
           "code": "4005",
-          "btype": 1,
-          "sign": "+",
-          "tier": "provisional",
-          "evidence": "center_pin台帳: pin_type=spread「石化スプレッド」sign=+。E2未取得",
-          "verified": "2026-07-28"
+          "tier": "rejected",
+          "reason": "決算実読2026-08-03: E&GM 144億/全社2,084億=6.9%<10%(関門D)。改善+729億はラービグ株売却益(一過性)と交易条件の合算で内訳非開示"
         },
         {
           "code": "4188",
-          "btype": 1,
-          "sign": "+",
-          "tier": "provisional",
-          "evidence": "石化セグメント保有だが台帳の中心ピンはMMA市況。関門D(桁)未検証",
-          "verified": "2026-07-28"
+          "tier": "rejected",
+          "reason": "決算実読2026-08-03: BM&P営利△42億=構成比△1.9%・全社利益の89.2%は産業ガス(関門D)。西日本エチレン設備停止で石化縮退中。中心ピンMMAも△15億"
         },
         {
           "code": "3407",
@@ -926,27 +914,18 @@
       "beneficiaries": [
         {
           "code": "4183",
-          "btype": 1,
-          "sign": "+",
-          "tier": "provisional",
-          "evidence": "center_pin台帳: pin_type=spread「基盤素材の対ナフサスプレッド」sign=+。E2(有報セグメント利益比)未取得",
-          "verified": "2026-07-28"
+          "tier": "rejected",
+          "reason": "決算実読2026-08-03: B&GM営利△184億(構成比△18.4%)。交易条件△98億で単価主導は確定だが利益の中心でなく、ナフサ下落期は在庫評価損で符号反転(関門D)"
         },
         {
           "code": "4005",
-          "btype": 1,
-          "sign": "+",
-          "tier": "provisional",
-          "evidence": "center_pin台帳: pin_type=spread「石化スプレッド」sign=+。E2未取得",
-          "verified": "2026-07-28"
+          "tier": "rejected",
+          "reason": "決算実読2026-08-03: E&GM 144億/全社2,084億=6.9%<10%(関門D)。改善+729億はラービグ株売却益(一過性)と交易条件の合算で内訳非開示"
         },
         {
           "code": "4188",
-          "btype": 1,
-          "sign": "+",
-          "tier": "provisional",
-          "evidence": "石化セグメント保有だが台帳の中心ピンはMMA市況。関門D(桁)未検証",
-          "verified": "2026-07-28"
+          "tier": "rejected",
+          "reason": "決算実読2026-08-03: BM&P営利△42億=構成比△1.9%・全社利益の89.2%は産業ガス(関門D)。西日本エチレン設備停止で石化縮退中。中心ピンMMAも△15億"
         },
         {
           "code": "3407",

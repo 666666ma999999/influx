@@ -343,7 +343,14 @@ def parse_spread(index_html: str, s: dict) -> dict | None:
     value = spread(num["value"], den["value"])
     # 1週前の各脚を週次%から解析的に復元（片脚でも週次%が無ければ週次判定はしない）
     weekly_abs = None
-    if num.get("weekly_pct") is not None and den.get("weekly_pct") is not None:
+    legs_mismatch = (num.get("src_date") or "") != (den.get("src_date") or "")
+    if legs_mismatch:
+        # 両脚の出所日が不一致なら週次判定を出さない（fail-closed・2026-08-03 実害:
+        # 日中の手動実行で PE 脚だけ Aug/03 に進みナフサ脚 Jul/31 のまま、weekly_abs が
+        # −8.75 → +44.12 USD/T に反転して誤発火・前向き記録まで汚染。旧注記「最大1日ズレ」は
+        # 実測3暦日ズレで破綻。value の記録は続け、発火だけを止める）
+        pass
+    elif num.get("weekly_pct") is not None and den.get("weekly_pct") is not None:
         n_prev = num["value"] / (1 + num["weekly_pct"] / 100)
         d_prev = den["value"] / (1 + den["weekly_pct"] / 100)
         weekly_abs = round(value - spread(n_prev, d_prev), 2)
@@ -352,6 +359,7 @@ def parse_spread(index_html: str, s: dict) -> dict | None:
     return {"value": round(value, 2), "day_pct": None, "weekly_pct": None,
             "monthly_pct": None, "src_date": min(d for d in dates) if all(dates) else "",
             "layout": "spread", "weekly_abs": weekly_abs, "usdcny": round(usdcny, 4),
+            "legs_mismatch": legs_mismatch,
             "legs": f"{s['num']['slug']}:{num.get('src_date')} / {s['den']['slug']}:{den.get('src_date')}"}
 
 

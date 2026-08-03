@@ -100,7 +100,7 @@
 {"code": "2590", "name": "ダイドーグループホールディングス", "s33": "食料品", "pin": "自販機飲料の値上げ浸透", "pin_type": "price_set", "sign": "+", "series": "日銀CGPI 清涼飲料", "watch": "manual", "note": "国内自販機が利益の柱、値上げ浸透と1台当り本数が中心"}
 {"code": "2593", "name": "伊藤園", "s33": "食料品", "pin": "茶飲料の値上げ浸透", "pin_type": "price_set", "sign": "+", "series": "農水省 荒茶価格", "watch": "manual", "note": "荒茶高騰は買い手側コスト、製品値上げの浸透が利益を決める"}
 {"code": "2602", "name": "日清オイリオグループ", "s33": "食料品", "pin": "搾油スプレッド（大豆菜種と食用油）", "pin_type": "spread", "sign": "+", "series": "CBOT大豆・ICE菜種と国内食用油価格", "watch": "manual", "note": "原料安と売価維持でスプレッド拡大が増益の主因"}
-{"code": "2607", "name": "不二製油", "s33": "食料品", "pin": "カカオ豆相場・加工マージン", "pin_type": "spread", "sign": "+", "series": "cocoa（ICEココア先物）", "watch": "auto", "note": "業務用チョコの川上でカカオ高が加工マージン拡大に直結"}
+{"code": "2607", "name": "不二製油", "s33": "食料品", "pin": "カカオ豆相場・加工マージン", "pin_type": "spread", "sign": "-", "series": "cocoa（ICEココア先物）", "watch": "none", "note": "【2026-08-03訂正・決算実読】カカオはコスト側=sign−。FY26/3で会社が『カカオ豆価格の安定・関連費用減少』を増益要因と明記・業務用チョコ営利構成比6.6%。旧note『加工マージン拡大に直結』は誤り（docs§11正味検証07-29+seisa_v0で二重確認）"}
 {"code": "2659", "name": "サンエー", "s33": "小売業", "pin": "既存店売上・沖縄観光客数", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "沖縄の食品スーパーで既存店売上と観光需要が利益源"}
 {"code": "2664", "name": "カワチ薬品", "s33": "小売業", "pin": "既存店売上・客数", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "郊外型ドラッグで既存店売上が利益、仕入は原価側"}
 {"code": "2670", "name": "エービーシー・マート", "s33": "小売業", "pin": "既存店売上・客単価", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "靴小売は既存店売上が利益源、ドル建て仕入で円安は原価増"}
@@ -248,7 +248,7 @@
 {"code": "4183", "name": "三井化学", "s33": "化学", "scale": "TOPIX Mid400", "pin": "基盤素材の対ナフサスプレッド", "pin_type": "spread", "sign": "+", "series": "TE naphtha(分母のみ)", "watch": "manual", "note": "基盤素材の対ナフサスプレッドが損益の振れを最も動かす"}
 {"code": "4186", "name": "東京応化工業", "s33": "化学", "scale": "TOPIX Mid400", "pin": "フォトレジストの出荷数量", "pin_type": "volume", "sign": "+", "series": "SEMI/WSTS半導体売上", "watch": "manual", "note": "フォトレジストが利益柱・半導体前工程の出荷数量が中心"}
 {"code": "4187", "name": "大阪有機化学工業", "s33": "化学", "scale": "TOPIX Small 1", "pin": "電子材料用アクリルモノマーの数量", "pin_type": "volume", "sign": "+", "series": "WSTS半導体売上", "watch": "manual", "note": "電子材料用アクリルモノマーの数量が利益の中心"}
-{"code": "4188", "name": "三菱ケミカルグループ", "s33": "化学", "scale": "TOPIX Large70", "pin": "MMA(メタクリル酸メチル)市況", "pin_type": "commodity", "sign": "+", "series": "none", "watch": "none", "note": "世界首位のMMA市況が利益の振れを支配・産業ガスは安定収益"}
+{"code": "4188", "name": "三菱ケミカルグループ", "s33": "化学", "scale": "TOPIX Large70", "pin": "MMA(メタクリル酸メチル)市況", "pin_type": "commodity", "sign": "+", "series": "none", "watch": "none", "note": "世界首位のMMA市況が利益の振れを支配・産業ガスは安定収益。【2026-08-03追記】FY26/3実読でMMA含むBM&P△42億の損失・全社利益の89.2%は産業ガス＝pin発火の受益カード化は保留が妥当"}
 {"code": "4189", "name": "ＫＨネオケム", "s33": "化学", "scale": "TOPIX Small 1", "pin": "冷凍機油用エステルの出荷数量(空調生産)", "pin_type": "volume", "sign": "+", "series": "エアコン出荷(JRAIA)", "watch": "manual", "note": "冷凍機油エステルが利益柱・空調機生産の数量に連動"}
 {"code": "4194", "name": "ビジョナル", "s33": "情報･通信業", "pin": "中途採用の成約数(求人数)", "pin_type": "volume", "sign": "+", "series": "厚労省 有効求人倍率", "watch": "manual", "note": "ビズリーチの採用成約数量が利益で採用市況の数量に連動"}
 {"code": "4202", "name": "ダイセル", "s33": "化学", "scale": "TOPIX Mid400", "pin": "アセテートトウの値決め・数量", "pin_type": "price_set", "sign": "+", "series": "none", "watch": "none", "note": "アセテートトウは寡占で値決め力・たばこ需要が数量を規定"}
