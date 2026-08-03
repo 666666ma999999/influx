@@ -7,6 +7,10 @@ set -uo pipefail
 
 PROJECT_ROOT="/Users/masaaki_nagasawa/Desktop/biz/influx"
 cd "$PROJECT_ROOT" || exit 1
+# launchd の既定 PATH に docker(/usr/local/bin) が無く 2026-08-03 10:30 に
+# `docker: command not found` で exit 3。手動実行はシェル PATH で成功するため
+# 8/1 の観測では再現しなかった（原因はこの PATH 行の欠落）。
+export PATH="/usr/local/bin:/opt/homebrew/bin:$PATH"
 START=20260724
 
 load_key_from_zshrc() {
