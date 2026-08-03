@@ -184,6 +184,58 @@ def parse_yuyutei(html: str) -> dict | None:
             "n_items": n, "src_date": "", "layout": "yuyutei_sar_v1"}
 
 
+def parse_dramexchange(html: str) -> dict | None:
+    """DRAMeXchange 無料トップの NAND スポット（512Gb TLC）セッション平均(USD)を採る。
+
+    波3前倒し（2026-08-03 ユーザー裁定B・tasks/expand_30_categories.md）。
+    行構造: 「512Gb TLC」アンカー後の数値 td 並び = [日中高値, 日中安値, セッション高値,
+    セッション安値, セッション平均]（変化率セルは img+% 混在のため数値専用正規表現に掛からない）。
+    5番目=セッション平均を value に採用。td 個数検査で表順変化の静かな誤記録を防ぐ（fail-closed）。
+    キオクシアASP自体は率非開示のため、市場スポットが唯一のリアルタイム代理（帰属= §11・§16）。
+    """
+    # 列の意味はヘッダ行ラベルの順序で固定する（Codex R2: 数値の大小関係だけでは列順を一意にできない）。
+    # 実測ヘッダ: Item | Weekly High | Weekly Low | Session High | Session Low | Session Average | Average Change
+    header_re = re.compile(
+        r"Item.{0,200}?Weekly\s*High.{0,200}?Weekly\s*Low.{0,200}?"
+        r"Session\s*High.{0,200}?Session\s*Low.{0,200}?Session\s*Average", re.S)
+    valid_rows: list[tuple[list[float], str]] = []
+    for m in re.finditer(r"512Gb TLC", html):
+        end = html.find("</tr>", m.start())
+        if end < 0:
+            continue  # </tr> 不在の断片を「行」扱いしない（Codex R1-2）
+        # 直前3000字にヘッダ列順の一致を要求（列並べ替え・別表マッチは欠測へ。Codex R2-1）
+        if not header_re.search(html[max(0, m.start() - 3000):m.start()]):
+            continue
+        row = html[m.start():end]
+        cells = [float(c) for c in re.findall(r"<td[^>]*>\s*([0-9]+(?:\.[0-9]+)?)\s*</td>", row)]
+        if len(cells) != 5:
+            continue
+        wk_hi, wk_lo, se_hi, se_lo, avg = cells
+        if not (wk_hi >= wk_lo and se_hi >= se_lo and se_lo <= avg <= se_hi and avg > 0):
+            continue  # ヘッダ一致後の数値健全性（欠損・桁化けの検知）
+        valid_rows.append((cells, row))
+    if len(valid_rows) != 1:
+        return None  # 0=構造変化・2以上=どれが正か決められない。誤セル記録より欠測を選ぶ
+    cells, row = valid_rows[0]
+    # 符号は up.gif / down.gif の排他的出現時のみ採用（両方・どちらも無し=方向不明でNone。Codex R2-2）
+    pm = re.search(r"([0-9]+(?:\.[0-9]+)?)\s*%", row)
+    has_up, has_down = "up.gif" in row, "down.gif" in row
+    if pm and has_up != has_down:
+        day_pct = -float(pm.group(1)) if has_down else float(pm.group(1))
+    else:
+        day_pct = None
+    # 更新日はページ先頭でなく「採用した行の近傍窓」から採る（別セクションのLast Update誤採用防止）
+    row_start = html.find(row)
+    near = html[max(0, row_start - 3000):row_start + len(row)]
+    dm = re.search(r"Last\s*Update:?\s*([A-Za-z]{3})\.?\s*(\d{1,2})\s+(\d{4})", near)
+    months = {"Jan": 1, "Feb": 2, "Mar": 3, "Apr": 4, "May": 5, "Jun": 6,
+              "Jul": 7, "Aug": 8, "Sep": 9, "Oct": 10, "Nov": 11, "Dec": 12}
+    src_date = (f"{dm.group(3)}-{months[dm.group(1)]:02d}-{int(dm.group(2)):02d}"
+                if dm and dm.group(1) in months else "")
+    return {"value": cells[4], "day_pct": day_pct, "weekly_pct": None,
+            "monthly_pct": None, "src_date": src_date, "layout": "dramexchange_512gb_tlc"}
+
+
 def parse_scfi(payload: dict) -> dict | None:
     """SCFI総合指数（en.sse.net.cn の週次JSON API・2026-07-28 実測スキーマ）。
 
@@ -518,6 +570,8 @@ def main() -> int:
                 parsed = tokyosteel_scrap.fetch_tokyosteel_scrap(today)
             elif s["type"] == "tanaka":
                 parsed = parse_tanaka(fetch("https://gold.tanaka.co.jp/commodity/souba/"))
+            elif s["type"] == "dramexchange":
+                parsed = parse_dramexchange(fetch("https://www.dramexchange.com/"))
             elif s["type"] == "uss":
                 parsed = parse_uss(fetch("https://www.ussnet.co.jp/ir/library/monthly/index.html"))
             elif s["type"] == "yuyutei":
