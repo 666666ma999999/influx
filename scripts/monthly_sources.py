@@ -382,6 +382,103 @@ def fetch_jnto() -> dict | None:
     return parse_jnto_wb(wb)
 
 
+# ---------------------------------------------------------------- e-Stat 生産動態（メモリ implied ASP）
+# ASP分解レーン縮小継続（2026-08-04 ユーザー裁定・tasks/asp_decomposition_lane.md）。
+# 探索経路は 2026-08-04 実測検証済み: 月ページ(tclass=12040605=月次確報)に statInfId が2つ
+# （時系列表 h2daa<YYYYMM>_jikei.xlsx と機械統計生産能力指数表）。指数表でない方をDL。
+
+_ESTAT_MONTH_PAGE = ("https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&cycle=1"
+                     "&toukei=00550200&tstat=000001022932&tclass1=000001058955&tclass2val=0"
+                     "&year={y}0&month=12040605")
+_ESTAT_DL = "https://www.e-stat.go.jp/stat-search/file-download?statInfId={sid}&fileKind=0"
+
+
+def parse_estat_asp_memory(wb) -> dict | None:
+    """生産動態・時系列表(実数)ワークブックから メモリ(調査票2360) の implied ASP を採る。
+
+    ASP[円/個] = 販売金額[百万円] ÷ 販売数量[千個] × 1000。列は月ヘッダの正規表現で解決
+    （12月号は13ヶ月窓・固定位置は不可＝backtest_v1で実測した罠）。fail-closed:
+    実数表なし/メモリ行なし/金額数量ペア名不一致/数量0・非有限は None（欠測>誤記録）。
+    """
+    if "実数表" not in wb.sheetnames:
+        return None
+    it = wb["実数表"].iter_rows(values_only=True)
+    next(it, None)
+    header = next(it, None)
+    if not header:
+        return None
+    cols = {str(v): i for i, v in enumerate(header) if v and re.fullmatch(r"20\d{4}", str(v))}
+    if len(cols) < 7:  # QoQ(3/3)に6ヶ月+当月が要る
+        return None
+    amount = qty = None
+    for r in it:
+        if r[0] is None:
+            continue
+        if str(r[0]).strip() == "2360" and str(r[5]).strip() == "メモリ":
+            item = str(r[6]).strip()
+            if item == "販売金額":
+                amount = {m: r[i] for m, i in cols.items()}
+            elif item == "販売数量":
+                qty = {m: r[i] for m, i in cols.items()}
+    if not amount or not qty:
+        return None
+    months = sorted(cols)
+    import math
+    asp = {}
+    for m in months:
+        a, q = amount.get(m), qty.get(m)
+        if (isinstance(a, (int, float)) and isinstance(q, (int, float))
+                and math.isfinite(a) and math.isfinite(q) and q > 0):
+            asp[m] = a / q * 1000.0
+    ms = [m for m in months if m in asp]
+    if len(ms) < 2:
+        return None
+    latest, prev = ms[-1], ms[-2]
+    monthly_pct = round((asp[latest] / asp[prev] - 1) * 100, 2)
+    qoq = None
+    if len(ms) >= 6:
+        recent = [asp[m] for m in ms[-3:]]
+        earlier = [asp[m] for m in ms[-6:-3]]
+        qoq = round((sum(recent) / 3 / (sum(earlier) / 3) - 1) * 100, 1)
+    return {"value": round(asp[latest], 1), "day_pct": None, "weekly_pct": None,
+            "monthly_pct": monthly_pct, "src_date": f"{latest[:4]}-{latest[4:]}",
+            "layout": "estat_asp_memory_2360",
+            "note_qoq3m": qoq, "n_months": len(ms)}
+
+
+def fetch_estat_asp() -> dict | None:
+    import datetime as _dt
+
+    import openpyxl
+    for year in (_dt.date.today().year, _dt.date.today().year - 1):  # 年初の未公表期は前年へ
+        # fail-closed: 誤SID・非XLSX・壊れたWorkbook等の例外は握って次候補/None へ倒す
+        # （誤った値を status=ok で記録するより欠測を選ぶ・Codex R1指摘）
+        try:
+            html = _get(_ESTAT_MONTH_PAGE.format(y=year)).text
+            sids = re.findall(r"statInfId=(\d+)", html)
+            if not sids:
+                continue
+            chosen = None
+            for sid in dict.fromkeys(sids):
+                seg_at = html.find(f"statInfId={sid}")
+                if "指数表" not in html[max(0, seg_at - 2000):seg_at + 300]:
+                    chosen = sid
+                    break
+            if chosen is None:
+                continue
+            wb = openpyxl.load_workbook(io.BytesIO(_get(_ESTAT_DL.format(sid=chosen)).content),
+                                        data_only=True, read_only=True)
+            try:
+                parsed = parse_estat_asp_memory(wb)
+            finally:
+                wb.close()
+            if parsed:
+                return parsed
+        except Exception:  # noqa: BLE001  (構造変化・DL失敗は欠測扱い＝発火しない)
+            continue
+    return None
+
+
 # ---------------------------------------------------------------- selftest
 
 def _selftest() -> int:  # noqa: C901

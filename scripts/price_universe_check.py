@@ -585,7 +585,7 @@ def main() -> int:
             elif s["type"] == "yuyutei":
                 parsed = parse_yuyutei(
                     fetch("https://yuyu-tei.jp/sell/poc/s/search?search_word=&rare=SAR"))
-            elif s["type"] in ("jmtba", "seaj", "jama", "miki", "tamago", "rice", "jnto"):
+            elif s["type"] in ("jmtba", "seaj", "jama", "miki", "tamago", "rice", "jnto", "estat_asp"):
                 # 波2の月次データ源（30カテゴリ拡張・2026-08-02）。取得実装と fixtures は
                 # monthly_sources.py に分離。type名 → fetch_<type>() の明示対応（allowlist方式）
                 import monthly_sources

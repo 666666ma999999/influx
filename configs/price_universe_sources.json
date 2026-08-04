@@ -2058,6 +2058,20 @@
           "verified": "2026-08-03"
         }
       ]
+    },
+    {
+      "id": "memory-asp-estat",
+      "label": "e-Stat Current Production Memory implied ASP",
+      "type": "estat_asp",
+      "jp": "メモリ公式ASP(生産動態・円/個)",
+      "cadence": "monthly",
+      "alert": {
+        "weekly_pct": 999.0,
+        "four_week_pct": 999.0,
+        "monthly_pct": 10.0
+      },
+      "beneficiaries": [],
+      "note": "ASP分解レーン縮小継続(2026-08-04ユーザー裁定・tasks/asp_decomposition_lane.md)。implied ASP=販売金額÷販売数量(調査票2360メモリ・確報+45日ラグ・月次)。受益は結線せず nand_spot カード(285A confirmed・週次スポット)と共有＝本系列は公式確定値によるスポットの裏取り・乖離検知役(月次レーンの環境指標扱い・§0b整合)。閾値+10%/月はv0(実測: 平常月±5%以内・サージ月+32%〜+48%の分離点・履歴8点で再フィット)。backtest 2回NO-GO(202012-202605)につき前向き観察のみ・成績の主張禁止。残る2360品目32本はマッピング成立時に拡張(在庫)"
     }
   ],
   "_monthly_lane": "月次レーン(cadence=monthly・2026-07-28新設): 月次統計は刻みが0.1〜0.5%/月で週次閾値では永久に鳴らないため前月比を専用閾値で見る。同じ公表月では再発火しない。**銘柄を鳴らさない環境指標レーン**=マクロ集計値を個社に紐付けるのは帰属プロトコル§0bの1ホップ制限に反するため beneficiaries は空。用途は price_set型64社(加工食品24/SIer19等)の追い風・向かい風の背景判断。"
