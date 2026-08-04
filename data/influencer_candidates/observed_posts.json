@@ -1,0 +1,11 @@
+{
+  "_note": "逆引きパイロットで観測した候補インフルエンサーの投稿サンプル（2026-07-23・Chrome手動収集・偏りあり=当方が目にした分のみ）。full収集はPlaywright collectorで別途。scorerのテスト兼seed。",
+  "_schema": "posts[].{account, date(YYYYMMDD), text}",
+  "posts": [
+    {"account": "kabuzoon", "date": "20250912", "text": "レアアース関連で本命候補を探すなら 東洋エンジニアリング(6330)。理由はシンプル、既に国策研究で圧倒的リードを取っているから。JAMSTECからの受注実績"},
+    {"account": "kabuzoon", "date": "20260619", "text": "リベラウェア（218A）時価総額約165億円。市場はまだドローン会社として評価だが、CalTa(34%保有・黒字化済み)鉄道点検ドローンProject SPARROW 下水道インフラDX KDDI連携などインフラDXプラットフォーム企業へ"},
+    {"account": "kabuzoon", "date": "20260711", "text": "ispaceは、月へ荷物を運び、月面で運用まで支援する月面物流インフラ企業を目指しています。Starshipは新たな事業の柱であり、自社ランダー(Ultra)も継続"},
+    {"account": "FIRE60028219", "date": "20250716", "text": "【5721】エスサイエンスそろそろ上がりそう"},
+    {"account": "FIRE60028219", "date": "20260701", "text": "かなりやばい"}
+  ]
+}

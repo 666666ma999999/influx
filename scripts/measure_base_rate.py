@@ -80,6 +80,13 @@ def month_ends_in_range(calendar_days: list[tuple[str, str]], start_month: str, 
     return jq_fetch.month_end_business_days_in_range(calendar_days, start_bound, end_bound)
 
 
+def month_starts_in_range(calendar_days: list[tuple[str, str]], start_month: str, end_month: str) -> list[str]:
+    """[start_month, end_month]（YYYY-MM）に含まれる各月の最初の営業日を返す（§7-AE用）。"""
+    start_bound = start_month.replace("-", "") + "01"
+    end_bound = end_month.replace("-", "") + "31"
+    return jq_fetch.month_start_business_days_in_range(calendar_days, start_bound, end_bound)
+
+
 @functools.lru_cache(maxsize=600)
 def load_bars_day(date_str: str) -> dict[str, dict]:
     """指定営業日の全銘柄四本値を Code -> record の dict で返す（未取得なら明確なエラーで停止）。"""
@@ -147,8 +154,19 @@ def build_universe(
     all_bdays: list[str],
     window_n: int,
     top_n: int,
+    master_date: Optional[str] = None,
 ) -> tuple[list[tuple[str, float]], dict]:
-    """月末営業日 T のユニバースを構築する。
+    """営業日 T のユニバースを構築する（既定は月末営業日 T。§7-AE等の月初起点呼び出しにも対応）。
+
+    Args:
+        master_date: ProdCat分類（内国株券フィルタ）に使うmasterスナップショットの日付を
+            t_date から分離指定したい場合に渡す（既定 None は t_date と同一＝全既存呼び出し元
+            の挙動を完全互換で維持）。data/jquants/master/ は月末営業日にしか取得されない
+            設計のため、t_date が月末以外（§7-AE の月初第1営業日等）だと load_master_day(t_date)
+            は失敗する。呼び出し側で「t_date より前で直近の既存masterスナップショット日」を
+            解決して渡すことで、売買代金トレーリング窓・look-aheadガードはt_date基準のまま、
+            ProdCat分類だけ既存の直近masterを使う（2026-07-18 team lead裁定・§7-AE用）。
+            master_date <= t_date であること（未来のmasterを使うlook-ahead違反を防ぐ）。
 
     Returns:
         (selected, stats): selected は [(code, turnover_sum), ...] を売買代金降順で
@@ -173,7 +191,11 @@ def build_universe(
             if va:
                 turnover[code] += va
 
-    master = load_master_day(t_date)
+    effective_master_date = master_date if master_date is not None else t_date
+    assert effective_master_date <= t_date, (
+        f"look-ahead 違反: master_date {effective_master_date} > t_date {t_date}"
+    )
+    master = load_master_day(effective_master_date)
     master_011_codes = {code for code, rec in master.items() if rec.get("ProdCat") == PROD_CAT_STOCK}
 
     candidates = [(code, tv) for code, tv in turnover.items() if code in master_011_codes]
@@ -185,6 +207,7 @@ def build_universe(
         "n_master_011": len(master_011_codes),
         "n_intersect": len(candidates),
         "n_selected": len(selected),
+        "master_date_used": effective_master_date,
     }
     if len(selected) < top_n:
         print(f"WARN: [{t_date}] ユニバースが{top_n}件未満: {len(selected)}件", file=sys.stderr)
