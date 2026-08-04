@@ -114,7 +114,13 @@ def wave_state(by_date: dict[str, dict], target_date: str, is_clean, cfg: dict) 
         elif win <= age < win * 2:
             prev.append(row["count"])
     need = cfg.get("wave_min_samples", 3)
-    if len(cur) < need or len(prev) < need or mean(prev) <= 0:
+    # 両窓の標本数が釣り合っていないと平均の比が意味を持たない。
+    # 例: 収集開始直後は「直近28日=28標本 / 前28日=3標本」になり、3日ぶんの平均と
+    # 28日ぶんの平均を比べることになる。実測でこの状態は 2026-08-24〜08-29 に発生する。
+    # 較正データ（2〜4日おきの疎な標本）では cur≈prev なので 0.3 でも陽性4/4・陰性0/4・
+    # 発火日まで完全に不変。0.5 まで上げると銅を取り逃す（実測）ので 0.3 を採る。
+    bal = cfg.get("wave_balance", 0.3)
+    if len(cur) < need or len(prev) < need or mean(prev) <= 0 or len(prev) < len(cur) * bal:
         return {"wave_ratio": None, "n_cur": len(cur), "n_prev": len(prev)}
     return {"wave_ratio": round(mean(cur) / mean(prev), 2),
             "n_cur": len(cur), "n_prev": len(prev)}
