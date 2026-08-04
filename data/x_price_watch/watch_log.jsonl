@@ -1,0 +1,1 @@
+{"date": "2026-08-02", "type": "watch", "rule_version": "v2-wave28x2", "query_id": "gen1-douka-kotou", "count": 36, "n_baseline": 7, "baseline_mean": 22.86, "baseline_std": 3.68, "z": 3.57, "wave_ratio": null, "n_wave_cur": 8, "n_wave_prev": 0, "verdict": "watch"}

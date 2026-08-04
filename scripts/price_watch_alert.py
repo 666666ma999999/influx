@@ -43,6 +43,9 @@ RULE_VERSION = "v2-wave28x2"
 DEFAULT_CONFIG = APP / "configs/x_price_watch.json"
 DEFAULT_LEDGER = APP / "data/x_price_watch/ledger.jsonl"
 DEFAULT_OUT_DIR = APP / "output/price_watch"
+# 候補（watch）の観察台帳。**発火台帳(forward_log)とは別ファイル**にして検定の分母に入れない。
+# v2 は履歴が貯まるまで沈黙するため、その間の取り逃しを後から監査するために残す（Codex C-4）
+WATCH_LOG = APP / "data/x_price_watch/watch_log.jsonl"
 
 
 def load_shortage_map() -> tuple[dict | None, str]:
@@ -83,7 +86,8 @@ def load_ledger(path: Path) -> list[dict]:
     return rows
 
 
-def wave_state(by_date: dict[str, dict], target_date: str, is_clean, cfg: dict) -> dict:
+def wave_state(by_date: dict[str, dict], target_date: str, is_clean, cfg: dict,
+               query_sha) -> dict:
     """「投稿の波」＝直近 wave_days 日の平均が、その前 wave_days 日の平均の何倍かを返す。
 
     なぜ単日 z でなく波なのか（2026-08-04 実装・較正は backfill 実データ）:
@@ -106,13 +110,22 @@ def wave_state(by_date: dict[str, dict], target_date: str, is_clean, cfg: dict) 
     t = datetime.strptime(target_date, "%Y-%m-%d")
     cur, prev = [], []
     for d, row in by_date.items():
-        if not is_clean(row):
+        # 検索式が変わった前後の母集団を混ぜない。zスコア側のベースラインは既に
+        # query_sha 一致を要求しており、波だけ検査しないのは実装の穴だった（Codex C-3）
+        if not is_clean(row) or row.get("query_sha") != query_sha:
             continue
         age = (t - datetime.strptime(d, "%Y-%m-%d")).days
         if 0 <= age < win:
             cur.append(row["count"])
         elif win <= age < win * 2:
             prev.append(row["count"])
+    # 直近窓の最小標本数を前窓より厳しくする（Codex C-1）。標本が少ないと当日1日の寄与が
+    # 大きくなり「複数週の持続」でなく単日スパイクで比が2.0に届いてしまう。
+    # 実測: 平時5件の系列で比2.0に必要な単日は 直近3標本→20件(4倍) / 6標本→35件(7倍) /
+    # 28標本→145件(29倍)。較正では直近>=6 まで陽性4/4・陰性0/4・発火日すべて不変で、
+    # 7以上にすると HDD の初回発火が 11/01→11/21 と遅れる（＝6が最良点）。
+    # 前窓は3のまま（対称に6へ上げると銅を取り逃す＝陽性3/4に悪化する実測）。
+    need_cur = cfg.get("wave_min_samples_cur", 6)
     need = cfg.get("wave_min_samples", 3)
     # 両窓の標本数が釣り合っていないと平均の比が意味を持たない。
     # 例: 収集開始直後は「直近28日=28標本 / 前28日=3標本」になり、3日ぶんの平均と
@@ -120,9 +133,13 @@ def wave_state(by_date: dict[str, dict], target_date: str, is_clean, cfg: dict) 
     # 較正データ（2〜4日おきの疎な標本）では cur≈prev なので 0.3 でも陽性4/4・陰性0/4・
     # 発火日まで完全に不変。0.5 まで上げると銅を取り逃す（実測）ので 0.3 を採る。
     bal = cfg.get("wave_balance", 0.3)
-    if len(cur) < need or len(prev) < need or mean(prev) <= 0 or len(prev) < len(cur) * bal:
+    if (len(cur) < need_cur or len(prev) < need or mean(prev) <= 0
+            or len(prev) < len(cur) * bal):
         return {"wave_ratio": None, "n_cur": len(cur), "n_prev": len(prev)}
-    return {"wave_ratio": round(mean(cur) / mean(prev), 2),
+    # 判定は生値で行い、丸めは表示用に別で持つ（1.995 が 2.00 に丸まって発火するのを防ぐ・
+    # Codex NIT-9）
+    raw = mean(cur) / mean(prev)
+    return {"wave_ratio": round(raw, 2), "wave_ratio_raw": raw,
             "n_cur": len(cur), "n_prev": len(prev)}
 
 
@@ -163,7 +180,7 @@ def judge_query(history: list[dict], target_date: str, alert_cfg: dict) -> dict:
         if is_clean(by_date[d])
         and by_date[d].get("query_sha") == target.get("query_sha")  # クエリ凍結の実効化（クエリ単位）
     ]
-    wave = wave_state(by_date, target_date, is_clean, alert_cfg)
+    wave = wave_state(by_date, target_date, is_clean, alert_cfg, target.get("query_sha"))
     result = {"count": target["count"], "n_baseline": len(baseline),
               "baseline_mean": round(mean(baseline), 2) if baseline else None,
               "baseline_std": round(pstdev(baseline), 2) if baseline else None, "z": None,
@@ -173,8 +190,8 @@ def judge_query(history: list[dict], target_date: str, alert_cfg: dict) -> dict:
         return {**result, "verdict": "warmup"}
 
     min_abs = alert_cfg.get("min_abs_count", 10)
-    wave_ok = (wave["wave_ratio"] is not None
-               and wave["wave_ratio"] >= alert_cfg.get("wave_ratio", 2.0))
+    wave_ok = (wave.get("wave_ratio_raw") is not None
+               and wave["wave_ratio_raw"] >= alert_cfg.get("wave_ratio", 2.0))
 
     mu, sigma = mean(baseline), pstdev(baseline)
     if sigma == 0:
@@ -387,9 +404,23 @@ def main() -> int:
     else:
         print("\nアラートなし")
     if watches:
-        # 候補は「まだ波になっていない単日の跳び」。台帳・通知には出さないが、
-        # 波に育つかを追うために毎回表示する（履歴が wave_days*2 貯まるまでは全部ここに出る）
-        print(f"\n👀 候補 {len(watches)} 件（単日の跳び・波は未成立＝発火せず・台帳にも残さない）")
+        # 候補は「まだ波になっていない単日の跳び」。発火台帳・通知・検定には出さないが、
+        # **専用台帳に残す**。v2 は履歴が貯まるまで約4週間ほぼ沈黙するため、その間に
+        # 本物の波を取り逃していないかを後から監査できる経路が無いと検証不能になる
+        # （Codex C-4）。watch_log は検定の分母に入れない＝観察専用（ファイルを分けて担保）
+        try:
+            WATCH_LOG.parent.mkdir(parents=True, exist_ok=True)
+            seen_w = {(r.get("date"), r.get("query_id")) for r in load_ledger(WATCH_LOG)}
+            with WATCH_LOG.open("a", encoding="utf-8") as fh:
+                for w in watches:
+                    if (target_date, w["query_id"]) in seen_w:
+                        continue   # 同日再実行で二重に積まない
+                    fh.write(json.dumps({"date": target_date, "type": "watch",
+                                         "rule_version": RULE_VERSION, **w},
+                                        ensure_ascii=False) + "\n")
+        except OSError as exc:
+            print(f"[watch] WARN: 候補台帳に書けません: {str(exc)[:80]}")
+        print(f"\n👀 候補 {len(watches)} 件（単日の跳び・波は未成立＝発火せず・観察台帳のみ）")
         for w in sorted(watches, key=lambda x: -(x.get("z") or 0)):
             wr = "履歴不足" if w.get("wave_ratio") is None else f"波{w['wave_ratio']:.2f}倍"
             z_txt = "-" if w.get("z") is None else f"{w['z']:.2f}"
