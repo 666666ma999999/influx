@@ -8,6 +8,7 @@
 fail-closed: 取れなければ status=failed（呼び出し側は本文なしとして扱い、カード化しない）。
 """
 import json
+import re
 import sys
 
 sys.path.insert(0, "/app/scripts")
@@ -38,6 +39,14 @@ def main() -> int:
             try:
                 page.goto(u, timeout=30000)
                 page.wait_for_timeout(5000)
+                # ツイートURLを渡された場合: 中の記事リンク(/i/article/)へ辿ってから抽出する
+                # （ツイートページのままだとタイムラインUIが混ざり、下流の機械ゲートで誤って落ちる）
+                if "/status/" in u:
+                    art = page.evaluate(
+                        "()=>document.querySelector('a[href*=\"/i/article/\"]')?.href || ''")
+                    if art:
+                        page.goto(art, timeout=30000)
+                        page.wait_for_timeout(5000)
                 txt = page.evaluate("()=>document.body.innerText") or ""
                 if any(m in txt[:400] for m in LOGIN_MARKERS):
                     row["status"] = "failed_login_wall"
@@ -46,11 +55,29 @@ def main() -> int:
                     # X画面のUI雑音（メニュー等）を除去: 記事本文はUI行を落とした残りから始まる
                     UI = ("キーボードショートカット", "ホーム", "話題を検索", "通知", "チャット",
                           "Grok", "プレミアム", "ブックマーク", "クリエイタースタジオ", "記事",
-                          "プロフィール", "もっと見る", "ポスト", "フォロー", "フォローする")
+                          "プロフィール", "もっと見る", "ポスト", "ポストする", "フォロー",
+                          "フォローする", "新しいポストを表示", "会話", "返信", "リポスト")
                     body_lines = [l for l in lines if l.strip() not in UI
                                   and not l.startswith("キーボードショートカット")]
-                    row["title"] = body_lines[0][:80] if body_lines else ""
-                    row["text"] = "\n".join(body_lines)[:12000]
+                    # タイトル= 冒頭10行内の「最後の @ハンドル行」の直後にある非数値行
+                    # （閲覧アカウント名→@自分→著者名→@著者→タイトル→指標数値…の並びが実測形）
+                    title = ""
+                    head = body_lines[:10]
+                    at_idx = [i for i, l in enumerate(head) if l.startswith("@")]
+                    start = 0
+                    if at_idx:
+                        j = at_idx[-1] + 1
+                        while j < len(body_lines):
+                            cand = body_lines[j].strip()
+                            if cand and not re.fullmatch(r"[\d,.万]+", cand) and not cand.startswith("@"):
+                                title = cand[:80]
+                                start = j
+                                break
+                            j += 1
+                    if not title and body_lines:
+                        title = body_lines[0][:80]
+                    row["title"] = title
+                    row["text"] = "\n".join(body_lines[start:])[:12000]
                     row["status"] = "full"
             except Exception as exc:  # noqa: BLE001
                 row["status"] = f"failed_{type(exc).__name__}"
