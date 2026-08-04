@@ -29,11 +29,16 @@ import argparse
 import json
 import sys
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from statistics import mean, pstdev
 
 APP = Path("/app") if Path("/app/scripts").exists() else Path(__file__).resolve().parent.parent
+
+# 検出器の版。前向き記録に刻み、ルール変更をまたいだ発火を同じ検定に混ぜない。
+#   v1 = 単日 z>=3.0（〜2026-08-03。較正で陽性3/4・陰性3/4＝判別力ほぼ無しと判明）
+#   v2 = 波（直近28日平均/前28日平均>=2.0）かつ当日>=10件（陽性4/4・陰性0/4）
+RULE_VERSION = "v2-wave28x2"
 
 DEFAULT_CONFIG = APP / "configs/x_price_watch.json"
 DEFAULT_LEDGER = APP / "data/x_price_watch/ledger.jsonl"
@@ -78,12 +83,55 @@ def load_ledger(path: Path) -> list[dict]:
     return rows
 
 
+def wave_state(by_date: dict[str, dict], target_date: str, is_clean, cfg: dict) -> dict:
+    """「投稿の波」＝直近 wave_days 日の平均が、その前 wave_days 日の平均の何倍かを返す。
+
+    なぜ単日 z でなく波なのか（2026-08-04 実装・較正は backfill 実データ）:
+    後ろ向き検証で成立した型は「投稿が数週間かけて3〜10倍に膨らんだ後、株の2段目が来る」
+    （§16h/§16i）。ところが検出器は単日の z を見ており**型と検出器が不一致**だった。
+    実際、成立4カテゴリ（銅・レアメタル・HDD・メモリ）と非成立4カテゴリ（金・原油・ポケカ・
+    中古車）の過去日次件数で較正すると:
+        単日 z>=3          → 陽性3/4 ・ **陰性3/4**（金もポケカも原油も鳴る＝判別力ほぼ無し）
+        単日 z + 最小件数   → 陽性3/4 ・ 陰性3/4（変わらず）
+        14日内に z>=3 が2回 → 陽性2/4 ・ 陰性2/4（改善せず）
+        **28日平均 / 前28日平均 >= 2.0** → **陽性4/4 ・ 陰性0/4**（完全分離）
+    しかも発火日が実用的で、レアメタルは 2026-01-14 に立つ（後ろ向き検証で「1/15買い→
+    4戦4勝・平均超過+30.8pt」だった日と一致）。倍率1.75〜2.0・窓21/28/35日のどれでも
+    同じ 4/4 vs 0/4 になる**広い安全域**があり、1点狙いの過適合ではない（1.5では陰性2/4が誤発火）。
+
+    Returns: {"wave_ratio": float|None, "n_cur": int, "n_prev": int}
+    （履歴不足なら wave_ratio=None ＝ 発火させない）
+    """
+    win = cfg.get("wave_days", 28)
+    t = datetime.strptime(target_date, "%Y-%m-%d")
+    cur, prev = [], []
+    for d, row in by_date.items():
+        if not is_clean(row):
+            continue
+        age = (t - datetime.strptime(d, "%Y-%m-%d")).days
+        if 0 <= age < win:
+            cur.append(row["count"])
+        elif win <= age < win * 2:
+            prev.append(row["count"])
+    need = cfg.get("wave_min_samples", 3)
+    if len(cur) < need or len(prev) < need or mean(prev) <= 0:
+        return {"wave_ratio": None, "n_cur": len(cur), "n_prev": len(prev)}
+    return {"wave_ratio": round(mean(cur) / mean(prev), 2),
+            "n_cur": len(cur), "n_prev": len(prev)}
+
+
 def judge_query(history: list[dict], target_date: str, alert_cfg: dict) -> dict:
     """1クエリ分の履歴（date昇順・同日複数は最終行採用）から対象日を判定する。
 
+    発火の条件（2026-08-04 改定）:
+      alert = **波条件**（wave_ratio >= wave_ratio 既定2.0）かつ 当日 count >= min_abs_count
+      watch = 単日 z>=閾値（または σ=0跳び）だが波が未成立/履歴不足 ＝ **候補どまり・発火しない**
+    単日 z は候補の目印としてのみ残す。低λクエリ（平時1〜2件）では Poisson の離散性だけで
+    z>=3 に届き、実測で年62件規模の誤発火が見込まれたため、最小件数の床も併用する。
+
     Returns:
-        {"verdict": alert|ok|warmup|no_data|not_clean|sigma0_jump, "z", "count",
-         "baseline_mean", "baseline_std", "n_baseline"}
+        {"verdict": alert|watch|ok|warmup|no_data|not_clean|sigma0_jump, "z", "count",
+         "baseline_mean", "baseline_std", "n_baseline", "wave_ratio", "n_wave_cur", "n_wave_prev"}
     """
     def is_clean(row: dict) -> bool:
         return row.get("status") == "ok" and not row.get("censored") and row.get("count") is not None
@@ -109,23 +157,39 @@ def judge_query(history: list[dict], target_date: str, alert_cfg: dict) -> dict:
         if is_clean(by_date[d])
         and by_date[d].get("query_sha") == target.get("query_sha")  # クエリ凍結の実効化（クエリ単位）
     ]
+    wave = wave_state(by_date, target_date, is_clean, alert_cfg)
     result = {"count": target["count"], "n_baseline": len(baseline),
               "baseline_mean": round(mean(baseline), 2) if baseline else None,
-              "baseline_std": round(pstdev(baseline), 2) if baseline else None, "z": None}
+              "baseline_std": round(pstdev(baseline), 2) if baseline else None, "z": None,
+              "wave_ratio": wave["wave_ratio"], "n_wave_cur": wave["n_cur"],
+              "n_wave_prev": wave["n_prev"]}
     if len(baseline) < alert_cfg["min_baseline_days"]:
         return {**result, "verdict": "warmup"}
 
+    min_abs = alert_cfg.get("min_abs_count", 10)
+    wave_ok = (wave["wave_ratio"] is not None
+               and wave["wave_ratio"] >= alert_cfg.get("wave_ratio", 2.0))
+
     mu, sigma = mean(baseline), pstdev(baseline)
     if sigma == 0:
-        verdict = "sigma0_jump" if target["count"] > mu else "ok"
-        return {**result, "verdict": verdict}
-    z = (target["count"] - mu) / sigma
-    result["z"] = round(z, 2)
-    return {**result, "verdict": "alert" if z >= alert_cfg["z_threshold"] else "ok"}
+        spike = target["count"] > mu
+    else:
+        z = (target["count"] - mu) / sigma
+        result["z"] = round(z, 2)
+        spike = z >= alert_cfg["z_threshold"]
+
+    # 波が立っていれば発火（単日 z は不要＝ゆっくり膨らむ本物の波を取り逃がさない）。
+    # 波が未成立なら、単日の跳びは候補（watch）どまりで台帳にも通知にも出さない。
+    if wave_ok and target["count"] >= min_abs:
+        return {**result, "verdict": "alert"}
+    if spike and target["count"] >= min_abs:
+        return {**result, "verdict": "sigma0_jump" if sigma == 0 else "watch"}
+    return {**result, "verdict": "ok"}
 
 
 def selftest() -> int:
-    alert_cfg = {"baseline_days": 14, "min_baseline_days": 7, "z_threshold": 3.0}
+    alert_cfg = {"baseline_days": 14, "min_baseline_days": 7, "z_threshold": 3.0,
+                 "wave_days": 28, "wave_ratio": 2.0, "wave_min_samples": 3, "min_abs_count": 10}
     days = [f"2026-07-{d:02d}" for d in range(1, 16)]
 
     def rows(query_id, counts, **extra):
@@ -138,8 +202,34 @@ def selftest() -> int:
     censored_target = rows("q-cens", [10] * 14 + [80])
     censored_target[-1]["censored"] = True
 
+    # --- 波条件の検証（2026-08-04 追加）。56日ぶんの履歴を作る ---
+    long_days = [(datetime(2026, 5, 1) + timedelta(days=i)).strftime("%Y-%m-%d") for i in range(60)]
+
+    def long_rows(qid, counts):
+        return [{"date": d, "query_id": qid, "count": c, "status": "ok", "censored": False}
+                for d, c in zip(long_days, counts)]
+
+    # 平時5件が最後の28日で15件へ＝3倍の波（単日zは立たなくても発火すべき）
+    wave_up = long_rows("q-wave", [5] * 32 + [15] * 28)
+    # 平時5件前後のまま最終日だけ50件＝単日スパイク（波は無い＝候補どまり）
+    spike_only = long_rows("q-spike2", [5, 6, 4, 5, 7, 4] * 9 + [5] * 5 + [50])
+    # 波は立っているが当日が9件＝最小件数10未満（低λの Poisson ノイズ対策）
+    wave_small = long_rows("q-small", [2] * 32 + [6] * 27 + [9])
+    # 波が2.0倍に届かない（1.6倍）＝発火しない
+    wave_weak = long_rows("q-weak", [10] * 32 + [16] * 28)
+
     checks = [
-        ("spike→alert", judge_query(spike, days[-1], alert_cfg)["verdict"], "alert"),
+        ("波3倍→alert（単日zに依らず発火）",
+         judge_query(wave_up, long_days[-1], alert_cfg)["verdict"], "alert"),
+        ("単日スパイクのみ→watch（発火させない）",
+         judge_query(spike_only, long_days[-1], alert_cfg)["verdict"], "watch"),
+        ("波ありでも当日9件→ok（最小件数10の床）",
+         judge_query(wave_small, long_days[-1], alert_cfg)["verdict"], "ok"),
+        ("波1.6倍→ok（閾値2.0に届かない）",
+         judge_query(wave_weak, long_days[-1], alert_cfg)["verdict"], "ok"),
+        ("履歴不足で波が測れない→発火しない",
+         judge_query(spike, days[-1], alert_cfg)["wave_ratio"], None),
+        ("spike→watch（旧alertから降格）", judge_query(spike, days[-1], alert_cfg)["verdict"], "watch"),
         ("flat→ok", judge_query(flat, days[-1], alert_cfg)["verdict"], "ok"),
         ("warmup→warmup", judge_query(warm, warm[-1]["date"], alert_cfg)["verdict"], "warmup"),
         ("censored対象日→not_clean", judge_query(censored_target, days[-1], alert_cfg)["verdict"], "not_clean"),
@@ -152,7 +242,7 @@ def selftest() -> int:
     if failed:
         print(f"selftest FAILED: {failed}")
         return 1
-    print("selftest PASS (5/5)")
+    print(f"selftest PASS ({len(checks)}/{len(checks)})")
     return 0
 
 
@@ -192,10 +282,12 @@ def main() -> int:
     for row in rows:
         by_query[row["query_id"]].append(row)
 
-    alerts = []
-    print(f"=== price_watch 判定 {target_date}（baseline {alert_cfg['baseline_days']}日・"
-          f"z>={alert_cfg['z_threshold']}）===")
-    hdr = f"{'query_id':<24}{'count':>7}{'mean':>8}{'std':>7}{'z':>7}  verdict"
+    alerts: list[dict] = []
+    watches: list[dict] = []
+    print(f"=== price_watch 判定 {target_date}（発火=直近{alert_cfg.get('wave_days', 28)}日平均が"
+          f"前{alert_cfg.get('wave_days', 28)}日の{alert_cfg.get('wave_ratio', 2.0)}倍以上"
+          f"かつ{alert_cfg.get('min_abs_count', 10)}件以上／単日z>={alert_cfg['z_threshold']}は候補）===")
+    hdr = f"{'query_id':<24}{'count':>7}{'mean':>8}{'std':>7}{'z':>7}{'wave':>8}  verdict"
     print(hdr)
     print("-" * len(hdr))
     for entry in config["queries"]:
@@ -205,8 +297,12 @@ def main() -> int:
         cnt = "-" if res["count"] is None else res["count"]
         mu = "-" if res["baseline_mean"] is None else res["baseline_mean"]
         sd = "-" if res["baseline_std"] is None else res["baseline_std"]
-        print(f"{qid:<24}{cnt:>7}{mu:>8}{sd:>7}{z_txt:>7}  {res['verdict']}")
-        if res["verdict"] in ("alert", "sigma0_jump"):
+        wr = "-" if res.get("wave_ratio") is None else f"{res['wave_ratio']:.2f}x"
+        print(f"{qid:<24}{cnt:>7}{mu:>8}{sd:>7}{z_txt:>7}{wr:>8}  {res['verdict']}")
+        if res["verdict"] in ("watch", "sigma0_jump"):
+            # 候補は表示だけ。台帳にも通知にも出さない（誤発火予算を守る・2026-08-04）
+            watches.append({"query_id": qid, **res})
+        if res["verdict"] == "alert":
             latest = max(
                 (r for r in by_query[qid] if r["date"] == target_date),
                 key=lambda r: r.get("run_at", ""),
@@ -267,9 +363,14 @@ def main() -> int:
                 for a in new_alerts:
                     stocks = a.get("stocks", [])
                     fwd.append({"type": "x_firing", "spec_version": fwd.SPEC_VERSION,
+                                # 検出器の版。v1=単日z>=3（〜2026-08-03）/ v2=波28日2倍＋最小件数
+                                # （2026-08-04〜）。ルールが変わった前後の発火を同じ検定に
+                                # 混ぜないための分離キー（v1の発火は v1 として据え置き・消さない）
+                                "rule_version": RULE_VERSION,
                                 "fire_date": a["date"], "query_id": a["query_id"],
                                 "lane": a.get("lane", ""), "count": a.get("count"),
-                                "z": a.get("z"), "verdict": a.get("verdict"),
+                                "z": a.get("z"), "wave_ratio": a.get("wave_ratio"),
+                                "verdict": a.get("verdict"),
                                 "subjects": a.get("subjects", []),
                                 "stocks": [{"code": s["code"], "tier": s["tier"]}
                                            for s in stocks],
@@ -279,6 +380,14 @@ def main() -> int:
                 print(f"[forward] WARN: X発火の記録に失敗: {str(exc)[:80]}")
     else:
         print("\nアラートなし")
+    if watches:
+        # 候補は「まだ波になっていない単日の跳び」。台帳・通知には出さないが、
+        # 波に育つかを追うために毎回表示する（履歴が wave_days*2 貯まるまでは全部ここに出る）
+        print(f"\n👀 候補 {len(watches)} 件（単日の跳び・波は未成立＝発火せず・台帳にも残さない）")
+        for w in sorted(watches, key=lambda x: -(x.get("z") or 0)):
+            wr = "履歴不足" if w.get("wave_ratio") is None else f"波{w['wave_ratio']:.2f}倍"
+            z_txt = "-" if w.get("z") is None else f"{w['z']:.2f}"
+            print(f"  {w['query_id']:<24} {w['count']:>4}件 (平均{w['baseline_mean']}・z={z_txt}・{wr})")
     return 0
 
 
