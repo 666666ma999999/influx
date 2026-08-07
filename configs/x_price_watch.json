@@ -256,12 +256,6 @@
       "lane": "semiconductor"
     },
     {
-      "id": "gen3-seiriyouhin",
-      "q": "(生理用品 OR ナプキン OR 紙おむつ) (値上げ OR 品薄)",
-      "min_faves": 0,
-      "lane": "daily"
-    },
-    {
       "id": "gen3-kami-seihin",
       "q": "(トイレットペーパー OR ティッシュ OR 紙製品) (値上げ OR 品薄)",
       "min_faves": 0,
@@ -286,22 +280,10 @@
       "lane": "food"
     },
     {
-      "id": "gen3-genyu",
-      "q": "原油 (高騰 OR 値上がり OR 上昇)",
-      "min_faves": 10,
-      "lane": "energy"
-    },
-    {
       "id": "gen3-choco",
       "q": "(チョコ OR ココア) (値上げ OR 高騰)",
       "min_faves": 0,
       "lane": "food"
-    },
-    {
-      "id": "gen3-naphtha",
-      "q": "ナフサ (高騰 OR 上昇)",
-      "min_faves": 0,
-      "lane": "material"
     },
     {
       "id": "gen3-reitou",
@@ -316,16 +298,34 @@
       "lane": "food"
     },
     {
-      "id": "gen3-neage-rush",
-      "q": "値上げラッシュ",
-      "min_faves": 0,
-      "lane": "generic"
-    },
-    {
       "id": "gen3-pan",
       "q": "パン (値上げ OR 品薄)",
       "min_faves": 0,
       "lane": "food"
+    },
+    {
+      "id": "gen4-hinmoku-fusoku",
+      "lane": "industrial",
+      "q": "(メモリ OR 半導体 OR 銅 OR ナフサ OR 資材 OR 部品) 不足",
+      "min_faves": 0
+    },
+    {
+      "id": "gen4-juchuu-teishi",
+      "lane": "industrial",
+      "q": "(受注停止 OR 受注制限)",
+      "min_faves": 0
+    },
+    {
+      "id": "gen4-kinyu",
+      "lane": "industrial",
+      "q": "(禁輸 OR 輸出制限)",
+      "min_faves": 0
+    },
+    {
+      "id": "gen4-tokuju",
+      "lane": "industrial",
+      "q": "特需",
+      "min_faves": 0
     }
   ]
 }
