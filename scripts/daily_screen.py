@@ -500,6 +500,7 @@ X_PROFILES_DIR = PROJECT_ROOT / "x_profiles"
 COOKIE_AGE_WARN_DAYS = 14  # 監査O-5: 実測80日のアカウントを「21日」と誤表示していた事例の再発防止
 MARGIN_STALE_WARN_DAYS = 90  # 監査O-6
 JSF_GAP_CHECK_SCRIPT = Path(__file__).parent / "check_jsf_gaps.py"  # 監査O-7
+PENDING_RESOLUTIONS_SCRIPT = Path(__file__).parent / "kpi_pending_resolutions.py"  # 敵対レビュー指摘8
 
 
 def format_cookie_age_lines() -> list[str]:
@@ -555,6 +556,25 @@ def format_jsf_gap_check_lines() -> list[str]:
         return [f"- jsf日次アーカイブ欠損検知: {summary}"]
     except Exception as e:  # noqa: BLE001  (監視系の失敗で朝ジョブ本体を落とさない)
         return [f"- jsf日次アーカイブ欠損検知: 確認失敗（{e}）"]
+
+
+def format_pending_resolution_lines() -> list[str]:
+    """kpi_pending_resolutions.py --audit を呼び、α消費/整理状況の1行を稼働状況に常設する。
+
+    敵対レビュー指摘8（pending在庫化）対応の可視化。分母（累積試行数）を隠さない形式で表示し、
+    90日SLA超過（exit 1）は⚠️を付ける。表示専用・判定無関与・失敗はWARN縮退（check=Trueにしない）。
+    """
+    try:
+        result = subprocess.run(
+            [sys.executable, str(PENDING_RESOLUTIONS_SCRIPT), "--audit"],
+            capture_output=True, text=True, timeout=30,
+        )
+        stdout_lines = [ln for ln in result.stdout.strip().splitlines() if ln]
+        summary = stdout_lines[0] if stdout_lines else "(出力なし)"
+        prefix = "⚠️ " if result.returncode != 0 else ""
+        return [f"- 試行整理状況: {prefix}{summary}"]
+    except Exception as e:  # noqa: BLE001  (監視系の失敗で朝ジョブ本体を落とさない)
+        return [f"- 試行整理状況: 確認失敗（{e}）"]
 
 
 # --- watchlist設定読み込み -----------------------------------------------------------
@@ -1965,6 +1985,7 @@ def main() -> int:
     operational_context_lines += format_cookie_age_lines()
     operational_context_lines += format_margin_freshness_lines(jq_fetch.DATA_ROOT / "margin")
     operational_context_lines += format_jsf_gap_check_lines()
+    operational_context_lines += format_pending_resolution_lines()
     # 表示層生成の成否を稼働状況に常時掲示（表示専用・沈黙クラッシュ検知欄）
     operational_context_lines.append(
         "- 表示層生成: " + " / ".join(
@@ -1996,6 +2017,8 @@ def main() -> int:
     # （2026-07-31 敵対レビュー指摘3・両者一致）。
     try:
         failures = [n for n, s in display_build_status.items() if s != "OK"]
+        # 試行整理SLA超過（敵対レビュー指摘8・稼働状況⚠️と同期して通知にも載せる=強制力）
+        pending_warn = any(ln.startswith("- 試行整理状況: ⚠️") for ln in operational_context_lines)
         if failures:
             note = f"⚠️ 表示層生成失敗: {', '.join(failures)}"
         else:
@@ -2006,6 +2029,8 @@ def main() -> int:
                 f"有力{summary.get('reco_count', 0)}銘柄{top_text} / 実戦投入可0本 / "
                 f"初回読み取り {summary.get('first_read_date', '未定')}"
             )
+        if pending_warn:
+            note = "⚠️ 試行整理SLA超過/不正あり / " + note
         subprocess.run(
             ["osascript", "-e",
              f'display notification "{note}" with title "influx 朝スクリーン" subtitle "ペーパー提案（正式合格前）"'],
