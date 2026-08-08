@@ -322,7 +322,9 @@ signal(code, D) :=
    （既存の `if kpi_name == ...` 型・§7-L/§7-R と同型）。
 3. `kpi_run_evidence` の KPI依存関係表に本KPI行を追加（critical_date = 月初第1営業日）。
 4. 台帳 `data/kpi_trials/trials.jsonl` に1行 append（`prospective_start_date`・`params`・
-   凍結仕様のSHA-256・`alpha_consumed=true`・`resolution_path=awaiting_paper_trade`）。
+   凍結仕様のSHA-256・`alpha_consumed=true`）。終端整理は `data/kpi_trials/resolutions.jsonl` に
+   `awaiting_forward` で記帳（2026-08-08 裁定: params内 resolution_path は廃止・resolutions.jsonl 一本化。
+   正本= catalog §pending解消ルール / tasks/pending_verdict_flow.md）。
 
 ---
 

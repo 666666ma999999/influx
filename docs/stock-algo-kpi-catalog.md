@@ -369,16 +369,35 @@ judge()が`fail`なら不採用のまま変わらない。
 点推定でゼロ以下と確定している場合の早期棄却）。それ以外（全基準を満たさないが point_lift>1.0、
 または point_lift が計算不能）は`pending`を返す。
 
-**pending解消ルール（新設）**: pending 53件（61試行中）の性質を四半期レビュー
-（次回目安: 2026-10）で以下の`resolution_path`に仕分ける。台帳の各trialレコードには
-現状この分類フィールドが存在しないため、四半期レビュー時に台帳を読み合わせて分類表を
-別途作成し、以後の新規試行から`params.resolution_path`として記録を開始する（遡及付与はしない）。
-- `awaiting_paper_trade`: 運用開始ライン充足済みでペーパートレード観察中（例: チャンピオン構成）。
-  観察期間終了後に前向き成績でholdout開封判断へ進む
-- `structurally_capped_n`: n<100等がデータの構造的制約（母集団自体が小さい・観測期間が短い）に
-  起因し、追加データの蓄積を待つ以外に採れる手がない（例: EDINET5年ローリング制約の§7-C参考観測枠）
-- `closed_no_action`: 追加データを待っても判定が動く見込みが薄く、以後の追試を行わない
-  （fail確定に近い探索的一次結論=rejected/degrading多数のケース）
+**pending解消ルール（2026-08-08 具体化・初回実行済み。設計正本= `tasks/pending_verdict_flow.md` v0.2・
+敵対レビュー1周〈同モデル別文脈14指摘+異モデルCodex 8指摘〉反映・ユーザー検収済み）**:
+pending 行（初回実行時点: 78件/114試行。旧記載の53件/61試行は当時の値）には台帳外の
+**`data/kpi_trials/resolutions.jsonl`** で終端整理（resolution）を与える。
+
+- **resolution は判決（verdict）ではない**: 統計的地位ゼロの運用整理。α・Bonferroni分母
+  （=trials.jsonl 行数のみ）に無関係。trials.jsonl には一切書かない（ツールが実行前後で
+  行数+sha256 を機械照合）。pending→合格の経路は作らない（合格へ届く道は前向き観察経由のみ）
+- **器の規約**: resolutions.jsonl も append-only。同一 run_id の**ファイル内最終行が現在状態**
+  （reduction 規則）。取り消し・更新は新行 append で表現
+- **5値の語彙**（旧3分類を拡張）:
+  - `superseded_rejected`: 同一KPIに後続の**棄却側**判決行（fail/hoos_rejected/confirm_fail/rejected/invalidated）あり。
+    ⚠️ `hoos_survived_tainted`（汚染OOS生存）は根拠にならない（生存に確証効力なし・棄却側のみ有効）
+  - `rejected_by_evidence`: holdout開封記録等の棄却証拠が系譜に直接該当（evidence 必須記載）
+  - `awaiting_forward`: `config/paper_watchlist.json` で status=observation＝判決は前向き評価から来る（非終端・旧`awaiting_paper_trade`）
+  - `structurally_capped_n`: in-sample 全域走査済みで n<100・増える見込みなし＝判決不能の明示
+  - `closed_no_action`: 運用開始ライン**3条件**（CI下限>1.2・EV≥+1%/月・月5銘柄以上）のいずれか未達等で
+    追試を予定しない旨の運用整理（判決ではなく、新規独立データでの将来の再検討を妨げない）
+- **運用**: ツール= `scripts/kpi_pending_resolutions.py`（--audit/--summary/--apply/--resolve）。
+  新規 pending 行は **append から90日以内**に resolution 必須（行単位SLA）。朝ジョブ（daily_screen）が
+  毎日 --audit を実行し「α消費N試行/整理済み/未整理/SLA超過」を稼働状況に常設表示（分母を隠さない）。
+  SLA超過は⚠️表示。四半期レビュー（次回目安: 2026-10）で未整理残差をユーザー裁定で解消する
+- 旧記載の「以後の新規試行から`params.resolution_path`として記録を開始する」は**廃止**
+  （2026-08-08 ユーザー裁定: 試行登録時点では行き先が未確定で意味が整合せず二重正本化するため、
+  記録は resolutions.jsonl に一本化）
+- 初回実行（2026-08-08）の結果（Codex実装レビュー1周の訂正3行を反映した最終状態）:
+  `rejected_by_evidence` 6（PEAD直系系譜=ユーザー裁定+holdout開封記録）・`closed_no_action` 44・
+  `awaiting_forward` 18（watchlist observation 17+holdout観測行1）・`structurally_capped_n` 9・
+  `superseded_rejected` 1 = **78/78 終端到達・未整理0・SLA超過0**（現在状態の全件検証OK・trials.jsonl不変を機械照合済み）
 
 **ラベル体系の変遷**については§7冒頭の対応表（監査C-4）を参照。
 ---
