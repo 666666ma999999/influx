@@ -1,4 +1,30 @@
-# pending 判決到達フロー設計（叩き台 v0.2・敵対レビュー1周反映済み・検収前）
+# pending 判決到達フロー設計（v0.2・検収済み・1周目実行完了 2026-08-08）
+
+## 1周目の実行結果（2026-08-08・ユーザー検収「それでいい」後に同セッション実行）
+
+- `scripts/kpi_pending_resolutions.py` 新設（--audit/--summary/--apply/--resolve・G1/G2機械検査つき）
+- --apply: 機械規則74件記帳（R0=2/R1=1/R2=17/R3=9/R4=45）・trials.jsonl 不変を機械照合済み
+- ユーザー裁定4件（PEAD系譜・ask 2026-08-08）: 直系2件（pead_initial_gap8_vol3 4c915ee9 /
+  pead_gap8_vol3_defer3 adb894af）= `rejected_by_evidence`・X複合変種2件（pead_x_max20_10 /
+  pead_x_dev25_10）= `closed_no_action`
+- **実装後Codexレビュー（1段統合）で訂正3行**（reduction規則=最終行勝ちで append 訂正・台帳は不変）:
+  ①volshock_5x_HOLDOUT_obs: R0のwatchlist照合がHOLDOUTサフィックスを剥がさず棄却誤分類→`awaiting_forward`
+  ②③pead_initial_gap8_vol3 のCI欠測行・部分走査行2件: 旧R4が機械クローズ→新規則では機械対象外のため
+  ユーザー裁定（PEAD直系=棄却証拠）を系譜適用。あわせて classify() を修正（未知holdout行は機械で閉じない・
+  欠測値を「未達」とみなさない・R3/R4は in-sample 全域走査の実測確認を必須化）、guarded_append を
+  3点照合（読込時→lock内→書込み後）+並行apply二重記帳防止に強化、--audit に現在状態の全件検証を追加、
+  SLA超過を macOS 通知にも配線
+- 最終状態: **78/78 終端到達・未整理0・SLA超過0・機械規則との不一致0・全件検証OK**
+  （`rejected_by_evidence` 6 / `closed_no_action` 44 / `awaiting_forward` 18 / `structurally_capped_n` 9 /
+  `superseded_rejected` 1。resolutions.jsonl 82行=現在状態78+訂正4）
+- 併せてユーザー裁定: `params.resolution_path` 記録方針は廃止→ resolutions.jsonl 一本化
+  （catalog §pending解消ルール改定・草案 surge_precursor_model_preregister.md §8-4 追随済み）
+- 表示配線: `daily_screen.py` 稼働状況に「試行整理状況」1行を常設（--audit 経由・SLA超過⚠️・失敗WARN縮退）
+- 残: 翌朝ジョブ（com.influx.paper-screen 07:30）での実走確認
+
+---
+
+# （以下、検収済み設計本文 v0.2）
 
 紐付け: 2026-07-31 敵対クロスレビュー**指摘8**「trials.jsonl の pending 78/114件が判決未到達で在庫化。
 α予算を消費済みの試行が判決に到達しない。G3『αの配り方』再設計とは独立の別欠陥」
