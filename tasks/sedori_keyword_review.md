@@ -107,3 +107,24 @@ t1の33%を占めた。既存 gen1-memori-kotou が汚染されていないの�
 ただしユーザーの直観「技術製品の品薄→上流逼迫」は**否定ではなく確認**——それは現行システムの
 勝ち筋そのものとして既に6クエリで稼働しており、追加すべき語彙は今回の実測では見つからなかった。
 せどり議題はこれで完全終端（§5の撤退+§6の重複確認）。
+
+---
+
+## 7. せどりトレンド定点観測レーン新設（2026-08-09・ユーザー指示「作って」・観測専用）
+
+§5/§6の終端とは別枠の**トレンド台帳**（「今せどりで何が熱いか」の週次可視化＋供給側反応の見逃し防止）。
+銘柄推奨・受益判定・α・本番50本/mapには一切不干渉。
+
+- **構成**: `configs/sedori_trend.json`（4クエリ: 抽選販売/プレ値/供給側反応/買取強化・alert節なし）→
+  週次ランナー `scripts/sedori_trend_run.sh`（直近7日分収集→digest→供給側反応>0でMac通知・失敗は非ゼロ終了）→
+  `scripts/sedori_trend_digest.py`（`data/sedori_trend/digests/digest_YYYY-Www.md` 生成・
+  供給側反応セクション＋商品名ヒューリスティック抽出・機械可読行 SUPPLY_COUNT=）
+- **Codexレビュー反映済み**: 銘柄非推奨の文言整合（BLOCKER）・digest失敗の非ゼロ終了（HIGH）・
+  週次7日分収集（HIGH）・実件数カウント＋SUPPLY_COUNT完全一致読取（MEDIUM×2）・alert節削除（MEDIUM）・
+  status_id重複キー・7日境界（MEDIUM/LOW）。既知の限界=カタカナ抽出の偽陽性（人が読む台帳のため許容・
+  STOP_NAMES育成で漸進改善）
+- **初回実走（2026-08-09）**: 収集95件（8/8窓4クエリ）→ digest_2026-W32.md 生成・**供給側反応22件**
+  （DDFF×タイトー受注生産決定・ジャンプ33号受注生産・ミッフィーバスケット等＝狙いどおりの型）
+- **launchd**: `config/launchd/com.influx.sedori-trend.plist`（毎週月曜09:00）。
+  登録はユーザーの `!` 実行待ち（AI実行が許可されなかったため）:
+  `cp config/launchd/com.influx.sedori-trend.plist ~/Library/LaunchAgents/ && launchctl load ~/Library/LaunchAgents/com.influx.sedori-trend.plist`

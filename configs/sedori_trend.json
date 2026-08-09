@@ -1,0 +1,42 @@
+{
+ "_comment": "せどりトレンド定点観測レーン（2026-08-09新設・観測専用）。銘柄推奨・受益判定をしない（本文転載に企業名が現れることはあるが推奨の意味を持たない）・アラート判定なし・本番50本/mapに不干渉。目的=今せどりで何が熱いかの週次台帳＋供給側反応（再販・増産・受注生産=たまごっち型）の見逃し防止。判定基準や凍結値を持たない（トレンドメモのレーン）。",
+ "version": "sedori-trend-1",
+ "collect": {
+  "max_scrolls": 15,
+  "cap_posts": 200,
+  "query_pacing_sec": [
+   20.0,
+   40.0
+  ],
+  "goto_wait_sec": [
+   3.0,
+   5.0
+  ]
+ },
+ "queries": [
+  {
+   "id": "st1-chusen",
+   "q": "(抽選販売 OR 抽選受付) (BOX OR パック OR 予約)",
+   "min_faves": 0,
+   "lane": "sedori-trend"
+  },
+  {
+   "id": "st2-pureba",
+   "q": "プレ値",
+   "min_faves": 10,
+   "lane": "sedori-trend"
+  },
+  {
+   "id": "st3-kyokyu-hannou",
+   "q": "(再販決定 OR 増産 OR 受注生産) (人気 OR 品薄 OR 完売 OR 転売)",
+   "min_faves": 0,
+   "lane": "sedori-trend"
+  },
+  {
+   "id": "st4-kaitori",
+   "q": "(買取強化 OR 高価買取) (BOX OR 新弾)",
+   "min_faves": 5,
+   "lane": "sedori-trend"
+  }
+ ]
+}

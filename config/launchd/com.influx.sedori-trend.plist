@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.influx.sedori-trend</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>-lc</string>
+        <string>bash /Users/masaaki_nagasawa/Desktop/biz/influx/scripts/sedori_trend_run.sh</string>
+    </array>
+
+    <!-- 毎週月曜 09:00（Weekday 1=月）。週末のせどり動向が揃った週明けに前7日分を収集・digest -->
+    <key>StartCalendarInterval</key>
+    <array>
+        <dict>
+            <key>Weekday</key>
+            <integer>1</integer>
+            <key>Hour</key>
+            <integer>9</integer>
+            <key>Minute</key>
+            <integer>0</integer>
+        </dict>
+    </array>
+
+    <key>RunAtLoad</key>
+    <false/>
+
+    <key>StandardOutPath</key>
+    <string>/Users/masaaki_nagasawa/.claude/state/sedori-trend.out.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/masaaki_nagasawa/.claude/state/sedori-trend.err.log</string>
+</dict>
+</plist>
