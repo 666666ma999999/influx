@@ -24,20 +24,34 @@ DIGEST_DIR = REPO / "data" / "sedori_trend" / "digests"
 
 SUPPLY_RE = re.compile(r"再販|増産|受注生産|再入荷|再生産")
 # 商品名らしきものの抽出: 【】内・「」内・カタカナ4文字以上の連なり・OP-XX/RTX等の型番
+# 各要素は (正規表現, 型番として正規化するか)。型番は \b を使わない（日本語文中では
+# 「op-01カートン」のように前後が \w 扱いになり境界が成立せず取り逃す）代わりに、
+# 大文字化＋空白除去で表記ゆれを1つの名前に合算する（OP-01 と op-01 を別名で数えない）。
 NAME_PATTERNS = [
-    re.compile(r"【([^】]{2,25})】"),
-    re.compile(r"「([^」]{2,25})」"),
-    re.compile(r"([ァ-ヴー]{4,}(?:ex|EX)?)"),
-    re.compile(r"\b(OP-\d{2}|RTX\s?\d{4}\w*|DDR\d|PS5|Switch\s?2)\b", re.I),
+    (re.compile(r"【([^】]{2,25})】"), False),
+    (re.compile(r"「([^」]{2,25})」"), False),
+    (re.compile(r"([ァ-ヴー]{4,}(?:ex|EX)?)"), False),
+    # 型番の接尾辞は ASCII 英字のみ（\w* だと「rtx4090入荷」の日本語まで型番に飲み込む）
+    (re.compile(r"(OP-\d{2}|RTX\s?\d{4}[A-Za-z]*|DDR\d|PS5|Switch\s?2)", re.I), True),
 ]
 STOP_NAMES = {"プレミア", "プレゼント", "キャンペーン", "フォロー", "リポスト", "オンライン",
               "ショップ", "サイト", "アカウント", "タイムライン", "メルカリ", "ヤフオク",
               "アマゾン", "ポイント", "クーポン", "リツイート", "フォロワー"}
 
 
+def today_utc() -> dt.date:
+    """基準日（UTC）。texts/ のファイル名も収集ランナーも UTC 日付なので合わせる。"""
+    return dt.datetime.now(dt.timezone.utc).date()
+
+
 def load_recent(days: int = 7) -> list[dict]:
-    """直近7暦日（UTC日付ファイル名基準・today-6〜today）のユニーク投稿を返す。"""
-    cutoff = dt.date.today() - dt.timedelta(days=days - 1)
+    """収集ランナーと同じ窓（UTC前日から遡って days 日分）のユニーク投稿を返す。
+
+    ランナー sedori_trend_run.sh は UTC の前日〜7日前を収集する。窓を today-6〜today に
+    すると当日（ファイル不在）を含む代わりに最古の収集日を読み落とすため、前日を終端にする。
+    """
+    end = today_utc() - dt.timedelta(days=1)
+    start = end - dt.timedelta(days=days - 1)
     rows, seen = [], set()
     if not TEXTS_DIR.exists():
         return rows
@@ -46,7 +60,7 @@ def load_recent(days: int = 7) -> list[dict]:
             day = dt.date.fromisoformat(p.stem)
         except ValueError:
             continue
-        if day < cutoff:
+        if day < start or day > end:
             continue
         for line in p.read_text(encoding="utf-8").splitlines():
             try:
@@ -62,16 +76,16 @@ def load_recent(days: int = 7) -> list[dict]:
 
 def extract_names(text: str) -> set[str]:
     names = set()
-    for pat in NAME_PATTERNS:
+    for pat, as_model in NAME_PATTERNS:
         for m in pat.findall(text):
-            m = m.strip()
+            m = re.sub(r"\s+", "", m).upper() if as_model else m.strip()
             if 2 <= len(m) <= 25 and m not in STOP_NAMES:
                 names.add(m)
     return names
 
 
 def build_digest(rows: list[dict]) -> str:
-    week = dt.date.today().isocalendar()
+    week = today_utc().isocalendar()
     counter: collections.Counter[str] = collections.Counter()
     supply_posts = []
     for r in rows:
@@ -114,7 +128,7 @@ def main() -> int:
     supply_n = sum(1 for r in rows if SUPPLY_RE.search(r.get("text", "")))
     digest = build_digest(rows)
     DIGEST_DIR.mkdir(parents=True, exist_ok=True)
-    week = dt.date.today().isocalendar()
+    week = today_utc().isocalendar()
     out = DIGEST_DIR / f"digest_{week[0]}-W{week[1]:02d}.md"
     out.write_text(digest, encoding="utf-8")
     print(f"digest -> {out.relative_to(REPO)}（投稿{len(rows)}件）")
