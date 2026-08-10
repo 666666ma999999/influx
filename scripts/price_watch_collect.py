@@ -236,7 +236,7 @@ def main() -> int:
         raw = f"{entry['id']}|{entry['q']}|{entry.get('min_faves', 0)}"
         return hashlib.sha256(raw.encode()).hexdigest()[:12]
 
-    log_identity(args.profile)
+    handle = log_identity(args.profile)
     cookies = fetch_bookmarks.load_cookies(str(args.profile))
     print(f"[run] day={day} queries={len(entries)} config_version={config['version']}")
 
@@ -260,6 +260,13 @@ def main() -> int:
                 "config_version": config["version"],
                 "query_sha": query_sha(entry),
                 "run_at": run_at,
+                # どのアカウントで収集したかを台帳に残す。X の日付演算子 since/until は
+                # ログイン中アカウントのTZで解釈されるため、アカウントが変わると
+                # 収集窓の意味そのものが変わる（実測: 2026-08-07 だけ UTC 丸1日窓・
+                # 他の日は JST 2日窓）。後から窓の意味を検証できるようにするための1項目
+                # ＝ tasks/date_label_offset_audit.md
+                "profile": args.profile.name,
+                "expected_handle": handle,
             }
             try:
                 url = build_search_url(compose_query(entry, day), days=1)

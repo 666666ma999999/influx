@@ -340,7 +340,116 @@ def _selftest() -> int:
         ok = v == want
         ng += not ok
         print(f"  {'OK ' if ok else 'NG '} {why}\n       期待={want} 実際={v}")
+
+    # 株価突き合わせの基準日 = 実投稿日（JST最大）であることの固定テスト。
+    # ラベル日に戻ると look-ahead が復活する（tasks/date_label_offset_audit.md・
+    # 実測で既存17アラート全件が +1日ずれていた）
+    import tempfile
+    global TEXTS_DIR
+    saved_texts_dir = TEXTS_DIR
+    try:
+        with tempfile.TemporaryDirectory() as td:
+            TEXTS_DIR = Path(td)
+            label = "2026-08-04"
+            # UTC 表記で保存され、JST では翌日になる投稿を混ぜる
+            recs = [
+                # JST 2026-08-04 12:00（ラベル日と同じ）
+                {"status_id": "s1", "text": "キオクシアのメモリが品薄", "posted_at": "2026-08-04T03:00:00.000Z"},
+                # JST 2026-08-05 07:00（ラベル+1日）＝これが最大になるべき
+                {"status_id": "s2", "text": "キオクシアの値上げ観測", "posted_at": "2026-08-04T22:00:00.000Z"},
+                # posted_at 欠落・壊れた値は無視されるべき
+                {"status_id": "s3", "text": "キオクシア"},
+                {"status_id": "s4", "text": "キオクシア", "posted_at": "not-a-date"},
+            ]
+            (TEXTS_DIR / f"{label}.jsonl").write_text(
+                "\n".join(json.dumps(r, ensure_ascii=False) for r in recs), encoding="utf-8")
+
+            got_any = post_date_jst_max(label)
+            ok_d1 = got_any == "2026-08-05"
+            print(f"  {'OK ' if ok_d1 else 'NG '} 実投稿日=JST最大を採る（銘柄指定なし）"
+                  f"\n       期待=2026-08-05 実際={got_any}")
+            ng += not ok_d1
+
+            # フォールバック: texts が無い日はラベル日に倒す（従来より甘い側に倒さないため）
+            got_fb = effective_base_date("2026-01-01")
+            ok_d2 = got_fb == "2026-01-01"
+            print(f"  {'OK ' if ok_d2 else 'NG '} texts 不在ならラベル日にフォールバック"
+                  f"\n       期待=2026-01-01 実際={got_fb}")
+            ng += not ok_d2
+
+            # 銘柄指定: その銘柄に言及していない投稿は基準日に影響しない
+            (TEXTS_DIR / "2026-08-06.jsonl").write_text("\n".join([
+                json.dumps({"status_id": "t1", "text": "キオクシアが品薄",
+                            "posted_at": "2026-08-06T03:00:00.000Z"}, ensure_ascii=False),
+                json.dumps({"status_id": "t2", "text": "関係のない雑談",
+                            "posted_at": "2026-08-06T22:00:00.000Z"}, ensure_ascii=False),
+            ]), encoding="utf-8")
+            got_code = post_date_jst_max("2026-08-06", "285A")   # キオクシアHD
+            ok_d3 = got_code == "2026-08-06"
+            print(f"  {'OK ' if ok_d3 else 'NG '} 銘柄指定時は非言及投稿を基準日に含めない"
+                  f"\n       期待=2026-08-06 実際={got_code}")
+            ng += not ok_d3
+    finally:
+        TEXTS_DIR = saved_texts_dir
     return ng
+
+
+def post_date_jst_max(day: str, code: str | None = None) -> str | None:
+    """収集日ラベル `day` の本文のうち、実投稿日（JST）の最大値を返す。
+
+    収集クエリ `since:D until:D+1` は X 側で「ログイン中アカウントのTZ・until 含む」と解釈され、
+    実際には JST D 00:00〜D+1 実行時刻の約2日窓になる。実測で **x_price_watch は投稿の 59.8%、
+    sedori_trend は 92.2% が「ラベル+1日」**（棚卸し正本: tasks/date_label_offset_audit.md）。
+    株価と突き合わせる基準日にラベルを使うと、基準日が実投稿より前に置かれ、測定窓が
+    **投稿当日の同時進行の値動きを内包**する（ラベル日の終値では翌日の投稿を知らないと買えない
+    ＝look-ahead）。そこで「いちばん遅い投稿の日」を採り、リード時間を保守的に見積もる。
+
+    code 指定時はその銘柄に言及した投稿だけを見る。該当なし・posted_at 皆無なら None。
+    """
+    path = TEXTS_DIR / f"{day}.jsonl"
+    if not path.exists():
+        return None
+    matcher = codes = None
+    if code:
+        table = xmd.build_dict()
+        matcher = xmd.build_matcher(table)
+        codes = {c for c, _ in table.values()}
+    best: str | None = None
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        try:
+            r = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(r, dict):
+            continue
+        stamp = r.get("posted_at")
+        if not isinstance(stamp, str) or not stamp:
+            continue
+        if code:
+            ms = xmd.find_mentions(r.get("text", "") or "", matcher, codes)
+            if len({m["code"] for m in ms}) > MAX_CODES_PER_POST:
+                continue    # 銘柄羅列まとめ投稿は言及として数えない（judge 側と同じ扱い）
+            if code not in {m["code"] for m in ms}:
+                continue
+        try:
+            jst = datetime.fromisoformat(stamp.replace("Z", "+00:00")).astimezone(JST)
+        except ValueError:
+            continue
+        d = jst.strftime("%Y-%m-%d")
+        if best is None or d > best:
+            best = d
+    return best
+
+
+def effective_base_date(day: str, code: str | None = None) -> str:
+    """株価突き合わせの基準に使う日。実投稿日（JST最大）が取れればそれ、取れなければラベル日。
+
+    フォールバックがラベル日なのは、実時刻が無い古いデータで**従来より甘い判定に倒さない**ため
+    （ラベル日基準は実投稿より前＝甘い側なので、取れた時だけ厳しい側へ寄せる）。
+    """
+    return post_date_jst_max(day, code) or day
 
 
 def price_linkage(code: str, mention_date: str, horizon: int = 6) -> dict | None:
@@ -349,6 +458,9 @@ def price_linkage(code: str, mention_date: str, horizon: int = 6) -> dict | None
     基準日 = 言及日以前の直近営業日の終値。そこから直近の営業日までの
     株価上昇率と、同期間の TOPIX 上昇率・超過(pt) を返す。データが無ければ None。
     J-Quants のコードは5桁（4桁 + 末尾0）なので変換して引く。
+
+    ⚠️ `mention_date` には**収集日ラベルではなく実投稿日**（`effective_base_date()` の戻り）を渡す。
+    ラベルを渡すと look-ahead が入る（上記 post_date_jst_max の docstring 参照）。
     """
     import gzip
     import glob as _glob
@@ -427,7 +539,11 @@ def evaluate_alerts() -> int:
     n_new = 0
     with ALERTS_OUT.open("a", encoding="utf-8") as fh:
         for f0 in firings:
-            day8 = f0["date"].replace("-", "")
+            # 基準日は実投稿日（JST最大）。古い行に post_date_jst が無ければ texts から引き直す
+            # （ラベル日を使うと基準日が実投稿より前になり look-ahead が入る
+            #  ＝ tasks/date_label_offset_audit.md）
+            base_date = f0.get("post_date_jst") or effective_base_date(f0["date"], f0["code"])
+            day8 = base_date.replace("-", "")
             base_cands = [d for d in bdays if d <= day8]
             if not base_cands:
                 continue
@@ -445,7 +561,8 @@ def evaluate_alerts() -> int:
                 stock = (p1 / p0 - 1) * 100
                 topix = (tp[ev_day] / tp[base] - 1) * 100
                 rec = {"type": "evaluation", "date": f0["date"], "code": f0["code"],
-                       "name": f0.get("name", ""), "window": win, "base_day": base,
+                       "name": f0.get("name", ""), "window": win,
+                       "post_date_jst": base_date, "base_day": base,
                        "eval_day": ev_day, "stock_pct": round(stock, 2),
                        "topix_pct": round(topix, 2), "excess_pt": round(stock - topix, 2),
                        "goal_confirmed": bool(stock > 0
@@ -546,7 +663,9 @@ def main() -> int:
         with ALERTS_OUT.open("a", encoding="utf-8") as fh:
             for r in alerts:
                 o = origin.get(r["code"], {})
-                pl = price_linkage(r["code"], target)
+                # 収集日ラベルではなく実投稿日（JST最大）を基準にする（look-ahead 除去）
+                base_date = effective_base_date(target, r["code"])
+                pl = price_linkage(r["code"], base_date)
                 in_list = o.get("in_beneficiaries", False)
                 tags = []
                 if o:
@@ -566,6 +685,9 @@ def main() -> int:
                     continue   # 既に記録済み（同日再実行）＝台帳は不変に保つ
                 fh.write(json.dumps({"date": target, "code": r["code"], "name": r["name"],
                                      "count": r["count"], "z": r["z"], "verdict": r["verdict"],
+                                     # 実投稿日（JST最大）を台帳に残す。後段の固定窓評価が
+                                     # 同じ基準日を使えるようにするため（ラベル日と別物）
+                                     "post_date_jst": base_date,
                                      "trade500": o or None, "price_linkage": pl,
                                      "goal_candidate": bool(not in_list and pl
                                                            and pl["stock_pct"] > 0),
