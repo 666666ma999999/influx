@@ -21,6 +21,8 @@ import datetime as dt
 import importlib.util
 import io
 import json
+import re
+import subprocess
 import tempfile
 import unittest
 from contextlib import redirect_stdout
@@ -72,6 +74,43 @@ class TestExtractNames(unittest.TestCase):
     def test_legitimate_model_suffix_is_kept(self):
         """正当入力の通過確認: 英字接尾辞（Ti 等）は型番の一部として残る。"""
         self.assertIn("RTX4090TI", self.m.extract_names("RTX 4090Ti の在庫あり"))
+
+    def test_model_number_negatives(self):
+        """負例（Codex 2026-08-10 MEDIUM-1）: 英数字に隣接する断片を型番にしない。
+
+        `\\b` を外しただけだと、より長い識別子・価格・URL・ハッシュの一部から偽の型番を拾う。
+        前後の ASCII 英数字を否定することで、日本語隣接（通す）と英数字隣接（落とす）を分ける。
+        """
+        for text, must_not in [
+            ("PS50周年モデル発売", "PS5"),
+            ("OP-010は別型番です", "OP-01"),
+            ("DDR5000円で落札", "DDR5"),
+            ("Switch20周年記念", "SWITCH2"),
+            ("RTX40900というSKU", "RTX4090"),
+            ("https://x.example/aPS5b", "PS5"),
+            ("sha=abcDDR5def", "DDR5"),
+        ]:
+            with self.subTest(text=text):
+                self.assertNotIn(must_not, self.m.extract_names(text))
+
+    def test_japanese_adjacency_still_matches(self):
+        """負例対策が正当入力を殺していないこと（偽陽性ガード）。"""
+        for text, expected in [
+            ("OP-01カートン入荷", "OP-01"),
+            ("DDR5メモリが高騰", "DDR5"),
+            ("PS5が品薄", "PS5"),
+            ("Switch 2の抽選", "SWITCH2"),
+        ]:
+            with self.subTest(text=text):
+                self.assertIn(expected, self.m.extract_names(text))
+
+    def test_stop_substrings_reject_compound_ad_words(self):
+        """複合語の宣伝文句を商品名にしない（Codex 2026-08-10 LOW-3）。"""
+        self.assertNotIn("オンラインショップ", self.m.extract_names("【オンラインショップ】限定"))
+        self.assertNotIn("プレゼントキャンペーン",
+                         self.m.extract_names("「プレゼントキャンペーン」実施中"))
+        # 正当入力は通る（宣伝語を含まないカタカナ商品名）
+        self.assertIn("ロマンスドーン", self.m.extract_names("ロマンスドーンが高騰"))
 
     def test_japanese_name_patterns_are_not_uppercased(self):
         """【】「」・カタカナ連の抽出は正規化しない（型番だけが大文字化対象）。"""
@@ -142,6 +181,27 @@ class TestLoadRecentWindow(unittest.TestCase):
         rows = self.m.load_recent()
         self.assertEqual([r["status_id"] for r in rows], ["ok"])
 
+    def test_shape_invalid_records_do_not_crash(self):
+        """JSONとして妥当でも形が違う行で週次処理が落ちない（Codex 2026-08-10 LOW-4）。
+
+        ランナーは digest 失敗で非ゼロ終了するため、1行の異常が全停止になっていた。
+        """
+        (self.texts / "2026-08-07.jsonl").write_text(
+            "\n".join([
+                "[]",
+                "null",
+                "42",
+                '"文字列だけの行"',
+                '{"status_id":"a","text":null}',
+                '{"status_id":"b","text":"正常な投稿・再販決定"}',
+            ]),
+            encoding="utf-8",
+        )
+        rows = self.m.load_recent()  # 例外を出さないこと自体が検証
+        self.assertEqual([r["status_id"] for r in rows], ["b"])
+        # 後段（名前抽出・供給側判定）も通ること
+        self.assertIsInstance(self.m.build_digest(rows), str)
+
 
 class TestMachineReadableContract(unittest.TestCase):
     """ランナー sedori_trend_run.sh が完全一致で読む行の書式を固定する。"""
@@ -173,23 +233,98 @@ class TestMachineReadableContract(unittest.TestCase):
         with redirect_stdout(buf):
             rc = self.m.main()
         self.assertEqual(rc, 0)
-        lines = buf.getvalue().splitlines()
+        raw = buf.getvalue()
+        lines = raw.splitlines()
         self.assertIn("SUPPLY_COUNT=2", lines, "run.sh が読む機械可読行の書式が変わっている")
+        # splitlines() は \r を吸収してしまうため、生出力の行境界でも検証する
+        # （CRLF になると run.sh の sed 完全一致が外れる・Codex 2026-08-10 LOW-5）
+        self.assertRegex(raw, r"(?m)^SUPPLY_COUNT=2$")
+        self.assertNotIn("\r", raw, "行末に CR が混ざると run.sh の sed が読めない")
 
-    def test_digest_file_is_written_with_week_label(self):
-        """週ラベル付きのダイジェストが UTC 基準週で書き出される。"""
+    def test_supply_count_is_readable_by_the_actual_runner_sed(self):
+        """ランナー実物の sed 式でこの出力が読めること（Python 側だけで固めない・LOW-5）。
+
+        run.sh の該当行から sed 式を実際に取り出して適用する。テストが通るのに shell 側の
+        契約が壊れている状態を防ぐ。
+        """
+        run_sh = (REPO / "scripts" / "sedori_trend_run.sh").read_text(encoding="utf-8")
+        m = re.search(r"sed -n '([^']*SUPPLY_COUNT[^']*)'", run_sh)
+        self.assertIsNotNone(m, "run.sh から SUPPLY_COUNT の sed 式を見つけられない")
+        sed_expr = m.group(1)
+        (self.texts / "2026-08-05.jsonl").write_text(
+            "\n".join([
+                json.dumps({"status_id": "a", "text": "再販決定"}, ensure_ascii=False),
+                json.dumps({"status_id": "b", "text": "増産を発表"}, ensure_ascii=False),
+            ]),
+            encoding="utf-8",
+        )
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            self.m.main()
+        proc = subprocess.run(["sed", "-n", sed_expr], input=buf.getvalue(),
+                              capture_output=True, text=True, check=True)
+        self.assertEqual(proc.stdout.strip().splitlines()[-1:], ["2"],
+                         f"run.sh の sed 式 {sed_expr!r} でこの出力から件数を取り出せない")
+
+    def test_digest_is_named_by_window_end_not_generation_day(self):
+        """窓の終端が属する週で名付ける（Codex 2026-08-10 MEDIUM-2）。
+
+        基準日 2026-08-10（月）は ISO W33 だが、窓は 08-03〜08-09 = W32。生成日基準だと
+        「W33 のダイジェスト」に W32 のデータが入り、毎週の定期実行で必ず1週ずれる。
+        """
         (self.texts / "2026-08-05.jsonl").write_text(
             json.dumps({"status_id": "a", "text": "【ポケカ】再販決定"}, ensure_ascii=False),
             encoding="utf-8",
         )
         with redirect_stdout(io.StringIO()):
             self.m.main()
-        week = dt.date(2026, 8, 10).isocalendar()
-        out = self.m.DIGEST_DIR / f"digest_{week[0]}-W{week[1]:02d}.md"
-        self.assertTrue(out.exists(), f"{out.name} が生成されていない")
+        self.assertEqual(self.m.week_label(), "2026-W32")
+        out = self.m.DIGEST_DIR / "digest_2026-W32.md"
+        self.assertTrue(out.exists(), "窓の終端の週で命名されていない（生成日基準に戻っている）")
+        self.assertFalse((self.m.DIGEST_DIR / "digest_2026-W33.md").exists(),
+                         "生成日基準の名前で余分なファイルが出ている")
         body = out.read_text(encoding="utf-8")
         self.assertIn("観測専用（銘柄非提示・判定なし）", body, "観測専用の但し書きが消えている")
+        self.assertIn("2026-W32", body, "見出しの週ラベルが窓と一致していない")
+        self.assertIn("収集日ラベル 2026-08-03〜2026-08-09", body, "収集日ラベルの明記が消えている")
         self.assertIn("再販決定", body, "供給側反応が本文に載っていない")
+
+
+class TestSupplyPostOrdering(unittest.TestCase):
+    """供給側反応の20件制限が「新しい順」で切られること（Codex 2026-08-10 LOW-6）。"""
+
+    def setUp(self):
+        self.m = load_module()
+        self.m.today_utc = lambda: dt.date(2026, 8, 10)
+
+    def test_newest_supply_posts_survive_truncation(self):
+        """21件以上ある時、窓の終盤の重要な発表が省略側に落ちない。"""
+        rows = [{"status_id": f"old{i}", "text": f"再販のお知らせ{i}",
+                 "posted_at": f"2026-08-03T0{i % 10}:00:00Z"} for i in range(20)]
+        rows.append({"status_id": "new", "text": "重要な増産を発表",
+                     "posted_at": "2026-08-09T12:00:00Z"})
+        body = self.m.build_digest(rows)
+        self.assertIn("重要な増産を発表", body, "最新の発表が20件制限で切り捨てられている")
+        self.assertIn("（全21件中、新しい順に20件表示）", body)
+        # 最古の投稿が押し出されていること（新しい順に20件＝21件目が落ちる）
+        supply_section = body.split("## 📈")[0]
+        self.assertEqual(supply_section.count("\n- ["), 20)
+
+    def test_actual_posted_at_range_is_shown_alongside_collection_labels(self):
+        """収集日ラベルと投稿実時刻を別々に出す（X検索の since/until が1日ずれるため）。
+
+        両者を「対象期間」の1語にまとめると、窓外の日付の投稿が並んでいるように読めてしまう。
+        """
+        rows = [{"status_id": "a", "text": "再販決定", "posted_at": "2026-08-04T01:00:00Z"},
+                {"status_id": "b", "text": "増産発表", "posted_at": "2026-08-10T09:00:00Z"}]
+        body = self.m.build_digest(rows)
+        self.assertIn("収集日ラベル 2026-08-03〜2026-08-09（ファイル名基準）", body)
+        self.assertIn("投稿の実時刻レンジ 2026-08-04〜2026-08-10（UTC）", body)
+
+    def test_missing_posted_at_does_not_break_the_range(self):
+        """posted_at 欠落だけの入力でも落ちない（レンジは「不明」と出す）。"""
+        body = self.m.build_digest([{"status_id": "a", "text": "再販決定"}])
+        self.assertIn("投稿の実時刻レンジ 不明（UTC）", body)
 
 
 if __name__ == "__main__":
