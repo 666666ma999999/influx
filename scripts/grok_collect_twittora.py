@@ -47,7 +47,9 @@ DEFAULT_QUERIES = [
     "Fable オーケストレーション",  # 3語→2語緩和 2026-07-26 実走0件のため（元: "Fable ループ オーケストレーション"）。c-a8503f59: Fable/Claude Codeのオーケストレーション・トークン節約運用（既存10本は"Fable"を含まない新シグナル）
     "Claude Code 新機能 アップデート",  # c-119763bf: リリース速報・アップデート系（既存は使い方/tipsのみで新機能速報を拾えていない）
     "Claude Skills Routines",  # c-119763bf: Skills/Routinesという新公式用語（既存のMCP検索と重複しない）
-    "Obsidian 第二の脳 Claude",  # c-0d17bd8e: Obsidian×AI知識管理（既存10本に完全な空白領域）
+    # "Obsidian 第二の脳 Claude",  # 🪦退役 2026-08-09（敵対レビューA実測: 2週稼働で芯命中0件・「第二の脳」は最汚染語=商材46%が単一起点の再梱包。経緯= make_article docs/x-operation/research/obsidian-mgmt-search-adv-review-2026-08-09.md）
+    "Obsidian Git 連携",  # 2026-08-09 追加: 芯②repo×vault使い分け。固有識別子Gitで商材語彙と重ならない（退役1+追加2=純増1・在庫制）
+    "CLAUDE.md Obsidian",  # 2026-08-09 追加: 芯③AI連携の配線。弁別語で唯一2.4%の母集団を持つ（同上）
     "NotebookLM Codex 文字起こし",  # c-49c1862f: Claude以外のAIツール（非エンジニア向け画像/動画/文字起こし）
     "Opus Fable Codex 使い分け",  # proposals: モデル使い分け・メタプロンプト（既存"Cursor vs Claude"はIDE比較でモデル比較とは別軸）
     # gen3追加 2026-08-03（束台帳の困りごと定義から逆生成）。
@@ -75,6 +77,14 @@ DEFAULT_QUERIES = [
     # トピック語×シグナル語の合成で1本だけ投入（E3前向き収率テスト・63語中62語は基準未達で不採用）。
     # 根拠: 定点z+2.83（保存率上位に濃い）＋採用カード3/10 vs 落選0/14（行動変換軸でも正）。
     "Claude Code 公式",
+    # gen6 2026-08-10（敵対レビューW1裁定「両方やる」= 入口のドメイン偏り是正）:
+    # 実測: 攻め棚 pending 55件中、広告/CRM/株のドメイン道具（Ads/GA4/LINE/株API系）を含む投稿は
+    # 1件のみ＝見張り25人と既存クエリが Claude Code 界隈に偏っている写像（レビューA#3・B#7 一致）。
+    # ≤3語・R3（銘柄の中身・稼ぐ系）非衝突の配管系のみ3本。正本= make_article
+    # docs/x-operation/research/architecture5-completeness-adv-review-2026-08-10.md W1裁定。
+    "Google広告 レポート 自動化",       # prime_ad: Ads Scripts/API の代替実例（経路B/C の供給）
+    "LINE公式 配信 自動化",             # prime_crm: 配信オペの自動化実例
+    "決算 データ取得 自動化",           # influx株: 開示・株データ取得の配管（銘柄の中身は R3 で落とす）
 ]
 
 DEFAULT_MIN_LIKES = 50
