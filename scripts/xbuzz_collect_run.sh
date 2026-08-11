@@ -29,12 +29,19 @@ xstock_ensure_ready || exit 1
 # TargetClosedError（ブラウザ即死）で落ちる（20:30 実走 rows:0 crash・fxnia 11:04 と同型）。
 # Xvfb/環境の温まり待ち＋失敗時1回だけ再試行（tracer の1リトライ前例と同型・有界）。
 sleep 20
-docker exec -e DISPLAY=:99 xstock-vnc python3 /app/scripts/x_search_collect_twittora.py --days 7
+# 2026-08-11 `--live` 追加（最新タブの併走）。人気順(f=top)だけだと X のランキングが
+# バズらない投稿を落とし、いいね下限を0にしても低いいね帯が入ってこなかった（41件中2件=5%）。
+# 試運転の実測: 壁エラー0・盲検で live 18/45(40%) vs top 12/38(32%)（劣化しない）・
+# 使える記事が 12→30件(2.5倍)。所要は 49タスク36分 → 80タスク約60分の見込み。
+# ⚠️ 失敗時は下の再試行で**全体をもう一度**引くため、壁が出ると検索回数が倍になる。
+# 初回実行後は wall_errors と所要を必ず確認すること。戻すときはこの2行から --live を消すだけ。
+# 経緯の正本= make_article docs/x-operation/research/grok-web-search-precision-2026-08-11.md
+docker exec -e DISPLAY=:99 xstock-vnc python3 /app/scripts/x_search_collect_twittora.py --days 7 --live
 rc=$?
 if [ "$rc" -ne 0 ]; then
   echo "収集 exit $rc → 60秒待って1回だけ再試行（ブラウザ即死の一過性対策）"
   sleep 60
-  docker exec -e DISPLAY=:99 xstock-vnc python3 /app/scripts/x_search_collect_twittora.py --days 7
+  docker exec -e DISPLAY=:99 xstock-vnc python3 /app/scripts/x_search_collect_twittora.py --days 7 --live
   rc=$?
 fi
 [ "$rc" -ne 0 ] && notify "X収集 失敗: 収集スクリプトが exit $rc（再試行込み）"
