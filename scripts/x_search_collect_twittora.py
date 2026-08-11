@@ -112,12 +112,34 @@ _JA_KIND = {"返信": "replies", "リポスト": "retweets", "いいね": "likes
 _JA_RE = re.compile(r"[ぁ-んァ-ン一-龥]")
 
 
-def build_buzz_search_url(q: str, since: str, until: str, min_likes: int, lang: str | None = None) -> str:
-    """バズ検索 URL（f=top 明示・min_faves・期間窓・任意 lang）。"""
-    parts = [q, f"min_faves:{min_likes}", f"since:{since}", f"until:{until}", "-filter:nativeretweets"]
+def build_buzz_search_url(q: str, since: str, until: str, min_likes: int,
+                          lang: str | None = None, tab: str = "top") -> str:
+    """検索 URL を組む（期間窓・任意 lang・タブ指定）。
+
+    tab="top"  … 話題のツイート（X のランキング順）。従来の唯一の経路
+    tab="live" … 最新（時系列）。2026-08-11 追加
+
+    ⚠️ なぜ live を足したか（実測・make_article 2026-08-11）:
+      f=top だけで引くと **X 側のランキングがバズらない投稿を落とす**ため、
+      いいね下限をいくら下げても低いいね帯が入ってこない（min_faves:0 でも 41件中2件=5%）。
+      同じクエリを f=live で引くと **39件が新規**（top との重複は1件のみ）で、うち60%がいいね5未満。
+      盲検採点では **live 12/39(31%) vs top 12/41(29%)・Fisher p=1.0** ＝量が2倍でも品質は落ちない
+      （使える記事 12件→24件）。**いいね5未満27% vs 5以上31%** で差が無く、
+      いいね数は品質の指標として機能していないことも実測された。
+      経緯の正本= make_article `docs/x-operation/research/grok-web-search-precision-2026-08-11.md`
+
+    ⚠️ 非互換（1点だけ）: `min_likes<=0` のとき `min_faves:` を**付けない**。
+      従来は `min_faves:0` を明示していた（＝URL文字列が変わる）。`min_likes>0` の
+      通常運用では従来と1文字も変わらない。リポジトリ内に `--min-likes 0` の本番指定は
+      無いことを確認済みだが、手動実行で 0 を渡していた場合はURLが変わる点に注意。
+    """
+    parts = [q]
+    if min_likes > 0:
+        parts.append(f"min_faves:{min_likes}")
+    parts += [f"since:{since}", f"until:{until}", "-filter:nativeretweets"]
     if lang:
         parts.append(f"lang:{lang}")
-    return f"https://x.com/search?q={quote(' '.join(parts))}&f=top"
+    return f"https://x.com/search?q={quote(' '.join(parts))}&f={tab}"
 
 
 def parse_aria_metrics(aria: str | None) -> dict:
@@ -221,9 +243,12 @@ def scrape_cards_rich(page) -> list[dict]:
 
 
 def collect_query(page, q: str, since: str, until: str, min_likes: int, per_query: int,
-                  lang: str | None = None) -> list[dict]:
-    """1クエリ収集。スクロール毎に取り込み・id マージ（仮想化による本文喪失の対策）。"""
-    url = build_buzz_search_url(q, since, until, min_likes, lang)
+                  lang: str | None = None, tab: str = "top") -> list[dict]:
+    """1クエリ収集。スクロール毎に取り込み・id マージ（仮想化による本文喪失の対策）。
+
+    tab は build_buzz_search_url() にそのまま渡す（"top"=話題 / "live"=最新）。
+    """
+    url = build_buzz_search_url(q, since, until, min_likes, lang, tab)
     page.goto(url, wait_until="domcontentloaded", timeout=45_000)
     time.sleep(random.uniform(3.0, 5.0))
     if is_login_wall_url(page.url):
@@ -257,12 +282,16 @@ def collect_query(page, q: str, since: str, until: str, min_likes: int, per_quer
     rows = [r for r in by_id.values() if r["likes"] >= min_likes]
     for r in rows:
         r["query"] = q + (f" lang:{lang}" if lang else "")
+        # どのタブで見つかったか（2026-08-11 追加・Codexレビュー LOW）。
+        # dedupe 後も残すことで「live でしか取れなかった投稿」を後から数えられる＝
+        # 併走の効果とブロック傾向を本番データで検証できる。
+        r["search_tabs"] = [tab]
     rows.sort(key=lambda r: r["likes"], reverse=True)
     return rows[:per_query]
 
 
 def append_runlog(out_dir: Path, run_at: str, queries: int, rows: int, quarantined: int,
-                   wall_errors: int, outcome: str) -> None:
+                   wall_errors: int, outcome: str, live_tasks: int = 0) -> None:
     """毎実行の結果を1行追記（0件 early-return を含む全経路）。
 
     「0件実行」と「未実行」を事後区別するための実行証跡（2026-07-26 T10・原観測の不変化）。
@@ -273,7 +302,11 @@ def append_runlog(out_dir: Path, run_at: str, queries: int, rows: int, quarantin
     runlog_path = out_dir / "collect_runlog.jsonl"
     entry = {
         "run_at": run_at,
+        # ⚠️ 意味の注意（2026-08-11・Codexレビュー LOW）: これは「クエリ数」でなく **タスク数**
+        # （top + lang:ja + live の合計）。`--live` を付けた回は同じクエリ集合でも値が跳ねるため、
+        # 過去との比較は `live_tasks` を併記した回かどうかを見てから行うこと。
         "queries": queries,
+        "live_tasks": live_tasks,
         "rows": rows,
         "quarantined": quarantined,
         "wall_errors": wall_errors,
@@ -364,6 +397,11 @@ def main() -> int:
     ap.add_argument("--min-likes-ja", type=int, default=20, help="lang:ja 窓の閾値（日本語相場は低め）")
     ap.add_argument("--per-query", type=int, default=8)
     ap.add_argument("--no-ja-split", action="store_true", help="lang:ja 別窓を無効化")
+    ap.add_argument("--live", action="store_true",
+                    help="最新タブ(f=live)を同じクエリで併走させる（既定OFF・2026-08-11 新設）。"
+                         "低いいね帯が取れる代わりにタスク数が +len(queries) 増える。"
+                         "既定クエリでは 49→80タスク(+63%)・pacing 20-40秒のまま所要が約24分→約40分になる見込みのため、"
+                         "週次ジョブへ入れる前に手動で2-3回まわして所要時間と壁発生率を確認すること")
     ap.add_argument("--refetch-cap", type=int, default=8, help="空本文の個別再取得の上限件数")
     # 2026-08-03: 50→120（7/26 実測は空本文29件に対し救済1件＝3%。cap が律速でない可能性も
     # あるが、上げ幅のコストは syndication 個別取得の回数のみで安全側）。
@@ -377,10 +415,23 @@ def main() -> int:
     until = args.until or now.strftime("%Y-%m-%d")
     since = args.since or (now - timedelta(days=args.days)).strftime("%Y-%m-%d")
 
-    # タスク表: (query, min_likes, lang)
-    tasks: list[tuple[str, int, str | None]] = [(q, args.min_likes, None) for q in args.queries]
+    # タスク表: (query, min_likes, lang, tab)
+    tasks: list[tuple[str, int, str | None, str]] = [(q, args.min_likes, None, "top") for q in args.queries]
     if not args.no_ja_split:
-        tasks += [(q, args.min_likes_ja, "ja") for q in JA_SPLIT_QUERIES if q in args.queries]
+        tasks += [(q, args.min_likes_ja, "ja", "top") for q in JA_SPLIT_QUERIES if q in args.queries]
+    # 最新タブ（時系列）を同じクエリで併走させる。話題タブは X のランキングが
+    # バズらない投稿を落とすため、ここでしか取れない層がある（2026-08-11 実測: 新規39件・
+    # 重複1件・盲検の品質は同等 p=1.0・使える記事が2.0倍）。いいね下限は掛けない
+    # （実測でいいね数と「使えるか」に相関が無く、下限は母集団を削るだけだったため）。
+    # ⚠️ 既定OFF（2026-08-11・Codexレビュー MEDIUM）: 収集価値は実測済みだが、
+    # タスク数が 49→80(+63%) になり、累積検索数の増加が X 側の challenge/block を
+    # 誘発しないかは**未実測**。手動で2-3回まわして所要時間と壁発生率を確かめてから
+    # 週次ラッパーに `--live` を足すこと（アカウント保護を収集量より優先する）。
+    if args.live:
+        tasks += [(q, 0, None, "live") for q in args.queries]
+    # runlog は crash 経路（playwright 起動前）でも書くため、try に入る前に確定させる
+    n_live_tasks = sum(1 for t in tasks if t[3] == "live")
+    n_ja_tasks = sum(1 for t in tasks if t[2] == "ja")
 
     # out_dir/run_at はcookieロード・playwright起動より前に確定させる（Critical2 item9・
     # そこで未捕捉クラッシュしても runlog を書けるようにするため）。
@@ -395,7 +446,7 @@ def main() -> int:
     try:
         cookies = fetch_bookmarks.load_cookies(args.profile)
         print("=== X Search Collect (@twittora_・login DOM v2) ===")
-        print(f"tasks: {len(tasks)} (global {len(args.queries)} + ja {len(tasks)-len(args.queries)}), "
+        print(f"tasks: {len(tasks)} (top {len(args.queries)} + ja {n_ja_tasks} + live {n_live_tasks}), "
               f"window: {since}..{until}, min_likes: {args.min_likes}/{args.min_likes_ja}(ja)")
 
         from playwright.sync_api import sync_playwright
@@ -406,11 +457,11 @@ def main() -> int:
             context = browser.new_context(**build_context_kwargs())
             context.add_cookies(cookies)
             page = context.new_page()
-            for i, (q, ml, lang) in enumerate(tasks):
-                label = f"{q!r}" + (f" [lang:{lang} min:{ml}]" if lang else "")
+            for i, (q, ml, lang, tab) in enumerate(tasks):
+                label = f"{q!r} [{tab}]" + (f" [lang:{lang} min:{ml}]" if lang else "")
                 print(f"  → searching: {label}")
                 try:
-                    rows = collect_query(page, q, since, until, ml, args.per_query, lang)
+                    rows = collect_query(page, q, since, until, ml, args.per_query, lang, tab)
                 except LoginWallError as exc:
                     print(f"  ✗ {exc}", file=sys.stderr)
                     wall_errors += 1
@@ -424,14 +475,30 @@ def main() -> int:
                 if i < len(tasks) - 1:
                     time.sleep(random.uniform(*QUERY_PACING))
 
-            # id 横断 dedupe（likes の大きい記録を残す）
+            # id 横断 dedupe。**指標は likes 最大の行を正本にし、本文だけを別行から補完する**。
+            # ⚠️ 2026-08-11 修正（Codexレビュー MEDIUM）: 旧実装は
+            #   `likes が大きい or (prev に本文が無く r に本文がある)` で **行ごと差し替え**ていたため、
+            #   〈先行 top 行 likes=100・本文空〉→〈後続 live 行 likes=2・本文あり〉の順で来ると
+            #   **likes が 100→2 に書き潰された**。top と live を併走させると
+            #   「本文ありの低いいね行が後から来る」並びが増えるため、実害が出やすくなる。
             by_id: dict[str, dict] = {}
             for r in all_rows:
                 prev = by_id.get(r["id"])
-                if prev is None or r["likes"] > prev["likes"] or (not prev.get("content") and r.get("content")):
-                    if prev and prev.get("content") and not r.get("content"):
-                        r["content"] = prev["content"]
+                if prev is None:
                     by_id[r["id"]] = r
+                    continue
+                # 指標の正本＝likes が大きい方。本文は「持っている方」を残す
+                winner, loser = (r, prev) if r["likes"] > prev["likes"] else (prev, r)
+                if not winner.get("content") and loser.get("content"):
+                    winner["content"] = loser["content"]
+                    # 本文の出所が入れ替わったことを下流が判別できるようにする
+                    if loser.get("content_source"):
+                        winner["content_source"] = loser["content_source"]
+                # どのタブで見つかったかは集合で持つ（効果検証・ブロック傾向の診断用）
+                tabs = set(winner.get("search_tabs") or []) | set(loser.get("search_tabs") or [])
+                if tabs:
+                    winner["search_tabs"] = sorted(tabs)
+                by_id[r["id"]] = winner
             deduped = list(by_id.values())
 
             # P1: 空本文の隔離と救済（likes 上位のみ・cap つき）
@@ -472,17 +539,17 @@ def main() -> int:
         # Critical2 item9: cookieロード失敗・playwright起動失敗等の未捕捉クラッシュも
         # runlog に残す（「未実行」と区別する。個別クエリの失敗は上のtry/exceptで既に処理済み）。
         print(f"ERROR: 予期しないクラッシュ: {type(exc).__name__}: {str(exc)[:200]}", file=sys.stderr)
-        append_runlog(out_dir, run_at, len(tasks), 0, 0, wall_errors, "crash")
+        append_runlog(out_dir, run_at, len(tasks), 0, 0, wall_errors, "crash", n_live_tasks)
         return 1
 
     print(f"\nTotal: {len(all_rows)} fetched, {len(deduped)} unique")
     if not deduped:
         if wall_errors:
             print("ERROR: ログイン壁で停止。Cookie 更新（refresh-x-cookies）を確認", file=sys.stderr)
-            append_runlog(out_dir, run_at, len(tasks), 0, 0, wall_errors, "login_wall")
+            append_runlog(out_dir, run_at, len(tasks), 0, 0, wall_errors, "login_wall", n_live_tasks)
             return 1
         print("0件（窓内に閾値超えなし）。空ファイルは書かない")
-        append_runlog(out_dir, run_at, len(tasks), 0, 0, wall_errors, "empty")
+        append_runlog(out_dir, run_at, len(tasks), 0, 0, wall_errors, "empty", n_live_tasks)
         return 0
 
     # P1: 完全性セルフチェック
@@ -554,7 +621,8 @@ def main() -> int:
     print(f"✓ {jsonl_path}\n✓ {md_path}")
     # Critical2 item9: 壁が出た後でも一部行を収集できたケースは"ok"と区別する（途中まで正常・途中から壁）
     final_outcome = "partial_wall" if wall_errors else "ok"
-    append_runlog(out_dir, run_at, len(tasks), len(deduped), len(quarantined), wall_errors, final_outcome)
+    append_runlog(out_dir, run_at, len(tasks), len(deduped), len(quarantined), wall_errors,
+                  final_outcome, n_live_tasks)
     return 0
 
 
