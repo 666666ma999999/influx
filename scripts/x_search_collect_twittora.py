@@ -84,7 +84,10 @@ JA_SPLIT_QUERIES = [
     "AI コーディング ワークフロー",
     "subagent 並列",
     "Claude Code 新機能 アップデート",
-    "Obsidian 第二の脳 Claude",
+    # 🪦 "Obsidian 第二の脳 Claude" は 2026-08-09 に DEFAULT_QUERIES 側で退役済み
+    #   （2週稼働で芯命中0件・「第二の脳」は最汚染語＝商材46%が単一起点の再梱包）だったが、
+    #   **この JA 別窓リストに残っていたため退役後も走り続けていた**（2026-08-11 発見・片側退役）。
+    #   退役はコード2箇所（DEFAULT_QUERIES と JA_SPLIT_QUERIES）を必ず揃えること。
     "Fable オーケストレーション",
     # gen3 日本語6本（2026-08-03 敵対レビューA指摘: JA別窓に未登録だと旧クエリだけが
     # min_faves:20 の低floor窓を持ち、新クエリは50の1窓のみ＝floor不公平の測定バイアス）
@@ -100,6 +103,10 @@ JA_SPLIT_QUERIES = [
     "コンテキスト 消える",
     "Fable プロンプト",
     "Claude Code 公式",
+    # gen7 勝負レーン（2026-08-11・DEFAULT_QUERIES と同時追加）。日本語主体の2本だけ JA 別窓に入れる。
+    # "Graph Engineering" は英語表記のみ実在（カタカナ0件）のため JA 別窓には入れない。
+    "Claude Code 棚卸し",
+    "ループエンジニアリング",
 ]
 
 _STATUS_ID_RE = re.compile(r"/status/(\d+)")
