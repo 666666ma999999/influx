@@ -12,39 +12,18 @@ INTERVAL_SEC=${INTERVAL_SEC:-30}
 # 2026-08-03 追加: 失敗が err.log にしか残らず8日間気づかれなかったため通知を出す
 notify() { osascript -e "display notification \"$1\" with title \"X収集 週次\"" 2>/dev/null || true; }
 
-# 2026-07-26 ユーザー許可: daemon 未起動なら Docker Desktop をバックグラウンド起動してから待つ
-# （-g=前面に出さない・-a=アプリ名指定。起動失敗しても従来どおり待機ループ→タイムアウト exit 1）
-if ! docker info >/dev/null 2>&1; then
-  echo "Docker daemon 未起動 → Docker Desktop をバックグラウンド起動 (open -ga Docker)"
-  open -ga Docker 2>/dev/null || true
-fi
-
-waited=0
-until docker info >/dev/null 2>&1; do
-  if [ "$waited" -ge "$MAX_WAIT_SEC" ]; then
-    echo "ERROR: Docker daemon起動待ちタイムアウト(${MAX_WAIT_SEC}秒経過)。daemon is not running." >&2
-    exit 1
-  fi
-  echo "Docker daemon起動待ち... (${waited}/${MAX_WAIT_SEC}秒)"
-  sleep "$INTERVAL_SEC"
-  waited=$((waited + INTERVAL_SEC))
-done
-
-# 2026-08-03: コンテナ停止時に「即失敗」していたため 7/27 の失敗が8日間放置され、
-# 実効収集が平均18日に1回まで落ちていた（敵対レビュー実測）。up -d を1回試してから再判定する。
-if ! docker ps --format '{{.Names}}' | grep -q '^xstock-vnc$'; then
-  echo "xstock-vnc 停止 → docker compose up -d を試行"
-  (cd "$HOME/Desktop/biz/influx" && docker compose -f docker-compose.vnc.yml up -d) || true
-  for _ in $(seq 1 12); do
-    docker ps --format '{{.Names}}' | grep -q '^xstock-vnc$' && break
-    sleep 5
-  done
-fi
-if ! docker ps --format '{{.Names}}' | grep -q '^xstock-vnc$'; then
-  echo "ERROR: xstock-vnc コンテナを起動できなかった（influx で docker compose -f docker-compose.vnc.yml up -d）" >&2
-  notify "X収集 失敗: xstock-vnc を起動できず"
-  exit 1
-fi
+# 2026-08-11: ここにあった「daemon待ち → コンテナが無ければ起こす」の手書き実装を
+# scripts/lib/xstock_vnc.sh へ集約した（挙動は同じ）。理由は同処理が3本のシェルに
+# 個別実装され、tracer にだけ無かったため 08-11 17:08 に tracer だけが復旧できず
+# 止まったこと（rules/20 Dual-Path 禁止）。⚠️ ここに書き戻さないこと。
+#   旧実装との差: コンテナ起動待ちの上限が「12回×5秒=60秒・超過しても続行して再判定」から
+#   「120秒・超過で即エラー」に変わった（xprice_watch_run.sh 側の実装に揃えた）。
+#   起動できなかった時に通知して exit 1 する結末は従来どおり。
+. "$(dirname "$0")/lib/xstock_vnc.sh"
+XSTOCK_NOTIFY_TITLE="X収集 週次"
+XSTOCK_DAEMON_WAIT="$MAX_WAIT_SEC"
+XSTOCK_DAEMON_INTERVAL="$INTERVAL_SEC"
+xstock_ensure_ready || exit 1
 
 # 2026-08-03 22時台の実測: コンテナを自動起動した直後の docker exec は
 # TargetClosedError（ブラウザ即死）で落ちる（20:30 実走 rows:0 crash・fxnia 11:04 と同型）。

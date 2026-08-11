@@ -6,6 +6,16 @@ set -u
 ALERTS="${ALERTS_FILE:-$HOME/Desktop/biz/influx/output/x_tracer/alerts-$(date +%Y-%m-%d).jsonl}"
 TRACER_CMD=${TRACER_CMD:-"docker exec xstock-vnc python3 /app/scripts/x_watchlist_tracer.py"}
 
+# 2026-08-11 追加: コンテナが落ちていると `No such container: xstock-vnc` で即失敗し、
+# 巡回が止まったまま気づけなかった（同日 17:08 実害）。収集・価格監視には昔から
+# あった自動復旧が、この tracer にだけ無かった。共通部品に集約して呼ぶ。
+# ⚠️ ここに復旧処理を手書きしないこと（3本目のコピーを作らない）。
+if [ -z "${XSTOCK_SKIP_ENSURE:-}" ]; then
+  . "$(dirname "$0")/lib/xstock_vnc.sh"
+  XSTOCK_NOTIFY_TITLE="x-buzz トレーサー"
+  xstock_ensure_ready || exit 1
+fi
+
 before=0
 [ -f "$ALERTS" ] && before=$(wc -l < "$ALERTS" | tr -d ' ')
 
@@ -22,6 +32,12 @@ if [ "$rc" -ne 0 ]; then
   sleep 300
   $TRACER_CMD
   rc=$?
+fi
+
+# 2026-08-11 追加: 再試行しても駄目なら通知する。従来は「新しいアラートがある時」しか
+# 通知が出ず、失敗は err.log にしか残らなかった＝止まっても気づけない（改善レーン G4）。
+if [ "$rc" -ne 0 ]; then
+  osascript -e "display notification \"トレーサーが exit $rc（再試行込み）\" with title \"x-buzz トレーサー 失敗\"" 2>/dev/null || true
 fi
 
 # 2026-08-03 追加（敵対レビュー2件一致）: tracer 出力を vault へ複製し、週次提案カードの
