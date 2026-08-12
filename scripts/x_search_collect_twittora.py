@@ -107,6 +107,17 @@ JA_SPLIT_QUERIES = [
     # "Graph Engineering" は英語表記のみ実在（カタカナ0件）のため JA 別窓には入れない。
     "Claude Code 棚卸し",
     "ループエンジニアリング",
+    # gen8 在庫ゼロ5グループ（2026-08-12・DEFAULT_QUERIES と同時追加）。日本語主体の4本を JA 別窓へ。
+    # "Claude Learning Mode" は英語主体（"Graph Engineering" / "Claude Skills Routines" と同型）のため入れない。
+    # ⚠️ ここに入れないと新クエリだけ min_faves:50 の1窓しか持たず、既存は20の低floor窓も持つ＝
+    #    4週後の「0件だったから退役」判定が不公平になる（2026-08-03 敵対レビューA指摘と同じ穴）。
+    "Claude 寝ている間",
+    "Claude 判断基準",
+    "Claude Code リファクタ",
+    "リバースプロンプティング",
+    # gen8b 2026-08-12（G6・最後の ❌ を潰す）。和文脈主体なので JA 別窓に入れる
+    # （"AI コーディング ワークフロー" "AIエージェント 承認 フロー" と同型）。
+    "AI同士 レビュー",
 ]
 
 _STATUS_ID_RE = re.compile(r"/status/(\d+)")
