@@ -1,0 +1,114 @@
+{
+ "_note": "@investramza 中立全収集（min_faves無し=分母込み・第17R Batch1 T2）。cookie=x_profiles/maaaki・自動ログインなし。status=success。",
+ "_schema": "posts[].{account, date(YYYYMMDD), text}",
+ "_collection": {
+  "query": "from:investramza since:2026-07-28 until:2026-08-12",
+  "status": "success",
+  "raw_collected": 20,
+  "own_posts": 20,
+  "max_scrolls": 40,
+  "error": null
+ },
+ "posts": [
+  {
+   "account": "investramza",
+   "date": "20260810",
+   "text": "レジスタンス抜けましたねー"
+  },
+  {
+   "account": "investramza",
+   "date": "20260810",
+   "text": "ほんとに疲れました、、、"
+  },
+  {
+   "account": "investramza",
+   "date": "20260810",
+   "text": "おや、週末に騒がれてた光が下落して、メモリが底堅い・・・。SNDK、ハイパースケーラーは上昇"
+  },
+  {
+   "account": "investramza",
+   "date": "20260810",
+   "text": "COPX"
+  },
+  {
+   "account": "investramza",
+   "date": "20260809",
+   "text": "ここ数年はバフェットもAAPLだけですね。買える株がサイズ的に限られすぎている超絶縛りがあるので、、"
+  },
+  {
+   "account": "investramza",
+   "date": "20260809",
+   "text": "家康「かって太閤がやったことをやったまでですよ」"
+  },
+  {
+   "account": "investramza",
+   "date": "20260809",
+   "text": "仮想敵国はイラン、インド、ロシア??"
+  },
+  {
+   "account": "investramza",
+   "date": "20260809",
+   "text": "今の価格ならもちろん"
+  },
+  {
+   "account": "investramza",
+   "date": "20260809",
+   "text": "まだまだCAPEXは続きますからねー"
+  },
+  {
+   "account": "investramza",
+   "date": "20260809",
+   "text": "6月ー7月、日本株→ハイパースケーラーにめっちゃお金移しました"
+  },
+  {
+   "account": "investramza",
+   "date": "20260809",
+   "text": "GOOGL、いまならバークシャーの引き受け値とほぼ同価格で買えます"
+  },
+  {
+   "account": "investramza",
+   "date": "20260809",
+   "text": "メモリについてはファンダ云々より日柄が必要、の一言の方がよほど説得力があります  ゴールド、プラチナも23年ー25年夏に買った分は全く売らずに放置してます(最近ちょい買い増しました)"
+  },
+  {
+   "account": "investramza",
+   "date": "20260809",
+   "text": "ひっそり銅の鉱山会社のETF買ってます"
+  },
+  {
+   "account": "investramza",
+   "date": "20260809",
+   "text": "万年強気も万年弱気もありですが暴落してから曲げるのはダサいですね  「ブルもベアも儲けることができるが、豚は破産する。」"
+  },
+  {
+   "account": "investramza",
+   "date": "20260809",
+   "text": "銘型→銘柄"
+  },
+  {
+   "account": "investramza",
+   "date": "20260809",
+   "text": "ちょっと前 ・中華AIでトークン価格暴落！！ →Open AI破産！！→メモリは供給過剰で崩壊！！  いま ・AI投資は回収可能↑→ハイパースケーラー上昇 ・メモリが足りな過ぎてNVDAが光を推奨 →光銘形爆上げ→足りなすぎるはずのメモリが供給過剰で崩壊！！  株価の後追いで理屈をつけてるだけでは？"
+  },
+  {
+   "account": "investramza",
+   "date": "20260809",
+   "text": "バリー、SOX空売り開始。 PLTRの推移を見るとこれも悪い話とは思えない。 NVDAのショートはどうなったの?? バリーはわりと売り方の岐阜さんなので"
+  },
+  {
+   "account": "investramza",
+   "date": "20260808",
+   "text": "単純に光が先に天井をつけたから、日柄調整が先に終わりつつある、てBKLZさんの説の方が信憑性ある気がします  でも僕は光は買わないかなあ。 技術的に色々越えないといけないハードルがありそうな上にPERど高値なんで怖さはあります。"
+  },
+  {
+   "account": "investramza",
+   "date": "20260808",
+   "text": "最後の強気派がタオルを投げたかも? 底は近いかな"
+  },
+  {
+   "account": "investramza",
+   "date": "20260808",
+   "text": "Geminiが最先端に追い付くのを諦めたぽいところが嫌われてますがまあそれは、、、"
+  }
+ ]
+}

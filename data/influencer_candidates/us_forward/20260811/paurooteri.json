@@ -1,0 +1,364 @@
+{
+ "_note": "@paurooteri 中立全収集（min_faves無し=分母込み・第17R Batch1 T2）。cookie=x_profiles/maaaki・自動ログインなし。status=success。",
+ "_schema": "posts[].{account, date(YYYYMMDD), text}",
+ "_collection": {
+  "query": "from:paurooteri since:2026-07-28 until:2026-08-12",
+  "status": "success",
+  "raw_collected": 80,
+  "own_posts": 70,
+  "max_scrolls": 40,
+  "error": null
+ },
+ "posts": [
+  {
+   "account": "paurooteri",
+   "date": "20260811",
+   "text": "DeepSeekショック2が来なくてショックな人たちがいる感じ？"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260811",
+   "text": "世の中は計算資源の需要と効果を過小評価していますね。AIで荒らして色々奪取できそうですね。"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260811",
+   "text": "日経が煽った時点で、ダメでしたね 情報が遅すぎます"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260811",
+   "text": "2027年のVera Rubin, TPU v7, 8t, 8i, Trainium 3, MI455の上方修正をみんなきちんと把握していないから、HBMの価格上昇を見誤るんでしょうね"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260811",
+   "text": "来年はおそらくGoogle TPUが1000万個以上、Amazon Trainiumは800万個以上出るはずです。 おっしゃる通り、桁違いです。"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260811",
+   "text": "なんでも革ジャンが先手を打ってきますね。 さぁHBMとスケールアップの適切な配分を"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260811",
+   "text": "まさにこれですね  AIは転換点を迎えた。研究段階から実用段階へと移行しつつある。AIは真の価値を生み出し、それを支えるインフラは世界で最も生産性の高い資産の一つになりつつある。AIの世界では、コンピューティング能力こそが収益源なのだ。"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260811",
+   "text": "光接続、銅接続、全ての高速接続にSITMEのクロックは必要と言っても言い過ぎではありません。そしてルネサスのタイミング事業取得で、クロック配分まで支配します。是非、読んでみてください。 拡散もよろしくお願いします"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260811",
+   "text": "電源のデルタが好調ということは、電子部品も良さそうですね。特にアルミ電解コンデンサ  デルタエレクトロニクスの7月の売上高は過去最高を記録し、最初の7ヶ月間も好調な業績を示し、今年の総売上高は4000億台湾ドルを超えた。"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260811",
+   "text": "もちろんHBMも需要増ですね"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260811",
+   "text": "Microsoftも自社チップMAIA300を大型発注へ  TSMCがまたもや大型受注を獲得！マイクロソフトは来年、自社開発の次世代AIチップの生産量を大幅に増やす計画だと報じられている。  The Informationが関係筋の話として報じたところによると、マイクロソフトは今秋に次世代AIチップ「Maia"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260811",
+   "text": "昨日のTSMCの月次売上を受けて、5000億台湾ドルは9月かな？  TSMCの7月の売上高は4,675億台湾ドルに達し、3ヶ月連続で首位となった。アナリストは、同社が1ヶ月で5,000億台湾ドルの大台突破に挑戦すると予測している。  世界有数の半導体ファウンドリであるTSMC"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260811",
+   "text": "あらゆる半導体のコスト転嫁が今年後半も続く見込み、売り手市場へ  半導体製造サプライチェーンは2026年下半期も引き続き上昇すると確認され、IC設計業界は「価格交渉」を継続している。"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260811",
+   "text": "共有ありがとうございます。彼らはT-GlassとNEZに注力しています。"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260810",
+   "text": "これ円安どうすんの また介入？"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260810",
+   "text": "ついに来ましたね 強いのが"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260810",
+   "text": "$SITM  ゆっくりじっくりATHまで行って欲しいね"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260810",
+   "text": "AlchipのTrainium3爆裂出荷開始か Amazonのカスタムチップが強烈だ"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260810",
+   "text": "光の戦士の今日は調子が悪い？ それともNPO/CPOやLED/Laserの区別がつかない投資家が騙された感じ？"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260810",
+   "text": "あら  $SNDK    $TSEM"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260810",
+   "text": "intel 株式発行で増資ですか 工場の運転資金ですかね 先端プロセス足りないもんなぁ  インテル同社は月曜日、人工知能コンピューティングに対する顧客需要の急増に対応するため、 150億ドル規模の普通株式発行を発表した。"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260810",
+   "text": "光と思ったら銅だったという感じ"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260810",
+   "text": "SiTimeがルネサスのタイミング事業を買収し、完成させようとしているものがあります。それはAIデータセンターの究極のタイミング・エコシステムです。30億ドルの決断がもたらす「乗数効果」を、徹底的に解説します。是非、読んでみてください。  $SITM"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260810",
+   "text": "あんまり陰謀論とか好きじゃないけど、Appleとメモリーメーカーの情報戦になってる感じ？ 今はMicronのターンか"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260810",
+   "text": "うわー、来年のiPhone 20周年記念のベゼルレスモデルはキャンセルと"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260810",
+   "text": "こういうレポートが出てきますよね Apple ジェフリーズがダウングレード  Apple対メモリーメーカー ながーい戦いが続く"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260810",
+   "text": "ありがとうございます 今回も渾身の記事です"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260810",
+   "text": "話題のAppleとレガシーDRAMについてメンバーシップ向けに記事を投稿しました。 独自の分析になります。コメントはネタバレを防ぐため、記事内にてお願いします。"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260810",
+   "text": "マージン確保の場合、日本市場でのiPhone 18 Pro MAXは29万9000円かな 1年で1.5倍"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260810",
+   "text": "Appleとメモリ企業の第一次大戦がはじまる どちらがどれだけボッタくれるか"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260810",
+   "text": "あれまぁ、ついにマージン削りますか  以下、引用します。 >> TrendForce：iPhone 18 Proのコストが約40%急増する見込み；Appleは出荷台数を安定させるため粗利益率戦略を調整する可能性"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260810",
+   "text": "さぁ面白くなってきました。  報道によると、アップルは議会議員からの警告を無視し、iPhoneとMacBookにCXMTのDRAMを搭載してテストを行っている。"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260810",
+   "text": "光に投資するならば、NPOとCPOの違い、そしてファウンダリは押さえておいてね  火傷しますよ"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260810",
+   "text": "7月からiPhone 18 Pro A20のN2の売り上げが入っているはず Rubin本格化は8月からかな"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260810",
+   "text": "TSMCの8月は熱い月になりそうだ"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260810",
+   "text": "TSMC 7月売上 467.58 B台湾ドル 脅威の前年同月比44.7%増 過去最高を更新"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260810",
+   "text": "さぁレガシーDRAM"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260810",
+   "text": "光接続シリーズの記事紹介です 光は良いところもありますが、変換が必要です  それぞれの企業の良い点を把握して頂ければと思います"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260810",
+   "text": "HBM減らしてCPO/NPOの光スケールアップ接続でDRAM容量を埋める話は信じない方が良いですよ NVLinkの接続構成と銅、光変換のペナルティはそこまで単純ではないので 512をスター型の接続には出来ないですからね"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260810",
+   "text": "SpaceX特需は継続中かな  AIサーバーと低軌道衛星で大幅な増収！主要機械部品メーカー4社は7月に売上高が急増、下半期も好調が見込まれる。 JPP、Wai Po、Lian De Holdings、Yi Shengは7月に素晴らしい業績を報告した。"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260810",
+   "text": "LPDDR4 capacity."
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260810",
+   "text": "わお、これはすごい どんなプロセスと生産規模になるんだろう"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260810",
+   "text": "失礼な言葉ですみません ただ過度に楽観的になるのは危険ですので"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260810",
+   "text": "この計算はダメです"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260809",
+   "text": "そう iPadもwatchも"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260809",
+   "text": "たぶんこれはApple watchやiPadのモデム用DRAMな気がしますね"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260809",
+   "text": "Appleの自社モデムがDRAMで苦しむことになるとは"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260809",
+   "text": "実際に2027年のDRAM売り切れは生産量の全てが売り切れではなくて、計画割り当て量の売り切れですね 数量は少ないけど、スポットに流したり、ゴニョゴニョしたり、グレーマーケットに流す分はまだまだありそう"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260809",
+   "text": "AppleはSoCのパッケージングが独自なので、DRAMはベアダイで買っているんですよね だから何回も言っていますが、メーカーごとにRDLが異なる  ちゃんと イヒが大量消費されるか確認したいところ"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260809",
+   "text": "安いと希望だったCXMTの現実 中国もAIサーバーを大量に展開するから当然  以下、日本語で引用します  WSJ：多くのCXMT製品は、Micron、韓国SK Hynix、Samsung Electronicsのものと同等の価格で取引されており、時にはプレミアム価格になることもあります"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260809",
+   "text": "TPUはよりSRAM載せる方向になるね TSMC大忙し SamsungがSRAMメーカーとしての存在感も出てくる 結局メモリですね 先端ロジックのチップの中もSRAMだらけ iPhoneもね"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260809",
+   "text": "cHBMは、先進ノードベースのダイを持つFeynmanにとって鍵となるでしょう。"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260809",
+   "text": "メモリに関してはLTAとHBM4が入ってくるから、色々な証券会社の予想レポートも当たらなくなってくると思います 契約価格が外に漏れることはないからです じっくり確認して行きましょう"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260809",
+   "text": "ありがとうございます。 意図をくみとってくださり、嬉しいです"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260809",
+   "text": "メンバーシップを募集しています テスト事業に関しても定量的なデータ、独自情報、洞察を投稿しています 1ヶ月500円で、1週間に2回以上投稿しています 大変お得になっています 是非、入ってみてください"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260809",
+   "text": "末松先生もね"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260809",
+   "text": "コストのほとんどがメモリのVera Rubin  「本格出荷」NVIDIA Vera Rubin、原価の62%はメモリ…「HBM4より比重が大きいSOCAMM2」 メモリ費用、前作より2.5倍増加… 増加分の大半はCPU用DRAM  Vera Rubinの1ラックにスマートフォン4,500台分の低電力DRAMを搭載  DRAM不足で次期製品の仕様調整…"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260809",
+   "text": "SK Hynixは中国の工場を  「SKハイニックス、4兆ウォン台中重慶工場持分売却検討」"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260809",
+   "text": "さらに液晶工場2個買収、これはCoPoSに向けて動き出したかな  TSMCは、高度なパッケージング技術を共同開発するという「イノラックスモデル」に倣い、台湾中部科学園区にあるAUオプトロニクスの工場2カ所を買収する計画だと報じられている。  市場の噂によると、TSMC"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260809",
+   "text": "電子部品はここがポイントですね 特殊が先行  標準製品の稼働率は第2四半期の約80%から90%以上に上昇し、特殊製品の稼働率は90%以上の高水準を維持し、全体の稼働率はフル稼働に近づく見込みです。"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260809",
+   "text": "Yageoも長期契約  MLCC（積層セラミックコンデンサ）の供給不足が価格競争と部品争奪戦を引き起こし、Yageo社は部品確保のために長期契約を結ぶ顧客が増えていると報告している。"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260809",
+   "text": "値上げだ  シリコンウェハー、特殊ガス、包装材料は戦略的資源となり、半導体材料の価格が全体的に高騰する原因となっている。"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260809",
+   "text": "全部のkvキャッシュをHBMに保存してたら、恐らく今のAIサービスは10倍ぐらいの値段に... 使わない一時的なkvキャッシュはNANDに格納が現実的です。具体的には皆様のAIとのチャットログなどです。"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260809",
+   "text": "いえ、消えてるので大丈夫です"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260809",
+   "text": "わかるんですが、分離して上場して欲しいです"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260809",
+   "text": "メモリやストレージは色々な種類がありますね。 以下の記事紹介の記事では、SRAM、HBM、NANDを深く掘り下げて、実際にどのように使われているのか、解説するシリーズになっています。 是非、読んでみてください。 拡散もよろしくお願いいたします。"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260809",
+   "text": "ですよね やはり大容量モデルは高ければ高いほど良い iPhone 18 Pro Max 2TB (QLC) 49.8万円 来年はさらに進化して iPhone 19 Pro Max Oblivion 4TB (PLC) 128万円 これで、高齢者富裕層を狙い撃ちですね"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260809",
+   "text": "クレジットベースのInfiniBandプロトコルも複雑化すると非常に弱いしね じゃぁイーサネット系にしたら、それこそBroadcomだし"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260809",
+   "text": "まぁ交渉材料だよ アーキテクチャ的に不利になることは革ジャンはしないよ"
+  },
+  {
+   "account": "paurooteri",
+   "date": "20260809",
+   "text": "これは正しいです。アクセラレータあたりのHBM容量を減らすことで、より多くのモデル状態とKVキャッシュがリモートのHBMに押し込まれ、スケールアップ・ファブリックへの依存度が高まります。これによりアクセス遅延が増加し、ファブリックの帯域幅を消費し、同期の停滞が増えます。All-to-All通信は特"
+  }
+ ]
+}

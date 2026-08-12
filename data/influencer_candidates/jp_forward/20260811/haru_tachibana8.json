@@ -1,0 +1,13 @@
+{
+ "_note": "@haru_tachibana8 中立全収集（min_faves無し=分母込み・第17R Batch1 T2）。cookie=x_profiles/maaaki・自動ログインなし。status=blocked。",
+ "_schema": "posts[].{account, date(YYYYMMDD), text}",
+ "_collection": {
+  "query": "from:haru_tachibana8 since:2026-07-28 until:2026-08-12",
+  "status": "blocked",
+  "raw_collected": 0,
+  "own_posts": 0,
+  "max_scrolls": 25,
+  "error": "Page.goto: net::ERR_NAME_NOT_RESOLVED at https://x.com/search?q=from%3Aharu_tachibana8%20since%3A2026-07-28%20until%3A2026-08-12&src=typed_query&f=live\nCall log:\n  - navigating to \"https://x.com/search?q=from%3Aharu_tachibana8%20since%3A2026-07-28%20until%3A2026-08-12&src=typed_query&f=live\", waiting until \"domcontentloaded\"\n"
+ },
+ "posts": []
+}

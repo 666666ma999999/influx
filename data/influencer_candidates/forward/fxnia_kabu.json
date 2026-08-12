@@ -2,7 +2,7 @@
  "_note": "@fxnia_kabu 中立全収集（min_faves無し=分母込み・第17R Batch1 T2）。cookie=x_profiles/maaaki・自動ログインなし。status=success。",
  "_schema": "posts[].{account, date(YYYYMMDD), text}",
  "_collection": {
-  "query": "from:fxnia_kabu since:2026-07-24 until:2026-06-29",
+  "query": "from:fxnia_kabu since:2026-07-24 until:2026-07-06",
   "status": "success",
   "raw_collected": 0,
   "own_posts": 0,
