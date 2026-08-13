@@ -158,6 +158,9 @@ DEFAULT_QUERIES = [
                                        #       裸語は「方向性の外側」を太らせる。"Claude" を足して道具文脈に絞る。
                                        #     ・"リストマーケ" → 実在1件で狭すぎ／"X運用" 単体 → 実在1件・表記ゆれ主体。
                                        #   計器の紐付け条件: クエリが "sns運用"（G13 match_terms）を含む → 自動で G13 に紐づく。
+    # gen9 2026-08-13（P2層化実験の1周目で唯一の合格・裁定の正本= make_article tasks/p2-keyword-experiment-2026-08-13.md）:
+    # 盲検93件の芯率判定で 21候補中これだけが基準（芯率50%+3芯）を通過（3/6・全体芯率9.7%）。
+    "Anthropic 発表",                   # 意図G12 新機能速報（実験時 X取得6・芯3=Claude Cowork一般提供/透かし発表/Inference Hooks）
     # 退役候補（gen7 と同時に観察開始・4週後に intent_coverage.md の在庫/採用で判定）:
     #   "Cursor vs Claude"（IDE比較＝どの意図グループにも紐づかない）
     #   "Anthropic Claude API"（一般語すぎ・API紹介は R3 寄り）
