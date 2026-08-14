@@ -3,7 +3,7 @@ project: influx（株アルゴ研究系統）
 type: architecture
 artifact_role: repo-canonical
 owners: MASA
-last_verified: 2026-08-09
+last_verified: 2026-08-14
 sensitivity: personal
 pair:
   - scripts
@@ -19,7 +19,6 @@ architecture_version: 1
 > ②は兄弟ファイル [`influx-architecture.md`](./influx-architecture.md) が持つ（2026-08-08 オーナー裁定で2系統分割）。
 > 数値定義・閾値・合格基準→ `docs/stock-algo-kpi-catalog.md`／事前登録と試行の記録→ `docs/` `data/kpi_trials/`／現在地→ `tasks/`。
 > ここは**境界・I/O・道具・索引のみ**。個別銘柄・保有・損益は一切書かない（工程と道具だけ）。
-> 初版の出自: make_article の理解ドキュメント `output/x-collection/understanding/influx-stock-algo.md`（2026-08-08・調査報告）を、現行 repo で再確認して再構成（移送でない）。
 
 ## 1. 責務と非責務（最初に固定）
 
@@ -36,8 +35,6 @@ architecture_version: 1
 | **Rules** | ① `data/kpi_trials/*.jsonl` は **append-only**（過去行を書き換えない・取り消しも新行）② 事前登録は SHA-256 凍結後**変更＝仮説の放棄**（AIが勝手に条件を直さない）③ Bonferroni 分母＝ trials.jsonl 行数、**分母の圧縮は恒久禁止** ④ 新規仮説の凍結前に必ず Codex 敵対レビューの GO を取る ⑤ ホスト上 `pip install` 禁止（Docker `xstock` 経由） | — |
 
 ## 2. システム全体像（二層構造）
-
-<!-- 「証拠ループ（検定）」と「配信ループ（表示）」の分離は 2026-07-31 の敵対クロスレビューで両レビュアーが一致要求。 -->
 
 ```mermaid
 flowchart LR
@@ -89,20 +86,9 @@ flowchart LR
 | P13 | 商品価格レーン | 外部価格の発火→受益カード→前向き記録 | `scripts/price_universe_check.py` / `xprice_watch_run.sh` | 月曜08:30＋毎日22:10 | ⏰ |
 | P14 | vault ミラー | 当日シグナル・台帳・hash chain を vault へ写す | 上記ジョブに同乗 | 毎朝 | ⏰ |
 
-### 4-1. 定期実行（launchd 8本・2026-08-09 実測で全て登録済み・最終 exit 0）
+### 4-1. 定期実行（配管図が正本）
 
-| ジョブ名 | 実行物 | スケジュール（plist 実読） |
-|---|---|---|
-| `com.influx.paper-screen` | `scripts/daily_screen.py` | 平日 07:30 |
-| `com.influx.tob-forward` | `scripts/tob_forward_launchd.sh` | 毎日 07:15（寄付前が唯一のエントリー機会） |
-| `com.influx.kpi-clock-sla` | `scripts/kpi_clock_sla.py` | 平日 08:45（粗い死活監視・coverage 証明ではない） |
-| `com.influx.jsf-archive` | `scripts/jsf_daily_archive.py` | 平日 12:30 / 19:30 |
-| `com.influx.price-universe` | `scripts/price_universe_run.sh` | 月曜 08:30 |
-| `com.influx.price-watch` | `scripts/xprice_watch_run.sh` | 毎日 22:10 |
-| `com.influx.fxnia-forward` | `scripts/fxnia_forward_launchd.sh` | 月曜 10:30 |
-| `com.influx.us-watchlist` | `scripts/us_watchlist_launchd.sh` | 火曜 10:30 |
-
-> ⚠️ `config/launchd/` には plist が **12本**あるが、`launchctl` に載っているのは上の8本。未ロードの4本（`edinet-tob` / `kpi-loop-weekly` / `research-weekly` / `tob-monthly`）は §8 参照。
+本数・時刻・入口の表と稼働の注意書きは **`docs/pipeline-map.md`（機械生成）** が持つ（2026-08-14 移設・手書き表は腐っていた）。
 
 ### 4-2. 走行中の前向きレーン（4本・お金は張っていない）
 
@@ -114,8 +100,6 @@ flowchart LR
 | S4 インフルエンサー前向き | `output/influencer_candidates/` 配下 | `tasks/influencer_discovery_preregister.md` |
 
 ## 5. 道具の一覧（何を・どう使っているか）
-
-<!-- X投稿とのマッチングで ①同じ道具の違う使い方（ライフハック）②道具の置き換え を拾うための突合表。道具名は X検索で通じる一般名で書く。全て source_env: personal。 -->
 
 ### A. データ源
 
@@ -171,9 +155,7 @@ flowchart LR
 
 ### 5.1 AI 資産（スキル・コマンド・hook）
 
-> 用途は §5 と同じ**突合表**（外部の活用術を自分の運用に当てる）。X で流れる「Claude Code 活用術」はこの層に当たるため、
-> ここが空白だと投稿を「うちの何が良くなるか」に翻訳できない。
-> **載せるのはこのプロジェクト固有のものだけ**。全プロジェクト共通のグローバル資産（skill 85本・コマンド 26本・hook 83本・2026-08-10 実測）は環境側の持ち物なので数だけ書き、個別列挙はしない。
+> §5 と同じ突合表。**載せるのはこのプロジェクト固有のものだけ**（全プロジェクト共通の資産は環境側の持ち物＝数だけ書き個別列挙しない）。
 
 | 資産 | 種別 | うちでの使い方（1行） | 使い方の癖・なぜそうしているか | 置き換えが起きうる部分 |
 |---|---|---|---|---|
@@ -201,21 +183,15 @@ flowchart LR
 | 毎日見る司令塔・進捗ダッシュボード | vault `02_Ai/influx/influx-kpi-cockpit.md` / `influx_ope.md`（⚠️鮮度は §8） | リンク先 |
 | **もう1系統（X収集基盤）** | [`influx-architecture.md`](./influx-architecture.md) | リンク先 |
 | 検証の回し方の一般則 | グローバル skill `prereg-freeze-cycle` | リンク先 |
-
-| **X収集基盤系統（同 repo のもう1系統）** | `influx-architecture.md`（repo 直下・2026-08-09 新設） | リンク先 |
 | **詳細リファレンス**（環境変数一覧・分類カテゴリ等） | `.claude/docs/architecture.md`（⚠️ モジュール構成・データフロー節は 5/2 停止・X収集寄り） | リンク先 |
 
 ## 7. 未反映キュー（機械が積む・人が消す）
 
-<!-- stop-paired-docs-guard が scripts/config/docs を触ったのに本書未更新の時に1行積む。人が更新したら消す。 -->
-
 ## 8. 矛盾・未確定（結論は書かない・移送先だけ）
 
 - **未確定**: `plan.md`（2026-04-24）・`.claude/docs/architecture.md`（2026-05-02）・`CLAUDE.md`（2026-08-02）は**株アルゴ研究に実質的に触れていない**（株アルゴは 2026-07 開始）。実害として `tasks/*_preregister.md` の複数が冒頭で `plan.md` を「上位」とリンクしているが参照が空振りしている。→ どちらを正本にするかは influx セッションで裁定（**兄弟ファイル §8 と同一の矛盾**・本書は株アルゴの現行像を repo 正本として提示）
-- **未確定**: `config/launchd/` に plist が12本あるのに `launchctl` 登録は8本。未ロードの4本のうち **`com.influx.edinet-tob`（平日18:45・EDINET 全件収集）は道具表Aで「稼働中」として記述されている**＝食い違う。残り3本（`kpi-loop-weekly` / `research-weekly` / `tob-monthly`）も意図的な停止か取りこぼしか不明。→ influx セッションで棚卸し
+- **未確定**: repo の定義本数と `launchctl` 登録本数の食い違い（未ロード4本・うち `edinet-tob` は道具表Aで「稼働中」と書かれている）→ 実態と注意書きは `docs/pipeline-map.md` §4 が持つ。棚卸しは influx セッションで
 - **未確定**: 「18系統」が指す集合が文書ごとに違う（vault ダッシュボード「毎朝18系統」／`config/paper_watchlist.json` は19件〈observation 17・reference 1・hoos_rejected 1〉／`tasks/segment_expansion_review.md`「前向き接続18本」／`tasks/pending_verdict_flow.md` の `awaiting_forward` 18）。→ どれが正しいかは決めない
-- **未確定**: 試行数の並存（vault `influx_ope.md` の「109行」は 2026-07-15 断面のまま・catalog と実測は114）。→ vault 側の更新で解消する筋
-- **未確定**: 目標本数「10本」表記が vault cockpit・`docs/recipe-lanes-portfolio.md` に残存（2026-07-21 に階段式へ改定済み）。catalog §6付記III に**読み替えの正本がある**ため設計上の残存だが初見で誤読しやすい
-- **未確定**: vault `influx-kpi-cockpit.md` は frontmatter `last_updated: 2026-07-16` だが本文の一部はそれより新しい（frontmatter と本文が非同期）。→ vault 側で解消
+- **未確定（vault 表示のずれ3件・いずれも vault 側で解消）**: ①試行数 109行（2026-07-15 断面）vs catalog/実測 114 ②目標本数「10本」の旧表記が cockpit・`docs/recipe-lanes-portfolio.md` に残存（読み替えの正本= catalog §6付記III）③`influx-kpi-cockpit.md` の frontmatter `last_updated: 2026-07-16` と本文が非同期
 - **未確認（本書で裏取りできなかった）**: ① 各 launchd ジョブが**実際に成功しているか**（`launchctl list` の最終 exit code が 0 であることのみ確認・`run_log.jsonl` の中身は未読）② `scripts/` 実装コードの中身（`judge()` の5基準・Bonferroni 分母の実装箇所は catalog の記述の引用であり、コード実読による確認はしていない）
 - **参考（矛盾ではない）**: `scripts/unified_shadow_eval.py` は未実装＝ `tasks/unified_shadow_portfolio_preregister.md` の「Codex GO 後に着手」通りの状態

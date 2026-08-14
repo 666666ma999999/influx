@@ -4,6 +4,7 @@ type: architecture
 artifact_role: repo-canonical
 owners: MASA
 last_verified: 2026-08-09
+pipeline_map: docs/pipeline-map.md
 sensitivity: mixed
 pair:
   - scripts

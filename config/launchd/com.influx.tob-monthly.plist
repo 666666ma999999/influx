@@ -8,7 +8,7 @@
     <!-- §7-AE-v2 (ii) 前向き観察: 毎月1〜10日の朝(7:30・daily_pipelineの7:00より後)に起動する
          （v1のDay1〜5からDay1〜10へ拡大・2026-07-18 v2凍結項目7。祝日・年末年始等で月初第1営業日が
          5日を超えてずれるケースへの耐性を高める）。月初第1営業日以外は
-         scripts/kpi_tob_candidate_score.py --forward が自己判定して即exit 0するため、
+         scripts/kpi_tob_candidate_score.py - -forward が自己判定して即exit 0するため、
          Day1〜10のどれが実際の月初第1営業日であっても正しく1回だけ実行される（同月内の
          2回目以降の起動は月次run-logの冪等ガードでもno-op化される・§7-AE-v2凍結項目6）。 -->
     <key>StartCalendarInterval</key>
