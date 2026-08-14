@@ -8,7 +8,8 @@ X(Twitter)上の株式投資インフルエンサーのツイートを Playwrigh
 
 主要モジュール: `collector/`（config, x_collector, classifier, llm_classifier）+ `scripts/`（collect_tweets, classify_tweets 等）。投稿管理は **2026-05-01 Phase 3** で `~/Desktop/biz/autopost/`（旧 tier3_posting）に物理分離済み。
 
-**詳細リファレンス**（モジュール構成・データフロー・カテゴリ定義・データスキーマ・各種設定値）→ `.claude/docs/architecture.md`
+**いま何が動いているか（機能マップ）** → `influx-architecture.md`（X収集基盤）／`influx-stock-algo-architecture.md`（株アルゴ研究）／**何がいつ動くか（配管図）** → `docs/pipeline-map.md`。この3枚は毎セッション自動で読み込まれる（`~/.claude/rules/05` §architecture）。
+**詳細リファレンス**（環境変数一覧・カテゴリ定義・データスキーマ）→ `.claude/docs/architecture.md`（⚠️ 冒頭のモジュール構成・データフロー節は 2026-05-02 で停止＝現況は上の機能マップが正本）
 
 ## Docker 実行モード
 
