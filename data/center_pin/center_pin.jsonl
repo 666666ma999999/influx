@@ -6,10 +6,10 @@
 {"code": "1417", "name": "ミライト・ワン", "s33": "建設業", "pin": "通信キャリアの設備投資額", "pin_type": "volume", "sign": "+", "series": "NTT/KDDI 設備投資計画", "watch": "manual", "note": "NTT等キャリアのcapexが受注量と利益を決める"}
 {"code": "1419", "name": "タマホーム", "s33": "建設業", "pin": "住宅販売単価−木材/建材仕入", "pin_type": "spread", "sign": "+", "series": "lumber（木材先物）", "watch": "auto", "note": "ローコスト戸建で坪単価改定と資材コストの差が粗利を決める"}
 {"code": "1515", "name": "日鉄鉱業", "s33": "鉱業", "pin": "銅価格（チリ自社鉱山）＋石灰石数量", "pin_type": "commodity", "sign": "+", "series": "TE copper", "watch": "auto", "note": "石灰石が数量の柱だが利益変動は自社銅鉱山の銅価が主・推測"}
-{"code": "1518", "name": "三井松島ホールディングス", "s33": "その他製品", "pin": "一般炭価格", "pin_type": "commodity", "sign": "+", "series": "TE Coal(一般炭)", "watch": "auto", "note": "豪州炭鉱権益の販売単価が石炭価格に直結し利益の主柱"}
+{"code": "1518", "name": "三井松島ホールディングス", "s33": "その他製品", "pin": "M&Aで取得した製造子会社群（産業用製品・生活消費財）の自社値付け・販売数量", "pin_type": "price_set", "sign": "+", "series": "none", "watch": "none", "note": "【決算実読 2026-08-15】FY26/3は生活消費財・産業用製品・金融の3セグメントのみ、石炭は2024年3月撤退で構成比0%。reject"}
 {"code": "1605", "name": "ＩＮＰＥＸ", "s33": "鉱業", "pin": "原油・LNG価格", "pin_type": "commodity", "sign": "+", "series": "TE brent / TE crude oil", "watch": "auto", "note": "権益保有で売上単価が原油LNG連動。3〜6ヶ月ラグの純受益"}
 {"code": "1662", "name": "石油資源開発", "s33": "鉱業", "pin": "原油・天然ガス価格", "pin_type": "commodity", "sign": "+", "series": "TE crude oil / TE brent", "watch": "auto", "note": "自社E&Pで売上単価が原油ガス連動。国内ガスも権益型"}
-{"code": "1663", "name": "Ｋ＆Ｏエナジーグループ", "s33": "鉱業", "pin": "ヨウ素・自社生産天然ガス価格", "pin_type": "commodity", "sign": "+", "series": "none", "watch": "none", "note": "自社ガス田とヨウ素が売上単価。ガス小売は原料費調整で中立・推測"}
+{"code": "1663", "name": "Ｋ＆Ｏエナジーグループ", "s33": "鉱業", "pin": "ヨウ素価格(輸出建値)のみ。『自社生産天然ガス価格』はpinから除外(原料費調整=転嫁型)", "pin_type": "commodity", "sign": "+", "series": "none", "watch": "none", "note": "【決算実読 2026-08-15】FY25/12 ヨウ素事業営業利益87.7億/連結105.9億=82.8%、輸出建値上昇で増益と明記。ガスは転嫁型で減益のためpinから除外※出典二次"}
 {"code": "167A", "name": "リョーサン菱洋ホールディングス", "s33": "卸売業", "pin": "半導体・電子部品の取扱数量", "pin_type": "volume", "sign": "+", "series": "WSTS 世界半導体出荷", "watch": "manual", "note": "半導体商社の統合会社、仕入売価は連動し取扱数量とマージンが主"}
 {"code": "1719", "name": "安藤・間", "s33": "建設業", "pin": "建設資材・労務費（鋼材/生コン）", "pin_type": "commodity", "sign": "-", "series": "建設物価調査会 建設資材物価指数", "watch": "manual", "note": "固定価格請負で資材労務費は原価、上昇が工事採算を直撃"}
 {"code": "1720", "name": "東急建設", "s33": "建設業", "pin": "建設資材・労務費（鋼材/生コン）", "pin_type": "commodity", "sign": "-", "series": "建設物価調査会 建設資材物価指数", "watch": "manual", "note": "固定価格請負で資材労務費が原価、渋谷案件の採算が変動源"}
@@ -74,8 +74,8 @@
 {"code": "2269", "name": "明治ホールディングス", "s33": "食料品", "pin": "食品（乳・菓子）の値上げ浸透", "pin_type": "price_set", "sign": "+", "series": "日銀CGPI 乳製品", "watch": "manual", "note": "利益最大は食品セグメント、生乳とカカオはコスト側"}
 {"code": "2270", "name": "雪印メグミルク", "s33": "食料品", "pin": "乳製品の値上げ浸透", "pin_type": "price_set", "sign": "+", "series": "Jミルク 生乳取引価格", "watch": "manual", "note": "生乳価格はコスト側、飲用乳と乳製品の値上げ転嫁が利益中心"}
 {"code": "2281", "name": "プリマハム", "s33": "食料品", "pin": "豚肉相場（原料コスト）", "pin_type": "commodity", "sign": "-", "series": "農畜産業振興機構 豚枝肉価格", "watch": "manual", "note": "加工品主体で豚肉は原料、相場高は転嫁遅行で減益・推測"}
-{"code": "2282", "name": "日本ハム", "s33": "食料品", "pin": "国産豚・鶏の枝肉相場", "pin_type": "commodity", "sign": "+", "series": "農水省 食肉流通統計 枝肉価格", "watch": "manual", "note": "食肉事業が利益の大半、自社生産があり相場高で増益"}
-{"code": "2292", "name": "Ｓ　Ｆｏｏｄｓ", "s33": "食料品", "pin": "国産牛枝肉相場", "pin_type": "commodity", "sign": "+", "series": "農畜産業振興機構 牛枝肉価格", "watch": "manual", "note": "食肉卸が主力で枝肉相場が売上単価と在庫評価に直結"}
+{"code": "2282", "name": "日本ハム", "s33": "食料品", "pin": "国産鶏(ブロイラー)枝肉相場を主pinに。国産豚は従属pinへ格下げ(増益は数量要因)", "pin_type": "commodity", "sign": "+", "series": "農水省 食肉流通統計 枝肉価格", "watch": "manual", "note": "【決算実読 2026-08-15】FY26/3 食肉事業本部613億/事業利益683億=89.8%。要因表『国産鶏相場高騰で生産部門+100億』。豚は数量寄与のためpinは鶏を主に"}
+{"code": "2292", "name": "Ｓ　Ｆｏｏｄｓ", "s33": "食料品", "pin": "国産牛枝肉の仕入価格と食肉卸売価格の利ざや", "pin_type": "spread", "sign": "+", "series": "none", "watch": "none", "note": "【決算実読 2026-08-15】26/2期 食肉卸が利益の94%だが米国は生体牛高で減益＝相場は仕入原価側。価格直結でなく利ざや型へ"}
 {"code": "2296", "name": "伊藤ハム米久ホールディングス", "s33": "食料品", "pin": "輸入豚・牛の食肉相場", "pin_type": "commodity", "sign": "mixed", "series": "農畜産業振興機構 輸入食肉価格", "watch": "manual", "note": "食肉卸と加工の両建てで相場の純方向が定まらない・推測"}
 {"code": "2317", "name": "システナ", "s33": "情報･通信業", "pin": "SE稼働率・受注量", "pin_type": "volume", "sign": "+", "series": "日銀CSPI 受託開発ソフトウェア", "watch": "manual", "note": "人月受託と機器販売が主体で稼働人数が利益を決める"}
 {"code": "2326", "name": "デジタルアーツ", "s33": "情報･通信業", "pin": "フィルタリングのライセンス数", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "学校企業の契約ライセンス数が積み上がり価格は据置き"}
@@ -105,7 +105,7 @@
 {"code": "2664", "name": "カワチ薬品", "s33": "小売業", "pin": "既存店売上・客数", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "郊外型ドラッグで既存店売上が利益、仕入は原価側"}
 {"code": "2670", "name": "エービーシー・マート", "s33": "小売業", "pin": "既存店売上・客単価", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "靴小売は既存店売上が利益源、ドル建て仕入で円安は原価増"}
 {"code": "2678", "name": "アスクル", "s33": "小売業", "pin": "取扱高・粗利率", "pin_type": "volume", "sign": "+", "series": "四半期売上(IR)", "watch": "manual", "note": "BtoB通販は取扱高と物流効率が利益、商材市況は転嫁側"}
-{"code": "2681", "name": "ゲオホールディングス", "s33": "小売業", "pin": "中古品（古着・トレカ・ゲーム機）相場", "pin_type": "commodity", "sign": "+", "series": "駿河屋・スニダン買取相場", "watch": "manual", "note": "リユースは中古相場が売価と在庫評価に直結、台帳の受益3社"}
+{"code": "2681", "name": "ゲオホールディングス", "s33": "小売業", "pin": "2nd STREET 等の店舗数・買取点数（リユース調達量）", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "【決算実読 2026-08-15】単一セグメントで利益比算出不可。増益要因は出店64店と販管費抑制、中古相場は買取原価にも効くmixed。volume型へ。"}
 {"code": "2685", "name": "アンドエスティＨＤ", "s33": "小売業", "pin": "既存店売上・客単価", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "SPAアパレルは既存店売上が利益源、円安は仕入原価増"}
 {"code": "268A", "name": "リガク・ホールディングス", "s33": "精密機器", "pin": "X線分析装置の受注数量（半導体・材料研究投資）", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "半導体・電池向け分析装置の受注数量型。市況は間接的"}
 {"code": "2695", "name": "くら寿司", "s33": "小売業", "pin": "既存店売上・客数", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "既存店客数が利益、コメ・水産高は原価側の逆風"}
@@ -116,14 +116,14 @@
 {"code": "2752", "name": "フジオフードグループ本社", "s33": "小売業", "pin": "既存店売上・客数", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "定食業態の客数が利益、コメ・食材は原価側の逆風"}
 {"code": "2760", "name": "東京エレクトロン　デバイス", "s33": "卸売業", "pin": "半導体デバイス出荷数量", "pin_type": "volume", "sign": "+", "series": "WSTS 世界半導体出荷", "watch": "manual", "note": "半導体商社で価格は転嫁、データセンター向け数量が利益を動かす"}
 {"code": "2767", "name": "円谷フィールズホールディングス", "s33": "卸売業", "pin": "パチンコ・パチスロ機の販売台数", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "遊技機の販売台数が最大の変動要因、ウルトラマンIPは補完的な収益"}
-{"code": "2768", "name": "双日", "s33": "卸売業", "pin": "一般炭価格", "pin_type": "commodity", "sign": "+", "series": "TE coal", "watch": "auto", "note": "豪州一般炭権益が利益の振れ幅で最大、他は自動車・化学の数量要因"}
+{"code": "2768", "name": "双日", "s33": "卸売業", "pin": "総合商社の取引マージン（単一商品pinは不成立。石炭を残すなら豪州原料炭）", "pin_type": "spread", "sign": "+", "series": "none", "watch": "none", "note": "【決算実読 2026-08-15】金属・資源・リサイクルの当期利益48億/連結1036億=4.6%。実体は一般炭でなく豪州原料炭で当期は減損。会社も市況と自社価格の差を明記。"}
 {"code": "2784", "name": "アルフレッサ　ホールディングス", "s33": "卸売業", "pin": "薬価(引き下げ改定)", "pin_type": "event", "sign": "+", "series": "厚労省 薬価改定率", "watch": "manual", "note": "薬価改定が売価と薬価差益を規定、卸マージンは制度側で決まる"}
 {"code": "2791", "name": "大黒天物産", "s33": "小売業", "pin": "既存店売上・客数", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "ディスカウントSMは客数と回転が利益、仕入は原価側"}
 {"code": "2801", "name": "キッコーマン", "s33": "食料品", "pin": "北米醤油・食品卸の値上げ浸透", "pin_type": "price_set", "sign": "+", "series": "none", "watch": "none", "note": "営業利益の約7割が海外、北米の値上げと数量が中心"}
 {"code": "2802", "name": "味の素", "s33": "食料品", "pin": "自社製品の値上げ浸透", "pin_type": "price_set", "sign": "+", "series": "日銀CGPI 食料品", "watch": "manual", "note": "利益額最大は調味料食品の値上げ、変動主因はABF半導体材料"}
 {"code": "2809", "name": "キユーピー", "s33": "食料品", "pin": "鶏卵相場（M玉）", "pin_type": "commodity", "sign": "-", "series": "JA全農たまご 鶏卵相場", "watch": "manual", "note": "マヨネーズ主原料の卵の買い手で、卵価上昇は直接コスト増"}
 {"code": "2810", "name": "ハウス食品グループ本社", "s33": "食料品", "pin": "自社製品の値上げ浸透", "pin_type": "price_set", "sign": "+", "series": "日銀CGPI 調味料", "watch": "manual", "note": "ルウと海外豆腐の値上げが利益中心、香辛料等はコスト"}
-{"code": "2811", "name": "カゴメ", "s33": "食料品", "pin": "加工用トマト（ペースト）国際相場", "pin_type": "commodity", "sign": "+", "series": "USDA カリフォルニア加工用トマト価格", "watch": "manual", "note": "米Ingomar連結で相場が売価側に入り下落が減益要因・推測"}
+{"code": "2811", "name": "カゴメ", "s33": "食料品", "pin": "加工用トマト（ペースト）国際相場", "pin_type": "commodity", "sign": "+", "series": "USDA カリフォルニア加工用トマト価格", "watch": "manual", "note": "【決算実読 2026-08-15】25/12期 国際事業利益92億/連結226億=40.7%。会社が「加工トマト市況変動で国際事業の変動幅拡大」と明記"}
 {"code": "2815", "name": "アリアケジャパン", "s33": "食料品", "pin": "天然調味料の販売数量（外食・食品向け）", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "外食加工食品向けエキスの数量が中心、鶏骨等はコスト・推測"}
 {"code": "285A", "name": "キオクシアホールディングス", "s33": "電気機器", "pin": "NAND価格", "pin_type": "commodity", "sign": "+", "series": "TrendForce NAND契約価格(四半期)・価格.com SSD", "watch": "manual", "note": "NAND価格が売上単価そのもの・電気機器で唯一の素直な受益"}
 {"code": "2871", "name": "ニチレイ", "s33": "食料品", "pin": "冷凍食品・低温物流の値上げ浸透", "pin_type": "price_set", "sign": "+", "series": "日銀CSPI 倉庫・貨物輸送", "watch": "manual", "note": "加工食品と低温物流が利益の柱、保管配送料金の改定が効く"}
@@ -161,7 +161,7 @@
 {"code": "3148", "name": "クリエイトＳＤホールディングス", "s33": "小売業", "pin": "既存店売上・調剤処方箋枚数", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "神奈川地盤の物販＋調剤で既存店売上が利益を決める"}
 {"code": "3167", "name": "ＴＯＫＡＩホールディングス", "s33": "卸売業", "pin": "LPガス・通信の契約件数", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "LPG原料は転嫁されストック顧客件数が主因、ガス価格の直効は小さい"}
 {"code": "3182", "name": "オイシックス・ラ・大地", "s33": "小売業", "pin": "定期会員数・出荷単価", "pin_type": "volume", "sign": "+", "series": "四半期会員数(IR)", "watch": "manual", "note": "食品サブスクは会員数が利益源、青果仕入は原価側"}
-{"code": "3186", "name": "ネクステージ", "s33": "小売業", "pin": "中古車小売相場（オークション相場）", "pin_type": "commodity", "sign": "+", "series": "USS月次AA統計・グーネット流通", "watch": "manual", "note": "中古車の販売単価と在庫評価に直結、台帳の受益3社の1つ"}
+{"code": "3186", "name": "ネクステージ", "s33": "小売業", "pin": "拠点数・小売販売台数", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "【決算実読 2026-08-15】単一セグメント。増益は242拠点への出店と収益性改善で、会社は「自動車相場に左右されにくい経営基盤」を明記。相場は仕入にも効く。volume型へ。"}
 {"code": "3191", "name": "ジョイフル本田", "s33": "小売業", "pin": "既存店売上・プロ需要", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "大型HCは既存店売上が利益源、木材建材は原価側"}
 {"code": "3197", "name": "すかいらーくホールディングス", "s33": "小売業", "pin": "既存店売上・客数", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "食材と人件費は原価側、客数回復が利益を動かす"}
 {"code": "3201", "name": "日本毛織", "s33": "繊維製品", "pin": "学販衣料の受注数量＋商業施設の賃料収入", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "アパレル数量と不動産賃貸が利益の柱。羊毛は買い手・推測"}
@@ -183,7 +183,7 @@
 {"code": "3407", "name": "旭化成", "s33": "化学", "scale": "TOPIX Large70", "pin": "住宅(ヘーベルハウス)引渡棟数", "pin_type": "volume", "sign": "+", "series": "住宅着工統計(国交省)", "watch": "manual", "note": "ヘーベルハウス住宅が営業利益の最大柱・引渡棟数が中心"}
 {"code": "3431", "name": "宮地エンジニアリンググループ", "s33": "金属製品", "pin": "橋梁の受注高（公共インフラ予算）", "pin_type": "volume", "sign": "+", "series": "国交省 建設工事受注動態統計(月次)", "watch": "manual", "note": "鋼材は買い手。固定価格請負なので鋼材↑は減益要因"}
 {"code": "3433", "name": "トーカロ", "s33": "金属製品", "pin": "半導体装置向け溶射加工の数量", "pin_type": "volume", "sign": "+", "series": "SEAJ 日本製半導体製造装置販売高(月次)", "watch": "manual", "note": "半導体設備投資に連動する加工数量型。材料市況は間接"}
-{"code": "3436", "name": "ＳＵＭＣＯ", "s33": "金属製品", "pin": "300mmシリコンウエハ価格・出荷面積", "pin_type": "commodity", "sign": "+", "series": "none", "watch": "none", "note": "ウエハ価格が売上単価に直結だが無料の公開系列がない"}
+{"code": "3436", "name": "ＳＵＭＣＯ", "s33": "金属製品", "pin": "300mmウエハのLTA（長期契約）価格改定＝顧客との交渉値決め", "pin_type": "price_set", "sign": "+", "series": "none", "watch": "none", "note": "【決算実読 2026-08-15】300mmは3〜5年LTAの交渉価格で公開市況なし。25/12期は増収でも営業益13億。価格直結は不成立"}
 {"code": "3445", "name": "ＲＳ　Ｔｅｃｈｎｏｌｏｇｉｅｓ", "s33": "金属製品", "pin": "再生シリコンウエハの数量（半導体稼働率）", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "ウエハ再生の数量型。プライムウエハ市況にも一部感応"}
 {"code": "3465", "name": "ケイアイスター不動産", "s33": "不動産業", "pin": "建売分譲価格−土地/建材仕入", "pin_type": "spread", "sign": "+", "series": "lumber（木材先物）", "watch": "auto", "note": "北関東の建売分譲で販売価格と仕入コストの差が粗利を決める"}
 {"code": "3498", "name": "霞ヶ関キャピタル", "s33": "不動産業", "pin": "ホテル・物流施設の売却価格", "pin_type": "asset", "sign": "+", "series": "不動産研究所 期待利回り", "watch": "manual", "note": "開発物件の売却益が柱でキャップレート低下が増益要因"}
@@ -209,9 +209,9 @@
 {"code": "3774", "name": "インターネットイニシアティブ", "s33": "情報･通信業", "pin": "法人ネットワーク・MVNO契約数", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "回線とクラウドの契約数量が中心で電力費は原価側の逆風"}
 {"code": "3778", "name": "さくらインターネット", "s33": "情報･通信業", "pin": "電力調達価格(JEPX・燃調)", "pin_type": "commodity", "sign": "-", "series": "JEPXスポット価格", "watch": "manual", "note": "DC電力費が原価の中核で高騰時に実際に減益、GPU受注は数量側"}
 {"code": "3844", "name": "コムチュア", "s33": "情報･通信業", "pin": "クラウドSIの稼働人数", "pin_type": "volume", "sign": "+", "series": "日銀CSPI 受託開発ソフトウェア", "watch": "manual", "note": "人月受託で技術者の稼働数と受注量が利益を決める"}
-{"code": "3861", "name": "王子ホールディングス", "s33": "パルプ・紙", "pin": "パルプ市況（自社パルプ・海外植林）", "pin_type": "commodity", "sign": "+", "series": "none", "watch": "none", "note": "資源部門でパルプが売上単価。国内紙は値上げ浸透型・推測"}
+{"code": "3861", "name": "王子ホールディングス", "s33": "パルプ・紙", "pin": "パルプ市況（自社パルプ・海外植林）", "pin_type": "commodity", "sign": "+", "series": "none", "watch": "none", "note": "【決算実読 2026-08-15】26/3期 資源環境67億/連結346億=19.4%(前期46%)。パルプ市況が減益主因だが分母も振れ要注意"}
 {"code": "3863", "name": "日本製紙", "s33": "パルプ・紙", "pin": "紙・板紙の値上げ浸透（対チップ・燃料）", "pin_type": "price_set", "sign": "+", "series": "none", "watch": "none", "note": "需要減の中で値上げが利益の中心。チップ・古紙は買い手"}
-{"code": "3865", "name": "北越コーポレーション", "s33": "パルプ・紙", "pin": "パルプ市況（市販パルプの外販）", "pin_type": "commodity", "sign": "+", "series": "none", "watch": "none", "note": "自社パルプの外販比率が高くパルプ高が売上単価に入る"}
+{"code": "3865", "name": "北越コーポレーション", "s33": "パルプ・紙", "pin": "パルプ市況（市販パルプの外販）", "pin_type": "commodity", "sign": "+", "series": "none", "watch": "none", "note": "【決算実読 2026-08-15】26/3期 紙パルプ59.6億/連結75.4億=79%。会社開示でパルプ価格▲76億＝通期下方修正の最大要因"}
 {"code": "3880", "name": "大王製紙", "s33": "パルプ・紙", "pin": "家庭紙・板紙の値上げ浸透", "pin_type": "price_set", "sign": "+", "series": "none", "watch": "none", "note": "パルプ・古紙は買い手。値上げとコストの差が利益を動かす"}
 {"code": "3923", "name": "ラクス", "s33": "情報･通信業", "pin": "SaaS課金アカウント数", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "楽楽精算の契約社数の積み上げが利益で値上げは補助的"}
 {"code": "3941", "name": "レンゴー", "s33": "パルプ・紙", "pin": "古紙価格（段ボール原料コスト）", "pin_type": "commodity", "sign": "-", "series": "古紙価格(古紙再生促進センター月次)", "watch": "manual", "note": "古紙は買い手。値上がりはコストで転嫁ラグ分が減益"}
@@ -223,10 +223,10 @@
 {"code": "4008", "name": "住友精化", "s33": "化学", "scale": "TOPIX Small 1", "pin": "半導体向け高純度ガスの出荷数量", "pin_type": "volume", "sign": "+", "series": "WSTS半導体売上", "watch": "manual", "note": "半導体向け高純度ガスとSAPの数量が利益の中心・推測"}
 {"code": "4021", "name": "日産化学", "s33": "化学", "scale": "TOPIX Mid400", "pin": "自社農薬・半導体材料の販売数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "独自農薬と半導体材料の販売数量が高採算利益の中心"}
 {"code": "4023", "name": "クレハ", "s33": "化学", "scale": "TOPIX Small 1", "pin": "掘削向けPGA・LiB向けPVDFの数量", "pin_type": "volume", "sign": "+", "series": "Baker Hughes リグ稼働数", "watch": "manual", "note": "掘削向けPGAとLiB向けPVDFの数量が利益を大きく動かす"}
-{"code": "4028", "name": "石原産業", "s33": "化学", "scale": "TOPIX Small 1", "pin": "酸化チタン(TiO2)価格", "pin_type": "commodity", "sign": "+", "series": "日銀CGPI 酸化チタン", "watch": "manual", "note": "酸化チタンの市況が売価に直結・農薬は安定収益"}
+{"code": "4028", "name": "石原産業", "s33": "化学", "scale": "TOPIX Small 1", "pin": "顔料用酸化チタンの自社建値（販売価格維持で採算改善＝値付け型）", "pin_type": "price_set", "sign": "+", "series": "none", "watch": "none", "note": "【決算実読 2026-08-15】26/3期 無機化学28億/連結191億=14.7%。利益の82%は農薬。酸化チタン直結は格下げ推奨"}
 {"code": "4041", "name": "日本曹達", "s33": "化学", "scale": "TOPIX Small 1", "pin": "自社開発農薬の販売数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "自社開発農薬の販売数量が利益の大半・化学品は補完"}
 {"code": "4042", "name": "東ソー", "s33": "化学", "scale": "TOPIX Mid400", "pin": "塩ビ・苛性ソーダ価格", "pin_type": "commodity", "sign": "+", "series": "TE polyvinyl", "watch": "auto", "note": "クロルアルカリが利益柱・塩ビと苛性ソーダが売価に直結"}
-{"code": "4043", "name": "トクヤマ", "s33": "化学", "scale": "TOPIX Mid400", "pin": "苛性ソーダ・塩ビ価格", "pin_type": "commodity", "sign": "+", "series": "TE polyvinyl", "watch": "auto", "note": "化成品(苛性ソーダ・塩ビ)が利益の振れ幅を支配、電子材料は数量"}
+{"code": "4043", "name": "トクヤマ", "s33": "化学", "scale": "TOPIX Mid400", "pin": "苛性ソーダ・塩ビ価格", "pin_type": "commodity", "sign": "+", "series": "TE polyvinyl", "watch": "auto", "note": "【決算実読 2026-08-15】化成品OP97億/連結370億=26.2%。苛性ソーダ・塩ビは売上単価側で符号+だが3割未満。最大利益源は電子先端材料157億。"}
 {"code": "4044", "name": "セントラル硝子", "s33": "化学", "scale": "TOPIX Small 1", "pin": "半導体向けフッ素系ガスの出荷数量", "pin_type": "volume", "sign": "+", "series": "WSTS半導体売上", "watch": "manual", "note": "半導体向けフッ素系ガスなど化学品の数量が利益の中心"}
 {"code": "4045", "name": "東亞合成", "s33": "化学", "scale": "TOPIX Mid400", "pin": "アクリル酸-プロピレンスプレッド", "pin_type": "spread", "sign": "+", "series": "TE naphtha(分母のみ)", "watch": "manual", "note": "アクリル酸系の対プロピレンスプレッドが利益の中心・推測"}
 {"code": "4046", "name": "大阪ソーダ", "s33": "化学", "scale": "TOPIX Small 1", "pin": "医薬用分離精製材(シリカゲル担体)の数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "医薬分離精製用シリカ等の機能化学品の数量が利益の中心"}
@@ -240,7 +240,7 @@
 {"code": "4095", "name": "日本パーカライジング", "s33": "化学", "scale": "TOPIX Small 1", "pin": "自動車生産台数(表面処理数量)", "pin_type": "volume", "sign": "+", "series": "自動車生産台数(自工会)", "watch": "manual", "note": "金属表面処理薬剤は自動車生産台数で処理数量が決まる"}
 {"code": "4109", "name": "ステラ　ケミファ", "s33": "化学", "scale": "TOPIX Small 1", "pin": "高純度フッ酸(半導体洗浄)の出荷数量", "pin_type": "volume", "sign": "+", "series": "WSTS半導体売上", "watch": "manual", "note": "半導体洗浄用高純度フッ酸の出荷数量が利益の中心"}
 {"code": "4114", "name": "日本触媒", "s33": "化学", "scale": "TOPIX Mid400", "pin": "アクリル酸/SAP-プロピレンスプレッド", "pin_type": "spread", "sign": "+", "series": "TE naphtha(分母のみ)", "watch": "manual", "note": "SAP・アクリル酸の対プロピレンスプレッドが利益の中心"}
-{"code": "4118", "name": "カネカ", "s33": "化学", "scale": "TOPIX Mid400", "pin": "塩ビ・苛性ソーダ市況", "pin_type": "commodity", "sign": "+", "series": "TE polyvinyl", "watch": "auto", "note": "塩ビ・化成品が最大の変動要因だが医療/食品で感応度は希薄・推測"}
+{"code": "4118", "name": "カネカ", "s33": "化学", "scale": "TOPIX Mid400", "pin": "先端事業群（Medical/Pharma/Supplement/MS・E&I）の自社値付け", "pin_type": "price_set", "sign": "+", "series": "none", "watch": "none", "note": "【決算実読 2026-08-15】VinylsはMaterial Solutions内の一事業で利益非開示・感応度開示なし。先端事業群が営業利益5割超。塩ビ直結の根拠なし。"}
 {"code": "4151", "name": "協和キリン", "s33": "医薬品", "pin": "クリースビータ海外売上数量", "pin_type": "volume", "sign": "na", "series": "none", "watch": "none", "note": "クリースビータ等の海外売上数量が利益の中心を占める"}
 {"code": "417A", "name": "ブルーゾーンホールディングス", "s33": "小売業", "pin": "既存店売上・客単価", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "埼玉地盤の食品スーパー、既存店売上と客単価が利益源"}
 {"code": "4180", "name": "Ａｐｐｉｅｒ　Ｇｒｏｕｐ", "s33": "情報･通信業", "pin": "広告主のデジタル出稿量", "pin_type": "volume", "sign": "+", "series": "日銀CSPI インターネット広告", "watch": "manual", "note": "広告運用額に連動し外貨建て収益で為替も振れ要因、推測"}
@@ -248,7 +248,7 @@
 {"code": "4183", "name": "三井化学", "s33": "化学", "scale": "TOPIX Mid400", "pin": "基盤素材の対ナフサスプレッド", "pin_type": "spread", "sign": "+", "series": "TE naphtha(分母のみ)", "watch": "manual", "note": "基盤素材の対ナフサスプレッドが損益の振れを最も動かす"}
 {"code": "4186", "name": "東京応化工業", "s33": "化学", "scale": "TOPIX Mid400", "pin": "フォトレジストの出荷数量", "pin_type": "volume", "sign": "+", "series": "SEMI/WSTS半導体売上", "watch": "manual", "note": "フォトレジストが利益柱・半導体前工程の出荷数量が中心"}
 {"code": "4187", "name": "大阪有機化学工業", "s33": "化学", "scale": "TOPIX Small 1", "pin": "電子材料用アクリルモノマーの数量", "pin_type": "volume", "sign": "+", "series": "WSTS半導体売上", "watch": "manual", "note": "電子材料用アクリルモノマーの数量が利益の中心"}
-{"code": "4188", "name": "三菱ケミカルグループ", "s33": "化学", "scale": "TOPIX Large70", "pin": "MMA(メタクリル酸メチル)市況", "pin_type": "commodity", "sign": "+", "series": "none", "watch": "none", "note": "世界首位のMMA市況が利益の振れを支配・産業ガスは安定収益。【2026-08-03追記】FY26/3実読でMMA含むBM&P△42億の損失・全社利益の89.2%は産業ガス＝pin発火の受益カード化は保留が妥当"}
+{"code": "4188", "name": "三菱ケミカルグループ", "s33": "化学", "scale": "TOPIX Large70", "pin": "産業ガス（日本酸素HD）の販売価格マネジメント", "pin_type": "price_set", "sign": "+", "series": "none", "watch": "none", "note": "【決算実読 2026-08-15】FY26/3のMMAコア営業利益は△83億（全社2,250億の-3.7%）、産業ガスが2,007億で89%。pinを産業ガス値付けへ"}
 {"code": "4189", "name": "ＫＨネオケム", "s33": "化学", "scale": "TOPIX Small 1", "pin": "冷凍機油用エステルの出荷数量(空調生産)", "pin_type": "volume", "sign": "+", "series": "エアコン出荷(JRAIA)", "watch": "manual", "note": "冷凍機油エステルが利益柱・空調機生産の数量に連動"}
 {"code": "4194", "name": "ビジョナル", "s33": "情報･通信業", "pin": "中途採用の成約数(求人数)", "pin_type": "volume", "sign": "+", "series": "厚労省 有効求人倍率", "watch": "manual", "note": "ビズリーチの採用成約数量が利益で採用市況の数量に連動"}
 {"code": "4202", "name": "ダイセル", "s33": "化学", "scale": "TOPIX Mid400", "pin": "アセテートトウの値決め・数量", "pin_type": "price_set", "sign": "+", "series": "none", "watch": "none", "note": "アセテートトウは寡占で値決め力・たばこ需要が数量を規定"}
@@ -347,9 +347,9 @@
 {"code": "4985", "name": "アース製薬", "s33": "化学", "scale": "TOPIX Small 1", "pin": "夏季気温(殺虫剤の販売数量)", "pin_type": "volume", "sign": "+", "series": "気象庁 夏季平均気温", "watch": "manual", "note": "殺虫剤・虫よけが主力で夏の高温が販売数量を直接決める"}
 {"code": "4996", "name": "クミアイ化学工業", "s33": "化学", "scale": "TOPIX Small 1", "pin": "自社農薬アクシーブの北米向け販売数量", "pin_type": "volume", "sign": "+", "series": "CBOT大豆/USDA作付面積", "watch": "manual", "note": "自社農薬アクシーブの北米向け数量が利益の中心"}
 {"code": "5016", "name": "ＪＸ金属", "s33": "非鉄金属", "pin": "半導体用スパッタターゲット等の数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "利益柱は機能材料の数量型。銅製錬はTC/RCと副産金依存"}
-{"code": "5019", "name": "出光興産", "s33": "石油･石炭製品", "pin": "原油価格（在庫評価益）＋石炭権益", "pin_type": "commodity", "sign": "+", "series": "TE crude oil / TE coal", "watch": "auto", "note": "原油↑で在庫評価益、豪州石炭権益も売上単価に直結"}
-{"code": "5020", "name": "ＥＮＥＯＳホールディングス", "s33": "石油･石炭製品", "pin": "原油価格（在庫評価益＋石油マージン）", "pin_type": "commodity", "sign": "+", "series": "TE crude oil / TE brent", "watch": "auto", "note": "原油↑で在庫評価益と製品マージンが拡大＝素直な受益"}
-{"code": "5021", "name": "コスモエネルギーホールディングス", "s33": "石油･石炭製品", "pin": "原油価格（在庫評価益・精製マージン）", "pin_type": "commodity", "sign": "+", "series": "TE crude oil / TE brent", "watch": "auto", "note": "原油↑で在庫評価益と精製マージン改善。風力は数量型"}
+{"code": "5019", "name": "出光興産", "s33": "石油･石炭製品", "pin": "原油価格（在庫評価益）＋石炭権益", "pin_type": "commodity", "sign": "+", "series": "TE crude oil / TE coal", "watch": "auto", "note": "【決算実読 2026-08-15】燃料油1777億/セグメント利益計2147億=83%。原油急騰のプラスのタイムラグで営業利益+30.8%、在庫評価影響除きでも+36.3%で一過性のみでない。"}
+{"code": "5020", "name": "ＥＮＥＯＳホールディングス", "s33": "石油･石炭製品", "pin": "石油製品マージン（製品価格−原油調達コスト、在庫影響除き）", "pin_type": "spread", "sign": "+", "series": "TE crude oil / TE brent", "watch": "auto", "note": "【決算実読 2026-08-15】在庫影響は△78億＝営業利益の-1.7%で一過性両方向、金属は非継続事業。石油開発は10.9%。精製マージン型へ"}
+{"code": "5021", "name": "コスモエネルギーホールディングス", "s33": "石油･石炭製品", "pin": "原油価格（在庫評価益・精製マージン）", "pin_type": "commodity", "sign": "+", "series": "TE crude oil / TE brent", "watch": "auto", "note": "【決算実読 2026-08-15】石油開発653億/連結経常1,492億=43.7%、原油売価が直接P/L。石油事業の在庫影響は当期△165億で一過性。"}
 {"code": "5032", "name": "ＡＮＹＣＯＬＯＲ", "s33": "情報･通信業", "pin": "ライバー配信の課金・グッズ数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "投げ銭とグッズイベントの販売数量が利益の中心"}
 {"code": "5076", "name": "インフロニア・ホールディングス", "s33": "建設業", "pin": "公共インフラ・道路工事の受注高", "pin_type": "volume", "sign": "+", "series": "建設工事受注動態統計", "watch": "manual", "note": "舗装と公共土木の受注量が柱、合材はアスファルト価格連動"}
 {"code": "5101", "name": "横浜ゴム", "s33": "ゴム製品", "pin": "天然ゴム価格（原料コスト）", "pin_type": "commodity", "sign": "-", "series": "TE rubber", "watch": "auto", "note": "天然ゴムは買い手。上昇は原価増でタイヤ値上げにラグ"}
@@ -357,15 +357,15 @@
 {"code": "5108", "name": "ブリヂストン", "s33": "ゴム製品", "pin": "天然ゴム価格（原料コスト）", "pin_type": "commodity", "sign": "-", "series": "TE rubber", "watch": "auto", "note": "天然ゴムは買い手。値上がりは原価増で転嫁ラグ分が減益"}
 {"code": "5110", "name": "住友ゴム工業", "s33": "ゴム製品", "pin": "天然ゴム価格（原料コスト）", "pin_type": "commodity", "sign": "-", "series": "TE rubber", "watch": "auto", "note": "天然ゴムは買い手。上昇は原価増、価格転嫁のラグで減益"}
 {"code": "5192", "name": "三ツ星ベルト", "s33": "ゴム製品", "pin": "天然ゴム・合成ゴム価格（原料コスト）", "pin_type": "commodity", "sign": "-", "series": "TE rubber", "watch": "auto", "note": "ゴム原料は買い手。上昇は原価増、値上げ浸透で防衛する側"}
-{"code": "5201", "name": "ＡＧＣ", "s33": "ガラス･土石製品", "pin": "塩ビ・苛性ソーダ市況", "pin_type": "commodity", "sign": "+", "series": "TE polyvinyl", "watch": "auto", "note": "最大利益は東南アジアの塩ビ・苛性ソーダ。ガラスは数量型"}
+{"code": "5201", "name": "ＡＧＣ", "s33": "ガラス･土石製品", "pin": "塩ビスプレッド（AGC定義: 塩ビ市況−エチレン市況×0.5）", "pin_type": "spread", "sign": "+", "series": "TE polyvinyl", "watch": "auto", "note": "【決算実読 2026-08-15】ｴｯｾﾝｼｬﾙｹﾐｶﾙｽﾞ東南ｱｼﾞｱは化学品OP530億の2割=連結の8.3%。会社開示は塩ビ\"スプレッド\"感応度($1→$1.7M)。"}
 {"code": "5202", "name": "日本板硝子", "s33": "ガラス･土石製品", "pin": "自動車生産台数（自動車用ガラスの数量）", "pin_type": "volume", "sign": "+", "series": "自工会 自動車生産台数(月次)", "watch": "manual", "note": "利益柱は自動車用ガラスの数量。燃料ガスは大きなコスト"}
 {"code": "5208", "name": "有沢製作所", "s33": "化学", "scale": "TOPIX Small 1", "pin": "FPC基材など電子回路材料の出荷数量", "pin_type": "volume", "sign": "+", "series": "台湾PCBメーカー月次売上", "watch": "manual", "note": "FPC基材など電子回路材料の出荷数量が利益の中心"}
 {"code": "5214", "name": "日本電気硝子", "s33": "ガラス･土石製品", "pin": "ディスプレイ用ガラスの数量・価格", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "パネル稼働と価格改定が中心。燃料と電力はコスト側"}
 {"code": "5232", "name": "住友大阪セメント", "s33": "ガラス･土石製品", "pin": "セメント値上げ−石炭/電力コストの値差", "pin_type": "spread", "sign": "+", "series": "TE coal（分母のみauto）", "watch": "manual", "note": "石炭は買い手。値上げ浸透と燃料安の値差で利益が動く"}
 {"code": "5233", "name": "太平洋セメント", "s33": "ガラス･土石製品", "pin": "セメント値上げ−石炭/電力コストの値差", "pin_type": "spread", "sign": "+", "series": "TE coal（分母のみauto）", "watch": "manual", "note": "石炭・電力は買い手。値上げ浸透との値差が利益の中心"}
 {"code": "5262", "name": "日本ヒューム", "s33": "ガラス･土石製品", "pin": "土木・建築の受注数量（公共投資）", "pin_type": "volume", "sign": "+", "series": "国交省 建設工事受注動態統計(月次)", "watch": "manual", "note": "コンクリ二次製品の数量型。セメント・鋼材は買い手側"}
-{"code": "5301", "name": "東海カーボン", "s33": "ガラス･土石製品", "pin": "黒鉛電極・カーボンブラック価格", "pin_type": "commodity", "sign": "+", "series": "none", "watch": "none", "note": "黒鉛電極が売上単価。原料ニードルコークスはコスト側"}
-{"code": "5302", "name": "日本カーボン", "s33": "ガラス･土石製品", "pin": "黒鉛電極価格（電炉向け）", "pin_type": "commodity", "sign": "+", "series": "none", "watch": "none", "note": "黒鉛電極が売上単価。ニードルコークスと電力はコスト"}
+{"code": "5301", "name": "東海カーボン", "s33": "ガラス･土石製品", "pin": "タイヤ生産量（カーボンブラック）・電炉粗鋼生産（黒鉛電極）", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "【決算実読 2026-08-15】黒鉛電極OP23.9億/連結258.5億=9.2%、黒字化は滋賀閉鎖・欧州売却の構造改革要因。CB131億の変動要因はタイヤ数量。"}
+{"code": "5302", "name": "日本カーボン", "s33": "ガラス･土石製品", "pin": "黒鉛電極価格（電炉向け）", "pin_type": "commodity", "sign": "+", "series": "none", "watch": "none", "note": "【決算実読 2026-08-15】炭素製品関連OP29.9億/連結48.1億=62%だが電極は同セグ売上の37.6%。電極の開示要因は輸出数量増で価格ではない。"}
 {"code": "5310", "name": "東洋炭素", "s33": "ガラス･土石製品", "pin": "特殊黒鉛の数量（半導体・SiC需要）", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "等方性黒鉛は数量型。原料コークスと電力はコスト側"}
 {"code": "5331", "name": "ノリタケ", "s33": "ガラス･土石製品", "pin": "電子ペースト・工業機材の販売数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "電子部材と研削砥石の数量型。銀・Pdは買い手側・推測"}
 {"code": "5332", "name": "ＴＯＴＯ", "s33": "ガラス･土石製品", "pin": "住宅着工・リフォーム数量（＋値上げ浸透）", "pin_type": "volume", "sign": "+", "series": "国交省 住宅着工統計(月次)", "watch": "manual", "note": "衛生陶器の数量と値上げが中心。中国住宅市況も変動要因"}
@@ -389,9 +389,9 @@
 {"code": "5463", "name": "丸一鋼管", "s33": "鉄鋼", "pin": "鋼管価格−母材コイルの値差", "pin_type": "spread", "sign": "+", "series": "none", "watch": "none", "note": "母材コイルは買い手。値差確保が利益、鋼材↑単独は中立〜減益"}
 {"code": "5471", "name": "大同特殊鋼", "s33": "鉄鋼", "pin": "自動車生産台数（特殊鋼の数量）", "pin_type": "volume", "sign": "+", "series": "自工会 自動車生産台数(月次)", "watch": "manual", "note": "特殊鋼は自動車数量型。スクラップ・合金はサーチャージ転嫁"}
 {"code": "547A", "name": "ムニノバホールディングス", "s33": "その他金融業", "pin": "無担保ローンの営業貸付金残高", "pin_type": "volume", "sign": "+", "series": "日本貸金業協会 無担保貸付残高(月次)", "watch": "manual", "note": "アイフルの持株会社で、消費者ローン残高の伸びが利益の中心"}
-{"code": "5480", "name": "日本冶金工業", "s33": "鉄鋼", "pin": "ニッケル価格（在庫評価・サーチャージ）", "pin_type": "commodity", "sign": "+", "series": "TE nickel", "watch": "auto", "note": "Ni↑は在庫評価益とサーチャージ増で増益、下落は逆"}
+{"code": "5480", "name": "日本冶金工業", "s33": "鉄鋼", "pin": "ニッケル(LME)価格の変化率（在庫評価損益経由・ラグあり）", "pin_type": "commodity", "sign": "+", "series": "TE nickel", "watch": "auto", "note": "【決算実読 2026-08-15】Niサーチャージは転嫁（FY27予想で販売価格+79億/原料-75億＝ほぼ相殺）。利益に残るのは在庫評価損益19億＝営業利益130億の15%。単一セグメント。"}
 {"code": "5482", "name": "愛知製鋼", "s33": "鉄鋼", "pin": "自動車生産台数（特殊鋼・鍛造の数量）", "pin_type": "volume", "sign": "+", "series": "自工会 自動車生産台数(月次)", "watch": "manual", "note": "トヨタ系の数量型。スクラップ・合金鉄はコスト側"}
-{"code": "5563", "name": "新日本電工", "s33": "鉄鋼", "pin": "合金鉄（フェロマンガン等）価格", "pin_type": "commodity", "sign": "+", "series": "none", "watch": "none", "note": "合金鉄が売上単価。マンガン鉱石と電力はコスト・無料系列なし"}
+{"code": "5563", "name": "新日本電工", "s33": "鉄鋼", "pin": "マンガン鉱石価格と合金鉄製品価格の利ざや（在庫影響経由）", "pin_type": "spread", "sign": "+", "series": "none", "watch": "none", "note": "【決算実読 2026-08-15】合金鉄事業は経常△21億の赤字（連結経常+27億）。マンガン鉱石市況下落の在庫影響が主因＝原料側。利益源は焼却灰資源化21億・機能材料19億。"}
 {"code": "5602", "name": "栗本鐵工所", "s33": "鉄鋼", "pin": "水道管更新・産業機械の受注数量", "pin_type": "volume", "sign": "+", "series": "国交省 建設工事受注動態統計(月次)", "watch": "manual", "note": "ダクタイル管の更新需要が中心。鋼材・銑鉄は買い手側"}
 {"code": "5631", "name": "日本製鋼所", "s33": "機械", "pin": "防衛・原子力向け受注高", "pin_type": "volume", "sign": "+", "series": "自社受注高(IR四半期)", "watch": "manual", "note": "素形材の防衛原子力案件が利益源、鋼材は自社製で原価側"}
 {"code": "5702", "name": "大紀アルミニウム工業所", "s33": "非鉄金属", "pin": "アルミ地金−アルミスクラップの値差", "pin_type": "spread", "sign": "+", "series": "TE aluminum（分子のみauto）", "watch": "manual", "note": "売価はLME連動で原料はスクラップ。急騰時は在庫評価益"}
@@ -399,10 +399,10 @@
 {"code": "5706", "name": "三井金属", "s33": "非鉄金属", "pin": "極薄銅箔の数量（半導体パッケージ基板需要）", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "利益柱はキャリア付極薄銅箔の数量。亜鉛製錬はTC型"}
 {"code": "5711", "name": "三菱マテリアル", "s33": "非鉄金属", "pin": "銅・金価格（自山鉱権益＋副産貴金属）", "pin_type": "commodity", "sign": "+", "series": "TE copper / TE gold", "watch": "auto", "note": "自山鉱と副産金で価格感応。製錬TCも効く・推測"}
 {"code": "5713", "name": "住友金属鉱山", "s33": "非鉄金属", "pin": "銅・金価格（菱刈金鉱山＋海外銅権益）", "pin_type": "commodity", "sign": "+", "series": "TE copper / TE gold", "watch": "auto", "note": "菱刈金鉱山と海外銅権益で金銅が売上単価に直結"}
-{"code": "5714", "name": "ＤＯＷＡホールディングス", "s33": "非鉄金属", "pin": "金・銀等の貴金属価格（リサイクル回収）", "pin_type": "commodity", "sign": "+", "series": "TE gold / TE silver", "watch": "auto", "note": "リサイクル原料からの貴金属回収が売上単価。亜鉛はTC型"}
+{"code": "5714", "name": "ＤＯＷＡホールディングス", "s33": "非鉄金属", "pin": "廃棄物処理量・使用済み自動車触媒/家電の集荷量（商品価格を残すなら亜鉛：感応度4.6億円/±100$/t）", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "【決算実読 2026-08-15】貴金属が入る製錬は6958百万/連結34192百万=20.3%だが価格上昇年に営業利益-34.1%。感応度開示は為替・銅・亜鉛のみで金銀なし。"}
 {"code": "5715", "name": "古河機械金属", "s33": "非鉄金属", "pin": "削岩機・産業機械の受注数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "利益柱は産業機械とユニック。金属事業は銅市況にも感応・推測"}
-{"code": "5726", "name": "大阪チタニウムテクノロジーズ", "s33": "非鉄金属", "pin": "スポンジチタン価格・数量（航空機需要）", "pin_type": "commodity", "sign": "+", "series": "none", "watch": "none", "note": "スポンジチタンが売上単価。無料の公開価格系列がない"}
-{"code": "5741", "name": "ＵＡＣＪ", "s33": "非鉄金属", "pin": "アルミ地金価格（在庫影響・メタル差益）", "pin_type": "commodity", "sign": "+", "series": "TE aluminum", "watch": "auto", "note": "地金↑は売価転嫁と在庫評価益で増益、下落局面は逆"}
+{"code": "5726", "name": "大阪チタニウムテクノロジーズ", "s33": "非鉄金属", "pin": "民間航空機向けチタン需要（MRO・在庫調整）＋副次的にチタン鉱石インデックス価格", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "【決算実読 2026-08-15】チタン事業利益4,654/営業利益5,524＝84%だがpin誤り。輸出価格はチタン鉱石インデックスのフォーミュラ連動、国内は数量△42.8%が主因。"}
+{"code": "5741", "name": "ＵＡＣＪ", "s33": "非鉄金属", "pin": "アルミ圧延ロールマージン（加工賃）×缶材・自動車材の販売数量", "pin_type": "spread", "sign": "+", "series": "none", "watch": "none", "note": "【決算実読 2026-08-15】会社は事業利益=営業利益-棚卸資産影響等と定義し増減要因にLME非登場。地金は転嫁。ロールマージン×数量型へ"}
 {"code": "5801", "name": "古河電気工業", "s33": "非鉄金属", "pin": "DC・電力向け光ファイバ/ケーブルの数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "利益柱は情報通信のDC需要。銅は建値スライドで買い手側"}
 {"code": "5802", "name": "住友電気工業", "s33": "非鉄金属", "pin": "自動車生産台数（ワイヤーハーネス数量）", "pin_type": "volume", "sign": "+", "series": "自工会 自動車生産台数(月次)", "watch": "manual", "note": "最大利益は自動車WHの数量型。銅は建値スライドで転嫁"}
 {"code": "5803", "name": "フジクラ", "s33": "非鉄金属", "pin": "データセンター向け光ケーブル・接続部品の数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "利益はほぼ情報通信。北米DC投資の数量型で銅はコスト側"}
@@ -588,7 +588,7 @@
 {"code": "7011", "name": "三菱重工業", "s33": "機械", "pin": "ガスタービン・防衛の受注高", "pin_type": "volume", "sign": "+", "series": "自社受注高(IR四半期)", "watch": "manual", "note": "GTCC受注と防衛予算増が利益源、鋼材は請負原価でコスト側"}
 {"code": "7012", "name": "川崎重工業", "s33": "輸送用機器", "pin": "二輪・航空・防衛の受注量", "pin_type": "volume", "sign": "na", "series": "none", "watch": "none", "note": "二輪と航空エンジン、防衛の受注・出荷数量が利益を決める"}
 {"code": "7013", "name": "ＩＨＩ", "s33": "機械", "pin": "民間航空エンジンのスペア需要", "pin_type": "volume", "sign": "+", "series": "IATA 旅客輸送量RPK(月次)", "watch": "manual", "note": "航空エンジン整備部品が利益の柱、運航量に連動する数量型"}
-{"code": "7014", "name": "名村造船所", "s33": "輸送用機器", "pin": "新造船価", "pin_type": "commodity", "sign": "+", "series": "Clarksons新造船価指数", "watch": "manual", "note": "受注時の新造船価が売上単価に直入りし鋼材は原価側に入る"}
+{"code": "7014", "name": "名村造船所", "s33": "輸送用機器", "pin": "受注残高・竣工隻数（新造船価は受注→売上計上まで2〜3年のラグ）", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "【決算実読 2026-08-15】新造船利益は営業利益の102%だが受注残4,220億＝売上3.4年分・進捗度基準で船価は2〜3年後に計上。当期増益要因は建造構成・原価削減・円安。"}
 {"code": "7085", "name": "カーブスホールディングス", "s33": "サービス業", "pin": "在籍会員数（店舗数×会員）", "pin_type": "volume", "sign": "na", "series": "none", "watch": "none", "note": "月会費のストック収入で、在籍会員数の純増が利益源"}
 {"code": "7128", "name": "ユニソルホールディングス", "s33": "卸売業", "pin": "建設・設備投資の受注数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "建設資材と機械工具の商社、鋼材市況より工事・設備の数量が主 推測"}
 {"code": "7130", "name": "ヤマエグループホールディングス", "s33": "卸売業", "pin": "食品卸の取扱数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "九州地盤の食品卸に住宅資材を併営、薄利で取扱数量と物流が主因"}
@@ -657,7 +657,7 @@
 {"code": "7581", "name": "サイゼリヤ", "s33": "小売業", "pin": "既存店売上・客数（国内＋アジア）", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "アジア店の客数が利益を牽引、輸入食材で円安は原価増"}
 {"code": "7593", "name": "ＶＴホールディングス", "s33": "小売業", "pin": "新車・中古車の販売台数", "pin_type": "volume", "sign": "+", "series": "自販連 新車販売台数(月次)", "watch": "manual", "note": "ディーラーは台数と整備稼働が利益、中古相場は在庫評価に一部"}
 {"code": "7595", "name": "アルゴグラフィックス", "s33": "情報･通信業", "pin": "CAD/PLMライセンス販売数", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "製造業のCAD投資数量が中心で外貨仕入のため円安は原価増"}
-{"code": "7599", "name": "ＩＤＯＭ", "s33": "卸売業", "pin": "中古車オークション相場", "pin_type": "commodity", "sign": "+", "series": "USS 月次成約単価", "watch": "manual", "note": "中古車在庫の評価と販売単価が相場に直結、仕入原価にも同時に効く"}
+{"code": "7599", "name": "ＩＤＯＭ", "s33": "卸売業", "pin": "中古車オークション相場", "pin_type": "commodity", "sign": "+", "series": "USS 月次成約単価", "watch": "manual", "note": "【決算実読 2026-08-15】日本セグメント利益20144百万/連結20209百万=99.7%。会社が「オートオークション相場の上昇による小売・卸売単価上昇」で増収増益と明記。"}
 {"code": "7606", "name": "ユナイテッドアローズ", "s33": "小売業", "pin": "既存店売上・客単価", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "セレクト衣料は既存店売上とプロパー消化率が利益源"}
 {"code": "7611", "name": "ハイデイ日高", "s33": "小売業", "pin": "既存店売上・客数", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "首都圏中華の深夜客数が利益、豚肉・小麦は原価側"}
 {"code": "7613", "name": "シークス", "s33": "卸売業", "pin": "EMS生産数量(車載・家電)", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "電子機器の受託製造が主、部材は転嫁され生産数量と稼働率が利益源"}
@@ -682,7 +682,7 @@
 {"code": "7762", "name": "シチズン時計", "s33": "精密機器", "pin": "時計の販売数量・単価（＋工作機械受注）", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "時計が最大利益。工作機械受注と為替も大きく効く"}
 {"code": "7780", "name": "メニコン", "s33": "精密機器", "pin": "メルスプラン会員数（定額契約の数量）", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "定額制の会員数増が利益の中心。素材市況は効かない"}
 {"code": "7821", "name": "前田工繊", "s33": "その他製品", "pin": "公共土木工事の施工量", "pin_type": "volume", "sign": "na", "series": "公共工事前払金保証統計", "watch": "manual", "note": "防災・土木の公共工事量が地盤資材の出荷数量を決める"}
-{"code": "7826", "name": "フルヤ金属", "s33": "その他製品", "pin": "イリジウム・ルテニウム価格", "pin_type": "commodity", "sign": "+", "series": "フルヤ金属Ir/Ru公表価格", "watch": "manual", "note": "IrとRuの価格が製品売上単価と在庫評価に直結する"}
+{"code": "7826", "name": "フルヤ金属", "s33": "その他製品", "pin": "イリジウム・ルテニウム価格", "pin_type": "commodity", "sign": "+", "series": "フルヤ金属Ir/Ru公表価格", "watch": "manual", "note": "【決算実読 2026-08-15】FY26/6 売上総利益302.7億中Ir/Ru関連61%(薄膜94.9+電子33.6+地金販売32.7+SC支援23.3)。短信『貴金属相場高が売上を押上』。符号+"}
 {"code": "7832", "name": "バンダイナムコホールディングス", "s33": "その他製品", "pin": "主力IPの販売数量", "pin_type": "volume", "sign": "na", "series": "none", "watch": "none", "note": "ガンダム等IPのトイホビーとゲームの販売数量が利益の中心"}
 {"code": "7839", "name": "ＳＨＯＥＩ", "s33": "その他製品", "pin": "USD/JPY・EUR/JPY為替", "pin_type": "fx", "sign": "+", "series": "USD/JPY", "watch": "manual", "note": "海外売上8割超で円安が売上単価と利益率を押し上げる"}
 {"code": "7846", "name": "パイロットコーポレーション", "s33": "その他製品", "pin": "USD/JPY為替", "pin_type": "fx", "sign": "+", "series": "USD/JPY", "watch": "manual", "note": "海外売上7割超で円安が売上と営業利益を大きく押し上げる"}
@@ -710,7 +710,7 @@
 {"code": "7990", "name": "グローブライド", "s33": "その他製品", "pin": "釣具の販売数量", "pin_type": "volume", "sign": "na", "series": "none", "watch": "none", "note": "釣具の国内外販売数量が利益の中心で為替も増幅要因。推測"}
 {"code": "7994", "name": "オカムラ", "s33": "その他製品", "pin": "オフィス家具の受注量", "pin_type": "volume", "sign": "na", "series": "三鬼商事 都心5区空室率", "watch": "manual", "note": "オフィス家具の受注量が利益の中心で物流機器も柱となる"}
 {"code": "7995", "name": "バルカー", "s33": "化学", "scale": "TOPIX Small 1", "pin": "半導体装置・プラント向けシール材の数量", "pin_type": "volume", "sign": "+", "series": "SEMI 半導体製造装置出荷", "watch": "manual", "note": "半導体装置・プラント向けシール材の需要数量が利益の中心"}
-{"code": "8001", "name": "伊藤忠商事", "s33": "卸売業", "pin": "鉄鉱石・原料炭価格", "pin_type": "commodity", "sign": "+", "series": "TE iron-ore", "watch": "auto", "note": "金属カンパニーが最大益・豪州鉄鉱石権益が持分利益に直結、非資源厚く感応度は中"}
+{"code": "8001", "name": "伊藤忠商事", "s33": "卸売業", "pin": "鉄鉱石(中国着粉鉱)価格 ※原料炭は赤字のため従属pinへ", "pin_type": "commodity", "sign": "+", "series": "TE iron-ore", "watch": "auto", "note": "【決算実読 2026-08-15】FY26/3 IMEA(鉄鉱石+石炭)純利益1,102億/連結9,003億=12.2%。開示の年間価格影響は△90億(1.0%)止まりで直結型としては弱くhold"}
 {"code": "8002", "name": "丸紅", "s33": "卸売業", "pin": "銅価格(LME)", "pin_type": "commodity", "sign": "+", "series": "TE copper", "watch": "auto", "note": "チリ銅権益の持分利益が最大の変動要因、アグリ・電力は数量側の寄与"}
 {"code": "8008", "name": "ヨンドシーホールディングス", "s33": "小売業", "pin": "金・地金価格", "pin_type": "commodity", "sign": "-", "series": "田中貴金属 金小売価格", "watch": "auto", "note": "ジュエリーは金が仕入原価、金高で店頭単価上昇も客数減"}
 {"code": "8012", "name": "長瀬産業", "s33": "卸売業", "pin": "電子材料・機能素材の取扱数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "化学品商社で市況は仕入売価の両面、半導体材料の数量が利益を動かす"}
@@ -729,7 +729,7 @@
 {"code": "8060", "name": "キヤノンマーケティングジャパン", "s33": "卸売業", "pin": "複合機・ITサービスの受注数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "キヤノン製品の国内販売とITソリューション、案件数量が利益を決める"}
 {"code": "8061", "name": "西華産業", "s33": "卸売業", "pin": "発電・産業設備の受注数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "三菱系の機械商社で電力向けプラント機器の受注案件数が利益を決める"}
 {"code": "8074", "name": "ＹＵＡＳＡ", "s33": "卸売業", "pin": "産業機械・建材の受注数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "機械建材商社で設備投資と建設需要の数量が主、市況は仕入売価両面"}
-{"code": "8078", "name": "阪和興業", "s33": "卸売業", "pin": "鋼材・ニッケル等の市況", "pin_type": "commodity", "sign": "+", "series": "TE nickel", "watch": "auto", "note": "鉄鋼非鉄の在庫を持つトレーダーで市況上昇が在庫評価と売価に直入"}
+{"code": "8078", "name": "阪和興業", "s33": "卸売業", "pin": "取扱数量×口銭（鋼材・非鉄）。資源持分法投資損益が別途の変動源", "pin_type": "spread", "sign": "+", "series": "none", "watch": "none", "note": "【決算実読 2026-08-15】鋼材価格下落の年に鉄鋼セグメント経常利益は+16.7%の387億（連結経常523億）。プライマリーメタルは持分法損で△1.5億。価格→利益の直結なし。"}
 {"code": "8079", "name": "正栄食品工業", "s33": "卸売業", "pin": "カカオ豆価格", "pin_type": "commodity", "sign": "-", "series": "TE cocoa", "watch": "auto", "note": "カカオ・ナッツを輸入して加工販売する買い手、原料高は原価増に直結"}
 {"code": "8086", "name": "ニプロ", "s33": "精密機器", "pin": "透析・注射器等の販売数量（海外含む）", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "数量成長が中心。薬価・診療報酬の引下げは恒常的逆風・推測"}
 {"code": "8088", "name": "岩谷産業", "s33": "卸売業", "pin": "LPガス価格(サウジCP)", "pin_type": "commodity", "sign": "mixed", "series": "サウジCP(月次公表)", "watch": "manual", "note": "LPGは仕入も売価も連動、在庫評価は+だが需要減は-で純方向が不定"}
@@ -820,7 +820,7 @@
 {"code": "8628", "name": "松井証券", "s33": "証券･商品先物取引業", "pin": "個人信用取引の売買代金", "pin_type": "volume", "sign": "+", "series": "JPX 東証売買代金(日次)", "watch": "manual", "note": "個人信用取引の売買代金が収益の大半、金利収入も信用残高に連動"}
 {"code": "8630", "name": "ＳＯＭＰＯホールディングス", "s33": "保険業", "pin": "国内損保の保険料率改定", "pin_type": "price_set", "sign": "+", "series": "損保料率算出機構 参考純率改定", "watch": "manual", "note": "国内損保の料率引上げ浸透が利益の柱、介護・海外事業は補助"}
 {"code": "8697", "name": "日本取引所グループ", "s33": "その他金融業", "pin": "東証1日平均売買代金", "pin_type": "volume", "sign": "+", "series": "JPX 東証売買代金(日次)", "watch": "manual", "note": "取引所の手数料は売買代金と清算件数に比例、価格でなく数量が主役"}
-{"code": "8698", "name": "マネックスグループ", "s33": "証券･商品先物取引業", "pin": "ビットコイン価格", "pin_type": "commodity", "sign": "+", "series": "BTC/JPY(取引所公表)", "watch": "manual", "note": "コインチェックの取引高と手数料がBTC価格に連動、金融唯一の商品型"}
+{"code": "8698", "name": "マネックスグループ", "s33": "証券･商品先物取引業", "pin": "暗号資産の販売所売買代金（取引高）", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "【決算実読 2026-08-15】クリプトは税引前△5.4億の赤字（連結税引前+158億）。会社は「業績は主に販売所の売買動向の影響を受ける」と明記。販売所売買代金△7.4%→損益△13.3%。"}
 {"code": "8706", "name": "極東証券", "s33": "証券･商品先物取引業", "pin": "外債・投信の販売額と自己運用損益", "pin_type": "volume", "sign": "+", "series": "JPX 東証売買代金(日次)", "watch": "manual", "note": "リテールの債券・投信販売と自己勘定運用が損益を左右する。推測"}
 {"code": "8707", "name": "岩井コスモホールディングス", "s33": "証券･商品先物取引業", "pin": "リテール株式売買代金", "pin_type": "volume", "sign": "+", "series": "JPX 東証売買代金(日次)", "watch": "manual", "note": "個人向け委託手数料が収益の中心で、相場の売買代金に直結する"}
 {"code": "8714", "name": "池田泉州ホールディングス", "s33": "銀行業", "pin": "国内金利(政策金利・長期金利)", "pin_type": "rate", "sign": "+", "series": "日銀政策金利/10年JGB利回り", "watch": "manual", "note": "池田泉州銀行の大阪府内貸出の利ざや拡大が利益の中心となる"}
@@ -879,7 +879,7 @@
 {"code": "9104", "name": "商船三井", "s33": "海運業", "pin": "コンテナ運賃SCFI", "pin_type": "commodity", "sign": "+", "series": "SCFI", "watch": "auto", "note": "ONE持分益が利益変動の中心、LNG・自動車船は長期契約で安定的"}
 {"code": "9107", "name": "川崎汽船", "s33": "海運業", "pin": "コンテナ運賃SCFI", "pin_type": "commodity", "sign": "+", "series": "SCFI", "watch": "auto", "note": "利益の大半がONE持分益、コンテナ運賃の変動がそのまま反映される"}
 {"code": "9110", "name": "ＮＳユナイテッド海運", "s33": "海運業", "pin": "ドライバルク運賃BDI", "pin_type": "commodity", "sign": "+", "series": "BDI", "watch": "auto", "note": "ケープ主体のバルカー運航で運賃が売値そのもの、長期契約も一部あり"}
-{"code": "9119", "name": "飯野海運", "s33": "海運業", "pin": "ケミカル・プロダクト船運賃", "pin_type": "commodity", "sign": "+", "series": "Baltic Clean Tanker Index", "watch": "manual", "note": "ケミカル船とLPG船の運賃が売値、不動産賃貸が下支えするが従属的"}
+{"code": "9119", "name": "飯野海運", "s33": "海運業", "pin": "ケミカルタンカー1年TC Rate（19,999dwt, US$/日）＝会社の業績予想前提条件と同一定義", "pin_type": "commodity", "sign": "+", "series": "Baltic Clean Tanker Index", "watch": "manual", "note": "【決算実読 2026-08-15】FY26/3外航海運は営業利益の65.4%だが船種別非開示・ケミカル船は下期スポット比率31%で市況直結は部分的。hold"}
 {"code": "9142", "name": "九州旅客鉄道", "s33": "陸運業", "pin": "鉄道輸送人員（訪日客）", "pin_type": "volume", "sign": "+", "series": "JNTO 訪日外客数", "watch": "manual", "note": "運輸は訪日客依存、駅ビル不動産も利益の4割前後・推測"}
 {"code": "9143", "name": "ＳＧホールディングス", "s33": "陸運業", "pin": "宅配便取扱個数（EC物量）", "pin_type": "volume", "sign": "+", "series": "国交省 宅配便取扱個数", "watch": "manual", "note": "デリバリーが利益の大半でEC物量が中心、単価改善が上乗せ"}
 {"code": "9147", "name": "ＮＩＰＰＯＮ　ＥＸＰＲＥＳＳホールディングス", "s33": "陸運業", "pin": "国際フォワーディングの運賃スプレッド", "pin_type": "spread", "sign": "+", "series": "SCFI JSON・TAC航空運賃指数", "watch": "auto", "note": "航空海上の運賃上昇局面で取扱マージンが拡大し増益"}
@@ -908,12 +908,12 @@
 {"code": "9468", "name": "ＫＡＤＯＫＡＷＡ", "s33": "情報･通信業", "pin": "IP作品の販売数量(書籍/ゲーム)", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "ヒットIPの出荷数量が中心で用紙代は原価側の逆風になる"}
 {"code": "9501", "name": "東京電力ホールディングス", "s33": "電気･ガス業", "pin": "柏崎刈羽原発の再稼働", "pin_type": "event", "sign": "+", "series": "none", "watch": "none", "note": "再稼働可否で燃料費が数千億円動き利益変動の最大要因"}
 {"code": "9502", "name": "中部電力", "s33": "電気･ガス業", "pin": "LNG・JEPX価格", "pin_type": "commodity", "sign": "mixed", "series": "LNG輸入価格/JEPXスポット", "watch": "manual", "note": "小売調達は−だがJERA持分は燃料高で+、純方向が定まらない"}
-{"code": "9503", "name": "関西電力", "s33": "電気･ガス業", "pin": "JEPXスポット価格", "pin_type": "commodity", "sign": "+", "series": "JEPXスポット価格", "watch": "manual", "note": "原発7基で限界費用が低くJEPX高が卸売収入増に直結"}
+{"code": "9503", "name": "関西電力", "s33": "電気･ガス業", "pin": "JEPXスポット価格", "pin_type": "commodity", "sign": "-", "series": "JEPXスポット価格", "watch": "manual", "note": "【決算実読 2026-08-15】FY26/3説明資料『JEPX単価差+380億』はJEPXが12.29→11.06円/kWhへ下落した年の増益要因＝符号は−。26年度計画も上昇前提で△640億"}
 {"code": "9504", "name": "中国電力", "s33": "電気･ガス業", "pin": "石炭・燃料価格", "pin_type": "commodity", "sign": "-", "series": "coal（石炭）", "watch": "auto", "note": "石炭火力主体で燃調ラグにより燃料高が短期の減益要因"}
 {"code": "9505", "name": "北陸電力", "s33": "電気･ガス業", "pin": "石炭・燃料価格", "pin_type": "commodity", "sign": "-", "series": "coal（石炭）", "watch": "auto", "note": "志賀原発停止で石炭火力依存、燃調ラグで燃料高が減益"}
 {"code": "9506", "name": "東北電力", "s33": "電気･ガス業", "pin": "LNG・石炭など燃料価格", "pin_type": "commodity", "sign": "-", "series": "coal（石炭）", "watch": "auto", "note": "女川再稼働後も火力比率が高く燃調ラグで燃料高が減益"}
 {"code": "9507", "name": "四国電力", "s33": "電気･ガス業", "pin": "燃料価格（LNG・石炭）", "pin_type": "commodity", "sign": "-", "series": "coal（石炭）", "watch": "auto", "note": "伊方稼働で緩和も火力併用、燃調ラグで燃料高が減益。推測"}
-{"code": "9508", "name": "九州電力", "s33": "電気･ガス業", "pin": "JEPXスポット価格", "pin_type": "commodity", "sign": "+", "series": "JEPXスポット価格", "watch": "manual", "note": "原発4基稼働で限界費用が低くJEPX高で卸売益が増える"}
+{"code": "9508", "name": "九州電力", "s33": "電気･ガス業", "pin": "原子力設備利用率(送電端発電電力量)。JEPXスポット価格は従属pinへ格下げ", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "【決算実読 2026-08-15】FY27/3計画の変動要因『卸電力取引市場 価格上昇影響+50億』＝符号+だが連結経常2,070億の2.4%。主因は燃調期ずれ△210・原子力稼働+100"}
 {"code": "9509", "name": "北海道電力", "s33": "電気･ガス業", "pin": "泊原発の再稼働", "pin_type": "event", "sign": "+", "series": "none", "watch": "none", "note": "泊停止で燃料費負担が重く再稼働可否が利益の最大変数"}
 {"code": "9511", "name": "沖縄電力", "s33": "電気･ガス業", "pin": "石炭・石油など燃料価格", "pin_type": "commodity", "sign": "-", "series": "coal（石炭）", "watch": "auto", "note": "原発がなく石炭石油依存、燃調ラグで燃料高が減益要因"}
 {"code": "9513", "name": "電源開発", "s33": "電気･ガス業", "pin": "JEPXスポット価格", "pin_type": "commodity", "sign": "+", "series": "JEPXスポット価格", "watch": "manual", "note": "卸電気で燃料はパススルー、水力と卸売がJEPX高の純受益"}
@@ -949,7 +949,7 @@
 {"code": "9757", "name": "船井総研ホールディングス", "s33": "サービス業", "pin": "コンサル会員数・稼働人員", "pin_type": "volume", "sign": "na", "series": "none", "watch": "none", "note": "月次会員制コンサルの会員数とコンサルタント人員数が中心"}
 {"code": "9759", "name": "ＮＳＤ", "s33": "情報･通信業", "pin": "SE稼働率・受注量", "pin_type": "volume", "sign": "+", "series": "日銀CSPI 受託開発ソフトウェア", "watch": "manual", "note": "人月受託が主体で技術者の稼働数と単価改定が利益を決める"}
 {"code": "9766", "name": "コナミグループ", "s33": "情報･通信業", "pin": "遊戯王TCG出荷・ゲーム課金数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "カード出荷数量とデジタル課金が利益の中心で紙代は軽微"}
-{"code": "9793", "name": "ダイセキ", "s33": "サービス業", "pin": "再生重油の販売価格（原油連動）", "pin_type": "commodity", "sign": "+", "series": "TE crude-oil/brent（既存自動系列）", "watch": "auto", "note": "廃油リサイクルの再生油売価が原油に連動。処理単価も強含み。推測"}
+{"code": "9793", "name": "ダイセキ", "s33": "サービス業", "pin": "産業廃棄物（工場廃液）の受入数量／処理料金収入", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "【決算実読 2026-08-15】単一セグメントで再生油売価の利益寄与は開示ゼロ。会社説明の増益要因は廃液受入量。数量型へ変更"}
 {"code": "9824", "name": "泉州電業", "s33": "卸売業", "pin": "銅建値(電線売価)", "pin_type": "commodity", "sign": "+", "series": "TE copper", "watch": "auto", "note": "電線専門卸で売価が銅建値に連動、在庫評価益も同時に発生する"}
 {"code": "9828", "name": "Ｇｅｎｋｉ　Ｇｌｏｂａｌ　Ｄｉｎｉｎｇ　Ｃｏｎｃｅｐｔｓ", "s33": "小売業", "pin": "既存店売上・客数", "pin_type": "volume", "sign": "+", "series": "月次既存店売上高(各社IR)", "watch": "manual", "note": "回転寿司の客数が利益、水産とコメは原価側の逆風"}
 {"code": "9830", "name": "トラスコ中山", "s33": "卸売業", "pin": "工具・消耗品の出荷数量", "pin_type": "volume", "sign": "+", "series": "none", "watch": "none", "note": "MRO卸で在庫即納が売り、製造業の稼働に伴う出荷数量が利益源"}
