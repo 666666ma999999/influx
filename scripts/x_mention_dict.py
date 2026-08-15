@@ -139,6 +139,59 @@ def universe_origin(trade500: Path = TRADE500) -> dict[str, dict]:
     return out
 
 
+# 受益タイプの平易ラベル（通知・アラート表示用）。center_pin.jsonl の pin_type が正本で、
+# ここは「価格高騰ニュースが出た時にその銘柄を買ってよい型か」を人が3秒で判別するための訳語。
+# 2026-08-15 新設: 銅高騰の検知で JX金属（数量型・銅価はほぼ利益に効かない）を
+# 「銅関連」として同列に見てしまう問題への対策（8/4 検知の実測: 直結型+21% vs 数量型−11%）
+PIN_TYPE_LABELS = {
+    "commodity": "価格直結型",   # 権益・在庫保有。値動きがそのまま利益
+    "spread": "利ざや型",        # 売値と仕入の差（加工賃）。値上がりだけでは判定不能
+    "volume": "数量型",          # 利益は販売量が決める。価格高騰の恩恵は薄い
+    "price_set": "自社値付け型",  # 自社の値上げ浸透が利益。市況とは別物
+    "asset": "資産型",           # 保有資産の売却・評価額が動く
+    "event": "イベント型",       # 制度改定・承認等の個別イベントで動く
+    "fx": "為替型",
+    "rate": "金利型",
+}
+
+# 符号の平易ラベル（"+" は表示しない＝既定）。na/mixed を機械値のまま人に見せない
+SIGN_LABELS = {"-": "⚠️上昇が逆風", "na": "方向なし", "mixed": "影響は混合"}
+
+
+def pin_info(path: Path = CENTER_PIN) -> dict[str, dict]:
+    """code -> {pin, pin_type, sign, type_label}（受益タイプの引き当て）。
+
+    アラート発火時に「この銘柄は価格高騰がそのまま利益になる型か」を機械で添えるために使う。
+    台帳が無い・壊れた行があってもアラート本線を止めない（fail-soft: 読めた行だけ返し、
+    壊れた行数は stderr に出す）。
+    """
+    out: dict[str, dict] = {}
+    if not path.exists():
+        return out
+    n_bad = 0
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        try:
+            r = json.loads(line)
+            if not isinstance(r, dict) or not isinstance(r.get("code"), str):
+                n_bad += 1
+                continue
+            # 型不正の有効JSON（pin_type: null 等）で後段の文字列連結を落とさない
+            pt = r.get("pin_type") if isinstance(r.get("pin_type"), str) else ""
+            out[r["code"]] = {
+                "pin": r.get("pin") if isinstance(r.get("pin"), str) else "",
+                "pin_type": pt,
+                "sign": r.get("sign") if isinstance(r.get("sign"), str) else "",
+                "type_label": PIN_TYPE_LABELS.get(pt, pt or "不明")}
+        except json.JSONDecodeError:
+            n_bad += 1
+    if n_bad:
+        print(f"WARN: center_pin 台帳に読めない行 {n_bad} 件（読めた {len(out)} 社で続行）",
+              file=sys.stderr)
+    return out
+
+
 def build_matcher(table: dict[str, tuple[str, str]]) -> list[tuple[re.Pattern, str, str, str]]:
     """最長一致優先で並べたパターン列。長い表記から先に当てて二重計上を防ぐ。"""
     out = []

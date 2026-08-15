@@ -100,7 +100,13 @@ if $MENTION_CMD --date "$TARGET_DATE"; then
       | /usr/bin/python3 -c 'import sys,json
 rows=[json.loads(l) for l in sys.stdin if l.strip()]
 g=[r for r in rows if r.get("goal_candidate")]
-print(f"{len(g)}件が完了条件候補" if g else f"{len(rows)}件(リスト内/連動なし)")' 2>/dev/null || echo "詳細は mention_alerts.jsonl")
+head=f"{len(g)}件が完了条件候補" if g else f"{len(rows)}件(リスト内/連動なし)"
+# 受益タイプの件数内訳（価格直結型だけが「値上がり=利益」。数量型・利ざや型は同列に買わない）
+from collections import Counter
+c=Counter((r.get("center_pin") or {}).get("type_label","") for r in rows)
+c.pop("",None)
+detail="/".join(f"{k}{n}" for k,n in c.most_common())
+print(head + ("・"+detail if detail else ""))' 2>/dev/null || echo "詳細は mention_alerts.jsonl")
     osascript -e "display notification \"${hit}\" with title \"🎯 銘柄言及の急増を検知\"" 2>/dev/null || true
   fi
 else

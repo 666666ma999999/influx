@@ -83,7 +83,8 @@ flowchart LR
 | P10 | 多重比較の感度確認 | 分母＝台帳行数で調整後CIを見る | `scripts/kpi_bonferroni_check.py` | 周次 | 🐳 |
 | P11 | 一括スクリーニング | 宣言グリッドを FDR で流す | `scripts/kpi_screen_batch.py` | **現在禁止**（catalog §6拡張5項） | 🐳 |
 | P12 | EV estimand v2 | 月等ウェイト two-stage で EV を出す | `scripts/ev_estimand_v2.py` / `kpi_event_study.ev_v2_summary` | 改定時 | 🐳 |
-| P13 | 商品価格レーン | 外部価格の発火→受益カード→前向き記録 | `scripts/price_universe_check.py` / `xprice_watch_run.sh` | 月曜08:30＋毎日22:10 | ⏰ |
+| P13 | 商品価格レーン | 外部価格の発火→受益カード→前向き記録（発火・通知・evaluation 行に受益タイプを付与 2026-08-15） | `scripts/price_universe_check.py` / `xprice_watch_run.sh` | 月曜08:30＋毎日22:10 | ⏰ |
+| P13' | 受益タイプ一覧 | center_pin 977社を型別一覧 md に組む（ラベル正本= `x_mention_dict.PIN_TYPE_LABELS` を共有） | `scripts/gen_center_pin_types.py` → `output/center_pin_types.md` | 手動 | 🖐 |
 | P14 | vault ミラー | 当日シグナル・台帳・hash chain を vault へ写す | 上記ジョブに同乗 | 毎朝 | ⏰ |
 
 ### 4-1. 定期実行（配管図が正本）

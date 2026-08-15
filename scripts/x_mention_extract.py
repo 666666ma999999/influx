@@ -391,6 +391,31 @@ def _selftest() -> int:
             ng += not ok_d3
     finally:
         TEXTS_DIR = saved_texts_dir
+
+    # 受益タイプ引き当て pin_info の固定テスト（2026-08-15 Codex 指摘の再発防止:
+    # 壊れた行・型不正の有効JSONでアラート本線を止めない）
+    with tempfile.TemporaryDirectory() as td2:
+        cp = Path(td2) / "cp.jsonl"
+        cp.write_text("\n".join([
+            json.dumps({"code": "1111", "pin_type": "commodity", "sign": "-", "pin": "x"}),
+            "壊れた行{{{",
+            json.dumps({"name": "code欠損"}),
+            json.dumps({"code": "2222", "pin_type": None, "sign": None}),
+            json.dumps({"code": "3333", "pin_type": "新型", "sign": "na"}),
+        ]), encoding="utf-8")
+        p = xmd.pin_info(cp)
+        checks = (
+            (set(p) == {"1111", "2222", "3333"}, "壊れた行・code欠損だけを捨てる"),
+            (p.get("1111", {}).get("type_label") == "価格直結型", "pin_type→平易ラベル変換"),
+            (isinstance(p.get("2222", {}).get("type_label"), str)
+             and p.get("2222", {}).get("pin_type") == "",
+             "pin_type:null（型不正の有効JSON）でも文字列ラベルで落ちない"),
+            (p.get("3333", {}).get("type_label") == "新型", "未知タイプは生の値をラベルに使う"),
+            (xmd.pin_info(Path(td2) / "nai.jsonl") == {}, "台帳不在は空dict"),
+        )
+        for ok, why in checks:
+            print(f"  {'OK ' if ok else 'NG '} pin_info: {why}")
+            ng += not ok
     return ng
 
 
@@ -562,6 +587,9 @@ def evaluate_alerts() -> int:
                 topix = (tp[ev_day] / tp[base] - 1) * 100
                 rec = {"type": "evaluation", "date": f0["date"], "code": f0["code"],
                        "name": f0.get("name", ""), "window": win,
+                       # 受益タイプを発火行から引き継ぐ（型別の成績集計を evaluation 行だけで
+                       # 完結させるため。古い発火行に無ければ None＝旧形式互換）
+                       "center_pin": f0.get("center_pin"),
                        "post_date_jst": base_date, "base_day": base,
                        "eval_day": ev_day, "stock_pct": round(stock, 2),
                        "topix_pct": round(topix, 2), "excess_pt": round(stock - topix, 2),
@@ -640,6 +668,7 @@ def main() -> int:
         # 取引高TOP500の銘柄で、品薄・値上がりの言及を拾い、株価が連動して上がっている」
         # → 発火ごとに ①リスト内外・取引高順位 ②対TOPIXの連動 を機械で付け、証拠台帳へ残す
         origin = xmd.universe_origin()
+        pins = xmd.pin_info()
         run_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
         print(f"\n🚨 言及が急増した銘柄 {len(alerts)}社:")
         ALERTS_OUT.parent.mkdir(parents=True, exist_ok=True)
@@ -676,7 +705,15 @@ def main() -> int:
                     link = (f"{pl['base_date']}→{pl['to_date']}({pl['days']}営業日) "
                             f"株価{pl['stock_pct']:+.1f}% / TOPIX{pl['topix_pct']:+.1f}% "
                             f"/ 超過{pl['excess_pt']:+.1f}pt")
+                p = pins.get(r["code"])
+                if p:
+                    # 受益タイプ＝「価格高騰がそのまま利益になる型か」。直結型以外を同列に
+                    # 買わないための1行（8/4 銅検知の実測: 直結型+21% vs 数量型−11%）
+                    sign_note = xmd.SIGN_LABELS.get(p["sign"], "")
+                    tags.append(p["type_label"] + (f"({sign_note})" if sign_note else ""))
                 print(f"  {r['code']} {r['name']}  [{'/'.join(tags)}]")
+                if p:
+                    print(f"     中心ピン: {p['pin']}")
                 print(f"     連動: {link}")
                 if not in_list and pl and pl["stock_pct"] > 0:
                     print("     🎯 完了条件の候補: リスト外銘柄の言及急増 ＋ 株価上昇。"
@@ -688,7 +725,8 @@ def main() -> int:
                                      # 実投稿日（JST最大）を台帳に残す。後段の固定窓評価が
                                      # 同じ基準日を使えるようにするため（ラベル日と別物）
                                      "post_date_jst": base_date,
-                                     "trade500": o or None, "price_linkage": pl,
+                                     "trade500": o or None, "center_pin": p,
+                                     "price_linkage": pl,
                                      "goal_candidate": bool(not in_list and pl
                                                            and pl["stock_pct"] > 0),
                                      "run_at": run_at}, ensure_ascii=False) + "\n")
