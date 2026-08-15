@@ -1,0 +1,22 @@
+{
+  "_comment": "§戻り試験 第1周（tasks/center_pin_reaudit.md §戻り試験が正本）。再監査で外れた22社のうちA群2テーマ（関電の下落側・マネックス取引高）の入場試験。本線 x_price_watch.json とは別枠・texts/ledger も data/x_price_watch/probe_reentry/ に隔離。判定基準は収集前に凍結（件数>=10 かつ 帰属文脈>=50% かつ 単発イベント支配でない）。",
+  "version": 1,
+  "generated_at": "2026-08-15",
+  "collect": {
+    "max_scrolls": 6,
+    "cap_posts": 120,
+    "query_pacing_sec": [20.0, 40.0],
+    "goto_wait_sec": [3.0, 5.0]
+  },
+  "alert": {
+    "baseline_days": 14,
+    "min_baseline_days": 7,
+    "z_threshold": 3.0
+  },
+  "queries": [
+    {"id": "probe-denkidai-sage", "q": "電気代 (値下げ OR 下がる)", "min_faves": 10, "lane": "probe-reentry"},
+    {"id": "probe-jepx-geraku", "q": "(JEPX OR 電力市場) (下落 OR 急落)", "min_faves": 0, "lane": "probe-reentry"},
+    {"id": "probe-btc-takane", "q": "ビットコイン (最高値 OR 高値更新)", "min_faves": 10, "lane": "probe-reentry"},
+    {"id": "probe-coincheck", "q": "コインチェック (口座 OR 開設 OR 取引)", "min_faves": 10, "lane": "probe-reentry"}
+  ]
+}
