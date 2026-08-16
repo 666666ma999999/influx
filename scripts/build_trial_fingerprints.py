@@ -573,6 +573,38 @@ CURATED_ENTRIES: list[dict[str, Any]] = [
     # --- source=avoidance: 回避ルール・教訓（複数試行の結果から確定した「触るな」知見） ---
     {
         "source": "avoidance",
+        "name": "株式分割は近年(2022-)効かない",
+        "family": "イベント",
+        "entry_condition": "TDnet表題マッチ「株式分割」の開示イベント買い（比率不問・TOP500）",
+        "universe": "TOP500",
+        "period_tested": "2016-09〜2026-06（記述測定・事前登録なし・α非消費）",
+        "verdict": "avoid",
+        "keywords": _keywords_for("イベント", ["株式分割", "分割", "split", "投資単位引下げ"]),
+        "ref": "tasks/split_recency_check.md + output/research/split_recency/（2026-08-16 期間分割・事前固定1通り）: "
+        "全期間では枠S通過（lift2.73[CI下限1.78]・EV(stop8)+3.41%）だが、**後半202201〜202606 で lift1.82"
+        "[CI下限0.78<1.0]・EV(なし)片側下限−0.87%と符号反転**＝判定規約でNO-GO。前半201609〜202112 は"
+        "lift4.02[2.30,6.63]と強く、全期間の通過は前半の寄与。**多重比較では消えない**（全期間はBonferroni"
+        "調整後もCI下限1.38〜1.46で1.2維持）＝偽陽性でなく『期間で消える』型。市場ベースレートは"
+        "前半3.79%→後半4.44%と上昇しているのに到達率は14.8%→7.5%へ半減＝イベント固有の減衰。"
+        "発火頻度は年25.3→41.6件と増加（分割が珍しくなくなった可能性・機序は未検証）",
+    },
+    {
+        "source": "avoidance",
+        "name": "配当予想の増額修正は近年(2022-)効かない",
+        "family": "SUE/PEAD",
+        "entry_condition": "TDnet表題マッチ「配当予想の修正」の開示イベント買い（増額幅不問・TOP500）",
+        "universe": "TOP500",
+        "period_tested": "2016-09〜2026-06（記述測定・事前登録なし・α非消費）",
+        "verdict": "avoid",
+        "keywords": _keywords_for("SUE/PEAD", ["配当", "増配", "配当予想", "dividend"]),
+        "ref": "tasks/split_recency_check.md + output/research/split_recency/（2026-08-16・参考測定）: "
+        "全期間では枠F通過（EV(なし)片側下限+0.42%・lift1.28・月19.3件）だが、**後半202201〜202606 で "
+        "lift0.90（<1.0）・EV(なし)片側下限−0.25%（<0）＝枠Fの根拠2条件が両方とも崩れる**。"
+        "前半はlift1.70[1.22,2.44]・EV下限+0.38%＝全期間の通過は前半の寄与。株式分割と同型の期間減衰。"
+        "既存 dividend_uprev（配当予想の増額修正・fins由来）とは別経路だが同じ機序に当たるため近傍",
+    },
+    {
+        "source": "avoidance",
         "name": "200週線の近傍帯(-20〜+20%)は+20%を濃縮しない",
         "family": "MA/GC",
         "entry_condition": "200週SMA（≈4年線）の**近傍帯 dev∈[-20%,+20%)** での買い（@AlphaOwlTrading 2026-08-14 のマンガー帰属ルール）。※両端（<-20% / >=+20%）はベース4.1%を上回るが時期偏在のため別扱い＝下記ref参照",
