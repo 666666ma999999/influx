@@ -223,6 +223,60 @@ def build() -> tuple[str, dict]:
     else:
         lines.append("（なし）")
     lines.append("")
+    # --- 仕込み型（価格系列レーン）の合流 ---
+    # 急騰狙い（上のセクション）とは別ゴール: 商品価格の上昇 → 恩恵が決算に出るまで8〜15週。
+    # 計算は build_shikomi_list.build_rows() を再利用（同じ計算を2箇所に書かない）。
+    sk_error = None
+    try:
+        from build_shikomi_list import LOOKBACK_DAYS as _SK_LOOKBACK
+        from build_shikomi_list import build_rows as _shikomi_rows
+        sk_rows, sk_skipped, sk_latest = _shikomi_rows()
+    except Exception as exc:  # noqa: BLE001  表示専用・本体は落とさないが**黙らせない**
+        sk_rows, sk_skipped, sk_latest = [], [], None
+        sk_error = str(exc)[:120]
+    if sk_error:
+        # 失敗を「0銘柄」と誤読させない（Codex指摘: 障害が本文を開くまで分からない状態を作らない）。
+        # summary 経由で朝の通知にも ⚠️ を伝搬する。
+        lines.append(f"## 🌱 仕込み型（価格系列レーン・別ゴール）: ⚠️ **生成失敗**（{sk_error}）")
+        lines.append("")
+        lines.append("> この節が失敗している間、仕込み型の候補は**0件ではなく不明**です。復旧まで判断に使わないこと。")
+        lines.append("")
+    else:
+        # 0件でも節は必ず出す（統合済みなのか生成漏れなのかを区別できるようにする・Codex指摘3）
+        lines.append(f"## 🌱 仕込み型（価格系列レーン・別ゴール）: {len(sk_rows)}銘柄")
+        lines.append("")
+        lines.append(
+            "> 上の「有力候補」が**1ヶ月で+20%の急騰**を狙うのに対し、こちらは**商品価格の上昇 → 恩恵が"
+            "決算に出るまで8〜15週**の型。**このレーンも成績は未確定**（初回評価 2026-09〜11）＝実弾の推奨ではない。"
+        )
+        lines.append("")
+        if not sk_rows:
+            lines.append(f"（直近{_SK_LOOKBACK}日に価格系列レーンの発火なし。次の週次チェックは月曜08:30）")
+            lines.append("")
+        lines.append("| 証拠 | 銘柄 | 社名 | 発火した価格 | 発火日 | 騰落 | TOPIX | **超過** |")
+        lines.append("|---|---|---|---|---|---:|---:|---:|")
+        for fd, sjp, code4, name, tier, chg, mkt, exc, _entry, _ev, stale in sk_rows:
+            mark = ("◎確証" if tier == "confirmed" else "△仮") + ("(要再確認)" if stale else "")
+            fmt_ = lambda v: f"{v:+.2f}%" if v is not None else "—"
+            lines.append(
+                f"| {mark} | {code4} | {name} | {sjp} | {fd[4:6]}/{fd[6:]} | "
+                f"{fmt_(chg)} | {fmt_(mkt)} | **{fmt_(exc)}** |"
+            )
+        lines.append("")
+        lines.append(
+            "掲載式: ①決算実読の証拠が強い順（確証→仮）→ ②対TOPIX超過が小さい順（＝まだ市場が反応していない順）。"
+            "仕込み起点＝発火の翌営業日終値→各銘柄の最新終値。**超過が小さい＝仕込み余地が残っている可能性**が"
+            "ある一方、**効かないシグナルだった可能性もある**（未検証）。決着は9〜11月の前向き評価。"
+        )
+        if sk_skipped:
+            lines.append("")
+            lines.append(
+                "掲載しなかった発火銘柄（決算実読で却下 or カード未登録）: "
+                + " ／ ".join(f"{c} {n}（{s}）" for c, n, s in sk_skipped)
+                + " ＝これらは発火通知には出るが候補には出さない（帰属プロトコル §0b）"
+            )
+        lines.append("")
+
     lines.append("## 次に何が起きるか")
     lines.append("")
     lines.append(
@@ -234,6 +288,7 @@ def build() -> tuple[str, dict]:
     lines.append(f"生成時刻: {dt.datetime.now().astimezone().isoformat(timespec='seconds')}")
     lines.append(
         "データ源: data/paper_trades/ledger.jsonl / config/recipe_shelf_meta.json / config/paper_watchlist.json"
+        " ／ 仕込み型= data/price_watch/forward_log.jsonl + configs/price_universe_sources.json + data/jquants"
     )
     lines.append("")
 
@@ -246,6 +301,8 @@ def build() -> tuple[str, dict]:
         "watch_pending": len(watch_pending),
         "banned_pending": len(banned_pending),
         "first_read_date": first_read,
+        "shikomi_count": len(sk_rows),
+        "shikomi_error": sk_error,
     }
     return "\n".join(lines), summary
 

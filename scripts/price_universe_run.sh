@@ -38,19 +38,12 @@ cd "$INFLUX" || exit 1
 docker compose run --rm xstock python scripts/price_universe_check.py 2>&1 | tee "$OUT"
 rc=${PIPESTATUS[0]}
 
-# --- 仕込み候補リストの再生成（表示専用・2026-08-16 追加） ---
-# チェッカーが台帳と forward_log を更新した直後に、価格系列レーンの発火→受益銘柄を
-# 対TOPIX超過つきで一覧化する（output/shikomi_list.md + vault ミラー）。
-# 非致死: 生成失敗は本体の exit code に影響させないが、握り潰さず通知する
-# （2026-07-31 の「表示層が沈黙クラッシュして success を名乗る」実害と同型の再発防止）。
-# ホスト python3 で実行する（標準ライブラリのみで動く・Docker 内からは vault パスが
-# 見えずミラーが必ず失敗するため。recipe_shelf / daily_reco と同じ作法）。
-shikomi_status="OK"
-if ! python3 "$(dirname "$0")/build_shikomi_list.py" >>"$OUT" 2>&1; then
-  shikomi_status="FAILED"
-  osascript -e 'display notification "仕込み候補リストの生成に失敗（価格チェック本体は完了）" with title "⚠️ shikomi_list 生成失敗"' 2>/dev/null || true
-fi
-echo "[shikomi_list] $shikomi_status" | tee -a "$OUT"
+# --- 仕込み候補リストについて（2026-08-16 一本化・ここでは生成しない） ---
+# ユーザー指摘「同じ役割なら1ファイルにまとめて」により、仕込み型は
+# **output/daily_reco.md の「🌱 仕込み型」節に合流**した（毎朝 daily_screen 経由で再生成）。
+# 週次でも別ファイルを作ると更新時刻差で内容が食い違うため、ここでの生成は廃止する
+# （Codex 指摘: 週次別ファイルの残存は統合の趣旨に反し不整合の火種）。
+# 本ジョブが更新した forward_log は、翌営業日の朝ジョブが自動で拾う。
 
 # --- ヘルス判定と通知 ---
 # 「N/M ok」行を実出力から拾う（取れなければ健全性判定は行わない＝黙って正常扱いにしない）

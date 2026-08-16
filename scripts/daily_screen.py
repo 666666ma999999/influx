@@ -2025,8 +2025,13 @@ def main() -> int:
             summary = json.loads((PROJECT_ROOT / "output/daily_reco_summary.json").read_text(encoding="utf-8"))
             top = summary.get("top") or []
             top_text = f"（1位 {top[0]['name'] or top[0]['code']}×{top[0]['n_kpis']}系統）" if top else ""
+            # 仕込み型が生成失敗した時は「0銘柄」でなく ⚠️ を出す
+            # （失敗を正常な0件と誤読させない・Codex指摘2）
+            shikomi_txt = ("⚠️仕込み生成失敗" if summary.get("shikomi_error")
+                           else f"仕込み{summary.get('shikomi_count', 0)}銘柄")
             note = (
-                f"有力{summary.get('reco_count', 0)}銘柄{top_text} / 実戦投入可0本 / "
+                f"有力{summary.get('reco_count', 0)}銘柄{top_text} / "
+                f"{shikomi_txt} / 実戦投入可0本 / "
                 f"初回読み取り {summary.get('first_read_date', '未定')}"
             )
         if pending_warn:
