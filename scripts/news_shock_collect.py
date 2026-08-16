@@ -216,12 +216,14 @@ def main() -> int:
     seen = load_seen()
     run_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
     n_hit, n_err = 0, 0
+    items_per_term = {}    # recall のサイレント崩壊検知用（敵対R3 A10: 0件返答と事象なしを区別）
     hits_for_notify = []
     with LEDGER.open("a", encoding="utf-8") as fh:
         for qe in cfg["queries"]:
             term = qe["term"]
             try:
                 items = fetch_rss(term, vocab, cfg.get("collect", {}))
+                items_per_term[term] = len(items)
             except Exception as e:                     # fail-closed: エラーは台帳に残す
                 n_err += 1
                 fh.write(json.dumps({"run_at": run_at, "term": term, "status": "error",
@@ -247,9 +249,12 @@ def main() -> int:
                 hits_for_notify.append(f"{term}:{v} → {labels}")
                 print(f"🛑 [{term}] {v} | {it['title'][:60]}")
                 print(f"    受益: {labels}")
-        # 実行サマリ行（欠測の見える化・空振りの日もこの1行は必ず残る）
+        # 実行サマリ行（欠測の見える化・空振りの日もこの1行は必ず残る）。
+        # items= クエリ別の RSS 取得件数: 全クエリ 0件が続けば「事象が無い」でなく
+        # 「Google 側の recall 崩壊」を疑う（敵対R3 A10）
         fh.write(json.dumps({"type": "run_summary", "run_at": run_at, "hit": n_hit,
                              "ok": len(cfg["queries"]) - n_err, "error": n_err,
+                             "items": items_per_term,
                              "config_version": cfg.get("version"), "config_sha": cfg_sha},
                             ensure_ascii=False) + "\n")
     if n_hit and not args.dry_run:
