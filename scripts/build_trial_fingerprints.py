@@ -573,9 +573,9 @@ CURATED_ENTRIES: list[dict[str, Any]] = [
     # --- source=avoidance: 回避ルール・教訓（複数試行の結果から確定した「触るな」知見） ---
     {
         "source": "avoidance",
-        "name": "200週線乖離帯は+20%を濃縮しない",
+        "name": "200週線の近傍帯(-20〜+20%)は+20%を濃縮しない",
         "family": "MA/GC",
-        "entry_condition": "200週SMA（≈4年線）近傍・下方での買い（@AlphaOwlTrading 2026-08-14 のマンガー帰属ルール）",
+        "entry_condition": "200週SMA（≈4年線）の**近傍帯 dev∈[-20%,+20%)** での買い（@AlphaOwlTrading 2026-08-14 のマンガー帰属ルール）。※両端（<-20% / >=+20%）はベース4.1%を上回るが時期偏在のため別扱い＝下記ref参照",
         "universe": "TOP500",
         "period_tested": "2020-05〜2026-06（74ヶ月・記述測定・事前登録なし・α非消費）",
         "verdict": "avoid",
@@ -595,9 +595,10 @@ CURATED_ENTRIES: list[dict[str, Any]] = [
         "period_tested": "2016-07〜2026-07（記述測定・事前登録なし）",
         "verdict": "avoid",
         "keywords": _keywords_for("自社株買い", ["自己株式", "buyback", "ToSTNeT", "下支え"]),
-        "ref": "catalog:128（2026-08-02 記述測定: TOP500 n=1,148・+20%到達2.5%=ベース9.5%の約1/4・"
-        "EV+0.96%は中央値+0.72%の下支え型＝急騰と逆方向。サイズ≥3%条件は本文数値要のため未検証だが"
-        "無条件版1/4から回復見込み薄・output/tdnet/event_profile.md）",
+        "ref": "catalog:128（2026-08-02 記述測定・2026-08-16 基準訂正: TOP500 n=1,148・+20%到達2.5%＝"
+        "正ベース4.1%[catalog §6・118ヶ月 n=58,497]の約0.61倍。旧記載「9.5%の1/4」は過熱3ヶ月ローカル値の誤用。"
+        "EV+0.96%は中央値+0.72%の下支え型＝急騰と逆方向。lift<1 のため死に筋の結論は基準訂正後も不変。"
+        "サイズ≥3%条件は本文数値要のため未検証・output/tdnet/event_profile.md）",
     },
     {
         "source": "avoidance",
