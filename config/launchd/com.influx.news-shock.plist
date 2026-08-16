@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.influx.news-shock</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>-lc</string>
+        <string>bash /Users/masaaki_nagasawa/Desktop/biz/influx/scripts/news_shock_run.sh</string>
+    </array>
+
+    <!-- 毎日 07:20（寄り付き前・海外市場の夜間ニュースを拾う）と 19:00（欧州時間の日中分） -->
+    <key>StartCalendarInterval</key>
+    <array>
+        <dict>
+            <key>Hour</key>
+            <integer>7</integer>
+            <key>Minute</key>
+            <integer>20</integer>
+        </dict>
+        <dict>
+            <key>Hour</key>
+            <integer>19</integer>
+            <key>Minute</key>
+            <integer>0</integer>
+        </dict>
+    </array>
+
+    <key>RunAtLoad</key>
+    <false/>
+
+    <key>StandardOutPath</key>
+    <string>/Users/masaaki_nagasawa/.claude/state/news-shock.out.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/masaaki_nagasawa/.claude/state/news-shock.err.log</string>
+</dict>
+</plist>

@@ -1,0 +1,40 @@
+{
+  "_comment": "news_shock レーン（docs/price-watch-universe.md §16u が入場条件の正本）。商品名つき供給ショックのニュースだけを拾う。queries の term は Google News RSS の検索語（英語）・series_ids は configs/price_universe_sources.json の系列ID（受益カードの引き当て先）。vocab は凍結語彙＝ローカル AND 判定に使う（Google の曖昧一致を通さない）。対象外（国内指標・ニュース経路が別）: jepx / scrap-steel / scrap-tokyosteel / uss-used-car / toreca-sar / mtool-orders / semicon-equip / auto-production / office-rent-tokyo / visitors-jnto / salmon",
+  "version": 1,
+  "generated_at": "2026-08-16",
+  "collect": {
+    "when_days": 2,
+    "timeout_sec": 20,
+    "hl": "en-US",
+    "gl": "US",
+    "ceid": "US:en"
+  },
+  "vocab": [
+    "export ban", "export restriction", "embargo", "force majeure",
+    "on strike", "miners strike", "miners' strike", "workers strike", "labor strike",
+    "labour strike", "general strike", "strike halts", "drone strike",
+    "mine accident", "mine collapse", "supply disruption", "production halt",
+    "suspends export", "輸出禁止", "禁輸", "輸出規制", "ストライキ", "不可抗力", "操業停止"
+  ],
+  "_vocab_note": "v1の単語 strike は英慣用句 strike gold（大当たり）に誤マッチ（2026-08-16 実疎通で17件中13件がノイズ）→ 句単位へ精密化。RSSクエリ側は広めに取り、精度はこのローカル凍結語彙で担保する設計",
+  "queries": [
+    {"term": "copper", "series_ids": ["copper"]},
+    {"term": "aluminum", "series_ids": ["aluminum"]},
+    {"term": "nickel", "series_ids": ["nickel"]},
+    {"term": "zinc", "series_ids": ["zinc"]},
+    {"term": "iron ore", "series_ids": ["iron-ore"]},
+    {"term": "gold", "series_ids": ["gold-int", "gold-tanaka"]},
+    {"term": "silver", "series_ids": ["silver"]},
+    {"term": "platinum", "series_ids": ["platinum"]},
+    {"term": "uranium", "series_ids": ["uranium"]},
+    {"term": "crude oil", "series_ids": ["wti", "brent"]},
+    {"term": "coal", "series_ids": ["coal", "coking-coal"]},
+    {"term": "methanol", "series_ids": ["methanol"]},
+    {"term": "PVC", "series_ids": ["pvc"]},
+    {"term": "container shipping", "series_ids": ["scfi"]},
+    {"term": "dry bulk shipping", "series_ids": ["bdi"]},
+    {"term": "iridium", "series_ids": ["fmbi-iridium"]},
+    {"term": "ruthenium", "series_ids": ["fmbi-ruthenium"]},
+    {"term": "NAND flash", "series_ids": ["nand_spot"]}
+  ]
+}
