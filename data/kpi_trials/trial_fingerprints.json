@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-02T07:29:19.618116+00:00",
+  "generated_at": "2026-08-16T03:36:17.222566+00:00",
   "sources": {
     "trials_jsonl_lines": 114,
     "trials_jsonl_unique_kpi_names": 97,
@@ -1768,6 +1768,29 @@
     },
     {
       "source": "avoidance",
+      "name": "200週線乖離帯は+20%を濃縮しない",
+      "family": "MA/GC",
+      "entry_condition": "200週SMA（≈4年線）近傍・下方での買い（@AlphaOwlTrading 2026-08-14 のマンガー帰属ルール）",
+      "universe": "TOP500",
+      "period_tested": "2020-05〜2026-06（74ヶ月・記述測定・事前登録なし・α非消費）",
+      "verdict": "avoid",
+      "keywords": [
+        "200週線",
+        "4年線",
+        "GC",
+        "MA",
+        "SMA200W",
+        "クオリティ株",
+        "ゴールデンクロス",
+        "移動平均",
+        "線奪回",
+        "長期移動平均"
+      ],
+      "ref": "tasks/sma200w_descriptive.md + output/research/sma200w/（2026-08-15 記述測定 n=33,805）: 8帯すべてで+20%到達率は2〜6%＝中央帯（-10〜+20%）は一様に約2%でベース4.1%を下回る。両端のみ持ち上がるU字（<-20%=6.0%・>=+20%=5.1%）だが、<-20%は月次等重みで5.1%へ低下しヒットの38.6%がコロナ後リバウンド3ヶ月に集中＝相場位置の代理変数。帯シェアも2020年→2026年で<-20%が28.4%→5.3%と激変し、銘柄の性質でなく時期を測っている。§8-6原則A（触媒なしの価格配置）の実証例",
+      "fp_id": "FP-098"
+    },
+    {
+      "source": "avoidance",
       "name": "自社株買い決議は+20%逆方向",
       "family": "自社株買い",
       "entry_condition": "TDnet表題マッチ「自己株式取得に係る事項の決定/市場買付/立会外買付」の開示イベント買い（サイズ不問）",
@@ -1781,7 +1804,7 @@
         "自己株式"
       ],
       "ref": "catalog:128（2026-08-02 記述測定: TOP500 n=1,148・+20%到達2.5%=ベース9.5%の約1/4・EV+0.96%は中央値+0.72%の下支え型＝急騰と逆方向。サイズ≥3%条件は本文数値要のため未検証だが無条件版1/4から回復見込み薄・output/tdnet/event_profile.md）",
-      "fp_id": "FP-098"
+      "fp_id": "FP-099"
     },
     {
       "source": "avoidance",
@@ -1801,7 +1824,7 @@
         "逆指標"
       ],
       "ref": "catalog:1486-1491（golden_cross_2575 fail + ma200_reclaim fail の2敗を踏まえた確定知見: 「監視者の多い定番テクニカル転換シグナルは+20%狙いでは逆指標」）",
-      "fp_id": "FP-099"
+      "fp_id": "FP-100"
     },
     {
       "source": "avoidance",
@@ -1821,7 +1844,7 @@
         "高値更新"
       ],
       "ref": "catalog:73（表: range_breakout fail・lift0.12[0,0.35]・『低ボラ銘柄は構造的に+20%が出ない』）/ catalog:764",
-      "fp_id": "FP-100"
+      "fp_id": "FP-101"
     },
     {
       "source": "avoidance",
@@ -1842,7 +1865,7 @@
         "追随買い"
       ],
       "ref": "catalog:731-735（ul_fade_standalone: EV点推定-8.13% CI[-14.10%,-1.41%]・事前凍結基準によりfade確認=成立）",
-      "fp_id": "FP-101"
+      "fp_id": "FP-102"
     },
     {
       "source": "avoidance",
@@ -1863,7 +1886,7 @@
         "解放反発"
       ],
       "ref": "catalog:1784,1881（ll_release_rebound: lift3.10[1.99,4.65]だがEV(なし)-5.14%[-8.09%,-2.36%]・除外=AVOIDANCE_SIGNAL）",
-      "fp_id": "FP-102"
+      "fp_id": "FP-103"
     },
     {
       "source": "avoidance",
@@ -1885,7 +1908,7 @@
         "連続ランキング"
       ],
       "ref": "catalog:2453-2464（rank_port_v1_composite v1棄却・コスト後月次超過-0.19%・NW t=-0.49・『この期間・TOP500・コスト条件では短期リバーサル買いが一貫して不利』・型転換トラックはv1で一旦停止）",
-      "fp_id": "FP-103"
+      "fp_id": "FP-104"
     },
     {
       "source": "avoidance",
@@ -1908,7 +1931,7 @@
         "需給"
       ],
       "ref": "catalog §7-AH見送り（naive全解除20bd中央値-10.7%・信用買残の実減少は解除の約9割に該当し左裾を絞れず・機序clean な左裾成分なし・§8-6墓場②実証・trial非消費）",
-      "fp_id": "FP-104"
+      "fp_id": "FP-105"
     },
     {
       "source": "misokuri",
@@ -1929,7 +1952,7 @@
         "格付け"
       ],
       "ref": "catalog:2543（§8-2: activist_5pct §6 fail済み＋EDINET保有割合フィールド不在で§7-P実施不能確定。再試行は新データ源＋新定義＋期間再定義の三条件でのみ）",
-      "fp_id": "FP-105"
+      "fp_id": "FP-106"
     },
     {
       "source": "misokuri",
@@ -1949,7 +1972,7 @@
         "需給"
       ],
       "ref": "catalog:2544（§8-2: short_crowd_exit既試行(pending)と同概念の疑い。事前登録前に§7の該当周を突合し同一なら変種禁止）",
-      "fp_id": "FP-106"
+      "fp_id": "FP-107"
     },
     {
       "source": "misokuri",
@@ -1970,7 +1993,7 @@
         "格付け"
       ],
       "ref": "catalog:2545（§8-2: split family同一期間変種禁止。§7でsplit_execution rejected済み。期間再定義後のみ）",
-      "fp_id": "FP-107"
+      "fp_id": "FP-108"
     },
     {
       "source": "misokuri",
@@ -1985,7 +2008,7 @@
         "格上げ"
       ],
       "ref": "catalog:2546（§8-2: データ経路が全滅=主要8サイト規約禁止・有償のみ。効果は小型>大型でTOP500と不整合。hold続行）",
-      "fp_id": "FP-108"
+      "fp_id": "FP-109"
     },
     {
       "source": "misokuri",
@@ -2006,7 +2029,7 @@
         "格付け"
       ],
       "ref": "catalog:2547（§8-2: TOP500対象外。不採用）",
-      "fp_id": "FP-109"
+      "fp_id": "FP-110"
     },
     {
       "source": "misokuri",
@@ -2026,7 +2049,7 @@
         "格付け"
       ],
       "ref": "catalog:2548（§8-2: 株式への波及実証が薄い。不採用）",
-      "fp_id": "FP-110"
+      "fp_id": "FP-111"
     },
     {
       "source": "misokuri",
@@ -2046,7 +2069,7 @@
         "逆張り"
       ],
       "ref": "catalog:576（§7-D: 棄却済みリバーサル家族の派生。市場条件付けの差分はあるが家族リスク濃厚 → hold）",
-      "fp_id": "FP-111"
+      "fp_id": "FP-112"
     },
     {
       "source": "misokuri",
@@ -2067,7 +2090,7 @@
         "進捗率"
       ],
       "ref": "catalog:577（§7-D: PEAD家族(holdout棄却)+カタログD群既存の再発見 → 追加せず。D群『上方修正常連』の優先度裏付けとしてのみ記録）",
-      "fp_id": "FP-112"
+      "fp_id": "FP-113"
     },
     {
       "source": "misokuri",
@@ -2086,7 +2109,7 @@
         "需給"
       ],
       "ref": "catalog:578（§7-D: 棄却済み『売り長×トレンド(リフト0.60)』の閾値変更版 → 却下）",
-      "fp_id": "FP-113"
+      "fp_id": "FP-114"
     },
     {
       "source": "misokuri",
@@ -2101,7 +2124,7 @@
         "地合い"
       ],
       "ref": "catalog:579（§7-D: bear地合い確定知見と重複・米国固有指標の縮小版 → hold）",
-      "fp_id": "FP-114"
+      "fp_id": "FP-115"
     },
     {
       "source": "misokuri",
@@ -2117,7 +2140,7 @@
         "自社株買い"
       ],
       "ref": "catalog:580（§7-D: カタログ§2既存v1の再発見。新規性なし・優先度メモのみ）",
-      "fp_id": "FP-115"
+      "fp_id": "FP-116"
     },
     {
       "source": "misokuri",
@@ -2139,7 +2162,7 @@
         "格付け"
       ],
       "ref": "catalog:581（§7-D: n=18の再分割は統計的に無意味 → 却下。activist_5pct fail(n=18)と同一母集団）",
-      "fp_id": "FP-116"
+      "fp_id": "FP-117"
     },
     {
       "source": "misokuri",
@@ -2154,7 +2177,7 @@
         "低PBR"
       ],
       "ref": "catalog:582（§7-D: +20%/月との適合度問題・上場前データ不能 → 却下）",
-      "fp_id": "FP-117"
+      "fp_id": "FP-118"
     },
     {
       "source": "excluded_family",
@@ -2176,7 +2199,7 @@
         "逆張り"
       ],
       "ref": "catalog:2514,2591（§7-AF: 敗北済み価格リバーサルfamily(§7-AD停止裁定・strev系5試行)の条件付き変種。再訴は期間再定義+追加裁定後のみ。⚠️S安反発EV-5.14%の回避知見と要突合）",
-      "fp_id": "FP-118"
+      "fp_id": "FP-119"
     },
     {
       "source": "excluded_family",
@@ -2196,7 +2219,7 @@
         "波及"
       ],
       "ref": "catalog:2514,2581（§7-AF: 既存fail sector_momentum_laggard(n=2810)等と同一設計の反対バケット＝近傍再投入。§7-V業種波及family変種禁止にも抵触）",
-      "fp_id": "FP-119"
+      "fp_id": "FP-120"
     },
     {
       "source": "excluded_family",
@@ -2218,7 +2241,7 @@
         "進捗率"
       ],
       "ref": "catalog:2514,2587（§7-AF: 既存SUE/PEAD系と近縁＝dedup要。§6拡張ルール5項＝同一期間への追加バッチ禁止）",
-      "fp_id": "FP-120"
+      "fp_id": "FP-121"
     },
     {
       "source": "excluded_family",
@@ -2241,7 +2264,7 @@
         "格付け"
       ],
       "ref": "catalog:2514,2592（§7-AF: BL-1/§7-AE（TOB）と統合整理。他はTDnetアドオン判断待ち）",
-      "fp_id": "FP-121"
+      "fp_id": "FP-122"
     },
     {
       "source": "excluded_family",
@@ -2258,7 +2281,7 @@
         "政策テーマ"
       ],
       "ref": "catalog:2514,2586（§7-AF: データ源なし）",
-      "fp_id": "FP-122"
+      "fp_id": "FP-123"
     }
   ]
 }
