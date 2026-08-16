@@ -58,3 +58,40 @@
 - 英語圏偏重（日本語語彙は入れてあるが日本語クエリは未設計）
 - §16d の負の実測（「誰より早く」は効かない）が本レーンにも当てはまる可能性は排除されていない
   ——だから前向きで測る
+
+## 6. v2 追補（凍結 2026-08-16・第3R敵対レビューR1対応・Codex v2審の必須項目を収載）
+
+**v2 の変更**（実装= collector/config・selftest 28件）:
+- RSS検索OR句を config `search_or_phrases` へ外出し（v1のハードコード修理）。**全ASCII語彙が
+  いずれかの検索句と部分文字列関係を持つことを selftest で機械検証**（カバレッジ保証）
+- 語彙追加: 攻撃系（missile/air/precision strike・airstrike・sabotage・blast・explosion）・
+  閉鎖系（port/mine closure・suspends/halts operation・suspends export・mine collapse）
+- 慣用句ガード凍結: strike gold / strike it rich / blast from the past / silver lining（実疎通で検出）・
+  語彙側も単語境界照合（precisiON STRIKE 誤一致の修理）
+- 施設クエリ2本（copper_mines 13施設・oil_chokepoints 8施設）。**facilities 21施設と or_terms は
+  1:1 整合を selftest で機械検証**（未クエリ施設ゼロ）。施設クエリでは攻撃語ガードの設備語要件を
+  施設名一致で充足とみなす
+- **event_id（事象バケット）**: sha256(sorted(series)|vocab_family|施設subject|pubdate UTC日)[:12]。
+  ⚠️ 真の事象IDでなく**日次バケットの代理**: 同日・同商品・同ファミリーの別事象は施設名が無い限り
+  合流し、日跨ぎの継続事象は分裂する（既知の限界）。dup_event=true は同バケット2件目以降
+
+**分析単位の凍結**（Codex 必須項目）:
+- 指標は3つを別々に数える: ①発火行数 ②ユニーク event_id 数 ③通知件数（=①でなく②系）
+- **§4「初回読み取りの発火20件」= ユニーク event_id 数**と定義変更（v1の曖昧さ解消）
+- 代表行= 各 event_id の**最初の非 false_positive 行**。評価器は各 event_id につき代表行だけを
+  評価し、先頭行が後日 FP 化されたら**次の非FP行へ自動で繰り上がる**（dup_event は情報フラグであり
+  評価の除外条件ではない。v1行は event_id が無いため従来どおり行単位＝後方互換）
+- false_positive 指定は **link 単位**（同 event_id の他行には自動では及ばない。バケット全体を
+  除外する時は各行の link に対して行を追記する）
+
+**v1/v2 の分離**（凍結）:
+- 分離条件= `config_version` **と** `config_sha` の両方（行に焼き込み済み）
+- v1 の観測3行は保持・再解釈禁止・**v2 の件数に混入させない**
+- v2 開発中の dry-run 行は台帳から除去済み（v2 観測は下記凍結時刻から）
+
+**凍結記録**:
+- v2 観測開始時刻（UTC）= `2026-08-16T12:33:03Z`
+- configs/news_shock.json (v2) sha256 = `99fc5ce4af43c36311842b46dce31f862d3ab8c01aafbf9d5490e8628de6f85d`
+- 凍結対象= config 全体（search_or_phrases・vocab・vocab_families・facilities・queries）＋
+  collector の慣用句/攻撃語ガード定数。本ファイル自身の sha は tasks/news_shock_lane.md に記帳
+- 日本語語彙は en-US クエリ構成では取得経路なし＝日本語クエリ新設（将来のv3）まで未稼働と明示

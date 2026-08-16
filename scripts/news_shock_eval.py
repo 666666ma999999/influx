@@ -69,7 +69,19 @@ def evaluate(ledger: Path = LEDGER, bars_dir: Path = BARS_DIR,
     rows = [json.loads(l) for l in ledger.read_text(encoding="utf-8").splitlines()
             if l.strip()]
     fp_links = {r.get("link") for r in rows if r.get("type") == "false_positive"}
-    hits = [r for r in rows if r.get("status") == "hit" and r.get("link") not in fp_links]
+    # 分析単位=事象: 各 event_id の**最初の非 false_positive 行**だけを代表として評価する
+    # （プレレジ§6の代表行規則。先頭行が後日FP化されたら次の非FP行へ繰り上がる＝Codex再審の注文。
+    #  v1行は event_id が無いので従来どおり行単位・FP除外のみ＝後方互換）
+    hits, seen_ev = [], set()
+    for r in rows:
+        if r.get("status") != "hit" or r.get("link") in fp_links:
+            continue
+        eid = r.get("event_id")
+        if eid:
+            if eid in seen_ev:
+                continue
+            seen_ev.add(eid)
+        hits.append(r)
     done = {(r.get("link"), r.get("code"), r.get("window")) for r in rows
             if r.get("type") in ("evaluation", "evaluation_skipped")}
     bdays = sorted(Path(f).name[:8] for f in glob.glob(str(bars_dir / "*.json.gz")))
@@ -170,7 +182,13 @@ def _selftest() -> int:
                 mk("2026-01-08T22:20:00+00:00", "http://d", "8888"),  # 基準1/9=最終日でAdjO欠損・繰延先データ未到来→保留
                 {"run_at": "2026-01-01T21:20:00+00:00", "link": "http://fp", "status": "hit",
                  "beneficiaries": [{"code": "9999", "tier": "confirmed", "type_label": ""}]},
-                {"type": "false_positive", "link": "http://fp"}]
+                {"type": "false_positive", "link": "http://fp"},
+                # 代表行の繰り上げ: 同一 event_id の先頭行がFP → 2件目が代表として評価される
+                {**mk("2026-01-01T21:20:00+00:00", "http://e1"), "event_id": "ev1",
+                 "dup_event": False},
+                {**mk("2026-01-01T21:20:00+00:00", "http://e2"), "event_id": "ev1",
+                 "dup_event": True},
+                {"type": "false_positive", "link": "http://e1"}]
         led.write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in rows),
                        encoding="utf-8")
         evaluate(led, bars, td / "topix.json.gz")
@@ -187,6 +205,9 @@ def _selftest() -> int:
             (a5 and abs(a5[0]["stock_pct"] - ((108 / 101 - 1) * 100)) < 0.01,
              "式=基準始値→+5営業日終値"),
             (not any(r["link"] == "http://fp" for r in evs), "false_positive は評価しない"),
+            (any(r["link"] == "http://e2" for r in evs)
+             and not any(r["link"] == "http://e1" for r in evs),
+             "代表行がFP化されたら同一event_idの次の非FP行へ繰り上げ"),
             (c5 and c5[0]["entry_day"] == "20260103", "基準日にAdjO欠損→翌営業日へ1日繰延"),
             (not d_rows, "繰延先の営業日データ未到来なら結論を書かず保留（skipped を確定させない）"),
         ]

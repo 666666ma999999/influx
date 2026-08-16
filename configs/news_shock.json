@@ -1,6 +1,6 @@
 {
-  "_comment": "news_shock レーン（docs/price-watch-universe.md §16u が入場条件の正本）。商品名つき供給ショックのニュースだけを拾う。queries の term は Google News RSS の検索語（英語）・series_ids は configs/price_universe_sources.json の系列ID（受益カードの引き当て先）。vocab は凍結語彙＝ローカル AND 判定に使う（Google の曖昧一致を通さない）。対象外（国内指標・ニュース経路が別）: jepx / scrap-steel / scrap-tokyosteel / uss-used-car / toreca-sar / mtool-orders / semicon-equip / auto-production / office-rent-tokyo / visitors-jnto / salmon",
-  "version": 1,
+  "_comment": "news_shock レーン v2（docs/price-watch-universe.md §16u が入場条件の正本・第3R敵対レビューR1対応 2026-08-16）。v1からの変更: ①RSS検索のOR句を search_or_phrases としてconfig化（v1はコード直書き＝凍結が効いていなかったバグの修理） ②攻撃・閉鎖語彙を追加 ③施設名→series の静的マッピング（facilities）と施設クエリ2本 ④イベントID（series|vocab_family|pubdate日付のsha）で同一事象の多重計上を防ぐ。判定は〈商品名 or 施設名〉AND〈凍結語彙〉。対象外（国内指標・ニュース経路が別）: jepx / scrap-steel / scrap-tokyosteel / uss-used-car / toreca-sar / mtool-orders / semicon-equip / auto-production / office-rent-tokyo / visitors-jnto / salmon",
+  "version": 2,
   "generated_at": "2026-08-16",
   "collect": {
     "when_days": 2,
@@ -9,14 +9,41 @@
     "gl": "US",
     "ceid": "US:en"
   },
+  "search_or_phrases": [
+    "\"export ban\"", "\"export restriction\"", "embargo", "strike", "\"force majeure\"",
+    "\"mine accident\"", "\"mine collapse\"", "\"supply disruption\"", "\"production halt\"",
+    "attack", "sabotage", "blast", "explosion", "\"port closure\"", "\"mine closure\"",
+    "\"suspends operation\"", "\"halts operation\"", "\"suspends export\""
+  ],
+  "_search_note": "全ローカル語彙（英語）は必ずいずれかの検索句と部分文字列関係を持つ（カバレッジ selftest で機械検証・Codex v2審 C1対応）。日本語語彙は en-US クエリ構成では取得経路が無い＝将来の日本語クエリ新設まで未稼働と明示",
   "vocab": [
     "export ban", "export restriction", "embargo", "force majeure",
     "on strike", "miners strike", "miners' strike", "workers strike", "labor strike",
     "labour strike", "general strike", "strike halts", "drone strike",
+    "missile attack", "missile strike", "air strike", "airstrike", "precision strike",
+    "sabotage", "blast", "explosion",
+    "port closure", "mine closure", "suspends operation", "halts operation",
     "mine accident", "mine collapse", "supply disruption", "production halt",
     "suspends export", "輸出禁止", "禁輸", "輸出規制", "ストライキ", "不可抗力", "操業停止"
   ],
-  "_vocab_note": "v1の単語 strike は英慣用句 strike gold（大当たり）に誤マッチ（2026-08-16 実疎通で17件中13件がノイズ）→ 句単位へ精密化。RSSクエリ側は広めに取り、精度はこのローカル凍結語彙で担保する設計",
+  "_vocab_note": "v1の単語 strike は英慣用句 strike gold（大当たり）に誤マッチ→句単位化＋strike gold除外ガード。v2で攻撃・閉鎖系を追加（第3R B2指摘: missile attack/sabotage/blast/port closure が構造的に漏れていた）。攻撃・爆発系（drone strike/missile */sabotage/blast/explosion）は供給設備語（terminal/refinery/pipeline/mine/smelter/port/facility/platform）を伴う時のみ有効＝collector の ATTACK_VOCAB ガード",
+  "vocab_families": {
+    "export_ban": ["export ban", "export restriction", "embargo", "suspends export", "輸出禁止", "禁輸", "輸出規制"],
+    "strike": ["on strike", "miners strike", "miners' strike", "workers strike", "labor strike", "labour strike", "general strike", "strike halts", "ストライキ"],
+    "attack": ["drone strike", "missile attack", "missile strike", "air strike", "airstrike", "precision strike", "sabotage", "blast", "explosion"],
+    "accident": ["mine accident", "mine collapse"],
+    "halt": ["force majeure", "port closure", "mine closure", "suspends operation", "halts operation", "supply disruption", "production halt", "不可抗力", "操業停止"]
+  },
+  "facilities": {
+    "escondida": ["copper"], "collahuasi": ["copper"], "el teniente": ["copper"],
+    "chuquicamata": ["copper"], "codelco": ["copper"], "antofagasta minerals": ["copper"],
+    "grasberg": ["copper"], "kamoa": ["copper"], "las bambas": ["copper"],
+    "cerro verde": ["copper"], "oyu tolgoi": ["copper"], "antamina": ["copper", "zinc"],
+    "freeport-mcmoran": ["copper"],
+    "abqaiq": ["wti", "brent"], "ras tanura": ["wti", "brent"], "kharg island": ["wti", "brent"],
+    "strait of hormuz": ["wti", "brent"], "novorossiysk": ["wti", "brent"],
+    "primorsk": ["wti", "brent"], "druzhba": ["wti", "brent"], "ceyhan": ["wti", "brent"]
+  },
   "queries": [
     {"term": "copper", "series_ids": ["copper"]},
     {"term": "aluminum", "series_ids": ["aluminum"]},
@@ -35,6 +62,12 @@
     {"term": "dry bulk shipping", "series_ids": ["bdi"]},
     {"term": "iridium", "series_ids": ["fmbi-iridium"]},
     {"term": "ruthenium", "series_ids": ["fmbi-ruthenium"]},
-    {"term": "NAND flash", "series_ids": ["nand_spot"]}
+    {"term": "NAND flash", "series_ids": ["nand_spot"]},
+    {"facility_group": "copper_mines",
+     "or_terms": ["Escondida", "Collahuasi", "\"El Teniente\"", "Chuquicamata", "Codelco", "\"Antofagasta Minerals\"", "Grasberg", "Kamoa", "\"Las Bambas\"", "\"Cerro Verde\"", "\"Oyu Tolgoi\"", "Antamina", "Freeport-McMoRan"],
+     "series_ids": ["copper"]},
+    {"facility_group": "oil_chokepoints",
+     "or_terms": ["Abqaiq", "\"Ras Tanura\"", "\"Kharg Island\"", "\"Strait of Hormuz\"", "Novorossiysk", "Primorsk", "Druzhba", "Ceyhan"],
+     "series_ids": ["wti", "brent"]}
   ]
 }

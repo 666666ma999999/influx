@@ -31,7 +31,8 @@
 ## 凍結記録（2026-08-16）
 
 - configs/news_shock.json sha256 = `57ba12012285d04b5877d9edd065156e7c57bbc7bcb977548646bb53bdced282`
-- prereg_sha256: `8a93f25eb5fed941a2c1ebf0ee4d20a7d77432299861d5d1ade7e11f27d5a7b3`
+- prereg_sha256 (v1凍結時): `8a93f25e…`（履歴）
+- prereg_sha256 (v2追補後 2026-08-16・Codex GO): `13550da87ce54bd85ac5ed3d7a495e539a5407052e02bdc392b98a43931bf576`
 - 台帳初期化: 凍結時に data/news_shock/news_log.jsonl を削除→観測開始（凍結前の試走行は残さない）
 - launchd 登録: ユーザーの `!` 手打ち待ち（本ファイル末尾のコマンド）
 
