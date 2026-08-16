@@ -1,7 +1,7 @@
 {
   "_comment": "B2B価格週次チェッカーの対象系列（docs/price-watch-universe.md の機械取得可能サブセット）。TE=tradingeconomics.com/commodity/<slug>（存在しないスラッグも200を返すため行スコープ+ラベル一致で判定）。閾値超えのみ表出力。",
   "_protocol": "受益カード v2（2026-07-28 2AI一致設計・docs/price-watch-universe.md §0b が正本）: beneficiaries は銘柄カードの配列。btype=受益3類型(1:素材製造販売 2:権益・在庫 3:運賃・処理料 4:代替品受益)。tier=confirmed(E1/E2証拠あり)/provisional(型合格・証拠未取得=表示に(仮))/rejected(理由必須・買いシグナル禁止)。sign=+のみ買い方向。verified から12ヶ月超で STALE 表示。rejected も理由つきで残す=再提案ループ防止。TOP1000圏外は関門Bで機械照合済(2026-07-28)。",
-  "version": 3,
+  "version": 4,
   "alert": {
     "weekly_pct": 5.0,
     "four_week_pct": 10.0
@@ -37,6 +37,46 @@
           "tier": "rejected",
           "evidence": "E1:会社感応度 銅±100$/tで0.3億円＝桁チェック不合格（決算実読2026-08-15）",
           "verified": "2026-08-15"
+        },
+        {
+          "code": "1515",
+          "btype": 2,
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "自社銅鉱山の銅価が利益変動の主（center_pin台帳・推測）。E1/E2未取得",
+          "verified": "2026-08-16"
+        },
+        {
+          "code": "8002",
+          "btype": 2,
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "チリ銅権益の持分利益が最大の変動要因（center_pin台帳）。E1/E2未取得",
+          "verified": "2026-08-16"
+        },
+        {
+          "code": "9824",
+          "btype": 2,
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "電線専門卸で売価が銅建値連動・在庫評価益も同時発生（§0a 3班実測）。E2構成比未取得",
+          "verified": "2026-08-16"
+        },
+        {
+          "code": "9934",
+          "btype": 2,
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "電線主力で銅建値が売価に直結（§0a 3班実測）。非電線比率高くE2構成比未取得",
+          "verified": "2026-08-16"
+        },
+        {
+          "code": "3036",
+          "btype": 2,
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "非鉄商社・LME価格が売上単価と在庫評価に直入（台帳）。8/4発火→8/13超過+10.6pt(E3補強・単独不可)。E2未取得",
+          "verified": "2026-08-16"
         }
       ]
     },
@@ -56,6 +96,14 @@
           "code": "5741",
           "tier": "rejected",
           "reason": "同上(圧延マージン型)"
+        },
+        {
+          "code": "3036",
+          "btype": 2,
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "非鉄商社（アルミ・銅LME直結・台帳）。E2未取得",
+          "verified": "2026-08-16"
         }
       ]
     },
@@ -78,6 +126,14 @@
           "code": "5541",
           "tier": "rejected",
           "reason": "TOP1000圏外(TOPIX Small 2・関門B機械照合 2026-07-28)"
+        },
+        {
+          "code": "5480",
+          "btype": 2,
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "E1:サーチャージは転嫁（FY27予想 販売価格+79億/原料-75億相殺）・利益に残るのは在庫評価19億=OP130億の15%（決算実読2026-08-15）",
+          "verified": "2026-08-16"
         }
       ]
     },
@@ -269,6 +325,14 @@
           "tier": "confirmed",
           "evidence": "E2:油ガス生産が主業",
           "verified": "2026-07-28"
+        },
+        {
+          "code": "5021",
+          "btype": 2,
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "E2:石油開発セグメント653億/連結経常1,492億=43.7%・原油売価が直接P/L（決算実読2026-08-15）",
+          "verified": "2026-08-16"
         }
       ],
       "driver": "crude-oil"
@@ -295,6 +359,14 @@
           "tier": "confirmed",
           "evidence": "E2:油ガス生産が主業",
           "verified": "2026-07-28"
+        },
+        {
+          "code": "5021",
+          "btype": 2,
+          "sign": "+",
+          "tier": "confirmed",
+          "evidence": "E2:同wti（石油開発43.7%・決算実読2026-08-15）",
+          "verified": "2026-08-16"
         }
       ],
       "driver": "crude-oil"
@@ -434,6 +506,14 @@
           "tier": "confirmed",
           "evidence": "E2:クロルアルカリ(塩ビ・苛性ソーダ)事業",
           "verified": "2026-07-28"
+        },
+        {
+          "code": "4043",
+          "btype": 1,
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "E2:化成品(苛性ソーダ・塩ビ)OP97億/連結370億=26.2%（決算実読2026-08-15）。30%未達のためprovisional",
+          "verified": "2026-08-16"
         }
       ]
     },
