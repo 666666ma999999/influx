@@ -1969,6 +1969,33 @@ census の「取得は動くがカード無し」27系列に受益カードを�
 カードは同一セッション内で撤回済み（config に差分なし）。**教訓: 1四半期の good quarter で通期ベースの却下を覆さない。
 在庫評価益は符号反転する。既存カードの `reason` を読んでから判定する。**
 
+### では「主役の会社」はどこにいるのか（2026-08-17 オーナー質問・**候補であってカードではない**）
+
+日本に居ないだけで、**海外には各商品の主役が上場している**。§16w で海外カードを解禁したので登録可能になった。
+以下は一次情報で「その商品が主力」と確認した**候補**で、**5関門（営業利益構成比≥30%の決算実読）は未実施**。
+カード化には Glanbia と同じ手続きが要る。純度の注意書きを付けたのは、名前だけで登録すると §0b 関門A違反になるため。
+
+| 系列 | 主役の候補（上場先） | 実測メモ（出所は下記） | 純度の注意 |
+|---|---|---|---|
+| lithium | **Pilbara Minerals**（ASX:PLS）／Albemarle（NYSE:ALB）／SQM（NYSE） | ALB は2026Q2 売上$1.7bn(+31%)・調整EBITDA+155%とリチウム市況に強く反応 | **ALB はリチウム＋臭素＋精製触媒の3事業／SQM はリチウム＋肥料＋ヨウ素**＝関門B要確認。**PLS はリチウム専業**で純度が高い |
+| uranium | **Kazatomprom**（LSE GDR）／Cameco（NYSE:CCJ） | Kazatomprom が世界生産の約40%・ウラン売上約$3.3bn、Cameco 約$2.1bn | Cameco は Westinghouse 持分を持つ＝ウラン単独比率の確認が要る |
+| urea（尿素） | **CF Industries**（NYSE:CF） | 報道が明確に「nitrogen の pure play」と位置づけ。北米安価ガスが原料 | Nutrien・Yara は多角化（カリ/リン/欧州ガスコスト）＝純度が落ちる |
+| rubber（天然ゴム） | **Sri Trang Agro-Industry**（SET:STA） | 年商約$2.6bn の天然ゴム一貫生産 | ゴム**手袋**事業も持つ＝川下の比率確認が要る |
+| lumber（木材） | **West Fraser**（TSX/NYSE:WFG）／Weyerhaeuser（NYSE:WY） | WFG は TTM 売上$5.24bn・2026Q2 $1.434bn、WY は2026Q2 売上$1.87bn | WY は**林地REIT＋不動産**を含む＝製材単独の比率確認が要る |
+| 石化スプレッド | LyondellBasell / Dow 等（未調査） | — | 未調査。日本勢は §16x 上表のとおり却下維持 |
+
+出所（すべて 2026-08-17 実読）: [INN 7 Biggest Lithium-mining Companies](https://investingnews.com/daily/resource-investing/battery-metals-investing/lithium-investing/top-lithium-producers/)／
+[Investing.com Albemarle Q2 2026](https://www.investing.com/news/company-news/albemarle-q2-2026-slides-lithium-pricing-surge-drives-155-ebitda-jump-93CH-4842774)／
+[World Nuclear News（Cameco/Kazatomprom 2025生産）](https://world-nuclear-news.org/articles/Cameco-Kazatomprom-release-2025-figures)／
+[CF Industries 深掘り記事](https://markets.financialcontent.com/stocks/article/finterra-2026-4-1-the-nitrogen-giants-new-frontier-a-deep-dive-into-cf-industries-nyse-cf)／
+[Sri Trang 会社情報](https://www.sritranggroup.com/en/business/natural-rubber)／
+[Weyerhaeuser Q2 2026](https://www.investing.com/news/company-news/weyerhaeuser-q2-2026-slides-lumber-recovery-drives-earnings-beat-93CH-4828923)／
+[West Fraser Q2 2026](https://woodcentral.com.au/west-fraser-q2-2026-results/)
+
+**次の1周の型**（Glanbia と同じ）: ①候補1社の直近決算を実読 ②セグメント営業利益構成比を算出（開示値でなければ provisional 止まり）
+③`market`/`ticker`/`benchmark` を付けてカード化 ④`foreign_forward` が自国指数超過で前向き記録。
+**一度に全部やらない**——1商品1社ずつ関門を通す（量産は 2026-07-29 裁定で禁止）。
+
 ### では、この27系列の監視に意味はあるのか
 
 ある。受益（買い）は出せないが、**保有銘柄への逆風（コスト警報）としては機能する**（天然ゴム↑＝タイヤ4社の原価増、
