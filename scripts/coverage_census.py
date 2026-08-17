@@ -152,6 +152,12 @@ def classify_cards(
         if not isinstance(card, dict):
             warnings.append(f"{where}: カードが辞書でない")
             continue
+        # §16w: 海外カードは ticker/benchmark が揃って初めて「使えるカード」。
+        # 欠けたものを有効カードに数えると census が実力を過大表示する（Codex 3審 C）
+        market = card.get("market") or "JP"
+        if market != "JP" and not (card.get("ticker") and card.get("benchmark")):
+            warnings.append(f"{where}: {market} カードに ticker/benchmark が無い（無効扱い）")
+            continue
         code, sign, tier = card.get("code"), card.get("sign"), card.get("tier")
         if tier is not None and tier not in KNOWN_TIERS:
             warnings.append(f"{where}: 未知の tier={tier!r}（コード{code}）")

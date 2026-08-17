@@ -67,6 +67,11 @@ def beneficiaries_of(series_ids: list[str], sources_path: Path = SOURCES) -> lis
             code = b.get("code")
             if not code or code in seen:
                 continue
+            # §16w（2026-08-17 P-08c）: 海外上場カードはこのレーンに入れない。
+            # news_shock の評価器は code+"0" を日本株コードとして対TOPIX評価するため、
+            # 海外銘柄が混ざると日本株の検定が壊れる（fail-closed・混入経路を塞ぐ）
+            if (b.get("market") or "JP") != "JP":
+                continue
             if b.get("sign") == "+" and b.get("tier") in ("confirmed", "provisional"):
                 seen.add(code)
                 out.append({"code": code, "tier": b["tier"],

@@ -338,6 +338,8 @@ def parse_usda_ndpsr(payload: dict, price_key: str) -> dict | None:
             val = float(str(price).replace(",", ""))
         except ValueError:
             continue
+        if val != val or val in (float("inf"), float("-inf")):
+            continue  # NaN/Infinity は float() を通るので明示除外
         prev = best.get(wk_iso)
         if prev is None or cd > prev[0]:
             best[wk_iso] = (cd, val)
@@ -345,7 +347,14 @@ def parse_usda_ndpsr(payload: dict, price_key: str) -> dict | None:
         return None
     weeks = sorted(best)
     cur = best[weeks[-1]][1]
-    prev_v = best[weeks[-2]][1] if len(weeks) >= 2 else None
+    # 前週比は「ちょうど7日前の週」がある時だけ出す。欠測週があると2週前を分母にした値を
+    # weekly として出してしまい、閾値判定が実態より大きく振れる（Codex 3審 B）
+    prev_v = None
+    if len(weeks) >= 2:
+        d_cur = datetime.strptime(weeks[-1], "%Y-%m-%d")
+        d_prev = datetime.strptime(weeks[-2], "%Y-%m-%d")
+        if (d_cur - d_prev).days == 7:
+            prev_v = best[weeks[-2]][1]
     return {
         "value": round(cur, 4),
         "day_pct": None,
@@ -556,7 +565,9 @@ def beneficiaries_display(s: dict, today: str) -> str:
         market = b.get("market") or "JP"
         if market != "JP":
             if not b.get("ticker") or not b.get("benchmark"):
-                parts.append(f"[{market}]{b.get('name') or b.get('code')}(要ticker/benchmark・非表示)")
+                # 受益者としては出さない（価格も評価もできない）。握りつぶさず診断だけ残す
+                print(f"  [warn] §16w: {market} カード {b.get('name') or b.get('code')} は "
+                      f"ticker/benchmark 欠落のため非表示", file=sys.stderr)
                 continue
         tag = "" if b["tier"] == "confirmed" else "(仮)"
         stale = "(STALE要再確認)"  # verified 無しは無期限に新鮮扱いしない（Codex軽微指摘）
@@ -566,6 +577,9 @@ def beneficiaries_display(s: dict, today: str) -> str:
                 stale = ""
         label = b["code"] if market == "JP" else f"[{market}]{b.get('name') or b['ticker']}"
         parts.append(f"{label}{tag}{stale}")
+    if not parts:
+        # カードはあったが全て fail-closed で落ちた場合も「無し」と言い切る（空文字を返さない）
+        return "受益者なし(表示可能なカードなし・発火記録のみ)"
     return "/".join(parts)
 
 
@@ -919,6 +933,12 @@ def main() -> int:
             fwd.record_firings(rise_alerts, today)
         except Exception as exc:  # noqa: BLE001  記録失敗で本処理を落とさない
             print(f"[forward] WARN: 前向き記録に失敗: {str(exc)[:100]}")
+        # §16w: 海外カードは自国指数超過で別台帳へ（対TOPIX検定には混ぜない）
+        try:
+            import foreign_forward as ffwd
+            ffwd.record_firings(rise_alerts, today)
+        except Exception as exc:  # noqa: BLE001  記録失敗で本処理を落とさない
+            print(f"[foreign] WARN: 海外前向き記録に失敗: {str(exc)[:100]}")
     else:
         print("閾値超えなし（4週累積は履歴4本蓄積後から判定）")
     return 0 if ok > 0 else 1
