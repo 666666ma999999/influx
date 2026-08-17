@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.influx.news-shock-probe</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>-lc</string>
+        <string>bash /Users/masaaki_nagasawa/Desktop/biz/influx/scripts/news_shock_probe_run.sh</string>
+    </array>
+
+    <!-- R2時計: 2時間毎（本線07:20/19:00 との first_seen 差を測る対照レーン） -->
+    <key>StartInterval</key>
+    <integer>7200</integer>
+
+    <key>RunAtLoad</key>
+    <false/>
+
+    <key>StandardOutPath</key>
+    <string>/Users/masaaki_nagasawa/.claude/state/news-shock-probe.out.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/masaaki_nagasawa/.claude/state/news-shock-probe.err.log</string>
+</dict>
+</plist>

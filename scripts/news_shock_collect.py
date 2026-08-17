@@ -36,6 +36,9 @@ sys.path.insert(0, str(APP / "scripts"))
 CONFIG = APP / "configs/news_shock.json"
 SOURCES = APP / "configs/price_universe_sources.json"
 LEDGER = APP / "data/news_shock/news_log.jsonl"
+# R2「時計」: 高頻度ポーリング対照レーンの first_seen 台帳（本線と完全分離・
+# tasks/news_shock_preregister.md §7 が指標の正本）
+PROBE_LEDGER = APP / "data/news_shock/first_seen_probe.jsonl"
 
 _TAG = re.compile(r"<[^>]+>")
 
@@ -334,15 +337,81 @@ def _selftest() -> int:
     return ng
 
 
+def run_probe() -> int:
+    """R2時計の対照レーン: 同一クエリ・同一判定で first_seen だけを高頻度記録する。
+
+    本線との違い（凍結・プレレジ§7）: 通知なし・受益引き当てなし・本線台帳に書かない。
+    重複キーは (term, link)＝この台帳内で最初に見えた時刻だけが残る。
+    """
+    import fcntl
+    PROBE_LEDGER.parent.mkdir(parents=True, exist_ok=True)
+    lock = (PROBE_LEDGER.parent / ".probe.lock").open("w")
+    try:
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        print("別のprobeが実行中のためスキップ")
+        return 0
+    cfg = load_config()
+    vocab = cfg["vocab"]
+    families = cfg.get("vocab_families", {})
+    cfg_sha = __import__("hashlib").sha256(CONFIG.read_bytes()).hexdigest()[:12]
+    seen, _ = load_seen(PROBE_LEDGER)
+    run_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    n_new, n_err = 0, 0
+    items_per_term = {}
+    with PROBE_LEDGER.open("a", encoding="utf-8") as fh:
+        for qe in cfg["queries"]:
+            term = qe.get("term") or qe["facility_group"]
+            terms = ([qe["term"]] if qe.get("term")
+                     else [x.strip('"') for x in qe["or_terms"]])
+            try:
+                items = fetch_rss(qe, cfg)
+                items_per_term[term] = len(items)
+            except Exception as e:
+                n_err += 1
+                fh.write(json.dumps({"first_seen_at": run_at, "term": term,
+                                     "status": "error", "error": str(e)[:200]},
+                                    ensure_ascii=False) + "\n")
+                continue
+            for it in items:
+                j = judge(f"{it['title']} {it['desc']}", terms, vocab,
+                          terms_are_facilities=bool(qe.get("or_terms")))
+                if not j or (term, it["link"]) in seen:
+                    continue
+                hit_term, v = j
+                seen.add((term, it["link"]))
+                fam = vocab_family(v, families)
+                subject = hit_term if qe.get("or_terms") else ""
+                eid = event_id_of(qe["series_ids"], fam, it["pubdate"], run_at, subject)
+                fh.write(json.dumps({"first_seen_at": run_at, "term": term,
+                                     "matched_term": hit_term, "matched_vocab": v,
+                                     "series_ids": qe["series_ids"], "event_id": eid,
+                                     "title": it["title"], "link": it["link"],
+                                     "pubdate": it["pubdate"], "status": "hit",
+                                     "config_version": cfg.get("version"),
+                                     "config_sha": cfg_sha}, ensure_ascii=False) + "\n")
+                n_new += 1
+        fh.write(json.dumps({"type": "run_summary", "run_at": run_at, "hit": n_new,
+                             "ok": len(cfg["queries"]) - n_err, "error": n_err,
+                             "items": items_per_term, "config_version": cfg.get("version"),
+                             "config_sha": cfg_sha}, ensure_ascii=False) + "\n")
+    print(f"[probe] first_seen 新規 {n_new} 件 / error {n_err}/{len(cfg['queries'])}")
+    return 1 if n_err > 3 else 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--selftest", action="store_true")
     ap.add_argument("--dry-run", action="store_true", help="通知を出さない")
+    ap.add_argument("--first-seen-probe", action="store_true",
+                    help="R2時計: first_seen 記録だけの対照モード（通知・受益引き当て・本線台帳なし）")
     args = ap.parse_args()
     if args.selftest:
         ng = _selftest()
         print("OK: 全通過" if not ng else f"NG: {ng}件失敗")
         return 1 if ng else 0
+    if args.first_seen_probe:
+        return run_probe()
 
     # 多重起動ロック（launchd と手動実行の重複で同じ行を二重追記しないため・Codex指摘）
     import fcntl

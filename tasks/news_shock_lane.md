@@ -36,8 +36,17 @@
 - 台帳初期化: 凍結時に data/news_shock/news_log.jsonl を削除→観測開始（凍結前の試走行は残さない）
 - launchd 登録: ユーザーの `!` 手打ち待ち（本ファイル末尾のコマンド）
 
+- prereg_sha256 (§7 R2時計追補後 2026-08-17・Codex GO): `88543aa5ccb172055f09c1e056ee119a6f22e017083623a237dfa35e4296cd03`
+- R2実装: probe レーン（--first-seen-probe・2h毎・first_seen_probe.jsonl）＋ clock_report
+  （結合/欠測/境界跨ぎ率・R3凍結条件= n>=30∧率>=10%∧件数>=3・Codex 3審で APPROVE/GO）
+
 ## launchd 登録コマンド（ユーザー実行）
 
+probe（R2時計・2時間毎）の登録:
+```
+! cp ~/Desktop/biz/influx/config/launchd/com.influx.news-shock-probe.plist ~/Library/LaunchAgents/ && launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.influx.news-shock-probe.plist && launchctl print gui/$(id -u)/com.influx.news-shock-probe | head -4
+```
+本線（登録済み）:
 ```
 ! cp ~/Desktop/biz/influx/config/launchd/com.influx.news-shock.plist ~/Library/LaunchAgents/ && launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.influx.news-shock.plist && launchctl print gui/$(id -u)/com.influx.news-shock | head -5
 ```
