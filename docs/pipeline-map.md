@@ -25,7 +25,7 @@
 | com.influx.news-shock-probe | 2時間ごと | `bash ~/Desktop/biz/influx/scripts/news_shock_probe_run.sh` | `config/launchd/com.influx.news-shock-probe.plist` |
 | com.influx.news-shock | 毎日 07:20／毎日 19:00 | `bash ~/Desktop/biz/influx/scripts/news_shock_run.sh` | `config/launchd/com.influx.news-shock.plist` |
 | com.influx.paper-screen | 月曜 07:30／火曜 07:30／水曜 07:30／木曜 07:30／金曜 07:30 | `exec /usr/bin/python3 ~/Desktop/biz/influx/scripts/daily_screen.py` | `config/launchd/com.influx.paper-screen.plist` |
-| com.influx.price-universe | 月曜 08:30 | `bash ~/Desktop/biz/influx/scripts/price_universe_run.sh` | `config/launchd/com.influx.price-universe.plist` |
+| com.influx.price-universe | 月曜 11:00 | `bash ~/Desktop/biz/influx/scripts/price_universe_run.sh` | `config/launchd/com.influx.price-universe.plist` |
 | com.influx.price-watch | 毎日 22:10 | `bash ~/Desktop/biz/influx/scripts/xprice_watch_run.sh` | `config/launchd/com.influx.price-watch.plist` |
 | com.influx.research-weekly | 土曜 09:00 | `exec ~/Desktop/biz/influx/scripts/research_weekly_launchd.sh` | `config/launchd/com.influx.research-weekly.plist` |
 | com.influx.sedori-trend | 月曜 09:00 | `bash ~/Desktop/biz/influx/scripts/sedori_trend_run.sh` | `config/launchd/com.influx.sedori-trend.plist` |
@@ -48,7 +48,7 @@
 ## 3. 依存と順序（人が書く）
 
 - **寄付前の 07:15 `tob-forward` が唯一のエントリー機会**（ここを落とすとその日は張れない）。07:30 `paper-screen` はその後。
-- `price-universe`（月曜 08:30）で対象銘柄の母集団を作り、日次の `price-watch`（22:10）が追いかける＝**母集団が先・観測が後**。
+- `price-universe`（月曜 11:00）で対象銘柄の母集団を作り、日次の `price-watch`（22:10）が追いかける＝**母集団が先・観測が後**。
 - `kpi-clock-sla`（平日 08:45）は**粗い死活監視**であって、データ網羅の証明ではない（両者を混同しない）。
 - `xbuzz-*`（X の収集・追跡）は **claude-env の配管図**が持つ。実行スクリプトだけ influx にある＝**定義と実体が別 repo**。
 

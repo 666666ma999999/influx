@@ -458,7 +458,7 @@ E1/E2 取得は1銘柄15〜30分の人間作業（新規は月1〜2件想定）�
   2026-07-28 に12系列を一括追加:
   scfi/bdi/cocoa（海運3社・不二製油）→ scrap-steel/jepx（TRE・電力3社）→ 月次3（環境指標）→
   fmbi 2（フルヤ金属）→ スプレッド3（三井化学・住友化学・三菱ケミカル）→ scrap-tokyosteel（国内実勢）。
-- **自動実行**: launchd `com.influx.price-universe`（毎週月曜08:30）→ `scripts/price_universe_run.sh`。
+- **自動実行**: launchd `com.influx.price-universe`（毎週月曜11:00・2026-08-17 に 08:30 から変更＝田中貴金属09:30/FMBI10:30 の公表前に走り構造的 stale を出していたため）→ `scripts/price_universe_run.sh`。
   取得低下（ok<20系列）・異常終了・発火をMac通知。手動も同スクリプトで可
 - **系列別の閾値上書き**（`series.alert`）: 平常時の変動が大きい系列に一律+5%を当てると
   常時発火して無意味になるため、系列側で上書きできる。JEPX= weekly+30%/4週+50%（実測120日: 週次変化の
