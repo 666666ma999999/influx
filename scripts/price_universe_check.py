@@ -19,6 +19,7 @@ import re
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from urllib.parse import quote
 
 import requests
 
@@ -307,6 +308,54 @@ def parse_jepx(today: str) -> dict | None:
             "monthly_pct": None, "src_date": days[-1].replace("/", "-"), "layout": "jepx_csv"}
 
 
+def parse_usda_ndpsr(payload: dict, price_key: str) -> dict | None:
+    """USDA「National Dairy Products Sales Report」の週次価格を1本取る（2026-08-17 新設）。
+
+    公的統計・認証不要・週次（週末日ベース）。同じ週の行が改訂で複数回現れるため、
+    `created_date` が最も新しい行を採用する（改訂前の値を掴まない）。
+
+    Args:
+        payload: datamart の JSON（`results` に行が入る）。
+        price_key: 価格カラム名（例 "whey_Price"）。
+
+    Returns:
+        value=最新週の価格(USD/lb)、weekly_pct=前週比%、src_date="YYYY-MM-DD"（週末日）。
+        1週分しか無ければ weekly_pct は None。
+    """
+    rows = payload.get("results") if isinstance(payload, dict) else None
+    if not isinstance(rows, list):
+        return None
+    best: dict[str, tuple[str, float]] = {}  # 週末日 -> (created_date, price)
+    for r in rows:
+        if not isinstance(r, dict):
+            continue
+        wk, price, created = r.get("Week Ending Date"), r.get(price_key), r.get("created_date")
+        if not wk or price in (None, ""):
+            continue
+        try:
+            wk_iso = datetime.strptime(str(wk), "%m/%d/%Y").strftime("%Y-%m-%d")
+            cd = datetime.strptime(str(created), "%m/%d/%Y").strftime("%Y-%m-%d") if created else ""
+            val = float(str(price).replace(",", ""))
+        except ValueError:
+            continue
+        prev = best.get(wk_iso)
+        if prev is None or cd > prev[0]:
+            best[wk_iso] = (cd, val)
+    if not best:
+        return None
+    weeks = sorted(best)
+    cur = best[weeks[-1]][1]
+    prev_v = best[weeks[-2]][1] if len(weeks) >= 2 else None
+    return {
+        "value": round(cur, 4),
+        "day_pct": None,
+        "weekly_pct": round((cur / prev_v - 1) * 100, 2) if prev_v else None,
+        "monthly_pct": None,
+        "src_date": weeks[-1],
+        "layout": "usda_ndpsr",
+    }
+
+
 def parse_spread(index_html: str, s: dict) -> dict | None:
     """石化スプレッド（製品 − ナフサ）を TE 一覧ページの2脚から合成する（2026-07-28 新設）。
 
@@ -502,13 +551,21 @@ def beneficiaries_display(s: dict, today: str) -> str:
     parts = []
     t = datetime.strptime(today, "%Y-%m-%d")
     for b in cards:
+        # §16w: 海外上場は市場を必ず表示する（どの市場の銘柄か分からない通知を出さない）。
+        # ticker/benchmark を欠く海外カードは fail-closed で表示しない（価格も評価もできないため）
+        market = b.get("market") or "JP"
+        if market != "JP":
+            if not b.get("ticker") or not b.get("benchmark"):
+                parts.append(f"[{market}]{b.get('name') or b.get('code')}(要ticker/benchmark・非表示)")
+                continue
         tag = "" if b["tier"] == "confirmed" else "(仮)"
         stale = "(STALE要再確認)"  # verified 無しは無期限に新鮮扱いしない（Codex軽微指摘）
         if b.get("verified"):
             age = (t - datetime.strptime(b["verified"], "%Y-%m-%d")).days
             if age <= 365:
                 stale = ""
-        parts.append(f"{b['code']}{tag}{stale}")
+        label = b["code"] if market == "JP" else f"[{market}]{b.get('name') or b['ticker']}"
+        parts.append(f"{label}{tag}{stale}")
     return "/".join(parts)
 
 
@@ -606,6 +663,12 @@ def main() -> int:
                 # 標準ライブラリのみで動くので requests 依存とは独立
                 import tokyosteel_scrap
                 parsed = tokyosteel_scrap.fetch_tokyosteel_scrap(today)
+            elif s["type"] == "usda_ndpsr":
+                # 公的統計（認証不要）。レポート内の節をパスで指定する（クエリ指定は無視される実測）
+                parsed = parse_usda_ndpsr(
+                    json.loads(fetch("https://mpr.datamart.ams.usda.gov/services/v1.1/reports/"
+                                     f"{s['report']}/{quote(s['section'])}")),
+                    s["price_key"])
             elif s["type"] == "tanaka":
                 parsed = parse_tanaka(fetch("https://gold.tanaka.co.jp/commodity/souba/"))
             elif s["type"] == "dramexchange":

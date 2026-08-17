@@ -145,10 +145,18 @@ def record_firings(alerts: list, fire_date: str) -> int:
         # （仮=provisional も記録に入れる裁定 2026-07-28。rejected は買いシグナル禁止で除外）。
         # 旧形式（stocks 自由文字列）の config にも後方互換
         if "beneficiaries" in series:
+            # §16w（P-08c 裁定 2026-08-17）: 海外上場カードは**この台帳に入れない**。
+            # 本台帳は対TOPIX超過・日本の営業日で事前登録された検定（n>=100）であり、
+            # 基準指数も営業日も違う海外株を同じ分母に入れると検定が壊れる。
+            # 黙って落とすと「カードを作ったのに何も起きない」になるため理由を残す（fail-closed）。
+            positives = [b for b in series["beneficiaries"]
+                         if b.get("sign") == "+" and b.get("tier") in ("confirmed", "provisional")]
+            skipped_foreign = [str(b.get("ticker") or b.get("code"))
+                               for b in positives if (b.get("market") or "JP") != "JP"]
             code_tiers = [(to_code5(b["code"]), b.get("tier", "confirmed"))
-                          for b in series["beneficiaries"]
-                          if b.get("sign") == "+" and b.get("tier") in ("confirmed", "provisional")]
+                          for b in positives if (b.get("market") or "JP") == "JP"]
         else:
+            skipped_foreign = []
             code_tiers = [(to_code5(c), "confirmed")
                           for c in CODE_RE.findall(series.get("stocks", ""))]
         stocks, skipped_dup = [], []
@@ -165,6 +173,7 @@ def record_firings(alerts: list, fire_date: str) -> int:
             "fire_date": fire_date, "series_id": series["id"], "series_jp": series["jp"],
             "driver": series.get("driver", series["id"]),
             "triggers": triggers, "skipped_dup": skipped_dup,
+            "skipped_foreign": skipped_foreign,  # §16w: 別レーンで評価する海外カード
             "commodity": {"value": row.get("value"), "weekly_pct": row.get("weekly_pct"),
                           "four_week_pct": row.get("four_week_pct")},
             "base_day": base_day, "topix_entry": topix.get(base_day),

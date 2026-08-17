@@ -2152,6 +2152,33 @@
       },
       "beneficiaries": [],
       "note": "ASP分解レーン縮小継続(2026-08-04ユーザー裁定・tasks/asp_decomposition_lane.md)。implied ASP=販売金額÷販売数量(調査票2360メモリ・確報+45日ラグ・月次)。受益は結線せず nand_spot カード(285A confirmed・週次スポット)と共有＝本系列は公式確定値によるスポットの裏取り・乖離検知役(月次レーンの環境指標扱い・§0b整合)。閾値+10%/月はv0(実測: 平常月±5%以内・サージ月+32%〜+48%の分離点・履歴8点で再フィット)。backtest 2回NO-GO(202012-202605)につき前向き観察のみ・成績の主張禁止。残る2360品目32本はマッピング成立時に拡張(在庫)"
+    },
+    {
+      "id": "dry-whey",
+      "label": "Dry Whey (USDA NDPSR)",
+      "type": "usda_ndpsr",
+      "report": "DYWDAIRYPRODUCTSSALES",
+      "section": "Dry Whey Prices and Sales",
+      "price_key": "whey_Price",
+      "jp": "ドライホエイ(米国公式週次・USD/lb)",
+      "alert": {
+        "weekly_pct": 5.0
+      },
+      "note": "§16w(2026-08-17)。⚠️ これは基礎商品のドライホエイで、2026-08 に6.3倍と報じられた WPC80(高純度ホエイプロテイン)とは別物＝両者は2025-2026に乖離している（実測 2026-08-17: 本系列は前年比+12.9%・52週高値比-7.3%。同時期にWPIは$11→$12.30/lb と報道）。WPC80の無料機械可読系列は未確保（TEに whey スラッグ無し・USDA datamartのDY系レポートは6本のみ）＝在庫",
+      "beneficiaries": [
+        {
+          "code": "GL9",
+          "ticker": "GL9.IR",
+          "market": "IE",
+          "name": "Glanbia plc",
+          "benchmark": "^ISEQ",
+          "btype": 1,
+          "sign": "+",
+          "tier": "provisional",
+          "evidence": "【決算実読 2026-08-17・§16w 初の海外カード】2026年上期: 全社売上$2.08bn / Performance Nutrition売上$917.2m＝売上比44.1%。利益ベースは会社が金額を分けていないため算出: PN EBITDA = PN売上917.2 × PN EBITDAマージン12.6% ≒ $115.6m、全社EBITDA $275.4m → 構成比 約42%（≥30%＝関門B相当だが**開示値でなく算出値**のため provisional 据え置き）。PN は LFL +16.9%（Optimum Nutrition +25.2%・PN売上の78%）、通期調整EPS見通しを+7〜11%→+17〜20%へ上方修正。⚠️ 符号の留保: ホエイは PN にとってコストで、記録的高値によりPNマージンは12.6%と前年並みの横ばい（会社は下期に値上げ効果で改善すると説明）。増益の主因は数量・値上げであり「ホエイ高→即増益」ではない。DN側は whey protein solutions の値上げが効いており両側面を持つ。出所: just-food 2026上期決算報道・Glanbia Q1 2026 IMS（実読 2026-08-17）",
+          "verified": "2026-08-17"
+        }
+      ]
     }
   ],
   "_monthly_lane": "月次レーン(cadence=monthly・2026-07-28新設): 月次統計は刻みが0.1〜0.5%/月で週次閾値では永久に鳴らないため前月比を専用閾値で見る。同じ公表月では再発火しない。**銘柄を鳴らさない環境指標レーン**=マクロ集計値を個社に紐付けるのは帰属プロトコル§0bの1ホップ制限に反するため beneficiaries は空。用途は price_set型64社(加工食品24/SIer19等)の追い風・向かい風の背景判断。"
