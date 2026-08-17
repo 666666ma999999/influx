@@ -452,8 +452,9 @@ E1/E2 取得は1銘柄15〜30分の人間作業（新規は月1〜2件想定）�
 ## 週次チェッカー運用（2026-07-28 稼働開始）
 
 - 実行（週1・手動）: `docker compose run --rm xstock python scripts/price_universe_check.py`
-- 対象**52系列**= configs/price_universe_sources.json（34→40は2026-08-02の食品6系列＝§16j、
-  40→42は同日の中古車USS・トレカ遊々亭＝§16l、42→52は同日の30カテゴリ拡張 波1+波2＝§16m）。
+- 対象**54系列**= configs/price_universe_sources.json（34→40は2026-08-02の食品6系列＝§16j、
+  40→42は同日の中古車USS・トレカ遊々亭＝§16l、42→52は同日の30カテゴリ拡張 波1+波2＝§16m、
+  52→54は2026-08-16 Phase 0 sources v4＝§16u系。実測 2026-08-17）。
   2026-07-28 に12系列を一括追加:
   scfi/bdi/cocoa（海運3社・不二製油）→ scrap-steel/jepx（TRE・電力3社）→ 月次3（環境指標）→
   fmbi 2（フルヤ金属）→ スプレッド3（三井化学・住友化学・三菱ケミカル）→ scrap-tokyosteel（国内実勢）。
