@@ -13,7 +13,7 @@
      旧: influx-stock-algo-architecture.md §4-1 の手書き表（2026-08-14 に本ブロックへ移設・向こうはポインタ1行に） -->
 
 <!-- AUTOGEN:start(schedule) -->
-<!-- このブロックは scripts/gen_pipeline_map.py が上書きします（手で編集しない）。件数 17・生成元= git ls-files の plist / workflows -->
+<!-- このブロックは scripts/gen_pipeline_map.py が上書きします（手で編集しない）。件数 18・生成元= git ls-files の plist / workflows -->
 
 | ジョブ（Label / workflow） | いつ動くか | 入口 | 定義ファイル |
 |---|---|---|---|
@@ -22,6 +22,7 @@
 | com.influx.jsf-archive | 月曜 12:30／月曜 19:30／火曜 12:30／火曜 19:30／水曜 12:30／水曜 19:30／木曜 12:30／木曜 19:30／金曜 12:30／金曜 19:30 | `exec /usr/bin/python3 ~/Desktop/biz/influx/scripts/jsf_daily_archive.py` | `config/launchd/com.influx.jsf-archive.plist` |
 | com.influx.kpi-clock-sla | 月曜 08:45／火曜 08:45／水曜 08:45／木曜 08:45／金曜 08:45 | `exec /usr/bin/python3 ~/Desktop/biz/influx/scripts/kpi_clock_sla.py` | `config/launchd/com.influx.kpi-clock-sla.plist` |
 | com.influx.kpi-loop-weekly | 月曜 09:41 | `~/.claude/scripts/vault-prompt-runner.sh "~/Desktop/biz/influx/prompts/scheduled/kpi-loop- …（全文は定義ファイル）` | `config/launchd/com.influx.kpi-loop-weekly.plist` |
+| com.influx.news-shock-probe | 2時間ごと | `bash ~/Desktop/biz/influx/scripts/news_shock_probe_run.sh` | `config/launchd/com.influx.news-shock-probe.plist` |
 | com.influx.news-shock | 毎日 07:20／毎日 19:00 | `bash ~/Desktop/biz/influx/scripts/news_shock_run.sh` | `config/launchd/com.influx.news-shock.plist` |
 | com.influx.paper-screen | 月曜 07:30／火曜 07:30／水曜 07:30／木曜 07:30／金曜 07:30 | `exec /usr/bin/python3 ~/Desktop/biz/influx/scripts/daily_screen.py` | `config/launchd/com.influx.paper-screen.plist` |
 | com.influx.price-universe | 月曜 08:30 | `bash ~/Desktop/biz/influx/scripts/price_universe_run.sh` | `config/launchd/com.influx.price-universe.plist` |
