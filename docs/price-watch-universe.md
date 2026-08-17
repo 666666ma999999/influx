@@ -1978,7 +1978,7 @@ census の「取得は動くがカード無し」27系列に受益カードを�
 | 系列 | 主役の候補（上場先） | 実測メモ（出所は下記） | 純度の注意 |
 |---|---|---|---|
 | lithium | **Pilbara Minerals**（ASX:PLS）／Albemarle（NYSE:ALB）／SQM（NYSE） | ALB は2026Q2 売上$1.7bn(+31%)・調整EBITDA+155%とリチウム市況に強く反応 | **ALB はリチウム＋臭素＋精製触媒の3事業／SQM はリチウム＋肥料＋ヨウ素**＝関門B要確認。**PLS はリチウム専業**で純度が高い |
-| uranium | **Kazatomprom**（LSE GDR）／Cameco（NYSE:CCJ） | Kazatomprom が世界生産の約40%・ウラン売上約$3.3bn、Cameco 約$2.1bn | Cameco は Westinghouse 持分を持つ＝ウラン単独比率の確認が要る |
+| uranium | ✅**Kazatomprom をカード化済み**（2026-08-17・KAP.IL）／Cameco（NYSE:CCJ）は未着手 | FY2025 連結収益 KZT1,803,049百万に対し U3O8売上 KZT1,638,000百万＝**90.8%**（会社開示） | **セグメント別利益は非開示**のため provisional。確証化は H1 2026（2026-08-21 公表）待ち。Cameco は Westinghouse 持分あり |
 | urea（尿素） | **CF Industries**（NYSE:CF） | 報道が明確に「nitrogen の pure play」と位置づけ。北米安価ガスが原料 | Nutrien・Yara は多角化（カリ/リン/欧州ガスコスト）＝純度が落ちる |
 | rubber（天然ゴム） | **Sri Trang Agro-Industry**（SET:STA） | 年商約$2.6bn の天然ゴム一貫生産 | ゴム**手袋**事業も持つ＝川下の比率確認が要る |
 | lumber（木材） | **West Fraser**（TSX/NYSE:WFG）／Weyerhaeuser（NYSE:WY） | WFG は TTM 売上$5.24bn・2026Q2 $1.434bn、WY は2026Q2 売上$1.87bn | WY は**林地REIT＋不動産**を含む＝製材単独の比率確認が要る |
