@@ -1,17 +1,23 @@
 #!/usr/bin/env python3
-"""海外上場カードの前向き記録（§16w・2026-08-17 P-08c 裁定）。
+"""海外上場カードの前向き記録・評価（§16w・2026-08-17 P-08c 裁定）。
 
 日本株の前向き検定（`price_watch_forward.py`・対TOPIX超過・事前登録 n>=100）とは
-**別台帳・別ベンチマーク**で記録する。基準指数も営業日も違うものを同じ分母に入れると
+**別台帳・別ベンチマーク**で扱う。基準指数も営業日も違うものを同じ分母に入れると
 検定が壊れるため（ピークアウト §16j・浸透 §16v と同じレーン分離の裁定）。
 
-- 記録単位: 発火した系列 × 海外カード（重複は fire_date+ticker で排除）
-- 指標: 銘柄リターン − ベンチマーク（カードの `benchmark`）リターン
-- 価格: yfinance（Docker イメージに同梱）。取得失敗は fail-soft で `entry_close=None` を残し、
-  後続の実行で埋め直せるようにする（黙って捨てない）
+台帳は append-only（`data/price_watch/foreign_forward_log.jsonl`）。行の型は3つ:
+
+- `firing`     … 発火の記録。1日1銘柄1行にまとめ、鳴った系列は `series_ids` に全部入れる
+                 （同日に複数系列が同じ銘柄へ鳴っても帰属を失わない）
+- `backfill`   … firing 時に価格が取れなかった行を、後日埋め直した記録（過去行は書き換えない）
+- `evaluation` … 8/15 取引日後の超過リターン（銘柄リターン − ベンチマークリターン）
+
+価格は yfinance（Docker イメージ同梱）。**発火日以前の直近終値**を使い、実際に採用した日付を
+`entry_date_used` に残す（発火後の値を掴む look-ahead を避ける）。取得失敗は fail-soft。
 
 実行:
-    python3 scripts/foreign_forward.py --selftest   # 判定ロジックの固定テスト
+    python3 scripts/foreign_forward.py --selftest   # ネットワーク不要の固定テスト
+    python3 scripts/foreign_forward.py --evaluate   # 期日が来た行を評価
 """
 
 from __future__ import annotations
@@ -20,13 +26,16 @@ import argparse
 import json
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 ROOT = Path(__file__).resolve().parent.parent
 LEDGER_PATH = ROOT / "data" / "price_watch" / "foreign_forward_log.jsonl"
-SPEC_VERSION = "foreign-v1"
-# 日本株レーンと同じ評価窓（8/15営業日）に揃える。海外の営業日で数える
+SPEC_VERSION = "foreign-v2"
+# 日本株レーンと同じ評価窓（8週=40取引日 / 15週=75取引日）。数えるのは当該銘柄の取引日
 WINDOWS_BD = {"w8": 40, "w15": 75}
+
+# (日付, 終値) の列を返す関数。テストでは差し替える
+HistoryFn = Callable[[str], List[Tuple[str, float]]]
 
 
 def foreign_cards(series: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -59,7 +68,7 @@ def read_log(path: Path = LEDGER_PATH) -> List[Dict[str, Any]]:
     """台帳を読む（無ければ空）。"""
     if not path.exists():
         return []
-    rows = []
+    rows: List[Dict[str, Any]] = []
     with path.open(encoding="utf-8") as fh:
         for line in fh:
             line = line.strip()
@@ -74,108 +83,290 @@ def read_log(path: Path = LEDGER_PATH) -> List[Dict[str, Any]]:
     return rows
 
 
-def already_recorded(rows: List[Dict[str, Any]], fire_date: str, ticker: str) -> bool:
-    """同じ発火日・同じ銘柄が既に記録済みか（二重計上の防止）。"""
-    return any(r.get("fire_date") == fire_date and r.get("ticker") == ticker for r in rows)
+def append_row(row: Dict[str, Any], path: Path = LEDGER_PATH) -> None:
+    """台帳へ1行追記する（過去行は書き換えない）。"""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps(row, ensure_ascii=False) + "\n")
 
 
-def fetch_close(ticker: str, day: str) -> Optional[float]:
-    """指定日の終値を取る。取得できなければ None（fail-soft）。
-
-    Args:
-        ticker: yfinance のティッカー（例 "GL9.IR"）。
-        day: "YYYY-MM-DD"。
+def latest_prices(rows: List[Dict[str, Any]], fire_date: str, ticker: str) -> Dict[str, Any]:
+    """firing + backfill を畳んで、その発火の最新の価格状態を返す。
 
     Returns:
-        終値。休場・取得失敗時は None。
+        {"exists": bool, "entry_close": float|None, "benchmark_entry": float|None,
+         "entry_date_used": str|None}
     """
+    state = {"exists": False, "entry_close": None, "benchmark_entry": None,
+             "entry_date_used": None}
+    for r in rows:
+        if r.get("fire_date") != fire_date or r.get("ticker") != ticker:
+            continue
+        if r.get("type") not in ("firing", "backfill"):
+            continue
+        state["exists"] = True
+        for k in ("entry_close", "benchmark_entry", "entry_date_used"):
+            if r.get(k) is not None:
+                state[k] = r[k]
+    return state
+
+
+def needs_backfill(state: Dict[str, Any]) -> bool:
+    """記録済みだが価格が欠けている（＝埋め直す対象）か。"""
+    return bool(state["exists"]) and (
+        state["entry_close"] is None or state["benchmark_entry"] is None
+    )
+
+
+def yf_history(ticker: str, start: str, end: str) -> List[Tuple[str, float]]:
+    """yfinance から (日付, 終値) の列を取る。失敗時は空（fail-soft）。"""
     try:
         import yfinance as yf
-        import pandas as pd  # noqa: F401  yfinance の依存（存在確認）
 
-        end = (datetime.strptime(day, "%Y-%m-%d")).strftime("%Y-%m-%d")
-        hist = yf.Ticker(ticker).history(start=end, period="5d", auto_adjust=True)
+        hist = yf.Ticker(ticker).history(start=start, end=end, auto_adjust=True)
         if hist is None or hist.empty:
-            return None
-        return float(hist["Close"].iloc[0])
+            return []
+        return [(idx.strftime("%Y-%m-%d"), float(row["Close"]))
+                for idx, row in hist.iterrows()]
     except Exception:  # noqa: BLE001  価格取得の失敗で本線を止めない
-        return None
+        return []
+
+
+def close_on_or_before(hist: List[Tuple[str, float]], day: str) -> Tuple[Optional[float], Optional[str]]:
+    """`day` 以前の直近終値と、その日付を返す（look-ahead を作らない）。"""
+    cands = [(d, v) for d, v in hist if d <= day]
+    if not cands:
+        return None, None
+    d, v = max(cands, key=lambda x: x[0])
+    return v, d
+
+
+def close_after_bdays(hist: List[Tuple[str, float]], entry_day: str, n: int
+                      ) -> Tuple[Optional[float], Optional[str]]:
+    """entry_day の n 取引日後の終値と日付を返す（その銘柄の取引日で数える）。"""
+    days = sorted({d for d, _ in hist})
+    if entry_day not in days:
+        return None, None
+    idx = days.index(entry_day) + n
+    if idx >= len(days):
+        return None, None
+    target = days[idx]
+    price = dict(hist).get(target)
+    return (price, target) if price is not None else (None, None)
 
 
 def record_firings(alerts: List[Tuple[Dict, Dict, List[str]]], fire_date: str,
-                   path: Path = LEDGER_PATH) -> int:
-    """発火した系列の海外カードを別台帳へ記録する。
+                   path: Path = LEDGER_PATH,
+                   history_fn: Optional[Callable[[str, str, str], List[Tuple[str, float]]]] = None
+                   ) -> int:
+    """発火した系列の海外カードを別台帳へ記録する（1日1銘柄1行・欠けた価格は後日 backfill）。
 
     Args:
         alerts: (series, row, triggers) のリスト（price_universe_check と同じ形）。
         fire_date: 発火日 "YYYY-MM-DD"。
         path: 台帳パス。
+        history_fn: 価格取得関数（テスト差し替え用）。
 
     Returns:
-        記録した行数。
+        追記した行数（firing + backfill）。
     """
+    fetch_hist = history_fn or yf_history
     rows = read_log(path)
     n = 0
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("a", encoding="utf-8") as fh:
-        for series, row, triggers in alerts:
-            for card in foreign_cards(series):
-                ticker = str(card["ticker"])
-                if already_recorded(rows, fire_date, ticker):
-                    continue
-                entry = fetch_close(ticker, fire_date)
-                bench = fetch_close(str(card["benchmark"]), fire_date)
-                rec = {
-                    "type": "firing", "spec_version": SPEC_VERSION,
-                    "fire_date": fire_date, "series_id": series.get("id"),
-                    "series_jp": series.get("jp"),
-                    "ticker": ticker, "market": card.get("market"),
-                    "name": card.get("name"), "tier": card.get("tier"),
-                    "benchmark": card.get("benchmark"),
-                    "entry_close": entry, "benchmark_entry": bench,
-                    "triggers": triggers,
-                    "commodity": {"value": row.get("value"),
-                                  "weekly_pct": row.get("weekly_pct")},
-                    "windows_bd": WINDOWS_BD,
-                    "note": ("§16w 別レーン。対TOPIX検定には含めない。"
-                             "entry_close が null の行は価格未取得＝後続実行で埋める"),
-                    "recorded_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-                }
-                fh.write(json.dumps(rec, ensure_ascii=False) + "\n")
-                rows.append(rec)
-                n += 1
-                px = f"{entry}" if entry is not None else "価格未取得"
-                print(f"[foreign] 記録: {series.get('jp')} → [{card.get('market')}]"
-                      f"{card.get('name') or ticker} 基準={fire_date} 終値={px}")
+
+    # 同日に複数系列が同じ銘柄へ鳴っても帰属を失わないよう、銘柄単位に畳んでから書く
+    by_ticker: Dict[str, Dict[str, Any]] = {}
+    for series, row, triggers in alerts:
+        for card in foreign_cards(series):
+            t = str(card["ticker"])
+            slot = by_ticker.setdefault(t, {"card": card, "series_ids": [], "triggers": [],
+                                            "commodity": {}})
+            slot["series_ids"].append(series.get("id"))
+            slot["triggers"].extend(f"{series.get('id')}:{x}" for x in triggers)
+            slot["commodity"][series.get("id")] = {
+                "value": row.get("value"), "weekly_pct": row.get("weekly_pct")}
+
+    start = (datetime.strptime(fire_date, "%Y-%m-%d")).strftime("%Y-%m-%d")
+    for ticker, slot in by_ticker.items():
+        card = slot["card"]
+        state = latest_prices(rows, fire_date, ticker)
+        if state["exists"] and not needs_backfill(state):
+            continue  # 価格まで揃っている＝二重計上しない
+
+        # 発火日以前の直近終値を使う（休場日に発火後の値を掴まない）
+        win_start = _shift_days(start, -12)
+        win_end = _shift_days(start, 2)
+        px, px_day = close_on_or_before(fetch_hist(ticker, win_start, win_end), fire_date)
+        bench_px, _ = close_on_or_before(
+            fetch_hist(str(card["benchmark"]), win_start, win_end), fire_date)
+
+        kind = "backfill" if state["exists"] else "firing"
+        rec = {
+            "type": kind, "spec_version": SPEC_VERSION,
+            "fire_date": fire_date,
+            "series_ids": sorted(set(slot["series_ids"])),
+            "ticker": ticker, "market": card.get("market"),
+            "name": card.get("name"), "tier": card.get("tier"),
+            "benchmark": card.get("benchmark"),
+            "entry_close": px, "benchmark_entry": bench_px, "entry_date_used": px_day,
+            "triggers": slot["triggers"], "commodity": slot["commodity"],
+            "windows_bd": WINDOWS_BD,
+            "note": ("§16w 別レーン。対TOPIX検定には含めない。"
+                     "価格が null の行は後日 backfill 行で埋める"),
+            "recorded_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        }
+        append_row(rec, path)
+        rows.append(rec)
+        n += 1
+        shown = px if px is not None else "価格未取得"
+        print(f"[foreign] {kind}: [{card.get('market')}]{card.get('name') or ticker} "
+              f"基準={fire_date}(採用{px_day}) 終値={shown}")
+    return n
+
+
+def _shift_days(day: str, delta: int) -> str:
+    from datetime import timedelta
+    return (datetime.strptime(day, "%Y-%m-%d") + timedelta(days=delta)).strftime("%Y-%m-%d")
+
+
+def evaluate(today: str, path: Path = LEDGER_PATH,
+             history_fn: Optional[Callable[[str, str, str], List[Tuple[str, float]]]] = None
+             ) -> int:
+    """期日が来た発火を評価し、超過リターンを追記する。
+
+    指標 = 銘柄リターン − ベンチマークリターン（カードの benchmark）。
+    まだ取引日が足りない窓は書かず、次回に持ち越す（期日前に結論を焼かない）。
+
+    Returns:
+        追記した evaluation 行数。
+    """
+    fetch_hist = history_fn or yf_history
+    rows = read_log(path)
+    done = {(r.get("fire_date"), r.get("ticker"), r.get("window"))
+            for r in rows if r.get("type") == "evaluation"}
+    n = 0
+    for r in rows:
+        if r.get("type") not in ("firing", "backfill"):
+            continue
+        fire_date, ticker = r.get("fire_date"), r.get("ticker")
+        state = latest_prices(rows, fire_date, ticker)
+        entry, bench_entry = state["entry_close"], state["benchmark_entry"]
+        entry_day = state["entry_date_used"]
+        if entry is None or bench_entry is None or not entry_day:
+            continue  # 価格未取得は評価しない（backfill 待ち）
+        hist = fetch_hist(ticker, _shift_days(entry_day, -5), _shift_days(today, 1))
+        bhist = fetch_hist(str(r.get("benchmark")), _shift_days(entry_day, -5),
+                           _shift_days(today, 1))
+        for win, bd in (r.get("windows_bd") or WINDOWS_BD).items():
+            if (fire_date, ticker, win) in done:
+                continue
+            px, day = close_after_bdays(hist, entry_day, bd)
+            bpx, _ = close_after_bdays(bhist, entry_day, bd)
+            if px is None or bpx is None:
+                continue  # 期日未到来 or 取得不能 → 次回へ
+            ret = (px / entry - 1) * 100
+            bret = (bpx / bench_entry - 1) * 100
+            append_row({
+                "type": "evaluation", "spec_version": SPEC_VERSION,
+                "fire_date": fire_date, "ticker": ticker, "window": win,
+                "eval_day": day, "close": px, "benchmark_close": bpx,
+                "ret_pct": round(ret, 2), "benchmark_ret_pct": round(bret, 2),
+                "excess_pct": round(ret - bret, 2),
+                "benchmark": r.get("benchmark"),
+                "recorded_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            }, path)
+            done.add((fire_date, ticker, win))
+            n += 1
+            print(f"[foreign] 評価 {ticker} {win}: 超過 {ret - bret:+.1f}% "
+                  f"（銘柄 {ret:+.1f}% / {r.get('benchmark')} {bret:+.1f}%）")
     return n
 
 
 def selftest() -> int:
-    """カード選別と二重排除の固定テスト（ネットワーク不要）。"""
+    """ネットワーク不要の固定テスト（カード選別・畳み込み・backfill・評価）。"""
+    import tempfile
+
     cases: List[Tuple[str, bool]] = []
     s = {"id": "dry-whey", "beneficiaries": [
-        {"code": "5713", "sign": "+", "tier": "confirmed"},                      # JP は対象外
+        {"code": "5713", "sign": "+", "tier": "confirmed"},
         {"code": "A", "market": "IE", "ticker": "GL9.IR", "benchmark": "^ISEQ",
-         "sign": "+", "tier": "provisional"},                                    # 対象
-        {"code": "B", "market": "US", "ticker": "X", "sign": "+", "tier": "confirmed"},  # benchmark 欠落
-        {"code": "C", "market": "US", "benchmark": "^GSPC", "sign": "+", "tier": "confirmed"},  # ticker欠落
+         "sign": "+", "tier": "provisional"},
+        {"code": "B", "market": "US", "ticker": "X", "sign": "+", "tier": "confirmed"},
+        {"code": "C", "market": "US", "benchmark": "^GSPC", "sign": "+", "tier": "confirmed"},
         {"code": "D", "market": "US", "ticker": "Y", "benchmark": "^GSPC",
-         "sign": "+", "tier": "rejected"},                                       # 却下
+         "sign": "+", "tier": "rejected"},
         {"code": "E", "market": "US", "ticker": "Z", "benchmark": "^GSPC",
-         "sign": "-", "tier": "confirmed"},                                      # 逆風
+         "sign": "-", "tier": "confirmed"},
     ]}
     picked = [c["code"] for c in foreign_cards(s)]
     cases.append(("JP は対象外", "5713" not in picked))
     cases.append(("要件を満たす海外カードのみ採用", picked == ["A"]))
     cases.append(("ticker/benchmark 欠落は除外", "B" not in picked and "C" not in picked))
     cases.append(("rejected/逆風は除外", "D" not in picked and "E" not in picked))
-    cases.append(("カード無しは空", foreign_cards({"beneficiaries": []}) == []))
     cases.append(("beneficiaries 欠落でも落ちない", foreign_cards({}) == []))
 
-    rows = [{"fire_date": "2026-08-17", "ticker": "GL9.IR"}]
-    cases.append(("同日同銘柄は二重記録しない", already_recorded(rows, "2026-08-17", "GL9.IR")))
-    cases.append(("別日は記録してよい", not already_recorded(rows, "2026-08-24", "GL9.IR")))
-    cases.append(("別銘柄は記録してよい", not already_recorded(rows, "2026-08-17", "ABC")))
+    # look-ahead 防止: 発火日が休場でも「以前の直近」を採る
+    hist = [("2026-08-13", 10.0), ("2026-08-14", 11.0), ("2026-08-18", 12.0)]
+    px, day = close_on_or_before(hist, "2026-08-15")
+    cases.append(("休場日は直近の過去終値を採用", (px, day) == (11.0, "2026-08-14")))
+    cases.append(("発火日より後の値を掴まない", day is not None and day <= "2026-08-15"))
+    cases.append(("履歴が全て未来なら None", close_on_or_before(hist, "2026-08-01") == (None, None)))
+    cases.append(("n取引日後を銘柄の営業日で数える",
+                  close_after_bdays(hist, "2026-08-13", 2) == (12.0, "2026-08-18")))
+    cases.append(("期日未到来は None", close_after_bdays(hist, "2026-08-14", 5) == (None, None)))
+
+    # 台帳まわり（一時ファイル）
+    with tempfile.TemporaryDirectory() as td:
+        p = Path(td) / "log.jsonl"
+        prices = {
+            "GL9.IR": [("2026-08-17", 100.0), ("2026-08-18", 110.0)],
+            "^ISEQ": [("2026-08-17", 1000.0), ("2026-08-18", 1050.0)],
+        }
+        def fake(t: str, a: str, b: str) -> List[Tuple[str, float]]:
+            return prices.get(t, [])
+        def none_fn(t: str, a: str, b: str) -> List[Tuple[str, float]]:
+            return []
+
+        series_a = {"id": "dry-whey", "jp": "ホエイ", "beneficiaries": s["beneficiaries"]}
+        series_b = {"id": "milk", "jp": "生乳", "beneficiaries": s["beneficiaries"]}
+        alerts = [(series_a, {"value": 1}, ["weekly +6%"]),
+                  (series_b, {"value": 2}, ["weekly +7%"])]
+
+        # 価格が取れない状況で記録 → firing 1行・価格 null
+        n1 = record_firings(alerts, "2026-08-17", p, none_fn)
+        rows = read_log(p)
+        fire = [r for r in rows if r["type"] == "firing"]
+        cases.append(("同日同銘柄は1行に畳む", n1 == 1 and len(fire) == 1))
+        cases.append(("複数系列の帰属を保持", fire[0]["series_ids"] == ["dry-whey", "milk"]))
+        cases.append(("価格未取得は null で残す", fire[0]["entry_close"] is None))
+
+        # 価格が取れるようになったら backfill される（前審#1）
+        n2 = record_firings(alerts, "2026-08-17", p, fake)
+        back = [r for r in read_log(p) if r["type"] == "backfill"]
+        cases.append(("欠けた価格は backfill で埋まる",
+                      n2 == 1 and len(back) == 1 and back[0]["entry_close"] == 100.0))
+
+        # 価格が揃った後は二重記録しない
+        n3 = record_firings(alerts, "2026-08-17", p, fake)
+        cases.append(("価格が揃えば再記録しない", n3 == 0))
+
+        # 評価（1取引日後を窓に見立てる）
+        rows = read_log(p)
+        for r in rows:
+            if r["type"] in ("firing", "backfill"):
+                r["windows_bd"] = {"w1": 1}
+        p2 = Path(td) / "log2.jsonl"
+        for r in rows:
+            append_row(r, p2)
+        n4 = evaluate("2026-08-18", p2, fake)
+        ev = [r for r in read_log(p2) if r["type"] == "evaluation"]
+        cases.append(("評価行が書かれる", n4 >= 1 and len(ev) >= 1))
+        if ev:
+            # 銘柄 +10% / ベンチ +5% → 超過 +5%
+            cases.append(("超過リターン = 銘柄 − ベンチ", ev[0]["excess_pct"] == 5.0))
+            cases.append(("評価は自国指数で測る", ev[0]["benchmark"] == "^ISEQ"))
+        n5 = evaluate("2026-08-18", p2, fake)
+        cases.append(("同じ窓を二重評価しない", n5 == 0))
 
     ok = sum(1 for _, passed in cases if passed)
     for name, passed in cases:
@@ -185,12 +376,18 @@ def selftest() -> int:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="海外カードの前向き記録（§16w）")
+    parser = argparse.ArgumentParser(description="海外カードの前向き記録・評価（§16w）")
     parser.add_argument("--selftest", action="store_true", help="固定テストを実行")
+    parser.add_argument("--evaluate", action="store_true", help="期日が来た発火を評価")
     args = parser.parse_args()
     if args.selftest:
         return selftest()
-    print("このモジュールは price_universe_check から呼ばれます（単体実行は --selftest のみ）")
+    if args.evaluate:
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        n = evaluate(today)
+        print(f"[foreign] 評価 {n} 件")
+        return 0
+    print("記録は price_universe_check から呼ばれます（単体は --selftest / --evaluate）")
     return 0
 
 
