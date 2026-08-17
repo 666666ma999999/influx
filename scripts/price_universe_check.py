@@ -716,11 +716,12 @@ def main() -> int:
             # 上昇側の閾値を既定へ戻す。浸透カード= pass_through:true かつ tier=confirmed の受益カード
             # （＝値上げ効果が原材料高を上回る正味プラスを決算実読で確認済み）。
             # カードの無い系列は従来どおり黙る＝関門を緩めた量産（2026-07-29 裁定）にしない
-            pt_unmuted = bool(pass_through_cards(s)) and any(
-                _is_muted(v) for v in s.get("alert", {}).values()
-            )
+            # 判定は「実際に上昇閾値を1つ以上既定へ戻したか」で行う。alert 内に解除対象外の 999 が
+            # あるだけで真にすると、通常閾値で鳴った発火まで浸透レーンへ誤分類する（Codex 2審 C）
+            restored = {k: v for k, v in alert_cfg.items() if _is_muted(th.get(k))}
+            pt_unmuted = bool(pass_through_cards(s)) and bool(restored)
             if pt_unmuted:
-                th = {**th, **{k: v for k, v in alert_cfg.items() if _is_muted(th.get(k))}}
+                th = {**th, **restored}
             trigger = []
             if s["type"] == "spread":
                 # スプレッドは%でなく絶対値(USD/T)で判定する（負値を取りうるため・上記コメント）
