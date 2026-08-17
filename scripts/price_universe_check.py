@@ -937,6 +937,8 @@ def main() -> int:
         try:
             import foreign_forward as ffwd
             ffwd.record_firings(rise_alerts, today)
+            ffwd.backfill_missing()   # 過去に価格が取れなかった発火を再訪して埋める
+            ffwd.evaluate(today)      # 期日が来た窓の超過リターンを追記
         except Exception as exc:  # noqa: BLE001  記録失敗で本処理を落とさない
             print(f"[foreign] WARN: 海外前向き記録に失敗: {str(exc)[:100]}")
     else:

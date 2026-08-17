@@ -97,14 +97,22 @@ def latest_prices(rows: List[Dict[str, Any]], fire_date: str, ticker: str) -> Di
         {"exists": bool, "entry_close": float|None, "benchmark_entry": float|None,
          "entry_date_used": str|None}
     """
-    state = {"exists": False, "entry_close": None, "benchmark_entry": None,
-             "entry_date_used": None}
-    for r in rows:
-        if r.get("fire_date") != fire_date or r.get("ticker") != ticker:
+    state: Dict[str, Any] = {"exists": False, "entry_close": None, "benchmark_entry": None,
+                             "entry_date_used": None, "benchmark": None, "card": None}
+    rel = [r for r in rows
+           if r.get("fire_date") == fire_date and r.get("ticker") == ticker
+           and r.get("type") in ("firing", "backfill")]
+    if not rel:
+        return state
+    # カードの benchmark が後から変わった場合、**指数が違う行の価格は混ぜない**
+    # （旧指数のエントリー値と新指数の評価値を突き合わせる事故を防ぐ・Codex 5審 #3）
+    bench = rel[-1].get("benchmark")
+    state["exists"] = True
+    state["benchmark"] = bench
+    state["card"] = rel[-1]
+    for r in rel:
+        if r.get("benchmark") != bench:
             continue
-        if r.get("type") not in ("firing", "backfill"):
-            continue
-        state["exists"] = True
         for k in ("entry_close", "benchmark_entry", "entry_date_used"):
             if r.get(k) is not None:
                 state[k] = r[k]
@@ -229,6 +237,57 @@ def _shift_days(day: str, delta: int) -> str:
     return (datetime.strptime(day, "%Y-%m-%d") + timedelta(days=delta)).strftime("%Y-%m-%d")
 
 
+def backfill_missing(path: Path = LEDGER_PATH,
+                     history_fn: Optional[Callable[[str, str, str], List[Tuple[str, float]]]] = None
+                     ) -> int:
+    """台帳を走査し、価格が欠けたままの過去の発火を埋める（Codex 5審 #1）。
+
+    `record_firings` は当日の発火しか見ないため、取得に失敗した過去行は
+    そのままでは永久に null で残る。本関数が全期間を再訪する。
+
+    Returns:
+        追記した backfill 行数。
+    """
+    fetch_hist = history_fn or yf_history
+    rows = read_log(path)
+    keys = []
+    seen = set()
+    for r in rows:
+        if r.get("type") not in ("firing", "backfill"):
+            continue
+        k = (r.get("fire_date"), r.get("ticker"))
+        if k not in seen:
+            seen.add(k)
+            keys.append(k)
+    n = 0
+    for fire_date, ticker in keys:
+        state = latest_prices(rows, fire_date, ticker)
+        if not needs_backfill(state):
+            continue
+        card = state["card"] or {}
+        win_start, win_end = _shift_days(fire_date, -12), _shift_days(fire_date, 2)
+        px, px_day = close_on_or_before(fetch_hist(ticker, win_start, win_end), fire_date)
+        bench_px, _ = close_on_or_before(
+            fetch_hist(str(state["benchmark"]), win_start, win_end), fire_date)
+        if px is None and bench_px is None:
+            continue  # まだ取れない（次回へ）
+        rec = {
+            "type": "backfill", "spec_version": SPEC_VERSION,
+            "fire_date": fire_date, "series_ids": card.get("series_ids"),
+            "ticker": ticker, "market": card.get("market"), "name": card.get("name"),
+            "tier": card.get("tier"), "benchmark": state["benchmark"],
+            "entry_close": px, "benchmark_entry": bench_px, "entry_date_used": px_day,
+            "windows_bd": card.get("windows_bd") or WINDOWS_BD,
+            "note": "§16w 価格の後追い取得（過去の発火を再訪して埋めた行）",
+            "recorded_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        }
+        append_row(rec, path)
+        rows.append(rec)
+        n += 1
+        print(f"[foreign] backfill(再訪): {ticker} 基準={fire_date} 終値={px}")
+    return n
+
+
 def evaluate(today: str, path: Path = LEDGER_PATH,
              history_fn: Optional[Callable[[str, str, str], List[Tuple[str, float]]]] = None
              ) -> int:
@@ -254,16 +313,20 @@ def evaluate(today: str, path: Path = LEDGER_PATH,
         entry_day = state["entry_date_used"]
         if entry is None or bench_entry is None or not entry_day:
             continue  # 価格未取得は評価しない（backfill 待ち）
+        bench_id = state["benchmark"]  # エントリー値と同じ指数を使う（途中変更を混ぜない）
         hist = fetch_hist(ticker, _shift_days(entry_day, -5), _shift_days(today, 1))
-        bhist = fetch_hist(str(r.get("benchmark")), _shift_days(entry_day, -5),
-                           _shift_days(today, 1))
+        bhist = fetch_hist(str(bench_id), _shift_days(entry_day, -5), _shift_days(today, 1))
         for win, bd in (r.get("windows_bd") or WINDOWS_BD).items():
             if (fire_date, ticker, win) in done:
                 continue
             px, day = close_after_bdays(hist, entry_day, bd)
-            bpx, _ = close_after_bdays(bhist, entry_day, bd)
-            if px is None or bpx is None:
+            if px is None or day is None:
                 continue  # 期日未到来 or 取得不能 → 次回へ
+            # 指数は**銘柄の評価日時点**を採る。指数側で独立に40/75日を数えると
+            # 休場日の違いで別の暦日どうしを引き算してしまう（Codex 5審 #2）
+            bpx, _bday = close_on_or_before(bhist, day)
+            if bpx is None:
+                continue
             ret = (px / entry - 1) * 100
             bret = (bpx / bench_entry - 1) * 100
             append_row({
@@ -272,7 +335,7 @@ def evaluate(today: str, path: Path = LEDGER_PATH,
                 "eval_day": day, "close": px, "benchmark_close": bpx,
                 "ret_pct": round(ret, 2), "benchmark_ret_pct": round(bret, 2),
                 "excess_pct": round(ret - bret, 2),
-                "benchmark": r.get("benchmark"),
+                "benchmark": bench_id, "benchmark_eval_day": _bday,
                 "recorded_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
             }, path)
             done.add((fire_date, ticker, win))
@@ -368,6 +431,49 @@ def selftest() -> int:
         n5 = evaluate("2026-08-18", p2, fake)
         cases.append(("同じ窓を二重評価しない", n5 == 0))
 
+        # Codex 5審 #1: 過去の発火を再訪して埋める（当日 alerts が無くても動く）
+        p3 = Path(td) / "log3.jsonl"
+        append_row({"type": "firing", "fire_date": "2026-08-17", "ticker": "GL9.IR",
+                    "benchmark": "^ISEQ", "market": "IE", "name": "Glanbia plc",
+                    "tier": "provisional", "series_ids": ["dry-whey"],
+                    "entry_close": None, "benchmark_entry": None,
+                    "entry_date_used": None, "windows_bd": {"w1": 1}}, p3)
+        nb = backfill_missing(p3, fake)
+        st = latest_prices(read_log(p3), "2026-08-17", "GL9.IR")
+        cases.append(("過去発火の再訪で価格が埋まる",
+                      nb == 1 and st["entry_close"] == 100.0))
+        cases.append(("埋まった後は再訪しても増えない", backfill_missing(p3, fake) == 0))
+
+        # Codex 5審 #3: benchmark が変わった行の価格を混ぜない
+        p4 = Path(td) / "log4.jsonl"
+        append_row({"type": "firing", "fire_date": "2026-08-17", "ticker": "GL9.IR",
+                    "benchmark": "^OLD", "entry_close": 1.0, "benchmark_entry": 2.0,
+                    "entry_date_used": "2026-08-17"}, p4)
+        append_row({"type": "backfill", "fire_date": "2026-08-17", "ticker": "GL9.IR",
+                    "benchmark": "^NEW", "entry_close": None, "benchmark_entry": None,
+                    "entry_date_used": None}, p4)
+        st2 = latest_prices(read_log(p4), "2026-08-17", "GL9.IR")
+        cases.append(("指数変更後は旧指数の価格を引き継がない",
+                      st2["benchmark"] == "^NEW" and st2["benchmark_entry"] is None))
+
+        # Codex 5審 #2: 指数は銘柄の評価日時点を採る（指数側で独立に数えない）
+        p5 = Path(td) / "log5.jsonl"
+        prices2 = {
+            "S": [("2026-08-17", 100.0), ("2026-08-18", 110.0)],           # 銘柄: 18日が1取引日後
+            "^B": [("2026-08-17", 1000.0), ("2026-08-18", 1000.0),
+                   ("2026-08-19", 2000.0)],                                 # 指数: 19日も開いている
+        }
+        def fake2(t: str, a: str, b: str) -> List[Tuple[str, float]]:
+            return prices2.get(t, [])
+        append_row({"type": "firing", "fire_date": "2026-08-17", "ticker": "S",
+                    "benchmark": "^B", "entry_close": 100.0, "benchmark_entry": 1000.0,
+                    "entry_date_used": "2026-08-17", "windows_bd": {"w1": 1}}, p5)
+        evaluate("2026-08-19", p5, fake2)
+        ev2 = [r for r in read_log(p5) if r["type"] == "evaluation"]
+        # 指数側で独立に1取引日を数えると 19日(2000)=+100% になり超過が -90% に化ける
+        cases.append(("指数は銘柄の評価日で揃える（暦日ズレを作らない）",
+                      bool(ev2) and ev2[0]["excess_pct"] == 10.0))
+
     ok = sum(1 for _, passed in cases if passed)
     for name, passed in cases:
         print(f"  {'PASS' if passed else 'FAIL'} {name}")
@@ -384,8 +490,9 @@ def main() -> int:
         return selftest()
     if args.evaluate:
         today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        nb = backfill_missing()          # 価格が欠けた過去の発火を先に埋める
         n = evaluate(today)
-        print(f"[foreign] 評価 {n} 件")
+        print(f"[foreign] backfill {nb} 件 / 評価 {n} 件")
         return 0
     print("記録は price_universe_check から呼ばれます（単体は --selftest / --evaluate）")
     return 0
