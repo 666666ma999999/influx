@@ -12,6 +12,8 @@ allowed-tools: [Read, Glob, Grep, Bash]
 ## 正本（必ず実読してから作業する・数値や判定表をここに写さない）
 
 - **判定ルール**: `docs/price-watch-universe.md` §0b「帰属プロトコル v2（受益カード）」
+- **カードの型2種（2026-08-17 追加）**: 同 §16v「値上げ浸透型」（食品の上昇を通す条件・`pass_through`）／
+  同 §16w「海外上場カード」（`market`/`ticker`/`benchmark` 必須・評価は別レーン）
 - **業種→主役の価格の逆引き**: 同 §0
 - **センターピン台帳（全977社・1社1行）**: 同 §0a
 - **実装（カード実体）**: `configs/price_universe_sources.json`（v2・銘柄ごとの受益カード）

@@ -33,6 +33,8 @@ allowed-tools: [Read, Glob, Grep, Bash, WebFetch]
 ### 2. カード形式 v2 で設定に足す
 
 系列だけでなく、**受益銘柄のカード**（`btype` / `sign` / `evidence` / `verified` / `tier`）まで書く。
+海外上場を載せる場合は `market`（JP以外）・`ticker`・`benchmark` の3つも必須（§16w・欠けると通知にも集計にも出ない）。
+食品系列で上昇を通したい場合は `pass_through: true` + 正味プラスの実測が要る（§16v）。
 カードの書き方と5関門は `beneficiary-attribution` スキルへ。**カードが書けないなら台帳に載せない。**
 
 ### 3. パーサの落とし穴を潰す
