@@ -22,6 +22,7 @@ import csv
 import io
 import re
 import sys
+import time
 from urllib.parse import urljoin
 
 import requests
@@ -377,8 +378,21 @@ def fetch_jnto() -> dict | None:
     m = re.search(r'href="([^"]*/_files/\d{8}_1615-5\.xlsx)"', idx)  # 1615-5 は安定（実測）
     if not m:
         return None
-    wb = openpyxl.load_workbook(io.BytesIO(_get(urljoin(base, m.group(1))).content),
-                                data_only=True, read_only=True)
+    # 2026-08-17: 週次実行で "File is not a zip file" が1回発生（同URLを後刻叩くと正常＝一過性）。
+    # xlsx は zip なので先頭が "PK"。違うものを openpyxl に渡すと原因の分からない例外になるため、
+    # マジックバイトで判定し、1度だけ取り直す。それでも駄目なら**何が返ってきたか**を載せて失敗する
+    url = urljoin(base, m.group(1))
+    data = b""
+    for attempt in (1, 2):
+        data = _get(url).content
+        if data[:2] == b"PK":
+            break
+        if attempt == 1:
+            time.sleep(3)
+    if data[:2] != b"PK":
+        head = data[:80].decode("utf-8", errors="replace").replace("\n", " ")
+        raise ValueError(f"JNTO xlsx が zip でない（{len(data)}バイト・先頭: {head!r}）")
+    wb = openpyxl.load_workbook(io.BytesIO(data), data_only=True, read_only=True)
     return parse_jnto_wb(wb)
 
 

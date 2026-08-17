@@ -12,16 +12,20 @@
         <string>bash /Users/masaaki_nagasawa/Desktop/biz/influx/scripts/price_universe_run.sh</string>
     </array>
 
-    <!-- 毎週月曜 08:30（Weekday 1=月）。SCFIは金曜公表・TEは日次更新なので週明けに前週分が揃う -->
+    <!-- 毎週月曜 11:00（Weekday 1=月）。SCFIは金曜公表・TEは日次更新なので週明けに前週分が揃う。
+         2026-08-17 に 08:30 → 11:00 へ変更: **08:30 は田中貴金属(09:30公表)・FMBI(10:30公表)より前**で、
+         定期実行が構造的に stale を出していた（実測: gold-tanaka は定期実行 4回すべて stale／
+         手動12:11の1回だけ ok。fmbi も 08:30 時点は前週分で5日閾値超え）。
+         週次の商品チェックに寄り付き前の即時性は不要（評価は終値基準・保有は8〜15週）ため公表後へ移す -->
     <key>StartCalendarInterval</key>
     <array>
         <dict>
             <key>Weekday</key>
             <integer>1</integer>
             <key>Hour</key>
-            <integer>8</integer>
+            <integer>11</integer>
             <key>Minute</key>
-            <integer>30</integer>
+            <integer>0</integer>
         </dict>
     </array>
 
