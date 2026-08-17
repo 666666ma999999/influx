@@ -524,6 +524,36 @@ def load_history() -> dict[str, list[dict]]:
     return hist
 
 
+def _is_muted(value) -> bool:
+    """閾値が「永久に鳴らさない」印（999 以上）かどうか。§16j の食品ミュートの実装。"""
+    try:
+        return float(value) >= 999.0
+    except (TypeError, ValueError):
+        return False
+
+
+def pass_through_cards(series: dict) -> list:
+    """浸透カード（§16v）を返す。
+
+    浸透カード = 値上げ浸透で受益する確証カード。`pass_through: true` かつ
+    `tier == "confirmed"` かつ `sign == "+"` の3つを全て満たすものだけを認める
+    （provisional は決算実読の待ち行列であって銘柄を出す資格ではない・§0b と同じ規約）。
+
+    Args:
+        series: configs/price_universe_sources.json の系列 dict。
+
+    Returns:
+        条件を満たす受益カードのリスト（無ければ空）。
+    """
+    out = []
+    for card in series.get("beneficiaries") or []:
+        if not isinstance(card, dict):
+            continue
+        if card.get("pass_through") and card.get("tier") == "confirmed" and card.get("sign") == "+":
+            out.append(card)
+    return out
+
+
 def main() -> int:
     cfg = json.loads(CONFIG_PATH.read_text())
     alert_cfg = cfg["alert"]
@@ -681,6 +711,16 @@ def main() -> int:
             # 系列に一律+5%を当てると常時発火して使い物にならないため（JEPX実測: 週次変化の
             # 平均絶対値13.9%・+5%だと41%の日で発火）。上書き値は series.alert に根拠つきで置く
             th = {**alert_cfg, **s.get("alert", {})}
+            # §16v（2026-08-17 オーナー裁定 P-08b）: 食品の上昇ミュート（alert に 999 を置いて
+            # 永久に鳴らさない §16j の実装）は原則維持しつつ、「浸透カード」を1枚でも持つ系列だけ
+            # 上昇側の閾値を既定へ戻す。浸透カード= pass_through:true かつ tier=confirmed の受益カード
+            # （＝値上げ効果が原材料高を上回る正味プラスを決算実読で確認済み）。
+            # カードの無い系列は従来どおり黙る＝関門を緩めた量産（2026-07-29 裁定）にしない
+            pt_unmuted = bool(pass_through_cards(s)) and any(
+                _is_muted(v) for v in s.get("alert", {}).values()
+            )
+            if pt_unmuted:
+                th = {**th, **{k: v for k, v in alert_cfg.items() if _is_muted(th.get(k))}}
             trigger = []
             if s["type"] == "spread":
                 # スプレッドは%でなく絶対値(USD/T)で判定する（負値を取りうるため・上記コメント）
@@ -764,6 +804,10 @@ def main() -> int:
                         print(f"  📉→📈 原材料ピークアウト: {s['jp']} 高値比{drop:+.1f}% "
                               f"→ 原価圧力の反転候補: {relief}")
 
+            # §16v の部分解除で鳴った上昇は「浸透レーン」として別扱いにする。既存の値上がり受益の
+            # 前向き検定（n>=100・事前登録）に混ぜると分母が汚れる（ピークアウトと同じ 2026-07-31 裁定）
+            if pt_unmuted and trigger and not row.get("peakout_fired"):
+                row["pass_through_fired"] = True
             rows.append(row)
             if trigger:
                 alerts.append((s, row, trigger))
@@ -785,8 +829,16 @@ def main() -> int:
         print(f"⚠️ 要確認 {len(bad)} 件: " + ", ".join(f"{r['id']}({r['status']})" for r in bad))
     # ピークアウト発火は「値上がり受益」の前向き検定（n>=100・事前登録）に混ぜない。
     # レーンが違う発火を同じ台帳に入れると検定の分母が汚れる（言及レーンと同じ裁定 2026-07-31）
-    rise_alerts = [(s, r, t) for s, r, t in alerts if not r.get("peakout_fired")]
+    rise_alerts = [(s, r, t) for s, r, t in alerts
+                   if not r.get("peakout_fired") and not r.get("pass_through_fired")]
     peak_alerts = [(s, r, t) for s, r, t in alerts if r.get("peakout_fired")]
+    pt_alerts = [(s, r, t) for s, r, t in alerts if r.get("pass_through_fired")]
+    if pt_alerts:
+        print(f"\n💹 値上げ浸透レーン {len(pt_alerts)} 系列（§16v・原材料高→製品値上げが通る側）:")
+        for s, row, trigger in pt_alerts:
+            names = "/".join(f"{c['code']}{str(c.get('name', ''))[:6]}" for c in pass_through_cards(s))
+            print(f"  {s['jp']}（{'/'.join(trigger)}）→ 浸透カード: {names}")
+            print("    ※既存の値上がり受益の前向き検定には混ぜない（別レーン・§16v）")
     if peak_alerts:
         print(f"\n📉→📈 原材料ピークアウト {len(peak_alerts)} 系列（原価圧力の反転・食品レーン）:")
         for s, row, trigger in peak_alerts:
