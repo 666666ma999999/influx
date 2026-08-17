@@ -202,11 +202,13 @@ def record_firings(alerts: List[Tuple[Dict, Dict, List[str]]], fire_date: str,
             continue  # 価格まで揃っている＝二重計上しない
 
         # 発火日以前の直近終値を使う（休場日に発火後の値を掴まない）
-        win_start = _shift_days(start, -12)
-        win_end = _shift_days(start, 2)
-        px, px_day = close_on_or_before(fetch_hist(ticker, win_start, win_end), fire_date)
-        bench_px, _ = close_on_or_before(
-            fetch_hist(str(card["benchmark"]), win_start, win_end), fire_date)
+        px, px_day, bench_px = _entry_prices(fetch_hist, ticker, str(card["benchmark"]), start)
+        if state["exists"]:
+            # 既存行がある＝価格の穴埋め目的。情報が増えない再実行では追記しない（Codex 6審 #1）
+            adds = (px is not None and state["entry_close"] is None) or \
+                   (bench_px is not None and state["benchmark_entry"] is None)
+            if not adds:
+                continue
 
         kind = "backfill" if state["exists"] else "firing"
         rec = {
@@ -237,6 +239,24 @@ def _shift_days(day: str, delta: int) -> str:
     return (datetime.strptime(day, "%Y-%m-%d") + timedelta(days=delta)).strftime("%Y-%m-%d")
 
 
+def _entry_prices(fetch_hist, ticker: str, benchmark: str, fire_date: str
+                  ) -> Tuple[Optional[float], Optional[str], Optional[float]]:
+    """エントリー価格の組を返す。**指数は銘柄の採用日に合わせる**（Codex 6審 #2）。
+
+    銘柄と指数をそれぞれ独立に「発火日以前の直近」で取ると、市場の休場差で
+    比較期間の起点がずれ、超過リターンが歪む。銘柄の採用日を決めてから指数を揃える。
+
+    Returns:
+        (銘柄終値, 採用日, 指数終値)。銘柄が取れなければ指数も採らない。
+    """
+    win_start, win_end = _shift_days(fire_date, -12), _shift_days(fire_date, 2)
+    px, px_day = close_on_or_before(fetch_hist(ticker, win_start, win_end), fire_date)
+    if px is None or px_day is None:
+        return None, None, None
+    bench_px, _ = close_on_or_before(fetch_hist(benchmark, win_start, win_end), px_day)
+    return px, px_day, bench_px
+
+
 def backfill_missing(path: Path = LEDGER_PATH,
                      history_fn: Optional[Callable[[str, str, str], List[Tuple[str, float]]]] = None
                      ) -> int:
@@ -265,12 +285,14 @@ def backfill_missing(path: Path = LEDGER_PATH,
         if not needs_backfill(state):
             continue
         card = state["card"] or {}
-        win_start, win_end = _shift_days(fire_date, -12), _shift_days(fire_date, 2)
-        px, px_day = close_on_or_before(fetch_hist(ticker, win_start, win_end), fire_date)
-        bench_px, _ = close_on_or_before(
-            fetch_hist(str(state["benchmark"]), win_start, win_end), fire_date)
-        if px is None and bench_px is None:
-            continue  # まだ取れない（次回へ）
+        px, px_day, bench_px = _entry_prices(
+            fetch_hist, ticker, str(state["benchmark"]), fire_date)
+        # 追記して情報が増える時だけ書く。片側だけ永遠に欠測する銘柄で
+        # 毎回同じ行を積むと台帳が無制限に膨らむ（Codex 6審 #1）
+        adds_entry = px is not None and state["entry_close"] is None
+        adds_bench = bench_px is not None and state["benchmark_entry"] is None
+        if not adds_entry and not adds_bench:
+            continue
         rec = {
             "type": "backfill", "spec_version": SPEC_VERSION,
             "fire_date": fire_date, "series_ids": card.get("series_ids"),
@@ -443,6 +465,36 @@ def selftest() -> int:
         cases.append(("過去発火の再訪で価格が埋まる",
                       nb == 1 and st["entry_close"] == 100.0))
         cases.append(("埋まった後は再訪しても増えない", backfill_missing(p3, fake) == 0))
+
+        # Codex 6審 #1: 片側だけ永遠に欠測しても台帳が膨らまない
+        p6 = Path(td) / "log6.jsonl"
+        half = {"S": [("2026-08-17", 100.0)]}   # 指数 "^B" は取れないまま
+        def fake_half(t: str, a: str, b: str) -> List[Tuple[str, float]]:
+            return half.get(t, [])
+        append_row({"type": "firing", "fire_date": "2026-08-17", "ticker": "S",
+                    "benchmark": "^B", "entry_close": None, "benchmark_entry": None,
+                    "entry_date_used": None, "windows_bd": {"w1": 1}}, p6)
+        first = backfill_missing(p6, fake_half)     # 銘柄側だけ埋まる
+        again = backfill_missing(p6, fake_half)     # 情報が増えないので追記しない
+        third = backfill_missing(p6, fake_half)
+        cases.append(("片側欠測でも台帳が無制限に増えない",
+                      first == 1 and again == 0 and third == 0))
+
+        # Codex 6審 #2: 指数のエントリーも銘柄の採用日に揃える
+        p7 = Path(td) / "log7.jsonl"
+        prices3 = {
+            "S": [("2026-08-14", 100.0)],                       # 銘柄は17日休場 → 14日採用
+            "^B": [("2026-08-14", 1000.0), ("2026-08-17", 1500.0)],  # 指数は17日も開いている
+        }
+        def fake3(t: str, a: str, b: str) -> List[Tuple[str, float]]:
+            return prices3.get(t, [])
+        append_row({"type": "firing", "fire_date": "2026-08-17", "ticker": "S",
+                    "benchmark": "^B", "entry_close": None, "benchmark_entry": None,
+                    "entry_date_used": None, "windows_bd": {"w1": 1}}, p7)
+        backfill_missing(p7, fake3)
+        st3 = latest_prices(read_log(p7), "2026-08-17", "S")
+        cases.append(("指数エントリーは銘柄の採用日に揃える",
+                      st3["entry_date_used"] == "2026-08-14" and st3["benchmark_entry"] == 1000.0))
 
         # Codex 5審 #3: benchmark が変わった行の価格を混ぜない
         p4 = Path(td) / "log4.jsonl"
