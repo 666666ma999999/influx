@@ -1788,6 +1788,27 @@
           "subject_side": "buys（サーモンは調達・仕入のみ）",
           "net_evidence": "サーモン系列に限れば売り側ゼロ・買い側のみ。魚価全般でも売り側7.8%に対し買い側優位で、連結営業利益は31,191百万円（+2.7%）と横ばい＝受益は観測されない。",
           "sensitivity_note": "食材流通の減益は輸入冷凍豚肉の価格変動も要因で水産物価格だけに帰属不可。ユニット別利益は非開示。"
+        },
+        {
+          "code": "MOWI",
+          "ticker": "MOWI.OL",
+          "market": "NO",
+          "name": "Mowi ASA",
+          "benchmark": "OSEBX.OL",
+          "btype": 1,
+          "sign": "+",
+          "tier": "confirmed",
+          "verified": "2026-08-18",
+          "evidence": "【決算実読 2026-08-18・§16w 海外カード10枚目】世界最大のアトランティックサーモン養殖会社（年間収穫 559千GWT・2025年）。FY2025通期の**開示セグメント表**（Q4 2025 レポート Note 4 BUSINESS SEGMENTS）: Operational EBIT は **Farming 341.4 / 総額 726.6（＝47.0%）**（他: Feed 51.0・Markets 151.3・Consumer Products 197.3・Other △14.4、EUR百万）。関門B（営業利益構成比≥30%）を**会社開示のセグメント利益そのもの**で通過。符号は両方向で実測: ①**価格↓→減益**＝FY2025 は Farming が 443.8→341.4（△23%）、取締役会が『Operational EBIT for the year of EUR 727 million was somewhat down from 2024 on **lower realised salmon prices** due to high industry supply』と明記 ②**価格↑→増益**＝2026年Q2 は『salmon prices increased by 6% in the second quarter』のもとで operational EBIT EUR 231m（**+23% YoY**・売上EUR 1.6bn は過去最高）。**分子の粒度**（§16x 一般則）: 監視系列= TE『Salmon』＝ノルウェー産アトランティックサーモンの現物価格（NOK/kg・2026-08-17 実測 74.09）／分子= Farming セグメント＝自社養殖（売る側）。**ドライバーと分子が一致**する（ニッスイ1332 の『水産事業全体44.0%』のような広すぎる分子ではない）。⚠️ 留保: 下流の Markets＋Consumer Products が 348.6（総額の48%）あり、これらは内部でサーモンを買って加工・販売する側＝魚価上昇は一部相殺する（統合型のため全社では売り側が優位）。生物資産の公正価値評価は Operational EBIT から除外されているため、価格変動の会計上のノイズは分子に入っていない。主役の選定理由: SalMar・Lerøy・Bakkafrost も純度の高い養殖専業だが、Mowi が収穫量・売上ともに最大でノルウェー以外（スコットランド・チリ・カナダ・アイルランド・フェロー）も持つ最も代表的な1枚（§16w『商品ごとに1枚ずつ』）。価格取得は実測（2026-08-18）: MOWI.OL（Oslo Børs・NOK建て・終値 198.70）＋ benchmark **OSEBX.OL**（Oslo Børs Benchmark Index・同じNOK建て・56営業日分の履歴を確認）。⚠️ `^OSEAX`・`^OBX` は yfinance で履歴が取れず（実測: 0〜1行）不採用。",
+          "source": {
+            "title": "Mowi ASA Quarterly Report Q4 2025（Note 4 BUSINESS SEGMENTS・取締役会 Outlook statement）",
+            "url": "https://mowi.com/wp-content/uploads/2025/05/Mowi_Q4_2025_Report.pdf",
+            "fiscal_period": "FY2025（2025年1月1日〜2025年12月31日）",
+            "quote": "Note 4 BUSINESS SEGMENTS の 2025 通期表（EUR million）: 「Operational EBIT — Feed 51.0 / Farming 341.4 / Markets 151.3 / Consumer Products 197.3 / Other -14.4 / TOTAL 726.6」（2024: Farming 443.8 / TOTAL 828.9）。取締役会 Outlook statement: 「Operational EBIT for the year of EUR 727 million was somewhat down from 2024 on lower realised salmon prices due to high industry supply.」／同 Note 4 冒頭: 「For management purposes, Mowi is organized into three Business Areas: Feed, Farming and Sales & Marketing.」＝Farming 47.0% は会社開示のセグメント利益から直接算出（341.4/726.6）。2026年Q2 の裏取り（価格↑→増益）は会社プレスリリース『Record-high revenues and volumes for Mowi in the second quarter』の「salmon prices increased by 6% in the second quarter」「operational EBIT of EUR 231 million, an increase of 23%」による（GlobeNewswire 配信・会社発表）。"
+          },
+          "subject_op_pct": 47.0,
+          "linkage": "direct",
+          "subject_side": "sells（自社養殖したサーモンを売る側）"
         }
       ]
     },
