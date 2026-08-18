@@ -1105,6 +1105,28 @@
           "linkage": "spread",
           "subject_side": "sells（PE・PPを作って売る側）だが原料はエタン主体＝系列のナフサ基準と一致しない",
           "op_pct_basis": "adjusted_ebitda・**ナフサ経済圏（O&P-EAI）のみを分子にした場合**の比率"
+        },
+        {
+          "code": "051910",
+          "ticker": "051910.KS",
+          "market": "KR",
+          "name": "LG Chem, Ltd.",
+          "benchmark": "^KS11",
+          "btype": 1,
+          "sign": "+",
+          "tier": "provisional",
+          "verified": "2026-08-18",
+          "op_pct_basis": "measurement_impossible（石油化学セグメントが2年連続の営業赤字で構成比を計算できない）",
+          "evidence": "【決算実読 2026-08-18・§16w 海外カード19枚目／石化スプレッド2社目】韓国最大手のナフサクラッカー運営会社で、**本系列の分子（中国のPE/PP価格）と分母（ナフサ）の差がそのまま採算になる立場**。LyondellBasell（米国エタン原料で却下）と違い、**原料がナフサで系列の定義と一致する**。⚠️ **provisional の理由**: **石油化学セグメントが赤字で関門Bを計算できない**——会社IR（4Q2025 Earnings Release）のセグメント営業利益は **石油化学 △356（2024年 △104）／全社 +1,181**（KRW十億）で、2年連続の営業赤字。Pilbara・West Fraser と同じ『赤字で構成比が意味を持たない』型。**符号は会社自身が明言（本カードの価値）**: 4Q2025 の石化コメントは「Recorded a loss due to a **narrowing spread** resulting from increased shipment volumes in region」＝**スプレッド縮小が赤字の理由**と会社が書いている。本系列（PE・PP−ナフサ）が測っているものと、同社の損益が直結していることの一次証拠。**分子の粒度**: 系列= 中国DCEのPE/PP先物−ナフサ／分子= 石油化学セグメント（NCC/PO・PVC・ABS・アクリル等を含む**やや広い**単位で、ポリオレフィン単独は非開示）。⚠️ **二次情報の誤りを実測で訂正（2026-08-18）**: 複数の報道が『LG化学の2025年 石油化学 営業利益 1.15兆ウォン』と書いていたが、**会社IRの実データは △356十億ウォンの赤字**だった。報道の数字でカードを作っていたら確証にしていた＝**一次資料を開いたことで誤りを防いだ**（教訓として記録）。確証化の条件: 石化セグメントが黒字転換した期の開示（スプレッド回復局面）で構成比≥30%を確認する。価格取得は実測（2026-08-18）: 051910.KS（韓国取引所・KRW建て・終値 270,500）＋ benchmark ^KS11（KOSPI・同じKRW建て）。",
+          "source": {
+            "title": "LG Chem, Ltd. — 4Q 2025 Earnings Release（英語版・会社IR）",
+            "url": "https://www.lgchem.com/upload/file/ir-events/4Q_2025_Earnings_Release_ENG.pdf",
+            "fiscal_period": "FY2025（2025年1月1日〜2025年12月31日）",
+            "quote": "p.5『2025 Business Results』（Operating Profit・KRW bn）: 「LG Chem 875 (2024) / 1,181 (2025)」「Petrochemicals -104 (2024) / -356 (2025)」「Advanced Materials 437 / 146」「Life Sciences 110 / 128」「Energy Solution 575 / 1,346」「Farm Hannong 44 / 38」／p.7『Results & Outlook by Business — Petrochemicals』: 「Recorded a loss due to a narrowing spread resulting from increased shipment volumes in region, as well as the impact of one-off costs at overseas operations.」"
+          },
+          "subject_op_pct": null,
+          "linkage": "spread",
+          "subject_side": "sells（ナフサを分解してPE・PPを作って売る側＝スプレッドがそのまま採算）"
         }
       ]
     },
@@ -1218,6 +1240,28 @@
           "linkage": "spread",
           "subject_side": "sells（PE・PPを作って売る側）だが原料はエタン主体＝系列のナフサ基準と一致しない",
           "op_pct_basis": "adjusted_ebitda・**ナフサ経済圏（O&P-EAI）のみを分子にした場合**の比率"
+        },
+        {
+          "code": "051910",
+          "ticker": "051910.KS",
+          "market": "KR",
+          "name": "LG Chem, Ltd.",
+          "benchmark": "^KS11",
+          "btype": 1,
+          "sign": "+",
+          "tier": "provisional",
+          "verified": "2026-08-18",
+          "op_pct_basis": "measurement_impossible（石油化学セグメントが2年連続の営業赤字で構成比を計算できない）",
+          "evidence": "【決算実読 2026-08-18・§16w 海外カード19枚目／石化スプレッド2社目】韓国最大手のナフサクラッカー運営会社で、**本系列の分子（中国のPE/PP価格）と分母（ナフサ）の差がそのまま採算になる立場**。LyondellBasell（米国エタン原料で却下）と違い、**原料がナフサで系列の定義と一致する**。⚠️ **provisional の理由**: **石油化学セグメントが赤字で関門Bを計算できない**——会社IR（4Q2025 Earnings Release）のセグメント営業利益は **石油化学 △356（2024年 △104）／全社 +1,181**（KRW十億）で、2年連続の営業赤字。Pilbara・West Fraser と同じ『赤字で構成比が意味を持たない』型。**符号は会社自身が明言（本カードの価値）**: 4Q2025 の石化コメントは「Recorded a loss due to a **narrowing spread** resulting from increased shipment volumes in region」＝**スプレッド縮小が赤字の理由**と会社が書いている。本系列（PE・PP−ナフサ）が測っているものと、同社の損益が直結していることの一次証拠。**分子の粒度**: 系列= 中国DCEのPE/PP先物−ナフサ／分子= 石油化学セグメント（NCC/PO・PVC・ABS・アクリル等を含む**やや広い**単位で、ポリオレフィン単独は非開示）。⚠️ **二次情報の誤りを実測で訂正（2026-08-18）**: 複数の報道が『LG化学の2025年 石油化学 営業利益 1.15兆ウォン』と書いていたが、**会社IRの実データは △356十億ウォンの赤字**だった。報道の数字でカードを作っていたら確証にしていた＝**一次資料を開いたことで誤りを防いだ**（教訓として記録）。確証化の条件: 石化セグメントが黒字転換した期の開示（スプレッド回復局面）で構成比≥30%を確認する。価格取得は実測（2026-08-18）: 051910.KS（韓国取引所・KRW建て・終値 270,500）＋ benchmark ^KS11（KOSPI・同じKRW建て）。",
+          "source": {
+            "title": "LG Chem, Ltd. — 4Q 2025 Earnings Release（英語版・会社IR）",
+            "url": "https://www.lgchem.com/upload/file/ir-events/4Q_2025_Earnings_Release_ENG.pdf",
+            "fiscal_period": "FY2025（2025年1月1日〜2025年12月31日）",
+            "quote": "p.5『2025 Business Results』（Operating Profit・KRW bn）: 「LG Chem 875 (2024) / 1,181 (2025)」「Petrochemicals -104 (2024) / -356 (2025)」「Advanced Materials 437 / 146」「Life Sciences 110 / 128」「Energy Solution 575 / 1,346」「Farm Hannong 44 / 38」／p.7『Results & Outlook by Business — Petrochemicals』: 「Recorded a loss due to a narrowing spread resulting from increased shipment volumes in region, as well as the impact of one-off costs at overseas operations.」"
+          },
+          "subject_op_pct": null,
+          "linkage": "spread",
+          "subject_side": "sells（ナフサを分解してPE・PPを作って売る側＝スプレッドがそのまま採算）"
         }
       ]
     },
