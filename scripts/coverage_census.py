@@ -39,6 +39,7 @@ SHORTAGE_PATH = ROOT / "configs" / "x_shortage_map.json"
 NEWS_PATH = ROOT / "configs" / "news_shock.json"
 WEEKLY_LEDGER = ROOT / "data" / "price_watch" / "universe_weekly.jsonl"
 X_WATCH_LOG = ROOT / "data" / "x_price_watch" / "watch_log.jsonl"
+X_COLLECT_LEDGER = ROOT / "data" / "x_price_watch" / "ledger.jsonl"
 NEWS_LEDGER = ROOT / "data" / "news_shock" / "news_log.jsonl"
 OUT_PATH = ROOT / "output" / "coverage_census.md"
 
@@ -79,6 +80,10 @@ FRESH_DAYS_B2B = 14
 FRESH_DAYS_NEWS = 3
 FRESH_DAYS_X = 3
 MUTE_THRESHOLD = 999.0  # 上昇アラートを止めている印（§16j の食品ミュート等）
+# X品薄レーンの「波」判定パラメータ。正本は price_watch_alert.wave_state（ここは見込み日の逆算用の写し）。
+# 値を変える時は必ず両方を合わせる（片方だけ変えると census の見込み日が嘘になる）
+WAVE_DAYS = 28
+WAVE_BALANCE = 0.3
 
 
 def resolve_driver(series_id: str) -> str:
@@ -233,8 +238,66 @@ def live_series_ids(
     }
 
 
-def x_lane_state(rows: List[Dict[str, Any]], now: datetime) -> Tuple[bool, str]:
-    """X品薄レーンが判定可能か（前28日窓の充填＋台帳の鮮度）を返す。"""
+def x_warmup_forecast(collect_rows: List[Dict[str, Any]], now: datetime,
+                      win: int = WAVE_DAYS, bal: float = WAVE_BALANCE,
+                      need_prev: int = 3, need_cur: int = 6,
+                      horizon: int = 180) -> Tuple[Optional[str], str]:
+    """X品薄レーンの「波」判定が成立し始める見込み日を返す（2026-08-19 追加）。
+
+    判定式は price_watch_alert.wave_state と同じ:
+    直近 win 日の標本が need_cur 以上、前 win 日の標本が need_prev 以上、かつ
+    前窓の標本数が直近窓の bal 倍以上。**収集が今後も同じ日次ペースで続く前提**で先を読む。
+
+    なぜ要るか: 収集を始めた直後は前窓が空で必ず判定不能になる。これを「故障」と表示すると
+    直す物が無いのに直しに行く（2026-08-19 に統括自身が『レーン復旧』を提案しかけた実害）。
+    「壊れている」と「まだ貯まっていない」を出力で区別するための関数。
+
+    Args:
+        collect_rows: X収集台帳（data/x_price_watch/ledger.jsonl）の行。
+        now: 現在時刻（UTC）。
+        win/bal/need_prev/need_cur: wave_state と同じ判定パラメータ。
+        horizon: 何日先まで探すか。
+
+    Returns:
+        (見込み開通日 "YYYY-MM-DD" or None, 説明文)
+    """
+    days = sorted({str(r.get("date")) for r in collect_rows
+                   if r.get("status") == "ok" and r.get("date")})
+    if not days:
+        return None, "収集台帳が空"
+    last = days[-1]
+    stale_cut = (now - timedelta(days=FRESH_DAYS_X)).strftime("%Y-%m-%d")
+    if last < stale_cut:
+        return None, f"収集が止まっている（最終収集 {last}）"
+    # 未来は「毎日収集が続く」と仮定して埋める（仮定は呼び出し側で明示する）
+    dayset = set(days)
+    cur_day = datetime.strptime(last, "%Y-%m-%d")
+    for i in range(1, horizon + 1):
+        dayset.add((cur_day + timedelta(days=i)).strftime("%Y-%m-%d"))
+    start = datetime.strptime(now.strftime("%Y-%m-%d"), "%Y-%m-%d")
+    for i in range(horizon):
+        target = start + timedelta(days=i)
+        n_cur = n_prev = 0
+        for k in range(win * 2):
+            d = (target - timedelta(days=k)).strftime("%Y-%m-%d")
+            if d not in dayset:
+                continue
+            if k < win:
+                n_cur += 1
+            else:
+                n_prev += 1
+        if n_cur >= need_cur and n_prev >= need_prev and n_prev >= n_cur * bal:
+            return target.strftime("%Y-%m-%d"), f"前窓 {n_prev}/直近窓 {n_cur} で条件成立"
+    return None, f"{horizon}日先まで条件を満たさない"
+
+
+def x_lane_state(rows: List[Dict[str, Any]], now: datetime,
+                 collect_rows: Optional[List[Dict[str, Any]]] = None) -> Tuple[bool, str]:
+    """X品薄レーンが判定可能か（前28日窓の充填＋台帳の鮮度）を返す。
+
+    `collect_rows`（X収集台帳）を渡すと、前窓が未充填のときに
+    〈ウォームアップ中＝見込み開通日つき〉と〈収集が止まっている＝故障〉を区別する。
+    """
     if not rows:
         return False, "watch_log が空"
     cutoff = (now - timedelta(days=FRESH_DAYS_X)).strftime("%Y-%m-%d")
@@ -244,7 +307,16 @@ def x_lane_state(rows: List[Dict[str, Any]], now: datetime) -> Tuple[bool, str]:
         return False, f"台帳が古い（最終 {last}）"
     with_prev = [r for r in fresh if (r.get("n_wave_prev") or 0) > 0]
     if not with_prev:
-        return False, f"直近{len(fresh)}件が n_wave_prev=0（前28日窓が未充填＝発火不能）"
+        base = f"直近{len(fresh)}件が n_wave_prev=0"
+        if collect_rows is not None:
+            opens, why = x_warmup_forecast(collect_rows, now)
+            if opens:
+                return False, (f"{base}＝**ウォームアップ中**（故障ではない）。"
+                               f"見込み開通 **{opens}**（{why}・毎日収集が続く前提）。"
+                               "⚠️ configs/x_price_watch.json のクエリ文言か min_faves を編集すると "
+                               "query_sha が変わり、そのクエリの前窓履歴が無効化されて28日以上巻き戻る")
+            return False, f"{base}＝発火不能（{why}）"
+        return False, f"{base}（前28日窓が未充填＝発火不能）"
     return True, f"直近{len(with_prev)}/{len(fresh)} 件で前窓あり"
 
 
@@ -444,12 +516,36 @@ def build_census(now: Optional[datetime] = None) -> Dict[str, Any]:
 
     latest = latest_series_status(_iter_jsonl(WEEKLY_LEDGER, warnings), warnings)
     live_ids = live_series_ids(latest, now)
-    x_live, x_note = x_lane_state(list(_iter_jsonl(X_WATCH_LOG, warnings)), now)
+    x_live, x_note = x_lane_state(list(_iter_jsonl(X_WATCH_LOG, warnings)), now,
+                                  list(_iter_jsonl(X_COLLECT_LEDGER, warnings)))
     news_live, news_note = news_lane_state(list(_iter_jsonl(NEWS_LEDGER, warnings)), now)
 
-    return build_census_from_data(
+    census = build_census_from_data(
         sources, shortage, news, live_ids, x_live, x_note, news_live, news_note, now, warnings
     )
+    # 止まっている（またはウォームアップ中の）レーンが開いたら実効がいくつ増えるかを併記する。
+    # 「復旧の価値」を数字で見せないと、増えないレーンの復旧に時間を使ってしまう
+    # （2026-08-19 実測: news 復旧は +0 ドライバー＝既存B2Bと重複、X 開通は +4 ドライバー/+6社）
+    if not x_live or not news_live:
+        upside = build_census_from_data(
+            sources, shortage, news, live_ids, True, "", True, "", now, []
+        )
+        census["lane_upside"] = {
+            "effective_n": upside["effective_n"],
+            "companies_n": upside["companies_n"],
+            "added": sorted(set(upside["effective"]) - set(census["effective"])),
+        }
+    return census
+
+
+def _lane_label(lane: Dict[str, Any]) -> str:
+    """レーンの見出し語。ウォームアップ中を「発火不能」と書かない（直す物が無いのに直しに行かせない）。"""
+    if lane.get("live"):
+        return "稼働"
+    note = str(lane.get("note") or "")
+    if "ウォームアップ中" in note:
+        return "ウォームアップ中"
+    return "発火不能"
 
 
 def render_markdown(c: Dict[str, Any]) -> str:
@@ -479,6 +575,12 @@ def render_markdown(c: Dict[str, Any]) -> str:
         f" {b['pending_only_companies_n']} 社",
         f"  （参考: 全ドライバーの provisional を合算すると {b['pending_all_companies_n']} 社）",
         "",
+        *( [
+            f"- 🔓 **止まっているレーンが開いた場合の実効**: {c['lane_upside']['effective_n']} ドライバー /"
+            f" {c['lane_upside']['companies_n']} 社"
+            f"（増える分: {', '.join(c['lane_upside']['added']) or 'なし'}）",
+            "",
+        ] if c.get("lane_upside") else [] ),
         "## レーン別の稼働",
         "",
         "| レーン | 登録数 | 稼働 |",
@@ -488,7 +590,7 @@ def render_markdown(c: Dict[str, Any]) -> str:
         f"| news_shock | {c['lanes']['news']['queries']} クエリ |"
         f" {'稼働' if c['lanes']['news']['live'] else '停止'}（{c['lanes']['news']['note']}） |",
         f"| X品薄 | {c['lanes']['x']['subjects']} subject |"
-        f" {'稼働' if c['lanes']['x']['live'] else '発火不能'}（{c['lanes']['x']['note']}） |",
+        f" {_lane_label(c['lanes']['x'])}（{c['lanes']['x']['note']}） |",
         "",
         "## 実効ドライバー一覧",
         "",
@@ -606,6 +708,28 @@ def selftest() -> int:
     # 実配置の不変条件（2026-08-18 P-08e の再発防止）: 確証カードを持つ系列は必ず上昇を鳴らせる。
     # パーム油は §16j の食品ミュート（alert 999）が残ったまま SD Guthrie を確証カード化したため、
     # 「カードはあるが1度も発火しない」状態が生まれた。config 側の取り違えを機械で止める。
+    # X品薄レーンの「ウォームアップ中」と「故障」の区別（2026-08-19 追加）
+    def _day(n: int) -> str:
+        return (_fixture_now() - timedelta(days=n)).strftime("%Y-%m-%d")
+
+    warm_rows = [{"date": _day(n), "status": "ok"} for n in range(0, 25)]      # 25日ぶんしか無い
+    opens, why = x_warmup_forecast(warm_rows, _fixture_now())
+    cases.append(("収集が浅いだけなら見込み開通日が出る", bool(opens) and opens > _day(0)))
+    live_w, note_w = x_lane_state([{"date": _day(0), "n_wave_prev": 0}], _fixture_now(), warm_rows)
+    cases.append(("ウォームアップは非稼働だが文言に『ウォームアップ中』が入る",
+                  (not live_w) and "ウォームアップ中" in note_w and "見込み開通" in note_w))
+
+    dead_rows = [{"date": _day(n), "status": "ok"} for n in range(40, 70)]     # 40日前で収集が停止
+    opens_d, why_d = x_warmup_forecast(dead_rows, _fixture_now())
+    cases.append(("収集が止まっていれば見込み日を出さない", opens_d is None and "止まっている" in why_d))
+    live_d, note_d = x_lane_state([{"date": _day(0), "n_wave_prev": 0}], _fixture_now(), dead_rows)
+    cases.append(("収集停止は『ウォームアップ中』と言わない",
+                  (not live_d) and "ウォームアップ中" not in note_d))
+
+    full_rows = [{"date": _day(n), "status": "ok"} for n in range(0, 70)]      # 70日ぶん＝条件充足
+    opens_f, _ = x_warmup_forecast(full_rows, _fixture_now())
+    cases.append(("履歴が十分なら見込み開通日は当日", opens_f == _day(0)))
+
     # config が読めない時は「検査しなかった」を PASS にしない（fail-open 禁止・Codex NIT-2）
     try:
         cfg_real = json.loads(SOURCES_PATH.read_text(encoding="utf-8"))
