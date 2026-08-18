@@ -1,6 +1,6 @@
 # 実効カバレッジ census（監視の広さ・重複除外）
 
-- 生成: 2026-08-18T04:18:14+00:00（`python3 scripts/coverage_census.py`）
+- 生成: 2026-08-18T06:01:48+00:00（`python3 scripts/coverage_census.py`）
 - 数え方の正本: tasks/xprice_reform_review.md §8（P-08a 裁定 2026-08-17）。
   **入力件数ではなく「独立ドライバー×稼働取得経路×関門通過カード」の重複除外集合**を数える。
 
@@ -15,8 +15,8 @@
 
 - 🔇 カードはあるが上昇を鳴らす経路が無い: 1 件 — memory-asp-estat
 - 🈳 取得は動くがカード無し: 25 件
-- ⏳ 裏取り待ちのみ（confirmed 0・provisional あり）: 11 ドライバー / 19 社
-  （参考: 全ドライバーの provisional を合算すると 64 社）
+- ⏳ 裏取り待ちのみ（confirmed 0・provisional あり）: 13 ドライバー / 21 社
+  （参考: 全ドライバーの provisional を合算すると 66 社）
 
 ## レーン別の稼働
 

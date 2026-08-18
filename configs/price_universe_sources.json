@@ -557,6 +557,18 @@
           "code": "7898",
           "tier": "rejected",
           "reason": "TOP1000圏外(関門B機械照合 2026-07-28)"
+        },
+        {
+          "code": "WFG",
+          "ticker": "WFG.TO",
+          "market": "CA",
+          "name": "West Fraser Timber",
+          "benchmark": "^GSPTSE",
+          "btype": 1,
+          "sign": "+",
+          "tier": "provisional",
+          "verified": "2026-08-18",
+          "evidence": "【決算実読 2026-08-18・§16w 海外カード6枚目】2026年Q2: 連結売上 $1.434bn・**営業損益 △$74m の赤字**（純損失△$61m）。セグメント別 Adjusted EBITDA= **Lumber $41m**／NA EWP $13m／Europe EWP $13m／その他 △$8m。**分子の粒度は監視系列と一致**（系列= TE『Lumber』／セグメント= Lumber）。⚠️ **provisional の理由（2つ）**: ①**全社が営業赤字**のため関門B（営業利益構成比）が計算できない（Pilbara と同型・P-08d の穴）②a' の代替も使えない——**セグメント別売上が本リリースで非開示**のため『単一商品の売上比≥80%』を検証できず、そもそも Lumber 以外に EWP・パルプ・欧州を持つため80%は考えにくい（EBITDAベースでも Lumber は 41/59＝69%、うち$13mは関税の期中調整という一過性要素を含む）。符号（製材の売り手＝木材高で受益）は明確だが、**関門を通す証拠が揃わないため確証にしない**。価格取得は実測: WFG.TO（TSX・CAD建て・本籍地カナダ）＋ ^GSPTSE（同じCAD建て）。米国上場 WFG（USD）も存在するが自国指数に合わせて TSX 側を採用"
         }
       ]
     },
@@ -567,7 +579,20 @@
       "slug": "rubber",
       "jp": "天然ゴム",
       "note": "ゴム製品5社は全社買い手=上昇は減益の逆シグナル専用",
-      "beneficiaries": []
+      "beneficiaries": [
+        {
+          "code": "STA",
+          "ticker": "STA.BK",
+          "market": "TH",
+          "name": "Sri Trang Agro-Industry",
+          "benchmark": "^SET.BK",
+          "btype": 1,
+          "sign": "+",
+          "tier": "provisional",
+          "verified": "2026-08-18",
+          "evidence": "【決算実読 2026-08-18・§16w 海外カード5枚目】2026年Q1: 総収益 THB26,841.8m のうち**天然ゴム事業 THB21,358.2m＝79.6%**、手袋事業 THB5,471.5m＝20.4%。粗利率は天然ゴム8.7%・手袋10.4%で、**粗利益ベースの構成比は約76.6%**（算出 21,358×8.7% ÷ (21,358×8.7%+5,471×10.4%)・関門B≥30%を通過）。**分子の粒度は監視系列と一致**（系列= TE『Rubber』／セグメント= Natural Rubber）。符号の実測2点: ①2025年Q3は『**weaker rubber prices**』で THB842m の損失 ②2026年Q1は『rubber and gloves recovered amid **better market prices**』で THB645m の黒字転換＝価格↑→利益↑の方向一致。⚠️ **provisional の理由**: 同社は小規模農家から生ゴムを買い上げて加工・販売する**中流の spread 構造**（自社農園は一部）で、ゴム高は売値と仕入の両方に効く。§16f 規約『spread→provisional』に従う。⚠️ 運用上の注意: ベンチマーク ^SET.BK は yfinance で欠測が多い（2026-08-18 実測: 3か月で34営業日分・7/17→8/18 に1か月の穴）。本コミットで入れた欠測ガードにより、指数が7日以上古い時は評価行を書かず持ち越す"
+        }
+      ]
     },
     {
       "id": "gold-tanaka",

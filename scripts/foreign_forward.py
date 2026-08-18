@@ -33,6 +33,9 @@ LEDGER_PATH = ROOT / "data" / "price_watch" / "foreign_forward_log.jsonl"
 SPEC_VERSION = "foreign-v2"
 # 日本株レーンと同じ評価窓（8週=40取引日 / 15週=75取引日）。数えるのは当該銘柄の取引日
 WINDOWS_BD = {"w8": 40, "w15": 75}
+# 指数側の欠測許容日数。銘柄の対象日から何日以上離れた指数値は使わない（古い指数で超過リターンを歪めない）。
+# 2026-08-18 実測: ^SET.BK は3か月で34営業日分しか無く 7/17→8/18 の1か月欠測があった
+BENCH_STALE_DAYS = 7
 
 # (日付, 終値) の列を返す関数。テストでは差し替える
 HistoryFn = Callable[[str], List[Tuple[str, float]]]
@@ -246,6 +249,13 @@ def _shift_days(day: str, delta: int) -> str:
     return (datetime.strptime(day, "%Y-%m-%d") + timedelta(days=delta)).strftime("%Y-%m-%d")
 
 
+def _days_apart(a: Optional[str], b: Optional[str]) -> int:
+    """2つの日付の差（日）。どちらか欠ければ大きな値を返して「使わない」に倒す。"""
+    if not a or not b:
+        return 10**6
+    return abs((datetime.strptime(a, "%Y-%m-%d") - datetime.strptime(b, "%Y-%m-%d")).days)
+
+
 def _entry_prices(fetch_hist, ticker: str, benchmark: str, fire_date: str
                   ) -> Tuple[Optional[float], Optional[str], Optional[float]]:
     """エントリー価格の組を返す。**指数は銘柄の採用日に合わせる**（Codex 6審 #2）。
@@ -260,7 +270,9 @@ def _entry_prices(fetch_hist, ticker: str, benchmark: str, fire_date: str
     px, px_day = close_on_or_before(fetch_hist(ticker, win_start, win_end), fire_date)
     if px is None or px_day is None:
         return None, None, None
-    bench_px, _ = close_on_or_before(fetch_hist(benchmark, win_start, win_end), px_day)
+    bench_px, bench_day = close_on_or_before(fetch_hist(benchmark, win_start, win_end), px_day)
+    if bench_px is not None and _days_apart(px_day, bench_day) > BENCH_STALE_DAYS:
+        bench_px = None  # 指数が古すぎる＝比較の起点が揃わないので採らない（後日 backfill で埋め直す）
     return px, px_day, bench_px
 
 
@@ -354,8 +366,8 @@ def evaluate(today: str, path: Path = LEDGER_PATH,
             # 指数は**銘柄の評価日時点**を採る。指数側で独立に40/75日を数えると
             # 休場日の違いで別の暦日どうしを引き算してしまう（Codex 5審 #2）
             bpx, _bday = close_on_or_before(bhist, day)
-            if bpx is None:
-                continue
+            if bpx is None or _days_apart(day, _bday) > BENCH_STALE_DAYS:
+                continue  # 指数が欠測 or 古すぎる → 誤った超過リターンを書かず次回へ持ち越す
             ret = (px / entry - 1) * 100
             bret = (bpx / bench_entry - 1) * 100
             append_row({
@@ -465,6 +477,22 @@ def selftest() -> int:
             cases.append(("評価は自国指数で測る", ev[0]["benchmark"] == "^ISEQ"))
         n5 = evaluate("2026-08-18", p2, fake)
         cases.append(("同じ窓を二重評価しない", n5 == 0))
+
+        # 指数の欠測ガード（2026-08-18・^SET.BK が3か月で34件しか無い実測への対策）
+        p8 = Path(td) / "log8.jsonl"
+        stale = {
+            "S": [("2026-08-17", 100.0), ("2026-08-18", 110.0)],
+            "^B": [("2026-06-01", 1000.0)],   # 指数が2か月以上古い
+        }
+        def fake_stale(t: str, a: str, b: str) -> List[Tuple[str, float]]:
+            return stale.get(t, [])
+        append_row({"type": "firing", "fire_date": "2026-08-17", "ticker": "S",
+                    "benchmark": "^B", "entry_close": 100.0, "benchmark_entry": 1000.0,
+                    "entry_date_used": "2026-08-17", "windows_bd": {"w1": 1}}, p8)
+        n_stale = evaluate("2026-08-18", p8, fake_stale)
+        cases.append(("指数が古すぎる時は評価を書かない", n_stale == 0))
+        cases.append(("日付差ヘルパー: 欠損は使わない側へ倒す", _days_apart(None, "2026-08-18") > 7))
+        cases.append(("日付差ヘルパー: 同日は0", _days_apart("2026-08-18", "2026-08-18") == 0))
 
         # Codex 5審 #1: 過去の発火を再訪して埋める（当日 alerts が無くても動く）
         p3 = Path(td) / "log3.jsonl"
