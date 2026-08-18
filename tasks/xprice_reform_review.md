@@ -236,3 +236,32 @@
 
 - 一致5のベースライン訂正: docs/price-watch-universe.md と CLAUDE.md の「52系列」→「54系列」（同一訂正・2行）。
   戻し方= 該当2行の revert
+
+## 9. Session Handoff（2026-08-18 中断時点）
+
+### Start Here（再開したらまずこれ）
+
+`docs/price-watch-universe.md` §16x（a' 裁定・総点検の結果・海外カード8枚の現況表）を読む。
+次の一手は **パーム油の主役カード化**（候補= Sime Darby Plantation / IOI Corp＝プランテーション所有＝売る側）。
+手順は Glanbia 以降と同じ4段: ①ティッカーと自国指数を Docker の yfinance で実測
+②直近決算でセグメント利益と**分子の粒度**を確認 ③カード作成 ④`beneficiaries_display`/`foreign_forward` で配線確認。
+
+### Avoid Repeating（同じ失敗を繰り返さない）
+
+- **構成比の%は必ず「分子が何か」を読む**。狭すぎ（東京エレクトロン）も広すぎ（メルカリ）も両方起きた
+- **既存の却下を覆す前に `reason` を実読**する（石化スプレッドで1四半期の好数字に釣られて誤ってカードを足し、撤回した）
+- **100%超の比率は問題ではない**（Alcoa 119%は分子=Aluminumでドライバーと一致）。比率でなく粒度で判断
+- 日本株には主役が居ない商品が多い（リチウム・尿素・ウランは台帳ヒット0社／ゴム・木材は買う側）
+
+### Key Evidence（判断の土台）
+
+- 実効カバレッジ **28ドライバー・34社**（`python3 scripts/coverage_census.py` で再生成）
+- 海外カード8枚（確証5: Kazatomprom・Pilbara・CF・Alcoa・Nexa／仮3: Glanbia・Sri Trang・West Fraser）
+- 週次ジョブは **月曜11:00**（08:30 は田中貴金属09:30・FMBI10:30 の公表前で構造的 stale を出していた）
+
+### If Still Failing（詰まったら）
+
+- 海外株の価格が取れない → `docker compose run --rm xstock python -c "import sys;sys.path.insert(0,'/app/scripts');import foreign_forward as ff;print(ff.yf_history('<ticker>','2026-08-01','2026-08-19'))"`
+  で実測。当日行が NaN で返る銘柄がある（ガード済み）・指数に欠測がある市場もある（^SET.BK・7日超で評価を持ち越す）
+- テストは `docker compose run --rm xstock python -m unittest discover -s tests -t .`（303件）と
+  `python3 scripts/foreign_forward.py --selftest`（29件）
