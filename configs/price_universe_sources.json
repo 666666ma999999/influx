@@ -1310,7 +1310,20 @@
         "weekly_pct": 999.0,
         "four_week_pct": 999.0
       },
-      "beneficiaries": [],
+      "beneficiaries": [
+        {
+          "code": "SDG",
+          "ticker": "5285.KL",
+          "market": "MY",
+          "name": "SD Guthrie Berhad",
+          "benchmark": "^KLSE",
+          "btype": 1,
+          "sign": "+",
+          "tier": "confirmed",
+          "verified": "2026-08-18",
+          "evidence": "【決算実読 2026-08-18・§16w 海外カード9枚目】FY2025通期（12月期・会社公式プレスリリース）: グループPBIT RM3,593m のうち **Upstream RM2,628m＝73.1%**（Downstream RM484m／Industrial Development RM430m）。関門B（営業利益構成比≥30%）を**会社開示のセグメント利益そのもの**で通過（Glanbia のような算出値でも、P-08d a' の売上比代替でもない）。符号は両方向で実測: ①**価格↑→増益**＝FY2025 は平均実現CPO RM4,254/t(+4%)・PK RM3,219/t(+33%) で純利益 RM2,503m(+16%)・過去最高 ②**価格↓→減益**＝1H FY2026 は Upstream PBIT RM1,160m(△18%)、会社は理由を『lower crude palm oil and palm kernel prices』と説明。**分子の粒度**（§16x の一般則）: 監視系列= TE『Palm Oil』＝マレーシアCPO先物（MYR/t・2026-08-17 実測 4,717）／分子= Upstream セグメント＝アブラヤシ農園（CPOとPKを産出）。PKを含むぶん系列よりわずかに広いが同一のFFB由来で同方向に動く（FY2025 は PK +33%）。**狭すぎ（東京エレクトロン型）でも広すぎ（寿スピリッツ型）でもない**。⚠️ 留保2点: ①Downstream（精製・CPOを買う側）を PBIT の13%持つため一部相殺する ②Industrial Development（土地売却益）が四半期利益を大きく振らす（26Q2は Kulai 土地売却 RM529m で純利益がほぼ倍）＝株価はCPO以外でも動く。主役の選定理由: 植林面積で世界最大級の上流専業寄り。IOI Corp(1961.KL)・KLK(2445.KL) は精製・オレオケミカル等の下流比率が高く純度が落ちるため未着手（§16w『商品ごとに1枚ずつ』）。価格取得は実測（2026-08-18）: 5285.KL（Bursa Malaysia・MYR建て・終値 6.71）＋ benchmark ^KLSE（FTSE Bursa Malaysia KLCI・同じMYR建て・終値 1,733.36）。2024年に Sime Darby Plantation Berhad から改称。⚠️ **発火レーンの制約**: 本系列は §16j の食品ピークアウト専用で上昇アラートを永久ミュート（alert 999）しているため、**現状このカードは発火しない**（上昇レーンを開けるかは P-08e としてオーナー裁定待ち・2026-08-18）。出所: SD Guthrie 公式プレスリリース『SD Guthrie Records All-Time High Net Profit of RM2.5 billion』（FY2025・実読）／The Star 2026-08-11『SD Guthrie posts higher earnings of RM1.55bil in 1H』（1H FY2026 セグメントPBIT・二次）"
+        }
+      ],
       "cost_relief_for": [
         {
           "code": "2001",
