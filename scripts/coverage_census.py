@@ -246,7 +246,12 @@ def x_warmup_forecast(collect_rows: List[Dict[str, Any]], now: datetime,
 
     判定式は price_watch_alert.wave_state と同じ:
     直近 win 日の標本が need_cur 以上、前 win 日の標本が need_prev 以上、かつ
-    前窓の標本数が直近窓の bal 倍以上。**収集が今後も同じ日次ペースで続く前提**で先を読む。
+    前窓の標本数が直近窓の bal 倍以上。**収集が今後も毎日続く前提**の「最短見込み日」を返す。
+
+    数える単位も正本に合わせて **(query_id, query_sha) ごと**にする（2026-08-19 敵対レビュー NO-GO）。
+    台帳全体の日付を1つの集合にすると、クエリAだけ成功した日とBだけ成功した日が交互でも
+    「毎日収集できている」に見えてしまい、どのクエリも標本不足なのに開通日を早く出す。
+    レーンとしての開通日は「**どれか1本のクエリが最初に条件を満たす日**」＝各クエリの最短値。
 
     なぜ要るか: 収集を始めた直後は前窓が空で必ず判定不能になる。これを「故障」と表示すると
     直す物が無いのに直しに行く（2026-08-19 に統括自身が『レーン復旧』を提案しかけた実害）。
@@ -261,34 +266,55 @@ def x_warmup_forecast(collect_rows: List[Dict[str, Any]], now: datetime,
     Returns:
         (見込み開通日 "YYYY-MM-DD" or None, 説明文)
     """
-    days = sorted({str(r.get("date")) for r in collect_rows
-                   if r.get("status") == "ok" and r.get("date")})
-    if not days:
-        return None, "収集台帳が空"
-    last = days[-1]
+    # clean の定義も正本 price_watch_alert.is_clean に合わせる（status=ok・censored でない・count あり）
+    per_query: Dict[Tuple[str, str], Set[str]] = {}
+    all_days: Set[str] = set()
+    for r in collect_rows:
+        if r.get("status") != "ok" or r.get("censored") or r.get("count") is None:
+            continue
+        day = str(r.get("date") or "")
+        if not DATE_RE.match(day):
+            continue
+        key = (str(r.get("query_id") or ""), str(r.get("query_sha") or ""))
+        per_query.setdefault(key, set()).add(day)
+        all_days.add(day)
+    if not all_days:
+        return None, "収集台帳に clean な行が無い"
+    last = max(all_days)
     stale_cut = (now - timedelta(days=FRESH_DAYS_X)).strftime("%Y-%m-%d")
     if last < stale_cut:
         return None, f"収集が止まっている（最終収集 {last}）"
-    # 未来は「毎日収集が続く」と仮定して埋める（仮定は呼び出し側で明示する）
-    dayset = set(days)
-    cur_day = datetime.strptime(last, "%Y-%m-%d")
-    for i in range(1, horizon + 1):
-        dayset.add((cur_day + timedelta(days=i)).strftime("%Y-%m-%d"))
+
     start = datetime.strptime(now.strftime("%Y-%m-%d"), "%Y-%m-%d")
-    for i in range(horizon):
-        target = start + timedelta(days=i)
-        n_cur = n_prev = 0
-        for k in range(win * 2):
-            d = (target - timedelta(days=k)).strftime("%Y-%m-%d")
-            if d not in dayset:
-                continue
-            if k < win:
-                n_cur += 1
-            else:
-                n_prev += 1
-        if n_cur >= need_cur and n_prev >= need_prev and n_prev >= n_cur * bal:
-            return target.strftime("%Y-%m-%d"), f"前窓 {n_prev}/直近窓 {n_cur} で条件成立"
-    return None, f"{horizon}日先まで条件を満たさない"
+    best: Optional[Tuple[str, str, int, int]] = None   # (日付, query_id, n_prev, n_cur)
+    for (qid, _sha), days in per_query.items():
+        # そのクエリが直近まで生きている場合だけ「今後も毎日集まる」と仮定する
+        # （SHA が変わった旧クエリの履歴で開通日を前倒ししない）
+        if max(days) < stale_cut:
+            continue
+        future = {(datetime.strptime(max(days), "%Y-%m-%d") + timedelta(days=i)).strftime("%Y-%m-%d")
+                  for i in range(1, horizon + 1)}
+        dayset = days | future
+        for i in range(horizon):
+            target = start + timedelta(days=i)
+            if best and target.strftime("%Y-%m-%d") >= best[0]:
+                break   # 既に見つかった最短日より後ろは見ない
+            n_cur = n_prev = 0
+            for k in range(win * 2):
+                d = (target - timedelta(days=k)).strftime("%Y-%m-%d")
+                if d not in dayset:
+                    continue
+                if k < win:
+                    n_cur += 1
+                else:
+                    n_prev += 1
+            if n_cur >= need_cur and n_prev >= need_prev and n_prev >= n_cur * bal:
+                best = (target.strftime("%Y-%m-%d"), qid, n_prev, n_cur)
+                break
+    if best:
+        return best[0], (f"最短は {best[1]}（前窓 {best[2]}/直近窓 {best[3]}）"
+                         f"・クエリ単位で計算・毎日収集が続く前提の最短値")
+    return None, f"{horizon}日先まで条件を満たすクエリが無い"
 
 
 def x_lane_state(rows: List[Dict[str, Any]], now: datetime,
@@ -312,7 +338,7 @@ def x_lane_state(rows: List[Dict[str, Any]], now: datetime,
             opens, why = x_warmup_forecast(collect_rows, now)
             if opens:
                 return False, (f"{base}＝**ウォームアップ中**（故障ではない）。"
-                               f"見込み開通 **{opens}**（{why}・毎日収集が続く前提）。"
+                               f"見込み開通 **{opens}**（{why}）。"
                                "⚠️ configs/x_price_watch.json のクエリ文言か min_faves を編集すると "
                                "query_sha が変わり、そのクエリの前窓履歴が無効化されて28日以上巻き戻る")
             return False, f"{base}＝発火不能（{why}）"
@@ -708,27 +734,77 @@ def selftest() -> int:
     # 実配置の不変条件（2026-08-18 P-08e の再発防止）: 確証カードを持つ系列は必ず上昇を鳴らせる。
     # パーム油は §16j の食品ミュート（alert 999）が残ったまま SD Guthrie を確証カード化したため、
     # 「カードはあるが1度も発火しない」状態が生まれた。config 側の取り違えを機械で止める。
-    # X品薄レーンの「ウォームアップ中」と「故障」の区別（2026-08-19 追加）
+    # X品薄レーンの「ウォームアップ中」と「故障」の区別（2026-08-19 追加・敵対レビュー後に強化）
     def _day(n: int) -> str:
         return (_fixture_now() - timedelta(days=n)).strftime("%Y-%m-%d")
 
-    warm_rows = [{"date": _day(n), "status": "ok"} for n in range(0, 25)]      # 25日ぶんしか無い
-    opens, why = x_warmup_forecast(warm_rows, _fixture_now())
+    def _rows(qid: str, ns: Iterable[int], sha: str = "s1", **extra) -> List[Dict[str, Any]]:
+        return [{"date": _day(n), "status": "ok", "count": 10,
+                 "query_id": qid, "query_sha": sha, **extra} for n in ns]
+
+    warm = _rows("q1", range(0, 25))                      # 25日ぶんしか無い＝前窓が埋まらない
+    opens, _ = x_warmup_forecast(warm, _fixture_now())
     cases.append(("収集が浅いだけなら見込み開通日が出る", bool(opens) and opens > _day(0)))
-    live_w, note_w = x_lane_state([{"date": _day(0), "n_wave_prev": 0}], _fixture_now(), warm_rows)
+    live_w, note_w = x_lane_state([{"date": _day(0), "n_wave_prev": 0}], _fixture_now(), warm)
     cases.append(("ウォームアップは非稼働だが文言に『ウォームアップ中』が入る",
                   (not live_w) and "ウォームアップ中" in note_w and "見込み開通" in note_w))
 
-    dead_rows = [{"date": _day(n), "status": "ok"} for n in range(40, 70)]     # 40日前で収集が停止
-    opens_d, why_d = x_warmup_forecast(dead_rows, _fixture_now())
+    dead = _rows("q1", range(40, 70))                     # 40日前で収集が停止
+    opens_d, why_d = x_warmup_forecast(dead, _fixture_now())
     cases.append(("収集が止まっていれば見込み日を出さない", opens_d is None and "止まっている" in why_d))
-    live_d, note_d = x_lane_state([{"date": _day(0), "n_wave_prev": 0}], _fixture_now(), dead_rows)
+    live_d, note_d = x_lane_state([{"date": _day(0), "n_wave_prev": 0}], _fixture_now(), dead)
     cases.append(("収集停止は『ウォームアップ中』と言わない",
                   (not live_d) and "ウォームアップ中" not in note_d))
 
-    full_rows = [{"date": _day(n), "status": "ok"} for n in range(0, 70)]      # 70日ぶん＝条件充足
-    opens_f, _ = x_warmup_forecast(full_rows, _fixture_now())
+    full = _rows("q1", range(0, 70))                      # 70日ぶん＝当日で条件充足
+    opens_f, _ = x_warmup_forecast(full, _fixture_now())
     cases.append(("履歴が十分なら見込み開通日は当日", opens_f == _day(0)))
+
+    # ① クエリを跨いだ日付の混線で開通日を早めない（NO-GO 2026-08-19）。
+    #    A は偶数日・B は奇数日だけ成功＝集合を畳むと「毎日」に見えるが、どちらも標本が半分
+    mixed = _rows("qA", range(0, 70, 2)) + _rows("qB", range(1, 70, 2))
+    mixed_open, _ = x_warmup_forecast(mixed, _fixture_now())
+    solo_open, _ = x_warmup_forecast(_rows("qA", range(0, 70, 2)), _fixture_now())
+    cases.append(("クエリを跨いで日付を畳まない（混線で前倒ししない）", mixed_open == solo_open))
+
+    # ② SHA が変わった旧クエリの履歴で前倒ししない（新SHAは今日から数え直し）
+    sha_changed = _rows("q1", range(30, 70), sha="old") + _rows("q1", range(0, 3), sha="new")
+    sha_open, _ = x_warmup_forecast(sha_changed, _fixture_now())
+    cases.append(("SHA変更後は旧履歴で前倒ししない", sha_open is None or sha_open > _day(0)))
+
+    # ③ clean でない行は標本に数えない（正本 is_clean と同じ3条件）
+    dirty = (_rows("q1", range(0, 70), status="blocked")
+             + _rows("q2", range(0, 70), censored=True)
+             + [{"date": _day(n), "status": "ok", "count": None,
+                 "query_id": "q3", "query_sha": "s1"} for n in range(0, 70)])
+    dirty_open, dirty_why = x_warmup_forecast(dirty, _fixture_now())
+    cases.append(("status/censored/count 欠落の行は数えない",
+                  dirty_open is None and "clean" in dirty_why))
+
+    # ④ balance 条件の境界（前窓が直近窓の 0.3 倍に届くかどうかで結果が変わる）
+    #    直近28日は毎日・前窓は n 日だけ、という履歴を作って境界を確かめる
+    def _bal_case(prev_days: int) -> Optional[str]:
+        ns = list(range(0, 28)) + list(range(28, 28 + prev_days))
+        return x_warmup_forecast(_rows("q1", ns), _fixture_now())[0]
+    cases.append(("前窓が 0.3 倍に足りなければ当日開通にしない（8日）", _bal_case(8) != _day(0)))
+    cases.append(("前窓が 0.3 倍に届けば当日開通（9日）", _bal_case(9) == _day(0)))
+
+    # ⑤ 複製したパラメータが正本 wave_state と一致しているか（値をコピーしている以上、
+    #    ズレたら見込み日が嘘になる。正本の関数に同じ履歴を流して答え合わせする）
+    try:
+        import price_watch_alert as _pwa
+
+        def _clean(row: Dict[str, Any]) -> bool:
+            return row.get("status") == "ok" and not row.get("censored") and row.get("count") is not None
+
+        by_date = {r["date"]: r for r in _rows("q1", list(range(0, 28)) + list(range(28, 37)))}
+        w_ok = _pwa.wave_state(by_date, _day(0), _clean, {}, "s1")
+        by_date8 = {r["date"]: r for r in _rows("q1", list(range(0, 28)) + list(range(28, 36)))}
+        w_ng = _pwa.wave_state(by_date8, _day(0), _clean, {}, "s1")
+        cases.append(("複製パラメータが正本 wave_state と同じ答えを出す",
+                      w_ok["wave_ratio"] is not None and w_ng["wave_ratio"] is None))
+    except Exception as exc:  # noqa: BLE001  正本が読めない環境でも他のテストは走らせる
+        cases.append((f"正本 wave_state と突き合わせできた（{exc}）", False))
 
     # config が読めない時は「検査しなかった」を PASS にしない（fail-open 禁止・Codex NIT-2）
     try:
