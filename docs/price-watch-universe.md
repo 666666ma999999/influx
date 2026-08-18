@@ -1981,12 +1981,12 @@ census の「取得は動くがカード無し」27系列に受益カードを�
 
 | 系列 | 主役の候補（上場先） | 実測メモ（出所は下記） | 純度の注意 |
 |---|---|---|---|
-| lithium | ✅**Pilbara Minerals をカード化済み**（2026-08-18・PLS.AX）／Albemarle・SQM は未着手 | ALB は2026Q2 売上$1.7bn(+31%)・調整EBITDA+155%とリチウム市況に強く反応 | **ALB はリチウム＋臭素＋精製触媒の3事業／SQM はリチウム＋肥料＋ヨウ素**＝関門E2要確認。**PLS はリチウム専業**で純度が高い |
-| uranium | ✅**Kazatomprom をカード化済み**（2026-08-17・KAP.IL）／Cameco（NYSE:CCJ）は未着手 | FY2025 連結収益 KZT1,803,049百万に対し U3O8売上 KZT1,638,000百万＝**90.8%**（会社開示） | **セグメント別利益は非開示**のため provisional。確証化は H1 2026（2026-08-21 公表）待ち。Cameco は Westinghouse 持分あり |
+| lithium | ✅**3枚とも決着（2026-08-18）**: Pilbara（確証・専業）／**Albemarle（確証）**／**SQM（仮）** | ALB: FY2025 Energy Storage 697.2/1,098.0＝**63.5%**・26Q2は723.5/858＝**84.3%**（価格+73%→同セグEBITDA+229%）。SQM: リチウム粗利益**45%**だがヨウ素も**42%** | ALB は Ketjen の51%を2026-03に売却し純度上昇→**確証**。SQM は①ヨウ素とほぼ同規模②価格上昇局面の増益実績が一次資料で未確認（26Q2はSEC未提出・実測）→**仮で据え置き** |
+| uranium | ✅**2枚とも決着**: Kazatomprom（確証・a' 適用）／**Cameco（確証・2026-08-18）** | KAP: U3O8売上90.8%。CCO: FY2025 調整後EBITDA **ウラン1,255/合計1,929＝65.1%**、実現価格 CAD87.00/lb(+9%)→ウラン粗利益803(+18%) | CCO の留保: **実現価格は長期契約主体でスポットと逆に動く年がある**（2025はスポット△14%でも実現+9%）／Westinghouse が黒字分の約38%＝ウラン価格ドライバーではない |
 | urea（尿素） | ✅**CF Industries をカード化済み（confirmed）**（2026-08-18・CF/^GSPC） | 2026Q2 会社開示: 連結 gross margin $1,145m のうち **Granular Urea $477m＝41.7%**（各セグメント合計が連結と一致）。尿素平均価格 $593/t(+29%) に対し同セグメント gross margin +71% | セグメント営業利益は非配賦のため **gross margin ベース**で判定（30%を大きく超過）。Nutrien・Yara は多角化で純度が落ちる |
 | rubber（天然ゴム） | ✅**Sri Trang をカード化済み（仮）**（2026-08-18・STA.BK/^SET.BK） | 2026Q1: 天然ゴム THB21,358m＝収益の79.6%・粗利益ベース約76.6%。価格↓の25Q3は損失／価格↑の26Q1は黒字転換と方向一致 | **中流の spread 構造**（農家から買い上げ加工）のため §16f 規約で provisional。^SET.BK は欠測多く欠測ガードで対応 |
-| lumber（木材） | ✅**West Fraser をカード化済み（仮）**（2026-08-18・WFG.TO/^GSPTSE）／Weyerhaeuser は未着手 | 2026Q2: 連結売上$1.434bn・**営業損益△$74m の赤字**。Adj.EBITDA は Lumber $41m／NA EWP $13m／Europe EWP $13m | **赤字で関門B計算不能**かつ**セグメント別売上が非開示**で a' の80%も検証できず→ provisional。WY は林地REIT混在で未着手 |
-| 石化スプレッド | LyondellBasell / Dow 等（未調査） | — | 未調査。日本勢は §16x 上表のとおり却下維持 |
+| lumber（木材） | ⚠️**2枚とも仮で決着（確証ゼロ）**: West Fraser（仮）／**Weyerhaeuser（仮・2026-08-18）** | WFG: 26Q2 営業損益△$74m の赤字で関門B計算不能。WY: FY2025 調整後EBITDA **Wood Products 250/合計1,021＝24.5%**（30%未満）。26Q2単独なら129/310＝41.6% | WY を確証にしない理由＝**1四半期の good quarter で通期判定を覆さない**（§16x の教訓）。Timberlands(57%)は**原木を売る側**で製材先物とは別価格＝分子に足さない（足せば81%だが寿スピリッツ型の誤り）。FY2026通期で再判定 |
+| 石化スプレッド | **LyondellBasell を検査（仮・2026-08-18）**／Dow は未着手 | FY2025 EBITDA(除く特別要因) O&P-Americas **1,161** ＋ O&P-EAI **50** ＝ 全社約2,500 の**約48%** | **数値は通るが連動が弱いため確証にしない**: 系列の分子は中国DCEのPE/PP×分母ナフサだが、LYB の稼ぎ頭は**米国エタン原料**。ナフサ経済圏の O&P-EAI は FY2025 EBITDA **△457**（除く特別要因でも+50）＝ほぼ稼いでいない。確証化には**アジアのナフサクラッカー**（Formosa Plastics・LG Chem 等）の実読が要る |
 
 出所（すべて 2026-08-17 実読）: [INN 7 Biggest Lithium-mining Companies](https://investingnews.com/daily/resource-investing/battery-metals-investing/lithium-investing/top-lithium-producers/)／
 [Investing.com Albemarle Q2 2026](https://www.investing.com/news/company-news/albemarle-q2-2026-slides-lithium-pricing-surge-drives-155-ebitda-jump-93CH-4842774)／
@@ -2077,7 +2077,7 @@ Kazatomprom（ウラン売上90.8%・FY2025営業利益率43.2%）の2枚を **c
 寿スピリッツはインバウンド売上が初の100億円突破＝成長の牽引役だが構成比は12.7%に留まる。
 「比率は小さいが伸びを作っている」型は現行の関門では拾えない（既知の限界として記録・裁定は保留）。
 
-### 海外カードの現況（2026-08-18 時点・12枚）
+### 海外カードの現況（2026-08-18 時点・15枚）
 
 | 商品 | 銘柄（市場） | 区分 | 判定に使った数字 |
 |---|---|---|---|
@@ -2085,6 +2085,9 @@ Kazatomprom（ウラン売上90.8%・FY2025営業利益率43.2%）の2枚を **c
 | サーモン | **Mowi**（Oslo Børs） | **確証** | Farming の**開示セグメント利益 47.0%**（341.4/726.6） |
 | ウラン(2枚目) | **Cameco**（TSX） | **確証** | ウランの**開示調整後EBITDA 65.1%**（1,255/1,929） |
 | リチウム(2枚目) | **Albemarle**（NYSE） | **確証** | Energy Storage の**開示調整後EBITDA 63.5%**（FY2025）・26Q2は84.3% |
+| リチウム(3枚目) | Sociedad Química y Minera (SQM・NYSE ADR) | 仮 | リチウム粗利益 45% だが**ヨウ素も42%**・価格上昇期の実績未確認 |
+| 木材(2枚目) | Weyerhaeuser（NYSE） | 仮 | Wood Products の**通期24.5%**（30%未満）・26Q2単独なら41.6% |
+| 石化スプレッド | LyondellBasell（NYSE） | 仮 | O&P 約48% だが**原料がエタンで系列のナフサ基準と不一致** |
 | ウラン | Kazatomprom（LSE GDR） | **確証** | U3O8売上 90.8%（a' 適用） |
 | リチウム | Pilbara Minerals（ASX） | **確証** | 単一鉱山・売上≈100%（a' 適用） |
 | 尿素 | CF Industries（NYSE） | **確証** | 粒状尿素の粗利益 41.7% |

@@ -614,6 +614,27 @@
           "tier": "provisional",
           "verified": "2026-08-18",
           "evidence": "【決算実読 2026-08-18・§16w 海外カード6枚目】2026年Q2: 連結売上 $1.434bn・**営業損益 △$74m の赤字**（純損失△$61m）。セグメント別 Adjusted EBITDA= **Lumber $41m**／NA EWP $13m／Europe EWP $13m／その他 △$8m。**分子の粒度は監視系列と一致**（系列= TE『Lumber』／セグメント= Lumber）。⚠️ **provisional の理由（2つ）**: ①**全社が営業赤字**のため関門B（営業利益構成比）が計算できない（Pilbara と同型・P-08d の穴）②a' の代替も使えない——**セグメント別売上が本リリースで非開示**のため『単一商品の売上比≥80%』を検証できず、そもそも Lumber 以外に EWP・パルプ・欧州を持つため80%は考えにくい（EBITDAベースでも Lumber は 41/59＝69%、うち$13mは関税の期中調整という一過性要素を含む）。符号（製材の売り手＝木材高で受益）は明確だが、**関門を通す証拠が揃わないため確証にしない**。価格取得は実測: WFG.TO（TSX・CAD建て・本籍地カナダ）＋ ^GSPTSE（同じCAD建て）。米国上場 WFG（USD）も存在するが自国指数に合わせて TSX 側を採用"
+        },
+        {
+          "code": "WY",
+          "ticker": "WY",
+          "market": "US",
+          "name": "Weyerhaeuser Company",
+          "benchmark": "^GSPC",
+          "btype": 1,
+          "sign": "+",
+          "tier": "provisional",
+          "verified": "2026-08-18",
+          "evidence": "【決算実読 2026-08-18・§16w 海外カード13枚目／木材2枚目】北米最大級の林地所有＋製材会社。**通期ベースでは関門Bに届かない**: FY2025 の開示調整後EBITDA は **Wood Products 250 / 合計 1,021＝24.5%**（他 Timberlands 581・Real Estate & ENR 411・Unallocated △221、US$百万）。黒字セグメント合計に対しても 20.1% で30%未満。⚠️ **直近四半期だけ見ると通る**: 2026年Q2 は Wood Products 129 / 合計 310＝**41.6%**。しかし**1四半期の good quarter で通期ベースの判定を覆さない**（§16x に記録済みの教訓・石化スプレッドで実際に誤った）ため **provisional 据え置き**。FY2026 通期の開示で再判定する。符号は明確（一次資料）: 2026年Q2 は『Sales realizations for lumber … increased 15 percent … compared with first quarter averages』のもとで Wood Products 調整後EBITDA が 71→**129**（+$58m・+82%）＝**価格↑→増益**。**分子の粒度**: 監視系列= TE『Lumber』＝製材先物（USD）／分子= Wood Products（製材・OSB・EWP）。一致する。⚠️ Timberlands（調整後EBITDAの57%）は**原木を売る側**で製材価格とは別の価格体系（原木価格）で動くため**分子に足さない**（足せば81%になるが、それは寿スピリッツ型の『分子を広げて通す』誤り）。同系列の West Fraser（WFG・仮）と役割が異なる: WFG は製材専業だが全社赤字で関門B測定不能、WY は黒字だが製材の比重が通期24.5%＝**どちらも確証に届かない**。木材は『日本にも海外にも確証カードが無い』状態が続く。価格取得は実測（2026-08-18）: WY（NYSE・USD建て・2026-08-14終値 24.56）＋ benchmark ^GSPC。",
+          "source": {
+            "title": "Weyerhaeuser Company Form 8-K Exhibit 99.1（Q4/FY2025 決算リリース 2026-01-29 ／ Q2 2026 決算リリース 2026-07-30）",
+            "url": "https://www.sec.gov/Archives/edgar/data/106535/000119312526029351/wy-ex99_1.htm",
+            "fiscal_period": "FY2025（2025年12月31日終了年度）＋2026年Q2",
+            "quote": "FY2025（$ millions）: 「The table below reconciles Adjusted EBITDA for the year ended December 31, 2025: Timberlands / Real Estate & ENR / Wood Products / Unallocated Items / Total … Adjusted EBITDA $581 $411 $250 $(221) $1,021」＝Wood Products 24.5%。／2026年Q2（https://www.sec.gov/Archives/edgar/data/106535/000119312526326124/wy-ex99_1.htm）: 「reconciles Adjusted EBITDA for the quarter ended June 30, 2026 … Adjusted EBITDA $123 $129 $129 $(71) $310」＝Wood Products 41.6%、および「WOOD PRODUCTS FINANCIAL HIGHLIGHTS … Adjusted EBITDA $71 (Q1) $129 (Q2) $58 (Change)」「Q2 2026 Performance – Sales realizations for lumber and oriented strand board increased 15 percent and 3 percent, respectively, compared with first quarter averages.」"
+          },
+          "subject_op_pct": 24.5,
+          "linkage": "direct",
+          "subject_side": "sells（製材・OSB・EWP を作って売る側。ただし原木は自社林地からも外部からも調達）"
         }
       ]
     },
@@ -1054,6 +1075,27 @@
           "code": "4208",
           "tier": "rejected",
           "reason": "カプロラクタム-ベンゼン型。TEにbenzeneスラッグが存在せず本系列では代替不能"
+        },
+        {
+          "code": "LYB",
+          "ticker": "LYB",
+          "market": "US",
+          "name": "LyondellBasell Industries N.V.",
+          "benchmark": "^GSPC",
+          "btype": 1,
+          "sign": "+",
+          "tier": "provisional",
+          "verified": "2026-08-18",
+          "evidence": "【決算実読 2026-08-18・§16w 海外カード15枚目／石化スプレッド初】世界最大級のポリオレフィン（PE・PP）メーカー。**構成比の数値だけなら通る**: FY2025 の開示セグメント表で EBITDA（除く特別要因）は **O&P-Americas 1,161 ＋ O&P-EAI 50 ＝ 1,211**、全社 約2,500（US$百万）＝**約48%**。⚠️ **それでも provisional にする理由＝ドライバーとの連動が弱い（関門A/E1 の問題で、大きさの問題ではない）**: ①本系列の分子は**中国DCEのPE/PP国内先物**、分母は**ナフサ**＝『ナフサ分解でポリオレフィンを作る採算』を測る指標。しかし LYB の稼ぎ頭 O&P-Americas は**米国シェールのエタン原料**で、ナフサ基準のスプレッドとは原料が違う ②ナフサ基準の O&P-EAI（欧州・アジア）は FY2025 EBITDA **△457**（除く特別要因でも +50 とほぼゼロ）＝**ナフサ経済圏の事業はほぼ稼いでいない** ③会社の説明も『olefins results decreased approximately $880 million due to decreased margins … higher energy costs』＝エネルギー（エタン・電力）主導。→ **確証にしない**。日本の石化12社が2026-08-03 に全て rejected（在庫評価損益で符号反転・§16x）になったのと同様、この系列は『上がったら買う』の受益者を確定しにくい。確証化には**中国・アジアのナフサクラッカー**（例: Formosa Plastics・LG Chem 等）で、スプレッド拡大期の増益実績を一次資料で確認する必要がある（未着手）。価格取得は実測（2026-08-18）: LYB（NYSE・USD建て・2026-08-14終値 63.76）＋ benchmark ^GSPC。",
+          "source": {
+            "title": "LyondellBasell — Business Results Discussion by Reporting Segment（2025年Q4・通期）",
+            "url": "https://s204.q4cdn.com/455115734/files/doc_financials/2025/q4/v2/2025-4Q-Business-Results-Discussion.pdf",
+            "fiscal_period": "FY2025（2025年12月31日終了年度）",
+            "quote": "Table 1 O&P-Americas「Year Ended December 31, 2025 … EBITDA 1,144 / EBITDA excluding identified items 1,161」（2024: 2,445）／Table 2 O&P-EAI「Year Ended December 31, 2025 … EBITDA (457) / EBITDA excluding identified items 50」（2024: (991) / 19）／本文「Full year ended December 31, 2025 versus full year ended December 31, 2024 - EBITDA decreased $1,301 million … olefins results decreased approximately $880 million due to decreased margins. Ethylene margins decreased driven by higher energy costs and lower co-product contributions」＝全社 EBITDA（除く特別要因）約$2.5bn は会社の2025年決算リリース記載。"
+          },
+          "subject_op_pct": 48.0,
+          "linkage": "spread",
+          "subject_side": "sells（PE・PPを作って売る側）だが原料はエタン主体＝系列のナフサ基準と一致しない"
         }
       ]
     },
@@ -1145,6 +1187,27 @@
           "code": "4208",
           "tier": "rejected",
           "reason": "カプロラクタム-ベンゼン型。TEにbenzeneスラッグが存在せず本系列では代替不能"
+        },
+        {
+          "code": "LYB",
+          "ticker": "LYB",
+          "market": "US",
+          "name": "LyondellBasell Industries N.V.",
+          "benchmark": "^GSPC",
+          "btype": 1,
+          "sign": "+",
+          "tier": "provisional",
+          "verified": "2026-08-18",
+          "evidence": "【決算実読 2026-08-18・§16w 海外カード15枚目／石化スプレッド初】世界最大級のポリオレフィン（PE・PP）メーカー。**構成比の数値だけなら通る**: FY2025 の開示セグメント表で EBITDA（除く特別要因）は **O&P-Americas 1,161 ＋ O&P-EAI 50 ＝ 1,211**、全社 約2,500（US$百万）＝**約48%**。⚠️ **それでも provisional にする理由＝ドライバーとの連動が弱い（関門A/E1 の問題で、大きさの問題ではない）**: ①本系列の分子は**中国DCEのPE/PP国内先物**、分母は**ナフサ**＝『ナフサ分解でポリオレフィンを作る採算』を測る指標。しかし LYB の稼ぎ頭 O&P-Americas は**米国シェールのエタン原料**で、ナフサ基準のスプレッドとは原料が違う ②ナフサ基準の O&P-EAI（欧州・アジア）は FY2025 EBITDA **△457**（除く特別要因でも +50 とほぼゼロ）＝**ナフサ経済圏の事業はほぼ稼いでいない** ③会社の説明も『olefins results decreased approximately $880 million due to decreased margins … higher energy costs』＝エネルギー（エタン・電力）主導。→ **確証にしない**。日本の石化12社が2026-08-03 に全て rejected（在庫評価損益で符号反転・§16x）になったのと同様、この系列は『上がったら買う』の受益者を確定しにくい。確証化には**中国・アジアのナフサクラッカー**（例: Formosa Plastics・LG Chem 等）で、スプレッド拡大期の増益実績を一次資料で確認する必要がある（未着手）。価格取得は実測（2026-08-18）: LYB（NYSE・USD建て・2026-08-14終値 63.76）＋ benchmark ^GSPC。",
+          "source": {
+            "title": "LyondellBasell — Business Results Discussion by Reporting Segment（2025年Q4・通期）",
+            "url": "https://s204.q4cdn.com/455115734/files/doc_financials/2025/q4/v2/2025-4Q-Business-Results-Discussion.pdf",
+            "fiscal_period": "FY2025（2025年12月31日終了年度）",
+            "quote": "Table 1 O&P-Americas「Year Ended December 31, 2025 … EBITDA 1,144 / EBITDA excluding identified items 1,161」（2024: 2,445）／Table 2 O&P-EAI「Year Ended December 31, 2025 … EBITDA (457) / EBITDA excluding identified items 50」（2024: (991) / 19）／本文「Full year ended December 31, 2025 versus full year ended December 31, 2024 - EBITDA decreased $1,301 million … olefins results decreased approximately $880 million due to decreased margins. Ethylene margins decreased driven by higher energy costs and lower co-product contributions」＝全社 EBITDA（除く特別要因）約$2.5bn は会社の2025年決算リリース記載。"
+          },
+          "subject_op_pct": 48.0,
+          "linkage": "spread",
+          "subject_side": "sells（PE・PPを作って売る側）だが原料はエタン主体＝系列のナフサ基準と一致しない"
         }
       ]
     },
@@ -1874,6 +1937,27 @@
           "subject_op_pct": 63.5,
           "linkage": "direct",
           "subject_side": "sells（リチウム化合物を売る側）"
+        },
+        {
+          "code": "SQM",
+          "ticker": "SQM",
+          "market": "US",
+          "name": "Sociedad Química y Minera de Chile (SQM・NYSE ADR)",
+          "benchmark": "^GSPC",
+          "btype": 1,
+          "sign": "+",
+          "tier": "provisional",
+          "verified": "2026-08-18",
+          "evidence": "【決算実読 2026-08-18・§16w 海外カード14枚目／リチウム3枚目】チリのアタカマ塩湖でリチウムを産出する大手。**関門Bの数値は通る**: 会社開示（SEC 6-K・4Q2025 決算リリース）で「Gross profit for the Lithium and Derivatives segment accounted for **45%** of SQM's consolidated gross profit for the twelve months ended December 31, 2025」（連結粗利益 US$1,352.6m ＝ リチウム約609m）。CF Industries と同じく**粗利益ベース**での判定（セグメント営業利益は非配賦）。⚠️ **provisional の理由2つ**: ①**ヨウ素が42%とほぼ同規模**（会社CEOも『iodine … contributed approximately 42% of SQM's total gross profit』と明言）＝リチウム単独ドライバーの会社とは言い切れず、ヨウ素価格（記録的高値と会社が説明）でも同じだけ動く ②**価格上昇局面での増益実績を一次資料で未確認**——2025年はリチウム数量+14%・売上△5%の価格下落局面であり、2026年Q2決算は 2026-08-18 時点で**SEC に未提出**（EDGAR の提出一覧を実測して確認）。→ 次の決算開示で条件2（高値期の増益）を確認してから確証化を再判定する。同系列には既に Pilbara Minerals（専業・確証）と Albemarle（確証）があり、**確証カードの不足を埋めるためのカードではない**（純度の低い3枚目を急いで確証にする理由がない）。価格取得は実測（2026-08-18）: SQM（NYSE ADR・USD建て・2026-08-14終値 74.32）＋ benchmark ^GSPC。⚠️ 本籍地チリの現地上場（SQM-B・サンティアゴ）ではなく**米国ADR**を採用したため、自国指数ではなく USD 建ての ^GSPC を基準にしている（Kazatomprom の GDR と同じ限界）。",
+          "source": {
+            "title": "SQM S.A. Form 6-K — 4Q2025 Earnings Release（SEC 提出・2026年2月）",
+            "url": "https://www.sec.gov/Archives/edgar/data/909037/000090903726000012/a6-k_4q2025earningsrelease.htm",
+            "fiscal_period": "12M2025（2025年1月1日〜2025年12月31日）",
+            "quote": "「Gross profit (1) for the Lithium and Derivatives segment accounted for 45% of SQM's consolidated gross profit for the twelve months ended December 31, 2025.」／「Gross profit (1) for the Iodine and Derivatives segment accounted for 42% of SQM's consolidated gross profit for the twelve months ended December 31, 2025.」／損益表: 「Gross Profit 448.5 (4Q2025) 293.8 (4Q2024) 1,352.6 (12M2025) 1,327.1 (12M2024)」／「Lithium and Derivatives Revenues MUS$ 2,138.7 (12M2025) 2,241.3 (12M2024) (102.6) (5)%」・数量は「Lithium and Derivatives Th. MT 233.1 vs 204.9 (+14%)」＝2025は**価格下落・数量増**の年。"
+          },
+          "subject_op_pct": 45.0,
+          "linkage": "direct",
+          "subject_side": "sells（塩湖由来のリチウム化合物を売る側）"
         }
       ]
     },
