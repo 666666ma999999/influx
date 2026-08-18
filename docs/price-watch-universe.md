@@ -1979,7 +1979,7 @@ census の「取得は動くがカード無し」27系列に受益カードを�
 |---|---|---|---|
 | lithium | ✅**Pilbara Minerals をカード化済み**（2026-08-18・PLS.AX）／Albemarle・SQM は未着手 | ALB は2026Q2 売上$1.7bn(+31%)・調整EBITDA+155%とリチウム市況に強く反応 | **ALB はリチウム＋臭素＋精製触媒の3事業／SQM はリチウム＋肥料＋ヨウ素**＝関門E2要確認。**PLS はリチウム専業**で純度が高い |
 | uranium | ✅**Kazatomprom をカード化済み**（2026-08-17・KAP.IL）／Cameco（NYSE:CCJ）は未着手 | FY2025 連結収益 KZT1,803,049百万に対し U3O8売上 KZT1,638,000百万＝**90.8%**（会社開示） | **セグメント別利益は非開示**のため provisional。確証化は H1 2026（2026-08-21 公表）待ち。Cameco は Westinghouse 持分あり |
-| urea（尿素） | **CF Industries**（NYSE:CF） | 報道が明確に「nitrogen の pure play」と位置づけ。北米安価ガスが原料 | Nutrien・Yara は多角化（カリ/リン/欧州ガスコスト）＝純度が落ちる |
+| urea（尿素） | ✅**CF Industries をカード化済み（confirmed）**（2026-08-18・CF/^GSPC） | 2026Q2 会社開示: 連結 gross margin $1,145m のうち **Granular Urea $477m＝41.7%**（各セグメント合計が連結と一致）。尿素平均価格 $593/t(+29%) に対し同セグメント gross margin +71% | セグメント営業利益は非配賦のため **gross margin ベース**で判定（30%を大きく超過）。Nutrien・Yara は多角化で純度が落ちる |
 | rubber（天然ゴム） | **Sri Trang Agro-Industry**（SET:STA） | 年商約$2.6bn の天然ゴム一貫生産 | ゴム**手袋**事業も持つ＝川下の比率確認が要る |
 | lumber（木材） | **West Fraser**（TSX/NYSE:WFG）／Weyerhaeuser（NYSE:WY） | WFG は TTM 売上$5.24bn・2026Q2 $1.434bn、WY は2026Q2 売上$1.87bn | WY は**林地REIT＋不動産**を含む＝製材単独の比率確認が要る |
 | 石化スプレッド | LyondellBasell / Dow 等（未調査） | — | 未調査。日本勢は §16x 上表のとおり却下維持 |

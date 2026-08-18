@@ -476,6 +476,18 @@
           "code": "4025",
           "tier": "rejected",
           "reason": "TOP1000圏外(TOPIX Small 2・関門B機械照合 2026-07-28)"
+        },
+        {
+          "code": "CF",
+          "ticker": "CF",
+          "market": "US",
+          "name": "CF Industries Holdings",
+          "benchmark": "^GSPC",
+          "btype": 1,
+          "sign": "+",
+          "tier": "confirmed",
+          "verified": "2026-08-18",
+          "evidence": "【決算実読 2026-08-18・§16w 海外カード4枚目】2026年Q2（4-6月）の会社開示セグメント表:連結 net sales $2,222m／連結 gross margin $1,145m。内訳= Ammonia 586/229・**Granular Urea 759/477**・UAN 613/350・AN 71/△4・Other 193/93（**合計が連結と完全一致**して検証済み）。→ **Granular Urea の gross margin 構成比 = 477/1,145 = 41.7%**（≥30%＝関門B通過）。**分子の粒度が監視系列と完全一致**（系列= TE『Urea』／セグメント= Granular Urea）＝2026-08-18 の総点検で問題になった『分子ズレ』は無い。符号と感応度も同一四半期で実証: 尿素の平均販売価格 $593/ton（前年同期 $460・**+29%**）に対し gross margin は $279m→$477m（**+71%**）＝価格上昇がそのまま利益増に出ている。会社は上昇要因を「世界の窒素需給の逼迫（イラン情勢の供給途絶で一段と逼迫）」と説明。⚠️ 測度の限界: CF は**セグメント別の営業利益を配賦・開示していない**ため gross margin を用いた（SG&A 未配賦）。41.7% は30%基準を大きく超えており按分でも崩れにくいと判断し confirmed。価格取得は実測: CF（NYSE・USD）・benchmark ^GSPC（同じUSD建て）。出所= 2026-08-05 開示の上半期決算リリース（SEC 8-K 添付・本文の数表を stocktitan 経由で取得。SEC 直リンクは403・IR ページは要約のみで直接取得できず＝**二次経由の数値だが合計一致で内部検証済み**）"
         }
       ]
     },

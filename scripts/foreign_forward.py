@@ -134,8 +134,15 @@ def yf_history(ticker: str, start: str, end: str) -> List[Tuple[str, float]]:
         hist = yf.Ticker(ticker).history(start=start, end=end, auto_adjust=True)
         if hist is None or hist.empty:
             return []
-        return [(idx.strftime("%Y-%m-%d"), float(row["Close"]))
-                for idx, row in hist.iterrows()]
+        out: List[Tuple[str, float]] = []
+        for idx, row in hist.iterrows():
+            v = float(row["Close"])
+            # 当日分など未確定の行は Close が NaN で返る（2026-08-18 実測: CF・^GSPC の当日行）。
+            # NaN は比較を全てすり抜けて台帳へ入り、リターン計算を丸ごと壊すのでここで落とす
+            if v != v or v in (float("inf"), float("-inf")):
+                continue
+            out.append((idx.strftime("%Y-%m-%d"), v))
+        return out
     except Exception:  # noqa: BLE001  価格取得の失敗で本線を止めない
         return []
 
@@ -389,6 +396,12 @@ def selftest() -> int:
     cases.append(("ticker/benchmark 欠落は除外", "B" not in picked and "C" not in picked))
     cases.append(("rejected/逆風は除外", "D" not in picked and "E" not in picked))
     cases.append(("beneficiaries 欠落でも落ちない", foreign_cards({}) == []))
+
+    # NaN 行が価格列に混ざらないこと（yf_history のガード相当・2026-08-18 実測の当日NaN対策）
+    nanmix = [("2026-08-14", 10.0), ("2026-08-17", float("nan"))]
+    clean = [(d, v) for d, v in nanmix if v == v]
+    px_n, day_n = close_on_or_before(clean, "2026-08-17")
+    cases.append(("NaN を除いた列から直近終値を採れる", (px_n, day_n) == (10.0, "2026-08-14")))
 
     # look-ahead 防止: 発火日が休場でも「以前の直近」を採る
     hist = [("2026-08-13", 10.0), ("2026-08-14", 11.0), ("2026-08-18", 12.0)]
