@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
@@ -199,6 +200,16 @@ def record_firings(alerts: List[Tuple[Dict, Dict, List[str]]], fire_date: str,
             t = str(card["ticker"])
             slot = by_ticker.setdefault(t, {"card": card, "series_ids": [], "triggers": [],
                                             "commodity": {}})
+            # 同じ ticker のカードが系列をまたいで**属性違い**で登録されていたら黙って先勝ちにしない
+            # （benchmark が違えば超過リターンの基準が変わり、tier が違えば銘柄の資格が変わる。
+            #  2026-08-18 敵対レビュー指摘: 先勝ちのまま後続の属性を捨てると台帳の意味が alerts の順序で変わる）
+            kept = slot["card"]
+            if kept is not card:
+                diffs = [k for k in ("benchmark", "tier", "market")
+                         if kept.get(k) != card.get(k)]
+                if diffs:
+                    print(f"  [warn] §16w: {t} は系列 {slot['series_ids']} と {series.get('id')} で "
+                          f"{'/'.join(diffs)} が食い違う（先に読んだカードの属性で記録する）", file=sys.stderr)
             slot["series_ids"].append(series.get("id"))
             slot["triggers"].extend(f"{series.get('id')}:{x}" for x in triggers)
             slot["commodity"][series.get("id")] = {
@@ -566,6 +577,22 @@ def selftest() -> int:
         # 指数側で独立に1取引日を数えると 19日(2000)=+100% になり超過が -90% に化ける
         cases.append(("指数は銘柄の評価日で揃える（暦日ズレを作らない）",
                       bool(ev2) and ev2[0]["excess_pct"] == 10.0))
+
+    # 同一 ticker が系列をまたいで属性違いで登録された時（2026-08-18 敵対レビュー指摘）:
+    # 落ちずに1行へ畳み、警告を出す。ここが NameError などで落ちると本線の記録ごと死ぬ
+    with tempfile.TemporaryDirectory() as td:
+        p6 = Path(td) / "mismatch.jsonl"
+        base = {"code": "M", "market": "US", "ticker": "MM", "benchmark": "^GSPC",
+                "sign": "+", "tier": "confirmed"}
+        other = dict(base, benchmark="^IXIC", tier="provisional")
+        a6 = [({"id": "s1", "beneficiaries": [base]}, {"value": 1, "weekly_pct": 6}, ["w"]),
+              ({"id": "s2", "beneficiaries": [other]}, {"value": 2, "weekly_pct": 7}, ["w"])]
+        n6 = record_firings(a6, "2026-08-18", p6, lambda t, a, b: [("2026-08-17", 100.0)])
+        fired = [r for r in read_log(p6) if r["type"] == "firing"]
+        cases.append(("属性違いの同一tickerでも落ちずに1行へ畳む",
+                      n6 == 1 and len(fired) == 1
+                      and fired[0].get("series_ids") == ["s1", "s2"]
+                      and fired[0].get("benchmark") == "^GSPC"))
 
     ok = sum(1 for _, passed in cases if passed)
     for name, passed in cases:

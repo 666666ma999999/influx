@@ -345,9 +345,9 @@
           "benchmark": "^GSPTSE",
           "btype": 1,
           "sign": "+",
-          "tier": "confirmed",
+          "tier": "provisional",
           "verified": "2026-08-18",
-          "evidence": "【決算実読 2026-08-18・§16w 海外カード11枚目／ウラン2枚目】西側最大級のウラン生産者。FY2025 の**開示セグメント表**（2025 Q4 MD&A p.69 の EBITDA 調整表）: 調整後EBITDA は **ウラン 1,255 / 燃料サービス 219 / Westinghouse 780 / その他 △325 / 合計 1,929**（CAD百万）＝**ウラン単独で 65.1%**（黒字セグメント合計に対しても 55.7%）。関門B（営業利益構成比≥30%）を**会社開示の数値**で通過。符号は実測: 2025年の平均実現価格 **CAD 87.00/lb（+9%）**に対しウランセグメント粗利益 **803（+18%）**・調整後EBITDA 1,255（+6%）＝**価格↑→増益**（MD&A p.57 の HIGHLIGHTS 表）。**分子の粒度**: 監視系列= TE『Uranium』＝ウラン精鉱スポット（USD/lb）／分子= ウランセグメント。一致する。⚠️ 留保3点: ①実現価格は**長期契約主体**（固定価格契約を含む）でスポットに対し鈍く遅れる——2025年はスポット平均 US$73.54（△14%）でも実現価格は+9%と逆方向で、**短期の値動きにそのまま連動しない** ②Westinghouse（49%持分・調整後EBITDA 780＝黒字分の約38%）は原子力サービス事業でウラン価格ドライバーではない ③そのため株価はウラン相場以外（受注・建設案件）でも動く。既に同系列に Kazatomprom（KAP・確証）があり、**本カードは2枚目**。発火時は両方が海外台帳に記録される。価格取得は実測（2026-08-18）: CCO.TO（トロント証券取引所・CAD建て・2026-08-14終値 135.56）＋ benchmark ^GSPTSE（S&P/TSX総合・同じCAD建て）。米国上場 CCJ（USD）もあるが §16w の『自国指数に合わせる』に従い本籍地カナダ側を採用（West Fraser と同じ扱い）。",
+          "evidence": "【決算実読 2026-08-18・§16w 海外カード11枚目／ウラン2枚目・**仮**（2026-08-18 の敵対レビューで確証→仮に修正）】西側最大級のウラン生産者。FY2025 の**開示セグメント表**（2025 Q4 MD&A p.69 の EBITDA 調整表）: 調整後EBITDA は **ウラン 1,255 / 燃料サービス 219 / Westinghouse 780 / その他 △325 / 合計 1,929**（CAD百万）＝**ウラン単独で 65.1%**（黒字セグメント合計に対しても 55.7%）。関門B（営業利益構成比≥30%）を**会社開示の数値**で通過。符号は実測: 2025年の平均実現価格 **CAD 87.00/lb（+9%）**に対しウランセグメント粗利益 **803（+18%）**・調整後EBITDA 1,255（+6%）＝**価格↑→増益**（MD&A p.57 の HIGHLIGHTS 表）。**分子の粒度**: 監視系列= TE『Uranium』＝ウラン精鉱スポット（USD/lb）／分子= ウランセグメント。一致する。⚠️ 留保3点: ①実現価格は**長期契約主体**（固定価格契約を含む）でスポットに対し鈍く遅れる——2025年はスポット平均 US$73.54（△14%）でも実現価格は+9%と逆方向で、**短期の値動きにそのまま連動しない** ②Westinghouse（49%持分・調整後EBITDA 780＝黒字分の約38%）は原子力サービス事業でウラン価格ドライバーではない ③そのため株価はウラン相場以外（受注・建設案件）でも動く。既に同系列に Kazatomprom（KAP・確証）があり、**本カードは2枚目**。発火時は両方が海外台帳に記録される。価格取得は実測（2026-08-18）: CCO.TO（トロント証券取引所・CAD建て・2026-08-14終値 135.56）＋ benchmark ^GSPTSE（S&P/TSX総合・同じCAD建て）。米国上場 CCJ（USD）もあるが §16w の『自国指数に合わせる』に従い本籍地カナダ側を採用（West Fraser と同じ扱い）。 ／【敵対レビュー反映 2026-08-18】当初 confirmed としたが、次の2点で **provisional に修正**: ①**測定科目**が規約文言（営業利益構成比）でなく**調整後EBITDA**（セグメント営業利益は非開示。Alcoa・Nexa・CF と同じ運用だが、規約文言との齟齬は P-08f としてオーナー裁定へ）②**監視系列はスポット価格なのに、同社の利益は長期契約の実現価格で決まる**——2025年はスポット△14%に対し実現価格+9%と**方向が逆**で、§16x の『分子とドライバーの粒度を合わせる』基準を厳密には満たさない。サイズ関門（65.1%≥30%）は通っているため rejected ではなく、**スポット感応度の実証待ち**として仮に置く。",
           "source": {
             "title": "Cameco Corporation — Management's Discussion and Analysis for the year ended December 31, 2025（2025 Q4 MD&A FS and Notes）",
             "url": "https://cameco.com/sites/default/files/documents/CCO-2025-Q4-MDA-FS-Notes.pdf",
@@ -356,7 +356,8 @@
           },
           "subject_op_pct": 65.1,
           "linkage": "direct",
-          "subject_side": "sells（自社鉱山のウラン精鉱を売る側）"
+          "subject_side": "sells（自社鉱山のウラン精鉱を売る側）",
+          "op_pct_basis": "adjusted_ebitda（セグメント営業利益は非開示。Alcoa・Nexa・CF と同じ扱い・規約文言との齟齬は P-08f）"
         }
       ]
     },
@@ -625,7 +626,7 @@
           "sign": "+",
           "tier": "provisional",
           "verified": "2026-08-18",
-          "evidence": "【決算実読 2026-08-18・§16w 海外カード13枚目／木材2枚目】北米最大級の林地所有＋製材会社。**通期ベースでは関門Bに届かない**: FY2025 の開示調整後EBITDA は **Wood Products 250 / 合計 1,021＝24.5%**（他 Timberlands 581・Real Estate & ENR 411・Unallocated △221、US$百万）。黒字セグメント合計に対しても 20.1% で30%未満。⚠️ **直近四半期だけ見ると通る**: 2026年Q2 は Wood Products 129 / 合計 310＝**41.6%**。しかし**1四半期の good quarter で通期ベースの判定を覆さない**（§16x に記録済みの教訓・石化スプレッドで実際に誤った）ため **provisional 据え置き**。FY2026 通期の開示で再判定する。符号は明確（一次資料）: 2026年Q2 は『Sales realizations for lumber … increased 15 percent … compared with first quarter averages』のもとで Wood Products 調整後EBITDA が 71→**129**（+$58m・+82%）＝**価格↑→増益**。**分子の粒度**: 監視系列= TE『Lumber』＝製材先物（USD）／分子= Wood Products（製材・OSB・EWP）。一致する。⚠️ Timberlands（調整後EBITDAの57%）は**原木を売る側**で製材価格とは別の価格体系（原木価格）で動くため**分子に足さない**（足せば81%になるが、それは寿スピリッツ型の『分子を広げて通す』誤り）。同系列の West Fraser（WFG・仮）と役割が異なる: WFG は製材専業だが全社赤字で関門B測定不能、WY は黒字だが製材の比重が通期24.5%＝**どちらも確証に届かない**。木材は『日本にも海外にも確証カードが無い』状態が続く。価格取得は実測（2026-08-18）: WY（NYSE・USD建て・2026-08-14終値 24.56）＋ benchmark ^GSPC。",
+          "evidence": "【決算実読 2026-08-18・§16w 海外カード13枚目／木材2枚目】北米最大級の林地所有＋製材会社。**通期ベースでは関門Bに届かない**: FY2025 の開示調整後EBITDA は **Wood Products 250 / 合計 1,021＝24.5%**（他 Timberlands 581・Real Estate & ENR 411・Unallocated △221、US$百万）。黒字セグメント合計に対しても 20.1% で30%未満。⚠️ **直近四半期だけ見ると通る**: 2026年Q2 は Wood Products 129 / 合計 310＝**41.6%**。しかし**1四半期の good quarter で通期ベースの判定を覆さない**（§16x に記録済みの教訓・石化スプレッドで実際に誤った）ため **provisional 据え置き**。FY2026 通期の開示で再判定する。符号は明確（一次資料）: 2026年Q2 は『Sales realizations for lumber … increased 15 percent … compared with first quarter averages』のもとで Wood Products 調整後EBITDA が 71→**129**（+$58m・+82%）＝**価格↑→増益**。**分子の粒度**: 監視系列= TE『Lumber』＝製材先物（USD）／分子= Wood Products（製材・**OSB・EWP を含む**）＝**やや広い分子**で、製材単独の寄与は非開示（provisional 据え置きの追加理由・2026-08-18 敵対レビュー指摘）。⚠️ Timberlands（調整後EBITDAの57%）は**原木を売る側**で製材価格とは別の価格体系（原木価格）で動くため**分子に足さない**（足せば81%になるが、それは寿スピリッツ型の『分子を広げて通す』誤り）。同系列の West Fraser（WFG・仮）と役割が異なる: WFG は製材専業だが全社赤字で関門B測定不能、WY は黒字だが製材の比重が通期24.5%＝**どちらも確証に届かない**。木材は『日本にも海外にも確証カードが無い』状態が続く。価格取得は実測（2026-08-18）: WY（NYSE・USD建て・2026-08-14終値 24.56）＋ benchmark ^GSPC。",
           "source": {
             "title": "Weyerhaeuser Company Form 8-K Exhibit 99.1（Q4/FY2025 決算リリース 2026-01-29 ／ Q2 2026 決算リリース 2026-07-30）",
             "url": "https://www.sec.gov/Archives/edgar/data/106535/000119312526029351/wy-ex99_1.htm",
@@ -634,7 +635,8 @@
           },
           "subject_op_pct": 24.5,
           "linkage": "direct",
-          "subject_side": "sells（製材・OSB・EWP を作って売る側。ただし原木は自社林地からも外部からも調達）"
+          "subject_side": "sells（製材・OSB・EWP を作って売る側。ただし原木は自社林地からも外部からも調達）",
+          "op_pct_basis": "adjusted_ebitda"
         }
       ]
     },
@@ -1084,18 +1086,19 @@
           "benchmark": "^GSPC",
           "btype": 1,
           "sign": "+",
-          "tier": "provisional",
+          "tier": "rejected",
           "verified": "2026-08-18",
-          "evidence": "【決算実読 2026-08-18・§16w 海外カード15枚目／石化スプレッド初】世界最大級のポリオレフィン（PE・PP）メーカー。**構成比の数値だけなら通る**: FY2025 の開示セグメント表で EBITDA（除く特別要因）は **O&P-Americas 1,161 ＋ O&P-EAI 50 ＝ 1,211**、全社 約2,500（US$百万）＝**約48%**。⚠️ **それでも provisional にする理由＝ドライバーとの連動が弱い（関門A/E1 の問題で、大きさの問題ではない）**: ①本系列の分子は**中国DCEのPE/PP国内先物**、分母は**ナフサ**＝『ナフサ分解でポリオレフィンを作る採算』を測る指標。しかし LYB の稼ぎ頭 O&P-Americas は**米国シェールのエタン原料**で、ナフサ基準のスプレッドとは原料が違う ②ナフサ基準の O&P-EAI（欧州・アジア）は FY2025 EBITDA **△457**（除く特別要因でも +50 とほぼゼロ）＝**ナフサ経済圏の事業はほぼ稼いでいない** ③会社の説明も『olefins results decreased approximately $880 million due to decreased margins … higher energy costs』＝エネルギー（エタン・電力）主導。→ **確証にしない**。日本の石化12社が2026-08-03 に全て rejected（在庫評価損益で符号反転・§16x）になったのと同様、この系列は『上がったら買う』の受益者を確定しにくい。確証化には**中国・アジアのナフサクラッカー**（例: Formosa Plastics・LG Chem 等）で、スプレッド拡大期の増益実績を一次資料で確認する必要がある（未着手）。価格取得は実測（2026-08-18）: LYB（NYSE・USD建て・2026-08-14終値 63.76）＋ benchmark ^GSPC。",
+          "evidence": "【決算実読 2026-08-18・§16w 海外カード15枚目／石化スプレッド初】世界最大級のポリオレフィン（PE・PP）メーカー。**構成比の数値だけなら通る**: FY2025 の開示セグメント表で EBITDA（除く特別要因）は **O&P-Americas 1,161 ＋ O&P-EAI 50 ＝ 1,211**、全社 約2,500（US$百万）＝**約48%**。⚠️ **それでも provisional にする理由＝ドライバーとの連動が弱い（関門A/E1 の問題で、大きさの問題ではない）**: ①本系列の分子は**中国DCEのPE/PP国内先物**、分母は**ナフサ**＝『ナフサ分解でポリオレフィンを作る採算』を測る指標。しかし LYB の稼ぎ頭 O&P-Americas は**米国シェールのエタン原料**で、ナフサ基準のスプレッドとは原料が違う ②ナフサ基準の O&P-EAI（欧州・アジア）は FY2025 EBITDA **△457**（除く特別要因でも +50 とほぼゼロ）＝**ナフサ経済圏の事業はほぼ稼いでいない** ③会社の説明も『olefins results decreased approximately $880 million due to decreased margins … higher energy costs』＝エネルギー（エタン・電力）主導。→ **確証にしない**。日本の石化12社が2026-08-03 に全て rejected（在庫評価損益で符号反転・§16x）になったのと同様、この系列は『上がったら買う』の受益者を確定しにくい。確証化には**中国・アジアのナフサクラッカー**（例: Formosa Plastics・LG Chem 等）で、スプレッド拡大期の増益実績を一次資料で確認する必要がある（未着手）。価格取得は実測（2026-08-18）: LYB（NYSE・USD建て・2026-08-14終値 63.76）＋ benchmark ^GSPC。 ／【敵対レビュー反映 2026-08-18・provisional → **rejected**】§16x の粒度原則を厳密に当てると、分子に入れてよいのは**ナフサ基準の O&P-EAI だけ**（FY2025 調整後EBITDA 50・GAAPベースでは △457）で、全社約2,500 に対し **約2%**＝規約の『<10% は rejected』に該当する。当初 provisional としたのは米国エタン事業（1,161）を分子に残していたためで、これは**自分で書いた『分子を広げて通すな』に反していた**。⚠️ 反論も併記して残す（将来の再検討用）: スプレッド拡大＝『製品価格が原料より速く上がる』局面では、**低コストのエタン生産者ほど増益幅が大きい**という見方もある。ただしそれは本系列（中国DCEのPE/PP−ナフサ）が測っている対象そのものではなく、実測での裏取りもない。確証化を狙うなら**アジアのナフサクラッカー**（Formosa Plastics・LG Chem 等）を実読すべき。**この却下を覆す時は本 reason を先に実読すること**（§16x の教訓）。",
           "source": {
             "title": "LyondellBasell — Business Results Discussion by Reporting Segment（2025年Q4・通期）",
             "url": "https://s204.q4cdn.com/455115734/files/doc_financials/2025/q4/v2/2025-4Q-Business-Results-Discussion.pdf",
             "fiscal_period": "FY2025（2025年12月31日終了年度）",
             "quote": "Table 1 O&P-Americas「Year Ended December 31, 2025 … EBITDA 1,144 / EBITDA excluding identified items 1,161」（2024: 2,445）／Table 2 O&P-EAI「Year Ended December 31, 2025 … EBITDA (457) / EBITDA excluding identified items 50」（2024: (991) / 19）／本文「Full year ended December 31, 2025 versus full year ended December 31, 2024 - EBITDA decreased $1,301 million … olefins results decreased approximately $880 million due to decreased margins. Ethylene margins decreased driven by higher energy costs and lower co-product contributions」＝全社 EBITDA（除く特別要因）約$2.5bn は会社の2025年決算リリース記載。"
           },
-          "subject_op_pct": 48.0,
+          "subject_op_pct": 2.0,
           "linkage": "spread",
-          "subject_side": "sells（PE・PPを作って売る側）だが原料はエタン主体＝系列のナフサ基準と一致しない"
+          "subject_side": "sells（PE・PPを作って売る側）だが原料はエタン主体＝系列のナフサ基準と一致しない",
+          "op_pct_basis": "adjusted_ebitda・**ナフサ経済圏（O&P-EAI）のみを分子にした場合**の比率"
         }
       ]
     },
@@ -1196,18 +1199,19 @@
           "benchmark": "^GSPC",
           "btype": 1,
           "sign": "+",
-          "tier": "provisional",
+          "tier": "rejected",
           "verified": "2026-08-18",
-          "evidence": "【決算実読 2026-08-18・§16w 海外カード15枚目／石化スプレッド初】世界最大級のポリオレフィン（PE・PP）メーカー。**構成比の数値だけなら通る**: FY2025 の開示セグメント表で EBITDA（除く特別要因）は **O&P-Americas 1,161 ＋ O&P-EAI 50 ＝ 1,211**、全社 約2,500（US$百万）＝**約48%**。⚠️ **それでも provisional にする理由＝ドライバーとの連動が弱い（関門A/E1 の問題で、大きさの問題ではない）**: ①本系列の分子は**中国DCEのPE/PP国内先物**、分母は**ナフサ**＝『ナフサ分解でポリオレフィンを作る採算』を測る指標。しかし LYB の稼ぎ頭 O&P-Americas は**米国シェールのエタン原料**で、ナフサ基準のスプレッドとは原料が違う ②ナフサ基準の O&P-EAI（欧州・アジア）は FY2025 EBITDA **△457**（除く特別要因でも +50 とほぼゼロ）＝**ナフサ経済圏の事業はほぼ稼いでいない** ③会社の説明も『olefins results decreased approximately $880 million due to decreased margins … higher energy costs』＝エネルギー（エタン・電力）主導。→ **確証にしない**。日本の石化12社が2026-08-03 に全て rejected（在庫評価損益で符号反転・§16x）になったのと同様、この系列は『上がったら買う』の受益者を確定しにくい。確証化には**中国・アジアのナフサクラッカー**（例: Formosa Plastics・LG Chem 等）で、スプレッド拡大期の増益実績を一次資料で確認する必要がある（未着手）。価格取得は実測（2026-08-18）: LYB（NYSE・USD建て・2026-08-14終値 63.76）＋ benchmark ^GSPC。",
+          "evidence": "【決算実読 2026-08-18・§16w 海外カード15枚目／石化スプレッド初】世界最大級のポリオレフィン（PE・PP）メーカー。**構成比の数値だけなら通る**: FY2025 の開示セグメント表で EBITDA（除く特別要因）は **O&P-Americas 1,161 ＋ O&P-EAI 50 ＝ 1,211**、全社 約2,500（US$百万）＝**約48%**。⚠️ **それでも provisional にする理由＝ドライバーとの連動が弱い（関門A/E1 の問題で、大きさの問題ではない）**: ①本系列の分子は**中国DCEのPE/PP国内先物**、分母は**ナフサ**＝『ナフサ分解でポリオレフィンを作る採算』を測る指標。しかし LYB の稼ぎ頭 O&P-Americas は**米国シェールのエタン原料**で、ナフサ基準のスプレッドとは原料が違う ②ナフサ基準の O&P-EAI（欧州・アジア）は FY2025 EBITDA **△457**（除く特別要因でも +50 とほぼゼロ）＝**ナフサ経済圏の事業はほぼ稼いでいない** ③会社の説明も『olefins results decreased approximately $880 million due to decreased margins … higher energy costs』＝エネルギー（エタン・電力）主導。→ **確証にしない**。日本の石化12社が2026-08-03 に全て rejected（在庫評価損益で符号反転・§16x）になったのと同様、この系列は『上がったら買う』の受益者を確定しにくい。確証化には**中国・アジアのナフサクラッカー**（例: Formosa Plastics・LG Chem 等）で、スプレッド拡大期の増益実績を一次資料で確認する必要がある（未着手）。価格取得は実測（2026-08-18）: LYB（NYSE・USD建て・2026-08-14終値 63.76）＋ benchmark ^GSPC。 ／【敵対レビュー反映 2026-08-18・provisional → **rejected**】§16x の粒度原則を厳密に当てると、分子に入れてよいのは**ナフサ基準の O&P-EAI だけ**（FY2025 調整後EBITDA 50・GAAPベースでは △457）で、全社約2,500 に対し **約2%**＝規約の『<10% は rejected』に該当する。当初 provisional としたのは米国エタン事業（1,161）を分子に残していたためで、これは**自分で書いた『分子を広げて通すな』に反していた**。⚠️ 反論も併記して残す（将来の再検討用）: スプレッド拡大＝『製品価格が原料より速く上がる』局面では、**低コストのエタン生産者ほど増益幅が大きい**という見方もある。ただしそれは本系列（中国DCEのPE/PP−ナフサ）が測っている対象そのものではなく、実測での裏取りもない。確証化を狙うなら**アジアのナフサクラッカー**（Formosa Plastics・LG Chem 等）を実読すべき。**この却下を覆す時は本 reason を先に実読すること**（§16x の教訓）。",
           "source": {
             "title": "LyondellBasell — Business Results Discussion by Reporting Segment（2025年Q4・通期）",
             "url": "https://s204.q4cdn.com/455115734/files/doc_financials/2025/q4/v2/2025-4Q-Business-Results-Discussion.pdf",
             "fiscal_period": "FY2025（2025年12月31日終了年度）",
             "quote": "Table 1 O&P-Americas「Year Ended December 31, 2025 … EBITDA 1,144 / EBITDA excluding identified items 1,161」（2024: 2,445）／Table 2 O&P-EAI「Year Ended December 31, 2025 … EBITDA (457) / EBITDA excluding identified items 50」（2024: (991) / 19）／本文「Full year ended December 31, 2025 versus full year ended December 31, 2024 - EBITDA decreased $1,301 million … olefins results decreased approximately $880 million due to decreased margins. Ethylene margins decreased driven by higher energy costs and lower co-product contributions」＝全社 EBITDA（除く特別要因）約$2.5bn は会社の2025年決算リリース記載。"
           },
-          "subject_op_pct": 48.0,
+          "subject_op_pct": 2.0,
           "linkage": "spread",
-          "subject_side": "sells（PE・PPを作って売る側）だが原料はエタン主体＝系列のナフサ基準と一致しない"
+          "subject_side": "sells（PE・PPを作って売る側）だが原料はエタン主体＝系列のナフサ基準と一致しない",
+          "op_pct_basis": "adjusted_ebitda・**ナフサ経済圏（O&P-EAI）のみを分子にした場合**の比率"
         }
       ]
     },
@@ -1888,11 +1892,12 @@
             "title": "Mowi ASA Quarterly Report Q4 2025（Note 4 BUSINESS SEGMENTS・取締役会 Outlook statement）",
             "url": "https://mowi.com/wp-content/uploads/2025/05/Mowi_Q4_2025_Report.pdf",
             "fiscal_period": "FY2025（2025年1月1日〜2025年12月31日）",
-            "quote": "Note 4 BUSINESS SEGMENTS の 2025 通期表（EUR million）: 「Operational EBIT — Feed 51.0 / Farming 341.4 / Markets 151.3 / Consumer Products 197.3 / Other -14.4 / TOTAL 726.6」（2024: Farming 443.8 / TOTAL 828.9）。取締役会 Outlook statement: 「Operational EBIT for the year of EUR 727 million was somewhat down from 2024 on lower realised salmon prices due to high industry supply.」／同 Note 4 冒頭: 「For management purposes, Mowi is organized into three Business Areas: Feed, Farming and Sales & Marketing.」＝Farming 47.0% は会社開示のセグメント利益から直接算出（341.4/726.6）。2026年Q2 の裏取り（価格↑→増益）は会社プレスリリース『Record-high revenues and volumes for Mowi in the second quarter』の「salmon prices increased by 6% in the second quarter」「operational EBIT of EUR 231 million, an increase of 23%」による（GlobeNewswire 配信・会社発表）。"
+            "quote": "Note 4 BUSINESS SEGMENTS の 2025 通期表（EUR million）: 「Operational EBIT — Feed 51.0 / Farming 341.4 / Markets 151.3 / Consumer Products 197.3 / Other -14.4 / TOTAL 726.6」（2024: Farming 443.8 / TOTAL 828.9）。取締役会 Outlook statement: 「Operational EBIT for the year of EUR 727 million was somewhat down from 2024 on lower realised salmon prices due to high industry supply.」／同 Note 4 冒頭: 「For management purposes, Mowi is organized into three Business Areas: Feed, Farming and Sales & Marketing.」＝Farming 47.0% は会社開示のセグメント利益から直接算出（341.4/726.6）。2026年Q2 の裏取り（価格↑→増益）は会社プレスリリース『Record-high revenues and volumes for Mowi in the second quarter』の「salmon prices increased by 6% in the second quarter」「operational EBIT of EUR 231 million, an increase of 23%」による（GlobeNewswire 配信・会社発表 https://www.globenewswire.com/news-release/2026/08/18/record-high-revenues-and-volumes-for-mowi-in-the-second-quarter.html ・実読 2026-08-18）。"
           },
           "subject_op_pct": 47.0,
           "linkage": "direct",
-          "subject_side": "sells（自社養殖したサーモンを売る側）"
+          "subject_side": "sells（自社養殖したサーモンを売る側）",
+          "op_pct_basis": "operational_ebit（会社開示のセグメント Operational EBIT・規約の営業利益に最も近い科目）"
         }
       ]
     },
@@ -1927,7 +1932,7 @@
           "sign": "+",
           "tier": "confirmed",
           "verified": "2026-08-18",
-          "evidence": "【決算実読 2026-08-18・§16w 海外カード12枚目／リチウム2枚目】世界最大級のリチウム生産者。**開示セグメント値で2期とも関門Bを通過**: ①FY2025 通期: 調整後EBITDA **Energy Storage 697.2 / 合計 1,098.0＝63.5%**（他 Specialties 275.7・Ketjen 150.4・Corporate △25.4、US$百万） ②2026年Q2: **Energy Storage 723.5 / 合計 858＝84.3%**（Ketjen は2026-03-02 に51%を売却し持分法へ移行＝**リチウム純度は上昇**）。符号の実測: 2026年Q2 は **Energy Storage の価格 +73%** に対し同セグメント調整後EBITDA **+229%**（全社 +155%・売上$1.7bn +31%）＝**価格↑→増益**が極めて明確な高レバレッジ。**分子の粒度**: 監視系列= TE『Lithium』（炭酸リチウム価格）／分子= Energy Storage セグメント（リチウム化合物）。一致する。⚠️ 留保（重要・§16x の a' 条件2と同じ思想）: **FY2025 は価格下落局面なのに同セグメントEBITDAは増加**した（会社の説明は『higher sales volumes and cost and productivity improvements mostly offset lower lithium market pricing』）＝**数量成長局面では価格と逆に動きうる**。価格連動は単調ではなく、価格上昇局面で強く効くタイプ。既に同系列に Pilbara Minerals（PLS・確証・専業）があり本カードは2枚目。PLS が純度100%の専業、ALB は規模と流動性で代表性がある大手という役割分担（発火時は両方が海外台帳に記録される）。価格取得は実測（2026-08-18）: ALB（NYSE・USD建て・2026-08-14終値 136.15）＋ benchmark ^GSPC（同じUSD建て・CF/Alcoa/Nexa と同じ扱い）。",
+          "evidence": "【決算実読 2026-08-18・§16w 海外カード12枚目／リチウム2枚目】世界最大級のリチウム生産者。**開示セグメント値で2期とも関門Bを通過**: ①FY2025 通期: 調整後EBITDA **Energy Storage 697.2 / 合計 1,098.0＝63.5%**（他 Specialties 275.7・Ketjen 150.4・Corporate △25.4、US$百万） ②2026年Q2: **Energy Storage 723.5 / 合計 858＝84.3%**（Ketjen は2026-03-02 に51%を売却し持分法へ移行＝**リチウム純度は上昇**）。符号の実測: 2026年Q2 は **Energy Storage の価格 +73%** に対し同セグメント調整後EBITDA **+229%**（全社 +155%・売上$1.7bn +31%）＝**価格↑→増益**が極めて明確な高レバレッジ。**分子の粒度**: 監視系列= TE『Lithium』（炭酸リチウム価格）／分子= Energy Storage セグメント（リチウム化合物）。一致する。⚠️ 留保（重要・§16x の a' 条件2と同じ思想）: **FY2025 は価格下落局面なのに同セグメントEBITDAは増加**した（会社の説明は『higher sales volumes and cost and productivity improvements mostly offset lower lithium market pricing』）＝**数量成長局面では価格と逆に動きうる**。価格連動は単調ではなく、価格上昇局面で強く効くタイプ。既に同系列に Pilbara Minerals（PLS・確証・専業）があり本カードは2枚目。PLS が純度100%の専業、ALB は規模と流動性で代表性がある大手という役割分担（発火時は両方が海外台帳に記録される）。価格取得は実測（2026-08-18）: ALB（NYSE・USD建て・2026-08-14終値 136.15）＋ benchmark ^GSPC（同じUSD建て・CF/Alcoa/Nexa と同じ扱い）。 ／【敵対レビュー反映 2026-08-18】63.5%・84.3% はいずれも**調整後EBITDA**構成比（営業利益ではない）。Cameco と違い**価格連動は直接的**（2026Q2: 価格+73%→同セグEBITDA+229%）で粒度の問題は無いため confirmed を維持する。",
           "source": {
             "title": "Albemarle Reports Fourth Quarter and Full Year 2025 Results ／ Albemarle Reports Second Quarter 2026 Results（会社ニュースリリース）",
             "url": "https://www.albemarle.com/us/en/news/albemarle-reports-fourth-quarter-and-full-year-2025-results",
@@ -1936,7 +1941,8 @@
           },
           "subject_op_pct": 63.5,
           "linkage": "direct",
-          "subject_side": "sells（リチウム化合物を売る側）"
+          "subject_side": "sells（リチウム化合物を売る側）",
+          "op_pct_basis": "adjusted_ebitda（セグメント営業利益は非開示。Alcoa・Nexa・CF と同じ扱い・規約文言との齟齬は P-08f）"
         },
         {
           "code": "SQM",
@@ -1957,7 +1963,8 @@
           },
           "subject_op_pct": 45.0,
           "linkage": "direct",
-          "subject_side": "sells（塩湖由来のリチウム化合物を売る側）"
+          "subject_side": "sells（塩湖由来のリチウム化合物を売る側）",
+          "op_pct_basis": "gross_profit（会社開示の粗利益構成比。CF Industries と同じ扱い）"
         }
       ]
     },
