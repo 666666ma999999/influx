@@ -606,7 +606,8 @@ def selftest() -> int:
     # 実配置の不変条件（2026-08-18 P-08e の再発防止）: 確証カードを持つ系列は必ず上昇を鳴らせる。
     # パーム油は §16j の食品ミュート（alert 999）が残ったまま SD Guthrie を確証カード化したため、
     # 「カードはあるが1度も発火しない」状態が生まれた。config 側の取り違えを機械で止める。
-    if SOURCES_PATH.exists():
+    # config が読めない時は「検査しなかった」を PASS にしない（fail-open 禁止・Codex NIT-2）
+    try:
         cfg_real = json.loads(SOURCES_PATH.read_text(encoding="utf-8"))
         dead_cards = [
             s.get("id")
@@ -617,6 +618,8 @@ def selftest() -> int:
         ]
         cases.append((f"確証カードを持つ系列が上昇ミュートで死んでいない（{dead_cards or 'なし'}）",
                       not dead_cards))
+    except (OSError, json.JSONDecodeError) as exc:
+        cases.append((f"実 config を読んで不変条件を検査できた（{SOURCES_PATH.name}: {exc}）", False))
 
     ok = sum(1 for _, passed in cases if passed)
     for name, passed in cases:
