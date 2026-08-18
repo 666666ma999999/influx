@@ -603,6 +603,21 @@ def selftest() -> int:
     cases.append(("X: 古い台帳は非稼働",
                   not x_lane_state([{"date": "2026-01-01", "n_wave_prev": 5}], now)[0]))
 
+    # 実配置の不変条件（2026-08-18 P-08e の再発防止）: 確証カードを持つ系列は必ず上昇を鳴らせる。
+    # パーム油は §16j の食品ミュート（alert 999）が残ったまま SD Guthrie を確証カード化したため、
+    # 「カードはあるが1度も発火しない」状態が生まれた。config 側の取り違えを機械で止める。
+    if SOURCES_PATH.exists():
+        cfg_real = json.loads(SOURCES_PATH.read_text(encoding="utf-8"))
+        dead_cards = [
+            s.get("id")
+            for s in cfg_real.get("series", [])
+            if is_muted_on_upside(s)
+            and any(isinstance(b, dict) and b.get("sign") == "+" and b.get("tier") == "confirmed"
+                    for b in (s.get("beneficiaries") or []))
+        ]
+        cases.append((f"確証カードを持つ系列が上昇ミュートで死んでいない（{dead_cards or 'なし'}）",
+                      not dead_cards))
+
     ok = sum(1 for _, passed in cases if passed)
     for name, passed in cases:
         print(f"  {'PASS' if passed else 'FAIL'} {name}")

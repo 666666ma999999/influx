@@ -241,10 +241,15 @@
 
 ### Start Here（再開したらまずこれ）
 
-`docs/price-watch-universe.md` §16x（a' 裁定・総点検の結果・海外カード8枚の現況表）を読む。
-次の一手は **パーム油の主役カード化**（候補= Sime Darby Plantation / IOI Corp＝プランテーション所有＝売る側）。
+`docs/price-watch-universe.md` §16x（a' 裁定・総点検の結果・海外カード**9枚**の現況表）を読む。
+**2026-08-18 に パーム油の主役 SD Guthrie（MY 5285.KL）を確証カード化して完了**（開示セグメント利益 73.1%）。
+同時に P-08e 裁定でパーム油の上昇ミュートを撤去（実効 29ドライバー・35社）。
+次の一手は **残る主役候補のカード化**（Albemarle / SQM＝リチウム多角化・Cameco＝ウラン・Weyerhaeuser＝木材・
+石化スプレッドの LyondellBasell / Dow は未調査）。
 手順は Glanbia 以降と同じ4段: ①ティッカーと自国指数を Docker の yfinance で実測
 ②直近決算でセグメント利益と**分子の粒度**を確認 ③カード作成 ④`beneficiaries_display`/`foreign_forward` で配線確認。
+**④の後に必ず `python3 scripts/coverage_census.py` を実走**する——カードを作っても系列側がミュートだと
+1度も発火しない（パーム油で実際に起きた・census の「鳴らす経路が無い」行で検出できる）。
 
 ### Avoid Repeating（同じ失敗を繰り返さない）
 
