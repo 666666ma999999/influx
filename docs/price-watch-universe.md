@@ -1977,7 +1977,7 @@ census の「取得は動くがカード無し」27系列に受益カードを�
 
 | 系列 | 主役の候補（上場先） | 実測メモ（出所は下記） | 純度の注意 |
 |---|---|---|---|
-| lithium | **Pilbara Minerals**（ASX:PLS）／Albemarle（NYSE:ALB）／SQM（NYSE） | ALB は2026Q2 売上$1.7bn(+31%)・調整EBITDA+155%とリチウム市況に強く反応 | **ALB はリチウム＋臭素＋精製触媒の3事業／SQM はリチウム＋肥料＋ヨウ素**＝関門B要確認。**PLS はリチウム専業**で純度が高い |
+| lithium | ✅**Pilbara Minerals をカード化済み**（2026-08-18・PLS.AX）／Albemarle・SQM は未着手 | ALB は2026Q2 売上$1.7bn(+31%)・調整EBITDA+155%とリチウム市況に強く反応 | **ALB はリチウム＋臭素＋精製触媒の3事業／SQM はリチウム＋肥料＋ヨウ素**＝関門B要確認。**PLS はリチウム専業**で純度が高い |
 | uranium | ✅**Kazatomprom をカード化済み**（2026-08-17・KAP.IL）／Cameco（NYSE:CCJ）は未着手 | FY2025 連結収益 KZT1,803,049百万に対し U3O8売上 KZT1,638,000百万＝**90.8%**（会社開示） | **セグメント別利益は非開示**のため provisional。確証化は H1 2026（2026-08-21 公表）待ち。Cameco は Westinghouse 持分あり |
 | urea（尿素） | **CF Industries**（NYSE:CF） | 報道が明確に「nitrogen の pure play」と位置づけ。北米安価ガスが原料 | Nutrien・Yara は多角化（カリ/リン/欧州ガスコスト）＝純度が落ちる |
 | rubber（天然ゴム） | **Sri Trang Agro-Industry**（SET:STA） | 年商約$2.6bn の天然ゴム一貫生産 | ゴム**手袋**事業も持つ＝川下の比率確認が要る |
@@ -1991,6 +1991,18 @@ census の「取得は動くがカード無し」27系列に受益カードを�
 [Sri Trang 会社情報](https://www.sritranggroup.com/en/business/natural-rubber)／
 [Weyerhaeuser Q2 2026](https://www.investing.com/news/company-news/weyerhaeuser-q2-2026-slides-lumber-recovery-drives-earnings-beat-93CH-4828923)／
 [West Fraser Q2 2026](https://woodcentral.com.au/west-fraser-q2-2026-results/)
+
+### ⚠️ 関門Bの穴: 赤字の専業会社には「営業利益構成比」が適用できない（2026-08-18 発見・未裁定）
+
+Pilbara Minerals（リチウム専業）のカード化で判明。**専業ほど価格に強く反応するのに、価格下落局面では赤字になり、
+「営業利益の30%以上」という関門Bが計算できない**（FY2025 は営業損益△A$146.4m）。分子と分母が同一で構成比は
+定義上100%だが、赤字に構成比を当てても意味を持たない。同型は Albemarle・SQM・West Fraser など市況専業に共通する。
+
+- **現状の運用**: 測定不能として **provisional 据え置き**（確証に上げない）。今回の Kazatomprom・Pilbara とも provisional
+- **オーナー裁定に上げる論点 P-08d（未裁定）**: 専業（単一商品の売上比 ≥80% 等）については、関門Bを
+  「営業利益構成比」ではなく「**売上構成比＋価格感応度の一次資料**」で代替してよいか。
+  代替を認めないなら、**市況専業は構造的に永久 provisional** になる（＝銘柄を出せない）ことを受け入れる必要がある
+- **AI が勝手に代替してはいけない**（関門を緩めた量産は 2026-07-29 裁定で禁止）。本節は問題の記録のみ
 
 **次の1周の型**（Glanbia と同じ）: ①候補1社の直近決算を実読 ②セグメント営業利益構成比を算出（開示値でなければ provisional 止まり）
 ③`market`/`ticker`/`benchmark` を付けてカード化 ④`foreign_forward` が自国指数超過で前向き記録。
