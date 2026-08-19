@@ -33,12 +33,14 @@ def main() -> int:
 
     p = Path(args.bookmarks)
     if not p.exists():
-        print(f"[metric-contract] SKIP: {p} が無い")
-        return 0
+        # 見張り対象の消失は「正常」ではない（パス変更で見張りが黙って無効化されるのを防ぐ）
+        print(f"[metric-contract] ❌ 監視対象が無い: {p}（移動したなら本スクリプトのパスも直すこと）")
+        return 1
 
     numeric_rows = 0
     bad_examples = []
     total = 0
+    broken = 0
     for line in p.open(encoding="utf-8"):
         line = line.strip()
         if not line:
@@ -46,6 +48,7 @@ def main() -> int:
         try:
             d = json.loads(line)
         except json.JSONDecodeError:
+            broken += 1
             continue
         total += 1
         if any(isinstance(d.get(k), int) for k in METRIC_KEYS):
@@ -53,17 +56,27 @@ def main() -> int:
             if numeric_rows > LEGACY_NUMERIC_ROWS and len(bad_examples) < 3:
                 bad_examples.append(d.get("url", "?"))
 
+    rc = 0
+    if broken:
+        print(f"[metric-contract] ❌ JSONL 破損行 {broken} 行（凍結行の毀損の可能性・要調査）")
+        rc = 1
     if numeric_rows > LEGACY_NUMERIC_ROWS:
         print(f"[metric-contract] ❌ 違反: 数値入り行が {numeric_rows} 行（凍結値 "
               f"{LEGACY_NUMERIC_ROWS} を超過）。計測廃止後に誰かが数値を書いている。"
               f" 例: {bad_examples}")
         print("[metric-contract]    正= 新規行の指標は null 固定"
               "（fetch_bookmarks.py ヘッダの 2026-08-19 履歴・x_metrics_lib.py が唯一の計測口）")
-        return 1
+        rc = 1
+    elif numeric_rows < LEGACY_NUMERIC_ROWS:
+        # 凍結は「不変」＝減るのも違反（行削除・null 化・差し替えを検知する）
+        print(f"[metric-contract] ❌ 違反: 数値入り行が {numeric_rows} 行（凍結値 "
+              f"{LEGACY_NUMERIC_ROWS} を下回った）。凍結済みの過去行が削除・書き換えられている。")
+        rc = 1
 
-    print(f"[metric-contract] OK: 全{total}行・数値入り行 {numeric_rows}"
-          f"（凍結値 {LEGACY_NUMERIC_ROWS} 以下）")
-    return 0
+    if rc == 0:
+        print(f"[metric-contract] OK: 全{total}行・数値入り行 {numeric_rows}"
+              f"（凍結値 {LEGACY_NUMERIC_ROWS} と一致）・破損行 0")
+    return rc
 
 
 if __name__ == "__main__":

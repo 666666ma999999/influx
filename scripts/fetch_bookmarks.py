@@ -177,13 +177,24 @@ def merge_bookmark_records(existing: List[dict], fetched: List[dict]) -> List[di
         if url not in merged:
             order.append(url)
         merged[url] = rec
+    metric_keys = ("like_count", "retweet_count", "reply_count", "bookmark_count", "view_count")
     for rec in fetched:
         url = rec.get("url")
         if not url:
             continue
         if url not in merged:
             order.append(url)
-        merged[url] = rec
+            merged[url] = rec
+        else:
+            # 同一URLの上書きはテキスト補完の反映が目的。2026-08-19 計測廃止後の
+            # 新規レコードは指標が全て null なので、凍結済みの過去数値を null で
+            # 潰さないよう、指標フィールドだけは既存値を保持する（Codexレビュー critical#1）。
+            keep = merged[url]
+            newrec = dict(rec)
+            for k in metric_keys:
+                if newrec.get(k) is None and keep.get(k) is not None:
+                    newrec[k] = keep[k]
+            merged[url] = newrec
     return [merged[url] for url in order]
 
 
