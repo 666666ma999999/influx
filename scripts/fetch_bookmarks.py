@@ -21,6 +21,14 @@
 graphql_count/stopped_reasonをJSONで書き出す。exit 0でもdom_count==0
 （selector死・ログイン壁等でtweetが1個も観測できない）ケースを呼び出し側が
 SUCCESSと誤分類しないよう検知できるようにするため。
+履歴: 2026-08-19 数値指標（like/retweet/reply/bookmark/view）の計測を廃止し
+全フィールド null 固定に変更（敵対レビュー 2026-08-19 一致結論・オーナー承認）。
+理由: ①「万」表記のパース不能で例外→0 を保存する全損（3万いいね→0 の実証4件）
+②write-once ゲートで初回0が永久凍結 ③下流の消費者は url/author/text しか
+使っていない（数値は grok-twittora 経路が正）。X指標が要る時は
+scripts/x_metrics_lib.py（オンデマンド計測・captured_at 付き）を使うこと。
+過去に保存済みの数値（0埋め）は書き換えず残すが参照禁止
+（正本の宣言= make_article/docs/data-sources.md §計測正本の対応表）。
 """
 
 import argparse
@@ -47,11 +55,13 @@ class Bookmark:
     url: str = ""
     text: str = ""
     author: str = ""
-    like_count: int = 0
-    retweet_count: int = 0
-    reply_count: int = 0
-    bookmark_count: int = 0
-    view_count: int = 0
+    # 数値指標は 2026-08-19 に計測廃止（欠測= null 固定・0 を書かない則）。
+    # フィールド自体を残すのは既存 jsonl とのスキーマ互換のため。
+    like_count: Optional[int] = None
+    retweet_count: Optional[int] = None
+    reply_count: Optional[int] = None
+    bookmark_count: Optional[int] = None
+    view_count: Optional[int] = None
     is_long_form: bool = False
     created_at: str = ""
 
@@ -263,10 +273,7 @@ def scrape_bookmarks_from_dom(page) -> List[Bookmark]:
             if time_el.count():
                 created_at = time_el.first.get_attribute("datetime") or ""
 
-            # メトリクス（表示されている数値を取得）
-            like_count = _parse_metric(card, '[data-testid="like"]')
-            retweet_count = _parse_metric(card, '[data-testid="retweet"]')
-            reply_count = _parse_metric(card, '[data-testid="reply"]')
+            # 数値指標の計測は 2026-08-19 廃止（ヘッダの履歴参照・欠測=null のまま）
 
             # 長文判定
             is_long = len(text) > 280
@@ -276,9 +283,6 @@ def scrape_bookmarks_from_dom(page) -> List[Bookmark]:
                     url=url,
                     text=text.strip(),
                     author=author,
-                    like_count=like_count,
-                    retweet_count=retweet_count,
-                    reply_count=reply_count,
                     is_long_form=is_long,
                     created_at=created_at,
                 ))
@@ -297,24 +301,9 @@ def _upsert_dom_bookmark(dom_bookmarks: Dict[str, Bookmark], bm: Bookmark) -> No
         dom_bookmarks[bm.url] = bm
 
 
-def _parse_metric(card, selector: str) -> int:
-    """ツイートカードからメトリクス数値を抽出する。"""
-    try:
-        el = card.locator(selector)
-        if el.count():
-            text = el.first.text_content() or ""
-            text = text.strip().replace(",", "")
-            if not text or text == "0":
-                return 0
-            # K/M表記対応
-            if text.endswith("K"):
-                return int(float(text[:-1]) * 1000)
-            if text.endswith("M"):
-                return int(float(text[:-1]) * 1000000)
-            return int(text)
-    except Exception:
-        pass
-    return 0
+# _parse_metric は 2026-08-19 に削除（計測廃止）。K/M しか扱えず日本語表示の
+# 「万」で例外→0 を返し、3万いいねの投稿を 0 と保存する全損の原因だった
+# （敵対レビュー A#1・実証4件）。数値が要る時は scripts/x_metrics_lib.py を使う。
 
 
 # ── GraphQL 傍受（補助取得）──────────────────────────────────
@@ -376,18 +365,8 @@ def _parse_tweet_entry(entry: dict) -> Optional[Bookmark]:
         full_text = legacy.get("full_text", "")
         created_at = legacy.get("created_at", "")
 
-        like_count = legacy.get("favorite_count", 0)
-        retweet_count = legacy.get("retweet_count", 0)
-        reply_count = legacy.get("reply_count", 0)
-        bookmark_count = legacy.get("bookmark_count", 0)
-        view_count = 0
-        views = tweet.get("views", {})
-        if views and views.get("count"):
-            try:
-                view_count = int(views["count"])
-            except (ValueError, TypeError):
-                pass
-
+        # 数値指標の取り込みは 2026-08-19 廃止（ヘッダの履歴参照・欠測=null のまま）。
+        # GraphQL 傍受の役割は full_text / note_tweet（長文原文）の取得に限定する。
         is_long = len(full_text) > 280
         note_tweet = tweet.get("note_tweet", {}).get("note_tweet_results", {}).get("result", {})
         if note_tweet:
@@ -398,9 +377,7 @@ def _parse_tweet_entry(entry: dict) -> Optional[Bookmark]:
 
         return Bookmark(
             url=url, text=full_text, author=f"@{screen_name}",
-            like_count=like_count, retweet_count=retweet_count,
-            reply_count=reply_count, bookmark_count=bookmark_count,
-            view_count=view_count, is_long_form=is_long, created_at=created_at,
+            is_long_form=is_long, created_at=created_at,
         )
     except Exception as exc:
         logger.debug("ツイート解析エラー: %s", exc)
@@ -565,7 +542,7 @@ def fetch_bookmarks(
                 bm = _parse_tweet_entry(entry)
                 if bm and bm.url and bm.url not in graphql_bookmarks:
                     graphql_bookmarks[bm.url] = bm
-                    logger.info("[GraphQL] @%s - %s... (%d likes)", bm.author, bm.text[:40], bm.like_count)
+                    logger.info("[GraphQL] @%s - %s...", bm.author, bm.text[:40])
         except Exception as exc:
             logger.debug("GraphQLレスポンス解析スキップ: %s", exc)
 
