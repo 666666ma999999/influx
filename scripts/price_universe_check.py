@@ -648,13 +648,17 @@ def main(only: list[str] | None = None) -> int:
     run_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
 
     # TE は一覧ページ1回で全系列の行を取得（リクエスト削減・自ページに行が無い系列対策）。
-    # 一覧に無い系列のみ個別ページへフォールバック
-    try:
-        te_index_html = fetch("https://tradingeconomics.com/commodities")
-    except Exception as exc:  # noqa: BLE001
-        # 一覧が取れないと全系列が列構成の違う個別ページへ落ちるため即停止（A-1）
-        print(f"[FATAL] TE一覧ページ取得失敗のため中断（誤列での記録を防ぐ）: {str(exc)[:100]}")
-        return 1
+    # 一覧に無い系列のみ個別ページへフォールバック。
+    # --only で TE 系を1本も選んでいない時は取りに行かない（TE障害で日銀系まで落とさない）
+    te_needed = any(s["type"] in ("te", "spread") for s in cfg["series"])
+    te_index_html = None
+    if te_needed:
+        try:
+            te_index_html = fetch("https://tradingeconomics.com/commodities")
+        except Exception as exc:  # noqa: BLE001
+            # 一覧が取れないと全系列が列構成の違う個別ページへ落ちるため即停止（A-1）
+            print(f"[FATAL] TE一覧ページ取得失敗のため中断（誤列での記録を防ぐ）: {str(exc)[:100]}")
+            return 1
 
     fmbi_payload: list | None = None  # Ir/Ru は同一エンドポイント＝1回だけ取って使い回す
 
@@ -1030,4 +1034,9 @@ if __name__ == "__main__":
             print("FATAL: --only の後に系列IDが必要（カンマ区切り可）")
             sys.exit(1)
         _only = [x for x in sys.argv[_i + 1].split(",") if x]
+        # 空指定（--only "" / --only ,）で全系列実行へ落ちない。
+        # 落ちると「1本だけ入れるつもりが55系列の履歴を汚す」という、まさに避けたい事故になる
+        if not _only:
+            print("FATAL: --only に有効な系列IDがありません（空指定で全系列は実行しない）")
+            sys.exit(1)
     sys.exit(main(_only))

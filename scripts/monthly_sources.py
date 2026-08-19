@@ -506,7 +506,9 @@ _BOJ_BULK_CACHE: dict[str, list[list[str]]] = {}   # 1回の実行で同じzip�
 # 指数の妥当レンジ（2020年=100）。桁違い・別系列の混入をここで弾く
 _BOJ_INDEX_MIN, _BOJ_INDEX_MAX = 20.0, 1000.0
 # 月次統計の公表ラグ（CGPIは翌月中旬・SPPIは翌々月下旬）。これを大きく超えたら鏡が凍っている
-_BOJ_MAX_STALE_MONTHS = 6
+# CGPIは翌月中旬・SPPIは翌々月下旬の公表。ラグ2ヶ月＋余裕2ヶ月で 4 とする
+# （6ヶ月だと、ファイル更新が止まっても半年間『正常だが鳴らない』状態になる・敵対レビュー指摘）
+_BOJ_MAX_STALE_MONTHS = 4
 
 
 def _boj_bulk_rows(dataset: str) -> list[list[str]]:
@@ -517,14 +519,26 @@ def _boj_bulk_rows(dataset: str) -> list[list[str]]:
 
     url = _BOJ_BULK_URL[dataset]
     zf = zipfile.ZipFile(io.BytesIO(_get(url).content))
-    raw = zf.read(zf.namelist()[0]).decode("shift_jis", errors="replace")
+    # 先頭ファイル決め打ちにしない（README等が同梱されたら別物を読む）。csv が1本の時だけ採用
+    names = [n for n in zf.namelist() if n.lower().endswith(".csv")]
+    if len(names) != 1:
+        raise ValueError(f"zip 内の csv が1本でない: {zf.namelist()}")
+    raw = zf.read(names[0]).decode("shift_jis", errors="replace")
     rows = list(csv.reader(io.StringIO(raw)))
     _BOJ_BULK_CACHE[dataset] = rows
     return rows
 
 
+def _ym_shift(ym: str, months: int) -> str:
+    """"YYYYMM" を months だけずらす（前月・前年同月をキーで引くため）。"""
+    y, m = int(ym[:4]), int(ym[4:])
+    total = y * 12 + (m - 1) + months
+    return f"{total // 12:04d}{total % 12 + 1:02d}"
+
+
 def parse_boj_bulk(rows: list[list[str]], data_code: str,
-                   today: str | None = None) -> dict | None:
+                   today: str | None = None,
+                   max_stale_months: int = _BOJ_MAX_STALE_MONTHS) -> dict | None:
     """一括CSVの行列から1系列を抜く。
 
     先頭行が `,,,202001,202002,...` の月ヘッダ、以降が
@@ -532,8 +546,12 @@ def parse_boj_bulk(rows: list[list[str]], data_code: str,
 
     fail-closed の方針（この skill の落とし穴表どおり）:
       - データコードが無い / 値が1つも無い → None（空を成功にしない）
-      - 指数レンジ外（20〜1000）→ None（桁違い・別系列の混入）
-      - 最新月が6ヶ月より古い → None（凍った鏡を新鮮な値として記録しない）
+      - 月ヘッダが昇順・一意でない → None（列の意味が変わった可能性）
+      - 指数レンジ（20〜1000）外 → None。**比較に使う前月・前年同月の値も同じ検査を通す**
+        （最新値だけ見ていると、過去セルの異常値が巨大な前月比に化ける・2026-08-19 敵対レビュー）
+      - 前月比・前年同月比は **月をキーで引く**。1ヶ月でも欠測があれば当該指標は None にする
+        （「1つ前に存在する値」との比を『前月比』と呼ぶと、欠測時に別期間の騰落率になる）
+      - 最新月が max_stale_months より古い → None（凍った鏡を新鮮な値として記録しない）
 
     Returns:
         {"value", "monthly_pct", "yoy_pct", "src_date"("YYYY-MM")} or None
@@ -544,6 +562,9 @@ def parse_boj_bulk(rows: list[list[str]], data_code: str,
     months = [(i, h) for i, h in enumerate(header) if re.fullmatch(r"\d{6}", h)]
     if not months:
         return None
+    labels = [h for _, h in months]
+    if labels != sorted(labels) or len(set(labels)) != len(labels):
+        return None   # 月が昇順・一意でない＝列の意味が変わった（推測しない）
     target = None
     for row in rows[1:]:
         if row and row[0].strip() == data_code:
@@ -551,7 +572,9 @@ def parse_boj_bulk(rows: list[list[str]], data_code: str,
             break
     if target is None:
         return None   # コードが無い＝列を推測しない（黙って別系列を採らない）
-    series: list[tuple[str, float]] = []
+
+    by_month: dict[str, float] = {}
+    order: list[str] = []
     for i, ym in months:
         if i >= len(target):
             break
@@ -559,35 +582,42 @@ def parse_boj_bulk(rows: list[list[str]], data_code: str,
         if not cell:
             continue
         try:
-            series.append((ym, float(cell)))
+            by_month[ym] = float(cell)
         except ValueError:
             continue
-    if not series:
+        order.append(ym)
+    if not order:
         return None
-    ym, value = series[-1]
-    if not (_BOJ_INDEX_MIN <= value <= _BOJ_INDEX_MAX):
+    ym = order[-1]
+    value = by_month[ym]
+
+    def _sane(v: float | None) -> bool:
+        return v is not None and _BOJ_INDEX_MIN <= v <= _BOJ_INDEX_MAX
+
+    if not _sane(value):
         return None
     src_date = f"{ym[:4]}-{ym[4:]}"
     if today:
         age = (int(today[:4]) - int(ym[:4])) * 12 + (int(today[5:7]) - int(ym[4:]))
-        if age > _BOJ_MAX_STALE_MONTHS:
+        if age > max_stale_months:
             return None
-    prev = series[-2][1] if len(series) >= 2 else None
-    year_ago = series[-13][1] if len(series) >= 13 else None
+    prev = by_month.get(_ym_shift(ym, -1))
+    year_ago = by_month.get(_ym_shift(ym, -12))
     return {
         "value": value,
-        "monthly_pct": round((value / prev - 1) * 100, 2) if prev else None,
-        "yoy_pct": round((value / year_ago - 1) * 100, 2) if year_ago else None,
+        "monthly_pct": round((value / prev - 1) * 100, 2) if _sane(prev) and prev else None,
+        "yoy_pct": round((value / year_ago - 1) * 100, 2) if _sane(year_ago) and year_ago else None,
         "src_date": src_date,
     }
 
 
-def fetch_boj_bulk(dataset: str, data_code: str, today: str | None = None) -> dict | None:
+def fetch_boj_bulk(dataset: str, data_code: str, today: str | None = None,
+                   max_stale_months: int = _BOJ_MAX_STALE_MONTHS) -> dict | None:
     """日銀の一括ファイルから系列を1本取る（dataset: cgpi|sppi）。"""
     if dataset not in _BOJ_BULK_URL:
         return None
     try:
-        return parse_boj_bulk(_boj_bulk_rows(dataset), data_code, today)
+        return parse_boj_bulk(_boj_bulk_rows(dataset), data_code, today, max_stale_months)
     except Exception:  # noqa: BLE001  取得・解凍の失敗は欠測扱い（発火させない）
         return None
 
@@ -624,6 +654,26 @@ def _selftest() -> int:  # noqa: C901
         parse_boj_bulk(_boj_rows, "PRCS20_5201450001", "2027-06") is None)
     chk("boj_bulk 月ヘッダが無ければ None",
         parse_boj_bulk([["", "", ""], ["PRCS20_5201450001", "a", "b"]], "PRCS20_5201450001") is None)
+    # 欠測月・異常な比較値・ヘッダ異常（2026-08-19 敵対レビュー NO-GO 1/2 の回帰）
+    _gap = [["", "", "", "202603", "202604", "202605", "202606"],
+            ["C", "統計名", "系列", "110.0", "", "113.0", "114.3"]]
+    g = parse_boj_bulk(_gap, "C", "2026-08")
+    chk("boj_bulk 欠測があっても前月比は隣接月のみで計算",
+        bool(g) and g["monthly_pct"] == 1.15 and g["src_date"] == "2026-06")
+    _gap2 = [["", "", "", "202603", "202604", "202605", "202606"],
+             ["C", "統計名", "系列", "110.0", "111.0", "", "114.3"]]
+    g2 = parse_boj_bulk(_gap2, "C", "2026-08")
+    chk("boj_bulk 前月が欠測なら monthly_pct は None（2ヶ月前と比べない）",
+        bool(g2) and g2["monthly_pct"] is None and g2["value"] == 114.3)
+    _bad = [["", "", "", "202605", "202606"], ["C", "統計名", "系列", "0.5", "114.3"]]
+    b2 = parse_boj_bulk(_bad, "C", "2026-08")
+    chk("boj_bulk 比較する前月の値がレンジ外なら monthly_pct は None",
+        bool(b2) and b2["monthly_pct"] is None)
+    _unsorted = [["", "", "", "202606", "202605"], ["C", "統計名", "系列", "114.3", "113.0"]]
+    chk("boj_bulk 月ヘッダが昇順でなければ None",
+        parse_boj_bulk(_unsorted, "C", "2026-08") is None)
+    chk("boj_bulk 既定の stale は4ヶ月（5ヶ月前は落とす）",
+        parse_boj_bulk(_boj_rows, "PRCS20_5201450001", "2026-12") is None)
 
     u = parse_jmtba("受注総額\n2026年6月分　受注速報\n"
                     "26/6月 前月比 前年同月比 2026年累計 前年同期比\n"

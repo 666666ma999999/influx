@@ -1,24 +1,24 @@
 # 実効カバレッジ census（監視の広さ・重複除外）
 
-- 生成: 2026-08-19T00:27:51+00:00（`python3 scripts/coverage_census.py`）
+- 生成: 2026-08-19T00:35:18+00:00（`python3 scripts/coverage_census.py`）
 - 数え方の正本: tasks/xprice_reform_review.md §8（P-08a 裁定 2026-08-17）。
   **入力件数ではなく「独立ドライバー×稼働取得経路×関門通過カード」の重複除外集合**を数える。
 
 ## いまの実効カバレッジ
 
-- **実効ドライバー数 = 31**（3倍の目標値 = **93**）
-- 銘柄を出せる会社数 = 38 社（関門通過カードのみ・重複除外）
+- **実効ドライバー数 = 30**（3倍の目標値 = **90**）
+- 銘柄を出せる会社数 = 37 社（関門通過カードのみ・重複除外）
 - 参考: 全ドライバー 81 / 稼働中 53（入力 118 件から重複 37 件を統合した後）
 - ⚠️ 実効のうち 2 件は loose な対応表（市場全体を単一指標に縮約）に依存
 
 ## 詰まりの内訳（ここを開けないと網を広げても増えない）
 
 - 🔇 カードはあるが上昇を鳴らす経路が無い: 1 件 — memory-asp-estat
-- 🈳 取得は動くがカード無し: 21 件
-- ⏳ 裏取り待ちのみ（confirmed 0・provisional あり）: 16 ドライバー / 25 社
-  （参考: 全ドライバーの provisional を合算すると 74 社）
+- 🈳 取得は動くがカード無し: 22 件
+- ⏳ 裏取り待ちのみ（confirmed 0・provisional あり）: 17 ドライバー / 26 社
+  （参考: 全ドライバーの provisional を合算すると 75 社）
 
-- 🔓 **止まっているレーンが開いた場合の実効**: 35 ドライバー / 44 社（増える分: memory-asp-estat, x:cpu-logic, x:secondary-resale, x:shokuhin-neage）
+- 🔓 **止まっているレーンが開いた場合の実効**: 34 ドライバー / 43 社（増える分: memory-asp-estat, x:cpu-logic, x:secondary-resale, x:shokuhin-neage）
 
 ## レーン別の稼働
 
@@ -37,7 +37,6 @@
 - coking-coal
 - copper
 - crude-oil
-- cspi-software
 - fmbi-iridium
 - fmbi-ruthenium
 - gold
