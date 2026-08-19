@@ -625,8 +625,18 @@ def pass_through_cards(series: dict) -> list:
     return out
 
 
-def main() -> int:
+def main(only: list[str] | None = None) -> int:
     cfg = json.loads(CONFIG_PATH.read_text())
+    # --only: 指定した系列だけ走らせる（新系列の初回投入用・2026-08-19 追加）。
+    # 週次ジョブの合間に全系列を回すと、自前計算の weekly_pct が「前の月曜」でなく
+    # 「途中の実行日」と比較されて歪む。新系列1本を台帳に載せるだけならここを使う
+    if only:
+        wanted = [s for s in cfg["series"] if s["id"] in set(only)]
+        missing = set(only) - {s["id"] for s in wanted}
+        if missing:
+            print(f"FATAL: --only に一致しない系列: {sorted(missing)}")
+            return 1
+        cfg = {**cfg, "series": wanted}
     alert_cfg = cfg["alert"]
     history = load_history()
     # 日付は **JST基準**（run_at はUTCのまま＝実行時刻の絶対記録）。
@@ -692,6 +702,11 @@ def main() -> int:
             elif s["type"] == "yuyutei":
                 parsed = parse_yuyutei(
                     fetch("https://yuyu-tei.jp/sell/poc/s/search?search_word=&rare=SAR"))
+            elif s["type"] == "boj_bulk":
+                # 日銀の一括ファイル（CGPI/SPPI 全系列）から品目別を1本取る。主要時系列ページ
+                # （type="boj"）には総平均しか無く、細目はこちらでしか取れない（2026-08-19 実証）
+                import monthly_sources
+                parsed = monthly_sources.fetch_boj_bulk(s["dataset"], s["data_code"], today[:7])
             elif s["type"] in ("jmtba", "seaj", "jama", "miki", "tamago", "rice", "jnto", "estat_asp"):
                 # 波2の月次データ源（30カテゴリ拡張・2026-08-02）。取得実装と fixtures は
                 # monthly_sources.py に分離。type名 → fetch_<type>() の明示対応（allowlist方式）
@@ -1008,4 +1023,11 @@ def _selftest() -> int:
 if __name__ == "__main__":
     if "--selftest" in sys.argv:
         sys.exit(_selftest())
-    sys.exit(main())
+    _only = None
+    if "--only" in sys.argv:
+        _i = sys.argv.index("--only")
+        if _i + 1 >= len(sys.argv):
+            print("FATAL: --only の後に系列IDが必要（カンマ区切り可）")
+            sys.exit(1)
+        _only = [x for x in sys.argv[_i + 1].split(",") if x]
+    sys.exit(main(_only))

@@ -493,6 +493,106 @@ def fetch_estat_asp() -> dict | None:
     return None
 
 
+# ---- 日銀の一括ダウンロード（CGPI/SPPI の全系列・品目別まで取れる唯一の無料経路） -------
+# 2026-08-19 実証: 主要時系列ページ（mtshtml pr01_m_1/pr02_m_1）には**総平均など5系列しか無く**、
+# 品目別（酪農品・菓子類・受託開発ソフトウェア等）は取れない。一方この一括ファイルには
+# CGPI 3,042系列 / SPPI 513系列が入っており、データコードで1本を抜ける（実測）。
+# §16v の宿題「日銀CGPI 細目の取得経路が無い」はこの経路で解消できる。
+_BOJ_BULK_URL = {
+    "cgpi": "https://www.stat-search.boj.or.jp/info/cgpi_m_jp.zip",   # 企業物価指数（月次）
+    "sppi": "https://www.stat-search.boj.or.jp/info/sppi_m_jp.zip",   # 企業向けサービス価格指数（月次）
+}
+_BOJ_BULK_CACHE: dict[str, list[list[str]]] = {}   # 1回の実行で同じzipを何度も落とさない
+# 指数の妥当レンジ（2020年=100）。桁違い・別系列の混入をここで弾く
+_BOJ_INDEX_MIN, _BOJ_INDEX_MAX = 20.0, 1000.0
+# 月次統計の公表ラグ（CGPIは翌月中旬・SPPIは翌々月下旬）。これを大きく超えたら鏡が凍っている
+_BOJ_MAX_STALE_MONTHS = 6
+
+
+def _boj_bulk_rows(dataset: str) -> list[list[str]]:
+    """一括zipをCSV行として返す（同一実行内はキャッシュ）。"""
+    if dataset in _BOJ_BULK_CACHE:
+        return _BOJ_BULK_CACHE[dataset]
+    import zipfile
+
+    url = _BOJ_BULK_URL[dataset]
+    zf = zipfile.ZipFile(io.BytesIO(_get(url).content))
+    raw = zf.read(zf.namelist()[0]).decode("shift_jis", errors="replace")
+    rows = list(csv.reader(io.StringIO(raw)))
+    _BOJ_BULK_CACHE[dataset] = rows
+    return rows
+
+
+def parse_boj_bulk(rows: list[list[str]], data_code: str,
+                   today: str | None = None) -> dict | None:
+    """一括CSVの行列から1系列を抜く。
+
+    先頭行が `,,,202001,202002,...` の月ヘッダ、以降が
+    `<データコード>,<統計名>,<系列名>,<値...>` の並び（2026-08-19 実測）。
+
+    fail-closed の方針（この skill の落とし穴表どおり）:
+      - データコードが無い / 値が1つも無い → None（空を成功にしない）
+      - 指数レンジ外（20〜1000）→ None（桁違い・別系列の混入）
+      - 最新月が6ヶ月より古い → None（凍った鏡を新鮮な値として記録しない）
+
+    Returns:
+        {"value", "monthly_pct", "yoy_pct", "src_date"("YYYY-MM")} or None
+    """
+    if not rows:
+        return None
+    header = [h.strip() for h in rows[0]]
+    months = [(i, h) for i, h in enumerate(header) if re.fullmatch(r"\d{6}", h)]
+    if not months:
+        return None
+    target = None
+    for row in rows[1:]:
+        if row and row[0].strip() == data_code:
+            target = row
+            break
+    if target is None:
+        return None   # コードが無い＝列を推測しない（黙って別系列を採らない）
+    series: list[tuple[str, float]] = []
+    for i, ym in months:
+        if i >= len(target):
+            break
+        cell = target[i].strip()
+        if not cell:
+            continue
+        try:
+            series.append((ym, float(cell)))
+        except ValueError:
+            continue
+    if not series:
+        return None
+    ym, value = series[-1]
+    if not (_BOJ_INDEX_MIN <= value <= _BOJ_INDEX_MAX):
+        return None
+    src_date = f"{ym[:4]}-{ym[4:]}"
+    if today:
+        age = (int(today[:4]) - int(ym[:4])) * 12 + (int(today[5:7]) - int(ym[4:]))
+        if age > _BOJ_MAX_STALE_MONTHS:
+            return None
+    prev = series[-2][1] if len(series) >= 2 else None
+    year_ago = series[-13][1] if len(series) >= 13 else None
+    return {
+        "value": value,
+        "monthly_pct": round((value / prev - 1) * 100, 2) if prev else None,
+        "yoy_pct": round((value / year_ago - 1) * 100, 2) if year_ago else None,
+        "src_date": src_date,
+    }
+
+
+def fetch_boj_bulk(dataset: str, data_code: str, today: str | None = None) -> dict | None:
+    """日銀の一括ファイルから系列を1本取る（dataset: cgpi|sppi）。"""
+    if dataset not in _BOJ_BULK_URL:
+        return None
+    try:
+        return parse_boj_bulk(_boj_bulk_rows(dataset), data_code, today)
+    except Exception:  # noqa: BLE001  取得・解凍の失敗は欠測扱い（発火させない）
+        return None
+
+
+
 # ---------------------------------------------------------------- selftest
 
 def _selftest() -> int:  # noqa: C901
@@ -502,6 +602,28 @@ def _selftest() -> int:  # noqa: C901
         print(("  ok " if cond else "  NG ") + name)
         if not cond:
             fails.append(name)
+
+    # 日銀一括ファイル（2026-08-19 新設）。ネットワーク不要の固定行列で境界を検査する
+    _boj_hdr = ["", "", "", "202604", "202605", "202606"]
+    _boj_rows = [
+        _boj_hdr,
+        ["PRCS20_5201450001", "統計名", "品目/___受託開発ソフトウェア（除組込み）", "112.0", "113.0", "114.3"],
+        ["PRCS20_ZERO", "統計名", "空っぽの系列", "", "", ""],
+        ["PRCS20_HUGE", "統計名", "桁が違う系列", "1", "2", "999999"],
+    ]
+    b = parse_boj_bulk(_boj_rows, "PRCS20_5201450001", "2026-08")
+    chk("boj_bulk 値/前月比/月",
+        bool(b) and b["value"] == 114.3 and b["monthly_pct"] == 1.15 and b["src_date"] == "2026-06")
+    chk("boj_bulk 前年比は12ヶ月ぶん無ければ None", bool(b) and b["yoy_pct"] is None)
+    chk("boj_bulk 未知コードは None", parse_boj_bulk(_boj_rows, "PRCS20_NOPE", "2026-08") is None)
+    chk("boj_bulk 値が1つも無ければ None（空を成功にしない）",
+        parse_boj_bulk(_boj_rows, "PRCS20_ZERO", "2026-08") is None)
+    chk("boj_bulk 指数レンジ外は None（桁違い・別系列の混入）",
+        parse_boj_bulk(_boj_rows, "PRCS20_HUGE", "2026-08") is None)
+    chk("boj_bulk 古すぎる最新月は None（凍った鏡を新鮮に見せない）",
+        parse_boj_bulk(_boj_rows, "PRCS20_5201450001", "2027-06") is None)
+    chk("boj_bulk 月ヘッダが無ければ None",
+        parse_boj_bulk([["", "", ""], ["PRCS20_5201450001", "a", "b"]], "PRCS20_5201450001") is None)
 
     u = parse_jmtba("受注総額\n2026年6月分　受注速報\n"
                     "26/6月 前月比 前年同月比 2026年累計 前年同期比\n"
