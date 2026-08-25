@@ -342,7 +342,15 @@ def append_event(ledger_path, event: dict) -> None:
     enriched = dict(event)
     enriched["ts"] = datetime.now(timezone.utc).isoformat()
     enriched["host"] = platform.node()
-    line = json.dumps(enriched, ensure_ascii=False) + "\n"
+    # JSONL の「1行=1レコード」を守るため、行区切り扱いされる非LF文字を必ず逃がす
+    # （2026-08-25 実害: ポケカ買取告知の excerpt に含まれた U+2028 を json.dumps が
+    #  生のまま出力 → 読み手 load_events():375 の splitlines() が1レコードを8行に分割 →
+    #  LEDGER CORRUPTION exit=5 で週次ジョブが2回連続停止。json規格上 U+2028 は文字列内に
+    #  置いてよいが、splitlines() は改行として数えるため JSONL では致命傷になる）
+    line = json.dumps(enriched, ensure_ascii=False)
+    for _ch in (" ", " ", "", "\x0b", "\x0c", "\x1c", "\x1d", "\x1e"):
+        line = line.replace(_ch, "\\u%04x" % ord(_ch))
+    line += "\n"
 
     with open(ledger_path, "a", encoding="utf-8") as f:
         fcntl.flock(f.fileno(), fcntl.LOCK_EX)
