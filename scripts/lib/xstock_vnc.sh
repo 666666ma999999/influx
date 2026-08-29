@@ -40,11 +40,11 @@ xstock_container_up() {
   docker ps --format '{{.Names}}' | grep -q "^${XSTOCK_CONTAINER}\$"
 }
 
-# 成功 0 / 失敗 1（呼び出し側で exit する）。失敗時は必ず通知を出す
-# ＝「止まっても気づかない」を作らない（改善レーン G4）。
-xstock_ensure_ready() {
-  XSTOCK_STARTED=0
-
+# Docker daemon だけを待つ（コンテナは起こさない）。
+# `docker compose run --rm` のようにブラウザ用コンテナを必要としない呼び出し側はこちらを使う
+# ＝ ensure_ready を呼ぶと不要な xstock-vnc（実測 1.79GiB）まで起こしてしまうため。
+# 成功 0 / 失敗 1（呼び出し側で exit する）。失敗時は必ず通知を出す。
+xstock_wait_daemon() {
   if ! docker info >/dev/null 2>&1; then
     echo "Docker daemon 未起動 → Docker Desktop をバックグラウンド起動 (open -ga Docker)"
     open -ga Docker 2>/dev/null || true
@@ -61,7 +61,17 @@ xstock_ensure_ready() {
     sleep "$XSTOCK_DAEMON_INTERVAL"
     waited=$((waited + XSTOCK_DAEMON_INTERVAL))
   done
+  return 0
+}
 
+# 成功 0 / 失敗 1（呼び出し側で exit する）。失敗時は必ず通知を出す
+# ＝「止まっても気づかない」を作らない（改善レーン G4）。
+xstock_ensure_ready() {
+  XSTOCK_STARTED=0
+
+  xstock_wait_daemon || return 1
+
+  local waited=0
   if xstock_container_up; then
     return 0
   fi

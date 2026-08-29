@@ -15,43 +15,17 @@ ALERTS="${ALERTS_FILE:-$INFLUX/output/price_watch/alerts-$TARGET_DATE.jsonl}"
 COLLECT_CMD=${COLLECT_CMD:-"docker exec -e DISPLAY=:99 xstock-vnc python3 /app/scripts/price_watch_collect.py --date $TARGET_DATE"}
 ALERT_CMD=${ALERT_CMD:-"/usr/bin/python3 $INFLUX/scripts/price_watch_alert.py"}
 
-# --- Docker daemon 待機（未起動ならバックグラウンド起動して最大5分待つ） ---
-if ! docker info >/dev/null 2>&1; then
-  echo "Docker daemon 未起動 → Docker Desktop をバックグラウンド起動 (open -ga Docker)"
-  open -ga Docker 2>/dev/null || true
-fi
-waited=0
-until docker info >/dev/null 2>&1; do
-  if [ "$waited" -ge "$MAX_WAIT_SEC" ]; then
-    echo "ERROR: Docker daemon起動待ちタイムアウト(${MAX_WAIT_SEC}秒経過)" >&2
-    exit 1
-  fi
-  echo "Docker daemon起動待ち... (${waited}/${MAX_WAIT_SEC}秒)"
-  sleep "$INTERVAL_SEC"
-  waited=$((waited + INTERVAL_SEC))
-done
-
-# コンテナが消えていたら自分で起こす（2026-07-29 追加）。
-# 常駐化(compose の restart: unless-stopped)を選ばなかったのは、実測でメモリ 1.79GiB を
-# 常時占有するため。日次の数分だけ必要なプロセスに常時2GBは割に合わない。
-# 実害の記録: 2026-07-27 と 07-29 の2回コンテナが消え、22:10 の自動実行が
-# 「ERROR: xstock-vnc コンテナが稼働していない」で失敗していた（price-watch.err.log に2行）。
-if ! docker ps --format '{{.Names}}' | grep -q '^xstock-vnc$'; then
-  echo "xstock-vnc が停止中 → 起動する"
-  (cd "$INFLUX" && docker compose -f docker-compose.vnc.yml up -d) || true
-  waited=0
-  until docker ps --format '{{.Names}}' | grep -q '^xstock-vnc$'; do
-    if [ "$waited" -ge 120 ]; then
-      echo "ERROR: xstock-vnc を120秒待っても起動できなかった" >&2
-      exit 1
-    fi
-    sleep 5
-    waited=$((waited + 5))
-  done
-  # Xvfb(:99) と supervisord の立ち上がりを待つ。ここを待たずに docker exec すると
-  # DISPLAY が無い状態で Playwright が落ちる
-  sleep 15
-  echo "xstock-vnc を起動した（${waited}秒待機）"
+# --- Docker daemon 待機＋コンテナ復旧（共通部品・2026-08-29 に手書きから移行） ---
+# 以前はここに daemon 待機とコンテナ起こしを手書きしていたが、同じ処理が3本に複製され
+# 「片側だけ直る」事故を生んでいた（lib 冒頭の 2026-08-11 の実害を参照）。
+# ⚠️ ここに復旧処理を手書きしないこと。
+if [ -z "${XSTOCK_SKIP_ENSURE:-}" ]; then
+  . "$(dirname "$0")/lib/xstock_vnc.sh"
+  XSTOCK_NOTIFY_TITLE="⚠️ X値上がり検出 失敗"
+  XSTOCK_DAEMON_WAIT="$MAX_WAIT_SEC"
+  XSTOCK_DAEMON_INTERVAL="$INTERVAL_SEC"
+  XSTOCK_INFLUX="$INFLUX"
+  xstock_ensure_ready || exit 1
 fi
 
 # --- 収集（一時的なDNS/ネットワーク障害を想定し、失敗時は5分後に1回だけ再試行） ---

@@ -17,22 +17,19 @@ MIN_OK=${MIN_OK:-42}
 cleanup() { rm -f "$OUT"; }
 trap cleanup EXIT
 
-# --- Docker daemon 待機（未起動ならバックグラウンド起動して最大5分待つ） ---
-if ! docker info >/dev/null 2>&1; then
-  echo "Docker daemon 未起動 → Docker Desktop をバックグラウンド起動 (open -ga Docker)"
-  open -ga Docker 2>/dev/null || true
+# --- Docker daemon 待機（共通部品・2026-08-29 に手書きから移行） ---
+# ここは `docker compose run --rm xstock` で使い捨てコンテナを立てるため、
+# ブラウザ用の常設コンテナ xstock-vnc は不要＝ ensure_ready ではなく **daemon 待機だけ** を呼ぶ
+# （ensure_ready を呼ぶと不要な xstock-vnc を起こしてしまう。実測 1.79GiB）。
+# ⚠️ ここに待機処理を手書きしないこと。
+if [ -z "${XSTOCK_SKIP_ENSURE:-}" ]; then
+  . "$(dirname "$0")/lib/xstock_vnc.sh"
+  XSTOCK_NOTIFY_TITLE="⚠️ B2B価格チェッカー失敗"
+  XSTOCK_DAEMON_WAIT="$MAX_WAIT_SEC"
+  XSTOCK_DAEMON_INTERVAL="$INTERVAL_SEC"
+  XSTOCK_INFLUX="$INFLUX"
+  xstock_wait_daemon || exit 1
 fi
-waited=0
-until docker info >/dev/null 2>&1; do
-  if [ "$waited" -ge "$MAX_WAIT_SEC" ]; then
-    echo "ERROR: Docker daemon起動待ちタイムアウト(${MAX_WAIT_SEC}秒経過)" >&2
-    osascript -e 'display notification "Docker起動待ちタイムアウト" with title "⚠️ B2B価格チェッカー失敗"' 2>/dev/null || true
-    exit 1
-  fi
-  echo "Docker daemon起動待ち... (${waited}/${MAX_WAIT_SEC}秒)"
-  sleep "$INTERVAL_SEC"
-  waited=$((waited + INTERVAL_SEC))
-done
 
 cd "$INFLUX" || exit 1
 docker compose run --rm xstock python scripts/price_universe_check.py 2>&1 | tee "$OUT"
