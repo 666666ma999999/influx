@@ -96,6 +96,19 @@ flowchart LR
 
 本数・時刻・入口の表と稼働の注意書きは **`docs/pipeline-map.md`（機械生成）** が持つ（2026-08-14 移設・手書き表は腐っていた）。
 
+### 4-3. 前向き検証レーンの対応表（レーン→スクリプト→台帳・2026-08-29 新設＝どのレーンがどこに書くかが分からず台帳を取り違える事故を止める）
+
+| レーン | 実装 | 台帳（書き込み先） |
+|---|---|---|
+| ペーパートレード（本体） | `scripts/paper_eval.py` / `daily_screen.py` | `data/paper_trades/ledger.jsonl`＋`state.json` |
+| ペア（対銘柄） | `scripts/pair_forward_scan.py` | `data/paper_trades/pair_forward_ledger.jsonl` |
+| TOB（公開買付） | `scripts/tob_forward_runner.py` | `data/paper_trades/tob_ledger.jsonl`＋`tob_state.json` |
+| 商品価格の発火 | `scripts/price_watch_forward.py` | `data/x_price_watch/ledger.jsonl` |
+| 海外受益カード | `scripts/foreign_forward.py` | 同上（`skipped_foreign` に除外理由）※**対TOPIX前向き台帳には入れない** |
+| インフルエンサー（fxnia） | `scripts/fxnia_forward_eval.py` | `data/influencer_candidates/forward/` |
+
+⚠️ **台帳は append-only**（過去行を書き換えない・取り消しも新しい行）。レーンを増やす時はこの表に1行足す。
+
 ### 4-2. 走行中の前向きレーン（4本・お金は張っていない）
 
 | レーン | 台帳 | 執行の正本（事前登録） |
@@ -133,7 +146,7 @@ flowchart LR
 | JSONL の append-only 台帳 | 試行・整理・FDRセル・ペーパー約定・実行証跡 | ①過去行を書き換えない（取り消しも新行・同一キーの最終行が現在状態）②書込み前後で**行数+sha256 を機械照合**し不一致は FATAL ③`fcntl` ロック＋3点照合 | DB化。ただし append-only が統計規律の担保なので同等の不変性保証が要る |
 | hash chain | run_log の末尾hashを日次連鎖させ vault へ**別媒体ミラー** | 「自分の成績を後から書き換えられない」ことを自分に証明する仕組み。別媒体に置くのが要点 | — |
 | git | 台帳・設定・スクリプトを追跡（生データは untracked） | 意味単位でコミット・`git add -A` 禁止。誤発火の記録を除いた時も「git履歴に原本保全」と明記して消さない | — |
-| macOS 通知（osascript） | 朝ジョブ完了・SLA超過・発火を通知 | 「沈黙＝順調」に見えないよう**成功語だけを watch せず全終端を拾う** | Slack / LINE |
+| macOS 通知（osascript） | 朝ジョブ完了・SLA超過・発火を通知 | **方針の正本は `influx-architecture.md` §5 の同行**（2026-08-29 集約・ここには書かない）。株アルゴ固有の点だけ: SLA 超過は `kpi_clock_sla.py` が exit 1 で鳴らす | Slack / LINE |
 
 ### C. 判断・レビュー
 

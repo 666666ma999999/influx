@@ -95,6 +95,18 @@ scripts/run_research.sh --phase report
 - 一度きりの探索スクリプトは `_tmp_<name>.py`（gitignore で追跡外）。`measure_*` 等の定常計測は無印 tracked
 - 実験出力は `output/`（gitignore 済）/ 学習データ `data/few_shot_examples.json` 等は tracked 正本
 
+## 完了前に回す検証（入口はこの1つ）
+
+```bash
+python3 -m unittest discover -s tests    # 324件・数秒。pytest は入っていない（設定ファイルも無い）
+```
+
+これが**唯一の一括ゲート**。個別スクリプトの `--selftest`（`coverage_census` `foreign_forward`
+`news_shock_eval` `news_shock_collect` `price_watch_alert` `x_mention_extract`
+`news_shock_clock_report` の7本）は、そのスクリプトを触った時だけ追加で回す＝一括ゲートの代わりには
+ならない。`x_watchlist_tracer.py` は実行の末尾に `--- self-check:` 行を出すが、これは実行時の自己申告で
+テストではない。（2026-08-29 集約: 入口が3系統あり「完了前に何を回すか」が人にも AI にも決まっていなかった）
+
 ## 実装完了ごとの同セッション commit（ユーザー恒久指示 2026-07-21）
 
 実装・文書の意味ある変更が終わったら、**同セッション内で意味単位の個別 add で commit まで行う**。
