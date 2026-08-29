@@ -210,9 +210,10 @@ flowchart LR
 
 ## 8. 矛盾・未確定（結論は書かない・移送先だけ）
 
-- **未確定**: `plan.md`（2026-04-24）・`.claude/docs/architecture.md`（2026-05-02）・`CLAUDE.md`（2026-08-02）は**株アルゴ研究に実質的に触れていない**（株アルゴは 2026-07 開始）。実害として `tasks/*_preregister.md` の複数が冒頭で `plan.md` を「上位」とリンクしているが参照が空振りしている。→ どちらを正本にするかは influx セッションで裁定（**兄弟ファイル §8 と同一の矛盾**・本書は株アルゴの現行像を repo 正本として提示）
+> 🚚 2026-08-29 に決着済み2項目を落とした（監査 I-37）: 「plan.md 等が株アルゴに触れていない」→ `plan.md`「## 目的」で解消／「vault 表示のずれ3件」→ vault `influx-kpi-cockpit.md` 側で解消済み。**決着したらここから落とし、決着先を1行で指す**。
+
+
 - **未確定**: repo の定義本数と `launchctl` 登録本数の食い違い（未ロード4本・うち `edinet-tob` は道具表Aで「稼働中」と書かれている）→ 実態と注意書きは `docs/pipeline-map.md` §4 が持つ。棚卸しは influx セッションで
 - **未確定**: 「18系統」が指す集合が文書ごとに違う（vault ダッシュボード「毎朝18系統」／`config/paper_watchlist.json` は19件〈observation 17・reference 1・hoos_rejected 1〉／`tasks/segment_expansion_review.md`「前向き接続18本」／`tasks/pending_verdict_flow.md` の `awaiting_forward` 18）。→ どれが正しいかは決めない
-- **未確定（vault 表示のずれ3件・いずれも vault 側で解消）**: ①試行数 109行（2026-07-15 断面）vs catalog/実測 114 ②目標本数「10本」の旧表記が cockpit・`docs/recipe-lanes-portfolio.md` に残存（読み替えの正本= catalog §6付記III）③`influx-kpi-cockpit.md` の frontmatter `last_updated: 2026-07-16` と本文が非同期
 - **未確認（本書で裏取りできなかった）**: ① 各 launchd ジョブが**実際に成功しているか**（`launchctl list` の最終 exit code が 0 であることのみ確認・`run_log.jsonl` の中身は未読）② `scripts/` 実装コードの中身（`judge()` の5基準・Bonferroni 分母の実装箇所は catalog の記述の引用であり、コード実読による確認はしていない）
 - **参考（矛盾ではない）**: `scripts/unified_shadow_eval.py` は未実装＝ `tasks/unified_shadow_portfolio_preregister.md` の「Codex GO 後に着手」通りの状態
