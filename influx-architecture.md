@@ -74,6 +74,8 @@ flowchart LR
 | P6 X Articles形式検索 | 長文記事を `url:x.com/i/article` で拾う。**グローバル検索＋定点著者スコープ（`lane=offense` を6人ずつ `from:` OR・f=live）の2系統**（2026-08-29 追加＝グローバルの Top 1画面では定点著者の記事共有を取りこぼすため） | `scripts/search_x_articles.py` | 手動（launchd未配線） | 🖐🐳 |
 | P7 X Articles本文取得 | 記事 URL から本文を全文取得（fail-closed） | `scripts/fetch_x_article.py` | 手動 | 🖐🐳 |
 | P8 エンゲージメント計測 | 自投稿の実数を取る | `scripts/fetch_engagement.py`（make_article ラッパー起動） | 投稿後24h/72h | 🐳 |
+| P8' 計測の唯一口 | X 投稿の数値（likes/replies/views/bookmarks/RT/quotes）を測る**唯一のオンデマンド計測モジュール**。取得経路（syndication / fxtwitter）を `sources` に残し、取れない値は 0 でなく `null` にする | `scripts/x_metrics_lib.py`（2026-08-19 新設・それまで経路ごとの独自実装で同じ投稿の数字が食い違っていた〔17/17件不一致・「万」パース全損で3万いいね→0保存〕） | 呼ばれた時 | 🐳 |
+| P8'' 契約の見張り | 「0は書かない」契約の違反を検知する report-only の見張り。`output/bookmarks.jsonl` の**凍結行が増減していないか**と、新規行の指標が null かを検査（増えても減っても違反＝差し替え・null 化も拾う） | `scripts/check_metric_contract.py`（⚠️ docstring は「毎日実行」だが **launchd・runner への配線は 0 件**＝実行は手動・2026-08-29 実測。直近実行は `OK: 全267行・数値入り行 243（凍結値 243 と一致）・破損行 0`） | 手動（未配線） | 🖐 |
 
 > ⚠️ P9 フォロワー計測（`fetch_followers.py`）は**定期実行に配線されていない**。呼び出しは `x_watchlist_tracer.py` の中だけ（2026-08-14 実測 grep）。
 
@@ -132,10 +134,12 @@ flowchart LR
 | **詳細リファレンス**（分類カテゴリ・テンプレ対応表・データスキーマ） | `.claude/docs/architecture.md`（⚠️ **2026-08-29 退役進行中**: §モジュール構成・§データフローは 5/2 停止／§環境変数は本書 §5.2 へ移送済み／§インフルエンサーグループ定義（文書6群 vs 実体8群）・§collect_tweets オプション（`--scrolls` 文書10 vs 実装20）・「Few-shot 46例」（実 51）は**実装と不一致＝読まない**。カテゴリ定義の正本は `collector/config.py`） | リンク先 |
 
 ## 7. 未反映キュー（機械が積む・人が消す）
-（空。2026-08-29 に 5件を1件ずつ判定して消化＝内訳: **株アルゴ側の対象で本書には載らない** 9本
+（空。2026-08-29 に 5件を1件ずつ判定して消化＝内訳: **株アルゴ側の対象で本書には載らない** 8本
 〔`gen_center_pin_types` `x_mention_dict` `x_mention_extract` `xprice_watch_run` `build_trial_fingerprints`
-`tdnet_event_profile` `coverage_census` `price_universe_check` `check_metric_contract`〕／**本書に既出で
-追記不要** 3本〔`fetch_bookmarks`= §4 P2・`bookmarks_keyword_common`= §4 P5・`x_metrics_lib`= §4 P8〕。
+`tdnet_event_profile` `coverage_census` `price_universe_check`〕／**本書に既出で追記不要** 3本
+〔`fetch_bookmarks`= §4 P2・`bookmarks_keyword_common`= §4 P5・`x_metrics_lib`= §4 P8'〕／
+**⚠️ 訂正（同日中）**: `check_metric_contract` を株アルゴ側と判定したのは誤りで、実体は
+`output/bookmarks.jsonl` を見る **X収集側の見張り**（本書 §4 P8'' へ反映済み）。
 ※ 見張りは `scripts/` 全体を見るため株アルゴ側の変更もここへ積まれる。積まれたら「本書の対象か」を先に見る。）
 
 <!-- stop-paired-docs-guard が scripts/configs/docker を触ったのに本書未更新の時に1行積む。人が更新したら消す。 -->

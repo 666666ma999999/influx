@@ -3,7 +3,7 @@ project: influx（株アルゴ研究系統）
 type: architecture
 artifact_role: repo-canonical
 owners: MASA
-last_verified: 2026-08-14
+last_verified: 2026-08-29
 sensitivity: personal
 pair:
   - scripts
@@ -73,6 +73,7 @@ flowchart LR
 |---|---|---|---|---|---|
 | P1 | 仮説の在庫化 | 外部リサーチ・X採掘・棚卸しでバックログを作る | catalog §8 | 不定期（**現在停止**） | 🖐＋AI |
 | P2 | 事前登録 | 1本を §7-X 節に書き SHA-256 で凍結してから測る | catalog §7 / `tasks/*_preregister.md` | 1周ごと | 🖐 |
+| P2' | 既試行の重複照合（dedupゲート） | 新しい候補が「既に試した／棄却した／回避確定」と近傍でないかを機械照合する署名表を作る。台帳 `trials.jsonl` と catalog §7-D/§8-2/§7-AF を read-only で読み、`data/kpi_trials/trial_fingerprints.json` を生成 | `scripts/build_trial_fingerprints.py`（2026-07-18 承認） | 収穫・事前登録の前 | 🐳 |
 | P3 | 敵対レビュー | 凍結前に GO/NO-GO を取る（NO-GO は素直に受ける） | `/adversarial-review` + Codex MCP | P2 直後・必須 | 🖐 |
 | P4 | in-sample 検定 | 統計量を計算し台帳に1行 append | `scripts/kpi_event_study.py` | GO後1回 | 🐳 |
 | P5 | 判定 (verdict) | 5基準で pass候補 / fail / pending を出す | 同 `judge()` | P4 と同時 | 🐳 |
@@ -88,6 +89,7 @@ flowchart LR
 | P13b | 監視カバレッジの物差し | 「独立ドライバー×稼働取得経路×関門通過カード」の重複除外集合を数える（P-08a 裁定 2026-08-17・入力件数では面積を測らない）。§16v の浸透カード有無で食品ミュートの部分解除も反映。出力= `output/coverage_census.md`。**`--selftest` に実 config の不変条件「確証カードを持つ系列が上昇ミュートで死んでいない」を内蔵**（2026-08-18 P-08e の再発防止・config 不在は FAIL 扱い） | `scripts/coverage_census.py`（判定の正本は `price_universe_check.pass_through_cards`） | 手動（**カード追加のたびに実行**＝鳴らす経路の有無を確認） | 🖐 |
 | P13' | 受益タイプ一覧 | center_pin 977社を型別一覧 md に組む（ラベル正本= `x_mention_dict.PIN_TYPE_LABELS` を共有） | `scripts/gen_center_pin_types.py` → `output/center_pin_types.md` | 手動 | 🖐 |
 | P15 | ニュース供給ショック | 商品名つき供給ショック（禁輸・スト・攻撃）を Google News RSS から検知→受益カード銘柄を型付き通知＋前向き記録（入場条件=§16u・プレレジ凍結 2026-08-16） | `scripts/news_shock_collect.py` / `news_shock_eval.py` / `news_shock_run.sh` → `data/news_shock/news_log.jsonl` | 毎日07:20+19:00（launchd 登録待ち） | ⏰（Docker不要） |
+| P13'' | TDnet イベント別プロファイル | 112万件の適時開示から表題で機械分類し「翌営業日始値→20営業日後終値」の実績を §0 の定義のまま測る。**記述測定のみ・台帳不算入・α非消費**（閾値探索やフィルタ探しはしない＝設計材料であって合格ではない） | `scripts/tdnet_event_profile.py` | 手動 | 🖐 |
 | P14 | vault ミラー | 当日シグナル・台帳・hash chain を vault へ写す | 上記ジョブに同乗 | 毎朝 | ⏰ |
 
 ### 4-1. 定期実行（配管図が正本）
@@ -190,9 +192,8 @@ flowchart LR
 | **詳細リファレンス**（環境変数一覧・分類カテゴリ等） | `.claude/docs/architecture.md`（⚠️ モジュール構成・データフロー節は 5/2 停止・X収集寄り） | リンク先 |
 
 ## 7. 未反映キュー（機械が積む・人が消す）
-- [ ] 2026-08-16 `build_trial_fingerprints.py`、`tdnet_event_profile.py` を更新（この文書への反映を確認）
-- [ ] 2026-08-19 `check_metric_contract.py`、`fetch_bookmarks.py`、`x_metrics_lib.py` を更新（この文書への反映を確認）
-- [ ] 2026-08-25 `bookmarks_keyword_common.py` を更新（この文書への反映を確認）
+（空。2026-08-29 に3件を1件ずつ判定して消化＝内訳: **本書へ反映した** 2本〔`build_trial_fingerprints`→ §4 P2'・`tdnet_event_profile`→ §4 P13''〕／**X収集側の対象で本書には載らない** 4本〔`check_metric_contract` `fetch_bookmarks` `x_metrics_lib` `bookmarks_keyword_common` → `influx-architecture.md`〕。
+※ 見張りは `scripts/` 全体を見るため両系統の変更がここへ積まれる。積まれたら「本書の対象か」を先に見る。）
 
 ## 8. 矛盾・未確定（結論は書かない・移送先だけ）
 
