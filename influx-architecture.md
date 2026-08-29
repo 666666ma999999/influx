@@ -71,7 +71,7 @@ flowchart LR
 | P4 週次バズ収集 | 検索スクレイプでバズcoーパスを作る | `com.masa.xbuzz-buzz-collect`→`x_search_collect_twittora.py` | 月曜20:30 | ⏰🐳 |
 | P4' 旧Grok経路 | クエリ定義の置き場（実行は停止・7/1切替） | `scripts/grok_collect_twittora.py`（DEFAULT_QUERIES 正本） | 停止 | 🖐 |
 | P5 キーワード台帳 | ブックマーク差分から検索語台帳を更新 | `com.masa.x-keywords-weekly`→`obs-x-keywords` | 土曜10:00 | ⏰🐳 |
-| P6 X Articles形式検索 | 長文記事を `url:x.com/i/article` で拾う | `scripts/search_x_articles.py` | 手動（launchd未配線） | 🖐🐳 |
+| P6 X Articles形式検索 | 長文記事を `url:x.com/i/article` で拾う。**グローバル検索＋定点著者スコープ（`lane=offense` を6人ずつ `from:` OR・f=live）の2系統**（2026-08-29 追加＝グローバルの Top 1画面では定点著者の記事共有を取りこぼすため） | `scripts/search_x_articles.py` | 手動（launchd未配線） | 🖐🐳 |
 | P7 X Articles本文取得 | 記事 URL から本文を全文取得（fail-closed） | `scripts/fetch_x_article.py` | 手動 | 🖐🐳 |
 | P8 エンゲージメント計測 | 自投稿の実数を取る | `scripts/fetch_engagement.py`（make_article ラッパー起動） | 投稿後24h/72h | 🐳 |
 
