@@ -100,6 +100,31 @@
     {
       "handle": "0xMoysei",
       "lane": "offense"
+    },
+    {
+      "handle": "t_wada",
+      "lane": "offense",
+      "note": "旧collection_reference監視・技術的に正確 2026-08-13移設"
+    },
+    {
+      "handle": "masuidrive",
+      "lane": "offense",
+      "note": "旧collection_reference監視・実践的Tips 2026-08-13移設"
+    },
+    {
+      "handle": "svpino",
+      "lane": "offense",
+      "note": "旧collection_reference監視・英語圏CC発信 2026-08-13移設"
+    },
+    {
+      "handle": "kenn",
+      "lane": "offense",
+      "note": "旧collection_reference監視・構造分析 2026-08-13移設"
+    },
+    {
+      "handle": "The_AGI_WAY",
+      "lane": "offense",
+      "note": "旧collection_reference監視・設定/ベスプラ 2026-08-13移設"
     }
   ],
   "rising_likes_per_hour": 30,
