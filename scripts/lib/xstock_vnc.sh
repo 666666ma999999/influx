@@ -37,17 +37,38 @@ XSTOCK_STARTED=0
 # XSTOCK_DAEMON_INTERVAL=0 を渡すと待機ループのカウンタが増えず**無限ループ**になる。
 # 共通部品なので設定事故が5本の runner へ波及する＝ここで弾く。
 xstock_validate_waits() {
-  case "$XSTOCK_DAEMON_INTERVAL" in
-    ''|*[!0-9]*|0) echo "ERROR: XSTOCK_DAEMON_INTERVAL は1以上の整数（現在: '${XSTOCK_DAEMON_INTERVAL}'）" >&2; return 1 ;;
-  esac
-  case "$XSTOCK_DAEMON_WAIT" in
-    ''|*[!0-9]*) echo "ERROR: XSTOCK_DAEMON_WAIT は0以上の整数（現在: '${XSTOCK_DAEMON_WAIT}'）" >&2; return 1 ;;
-  esac
+  local name value
+  # 10進で正規化して検証する。先頭ゼロ（08/09）は算術展開で八進として扱われ
+  # `value too great for base` になるため、ここで弾く（2026-08-29 実測で再現）。
+  # 上限を置くのは、桁の打ち間違いで「事実上止まらない待機」になるのを防ぐため。
+  for name in XSTOCK_DAEMON_WAIT:3600 XSTOCK_DAEMON_INTERVAL:300 \
+              XSTOCK_UP_WAIT:3600 XSTOCK_DISPLAY_WAIT:3600 XSTOCK_WARMUP:600; do
+    eval "value=\${${name%%:*}}"
+    case "$value" in
+      ''|*[!0-9]*|0[0-9]*)
+        echo "ERROR: ${name%%:*} は0〜${name##*:}の10進整数（先頭ゼロ不可・現在: '${value}'）" >&2
+        return 1 ;;
+    esac
+    if [ "$value" -gt "${name##*:}" ]; then
+      echo "ERROR: ${name%%:*} が上限 ${name##*:} を超えている（現在: '${value}'）" >&2
+      return 1
+    fi
+  done
+  # interval だけは 0 だと待機カウンタが増えず無限ループになるため 1 以上
+  if [ "$XSTOCK_DAEMON_INTERVAL" -lt 1 ]; then
+    echo "ERROR: XSTOCK_DAEMON_INTERVAL は1以上（現在: '${XSTOCK_DAEMON_INTERVAL}'）" >&2
+    return 1
+  fi
   return 0
 }
 
+# 通知（AppleScript のリテラルに壊れる文字を落としてから埋め込む。素で入れると
+# `"` や `\` で構文エラーになり、`|| true` のせいで**黙って消える**・2026-08-29 Codex 指摘）
 xstock_notify() {
-  osascript -e "display notification \"$1\" with title \"${XSTOCK_NOTIFY_TITLE}\"" 2>/dev/null || true
+  local msg title
+  msg=$(printf '%s' "$1" | tr -d '"\\')
+  title=$(printf '%s' "${XSTOCK_NOTIFY_TITLE}" | tr -d '"\\')
+  osascript -e "display notification \"${msg}\" with title \"${title}\"" 2>/dev/null || true
 }
 
 xstock_container_up() {
@@ -107,7 +128,13 @@ xstock_ensure_ready() {
     # （別ジョブが起こした直後に相乗りするとこの窓に入る）。ソケットの実在まで確認する
     # ＝ us_watchlist_launchd.sh が以前から使っている判定と同じ（2026-08-29 に共通化）。
     xstock_wait_display && return 0
-    echo "WARN: ${XSTOCK_CONTAINER} は稼働中だが DISPLAY=:99 が準備できていない → 起こし直す" >&2
+    # ここで compose up をやり直さない（2026-08-29 Codex 2巡目の指摘）。
+    # 設定に差分があるとコンテナが作り直され、同じコンテナを使っている**別ジョブを巻き込んで落とす**。
+    # 差分が無ければ no-op で Xvfb の固着は直らず、待ち時間だけ伸びる。どちらも損なので、
+    # 「稼働中なのに DISPLAY が来ない」は人が見るべき異常として通知して失敗させる。
+    echo "ERROR: ${XSTOCK_CONTAINER} は稼働中だが DISPLAY=:99 が準備できない（別ジョブが起動中か Xvfb の固着）" >&2
+    xstock_notify "${XSTOCK_CONTAINER} は稼働中だが DISPLAY=:99 が準備できませんでした"
+    return 1
   fi
 
   echo "${XSTOCK_CONTAINER} 停止 → ${XSTOCK_COMPOSE_CMD} を試行"

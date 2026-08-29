@@ -17,7 +17,11 @@ ALERT_CMD=${ALERT_CMD:-"/usr/bin/python3 $INFLUX/scripts/price_watch_alert.py"}
 
 # 失敗通知（lib を source しない XSTOCK_SKIP_ENSURE 経路でも鳴るよう runner 側に持つ）
 xprice_notify() {
-  osascript -e "display notification \"$1\" with title \"⚠️ X値上がり検出 失敗\"" 2>/dev/null || true
+  # タイトルは lib と同じ変数を尊重（環境で上書きできる）。AppleScript を壊す文字は落とす。
+  local msg title
+  msg=$(printf '%s' "$1" | tr -d '"\\')
+  title=$(printf '%s' "${XSTOCK_NOTIFY_TITLE:-⚠️ X値上がり検出 失敗}" | tr -d '"\\')
+  osascript -e "display notification \"${msg}\" with title \"${title}\"" 2>/dev/null || true
 }
 
 # --- Docker daemon 待機＋コンテナ復旧（共通部品・2026-08-29 に手書きから移行） ---
