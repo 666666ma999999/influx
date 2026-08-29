@@ -9,8 +9,34 @@ cd "$PROJECT_ROOT" || exit 1
 ACCOUNTS_US="yukimamax paurooteri investramza Biz_zatukora tomoyaasakura kakatothecat Drdebuneko YasLovesTech"
 ACCOUNTS_JP="ShinjukuSokai"
 # 第23R裁定②: 前向き勝率台帳の段階拡大（月+10人上限・bot徴候で即停止）。
-# 選定=config記載順の先頭10（結果で選ばない・2026-07-28追加）。
-ACCOUNTS_JP_SEARCH="goto_finance cissan_9984 tesuta001 yurumazu 2okutameo tapazou29 kanpo_blog haru_tachibana8 heihachiro888 uehara_sato4"
+# 選定=config記載順の先頭 JP_SEARCH_N（結果で選ばない・2026-07-28追加）。
+# 名簿の正本は collector/config.py INFLUENCER_GROUPS の1箇所（2026-08-29 統合。以前はここへ
+# 手書きコピーしており、config を触った時に片側だけ変わる状態だった）。増員は N を上げるだけ。
+JP_SEARCH_N=10
+ACCOUNTS_JP_SEARCH=$(cd "$PROJECT_ROOT" && JP_SEARCH_N="$JP_SEARCH_N" python3 - <<'PYROSTER'
+import json, os, sys
+sys.path.insert(0, ".")
+from collector.config import INFLUENCER_GROUPS
+
+n = int(os.environ["JP_SEARCH_N"])
+handles = [a["username"] for g in INFLUENCER_GROUPS.values()
+           for a in (g.get("accounts", []) if isinstance(g, dict) else g)
+           if isinstance(a, dict) and "username" in a]
+if len(handles) < n:
+    sys.exit(f"FATAL: config の名簿が {len(handles)} 人で N={n} に届かない")
+top = handles[:n]
+# fail-closed: 既に前向き観察に入っている口が先頭 N から落ちたら中断（コホートを黙って変えない）
+try:
+    with open("data/influencer_candidates/jp_forward/receipts.jsonl", encoding="utf-8") as f:
+        seen = {json.loads(l)["account"] for l in f if l.strip()}
+except FileNotFoundError:
+    seen = set()
+dropped = sorted((seen & set(handles)) - set(top))
+if dropped:
+    sys.exit("FATAL: 観察中の口が名簿の先頭から外れた: " + " ".join(dropped))
+print(" ".join(top))
+PYROSTER
+) || { echo "FATAL: jp_search 名簿の導出に失敗（collector/config.py を確認）" >&2; exit 4; }
 RUN_DAY=$(date +%Y%m%d)
 SINCE=$(date -v-14d +%Y-%m-%d)
 UNTIL=$(date -v+1d +%Y-%m-%d)
