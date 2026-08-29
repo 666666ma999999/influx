@@ -106,6 +106,7 @@ flowchart LR
 | 商品価格の発火 | `scripts/price_watch_forward.py` | `data/x_price_watch/ledger.jsonl` |
 | 海外受益カード | `scripts/foreign_forward.py` | 同上（`skipped_foreign` に除外理由）※**対TOPIX前向き台帳には入れない** |
 | インフルエンサー（fxnia） | `scripts/fxnia_forward_eval.py` | `data/influencer_candidates/forward/` |
+| インフルエンサー（okasira_kanki・2026-08-29 追加・P-INF-07） | 同上（`fxnia_forward_launchd.sh` を `FWD_ACCOUNT/FWD_START/FWD_LABEL` で共用） | `data/influencer_candidates/forward/okasira_kanki.json`・台帳 `output/influencer_candidates/okasira_forward_ledger.tsv`（監視開始 2026-08-30） |
 
 ⚠️ **台帳は append-only**（過去行を書き換えない・取り消しも新しい行）。レーンを増やす時はこの表に1行足す。
 

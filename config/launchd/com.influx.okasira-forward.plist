@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.influx.okasira-forward</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>-c</string>
+        <string>exec /Users/masaaki_nagasawa/Desktop/biz/influx/scripts/fxnia_forward_launchd.sh</string>
+    </array>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>FWD_ACCOUNT</key><string>okasira_kanki</string>
+        <key>FWD_START</key><string>20260830</string>
+        <key>FWD_LABEL</key><string>okasira</string>
+    </dict>
+
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Weekday</key>
+        <integer>1</integer>
+        <key>Hour</key>
+        <integer>11</integer>
+        <key>Minute</key>
+        <integer>15</integer>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <false/>
+
+    <key>StandardOutPath</key>
+    <string>/Users/masaaki_nagasawa/Library/Logs/influx-okasira-forward.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/masaaki_nagasawa/Library/Logs/influx-okasira-forward.log</string>
+</dict>
+</plist>

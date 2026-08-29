@@ -1,5 +1,7 @@
 #!/bin/bash
-# @fxnia_kabu 前向き監視の週次capture+採点+台帳追記（Batch3事前登録・launchdラッパー）。
+# 前向き監視の週次capture+採点+台帳追記（Batch3事前登録・launchdラッパー）。
+# 既定= @fxnia_kabu。環境変数 FWD_ACCOUNT / FWD_START(YYYYMMDD) / FWD_LABEL で他アカウントにも使う
+# （2026-08-29 P-INF-07: @okasira_kanki を com.influx.okasira-forward.plist から同スクリプトで起動。コピーを作らない）。
 # research_weekly_launchd.sh と同型: キー解決→vnc up→Xvfb待ち→docker exec→down。
 # since=監視開始日(2026-07-24 固定=out-of-sample境界)。until=recollect既定(35日前・成熟)。
 # 各週フル窓を採り直すため、Docker停止で走らなかった週があっても次回成功で完全回復する。
@@ -11,7 +13,9 @@ cd "$PROJECT_ROOT" || exit 1
 # `docker: command not found` で exit 3。手動実行はシェル PATH で成功するため
 # 8/1 の観測では再現しなかった（原因はこの PATH 行の欠落）。
 export PATH="/usr/local/bin:/opt/homebrew/bin:$PATH"
-START=20260724
+ACCOUNT="${FWD_ACCOUNT:-fxnia_kabu}"
+START="${FWD_START:-20260724}"
+LABEL="${FWD_LABEL:-fxnia}"   # 出力dir/台帳名の接頭辞（既存 fxnia_forward/ を壊さないため account と分ける）
 
 load_key_from_zshrc() {
     local var_name="$1"
@@ -38,25 +42,25 @@ done
 [ "$READY" -ne 1 ] && echo "警告: Xvfb起動確認タイムアウト・続行" >&2
 
 ASOF=$(date +%Y%m%d)
-SINCE_ISO="2026-07-24"
+SINCE_ISO="${START:0:4}-${START:4:2}-${START:6:2}"
 
 # capture（forward専用dir・in-sample recollect/ を汚さない）
 docker exec -e DISPLAY=:99 -e PYTHONPYCACHEPREFIX=/tmp/pc xstock-vnc \
     python3 /app/scripts/recollect_account.py \
-    --account fxnia_kabu --since "$SINCE_ISO" \
+    --account "$ACCOUNT" --since "$SINCE_ISO" \
     --output-dir /app/data/influencer_candidates/forward || echo "警告: capture失敗" >&2
 
 # score
 docker exec -e PYTHONPYCACHEPREFIX=/tmp/pc xstock-vnc \
     python3 /app/scripts/influencer_candidate_score.py \
-    --input /app/data/influencer_candidates/forward/fxnia_kabu.json \
-    --output-dir /app/output/influencer_candidates/fxnia_forward || echo "警告: score失敗（成熟コール0の可能性）" >&2
+    --input "/app/data/influencer_candidates/forward/${ACCOUNT}.json" \
+    --output-dir "/app/output/influencer_candidates/${LABEL}_forward" || echo "警告: score失敗（成熟コール0の可能性）" >&2
 
 # 評価＋台帳追記
 docker exec -e PYTHONPYCACHEPREFIX=/tmp/pc xstock-vnc \
     python3 /app/scripts/fxnia_forward_eval.py \
-    --mentions /app/output/influencer_candidates/fxnia_forward/mentions.csv \
-    --ledger /app/output/influencer_candidates/fxnia_forward_ledger.tsv \
+    --mentions "/app/output/influencer_candidates/${LABEL}_forward/mentions.csv" \
+    --ledger "/app/output/influencer_candidates/${LABEL}_forward_ledger.tsv" \
     --asof "$ASOF" --start "$START"
 
 docker compose -f docker-compose.vnc.yml down

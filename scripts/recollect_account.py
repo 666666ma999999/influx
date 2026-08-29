@@ -102,7 +102,11 @@ def main() -> int:
                 continue
             if date >= until_ymd:
                 continue
-        posts.append({"account": acc, "date": date, "text": text})
+        # url は続きスレッド・画像の個別取得に使う（2026-08-29 追加・無い時は省略＝旧スキーマ互換）
+        post = {"account": acc, "date": date, "text": text}
+        if t.get("url"):
+            post["url"] = t["url"]
+        posts.append(post)
 
     out_dir = ROOT / args.output_dir
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -110,7 +114,7 @@ def main() -> int:
     payload = {
         "_note": f"@{acc} 中立全収集（min_faves無し=分母込み・第17R Batch1 T2）。"
                  f"cookie={args.profile}・自動ログインなし。status={res.status}。",
-        "_schema": "posts[].{account, date(YYYYMMDD), text}",
+        "_schema": "posts[].{account, date(YYYYMMDD), text, url?}",
         "_collection": {"query": query, "status": res.status,
                         "raw_collected": len(res.tweets), "own_posts": len(posts),
                         "max_scrolls": args.max_scrolls, "error": res.error_message or None},
