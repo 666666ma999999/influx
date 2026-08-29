@@ -34,7 +34,7 @@ architecture_version: 1
 | **Read** | `plan.md` / 本ファイル / `scripts/` の X収集系（下表§4） / `configs/x_watchlist.json` | 作業開始時にまず読む |
 | **Write** | `scripts/`（X収集系の改修）/ 本ファイル§7 未反映キュー / `configs/x_watchlist.json` | 収集ロジックと設定 |
 | **Skip** | `x_profiles/`（Cookie=秘密・値を読まない）/ `output/`（巨大な生成物）/ 株アルゴ系 tasks・scripts（別系統）/ `_tmp_*.py`（使い捨て） | 秘密・巨大・別事業・一時物 |
-| **Rules** | Cookie 値は絶対に転記しない ／ 収集クエリの正本は DEFAULT_QUERIES（本書は索引）／ 他プロジェクト（make_article）は本基盤を**読むだけ** | — |
+| **Rules** | Cookie 値は絶対に転記しない ／ 収集クエリの正本は DEFAULT_QUERIES（本書は索引）／ 他プロジェクト（make_article）は本基盤を**読むだけ** ／ **収集はログイン済み Cookie でのブラウザ閲覧のみ・X API 非使用・自動ログインは永久禁止**（2026-08-29 に旧 plan.md §法的・TOSリスク方針 と Non-Goal 8 から移送＝現行9工程に有効な現役ルール） | — |
 
 ## 2. システム全体像（X収集基盤）
 
@@ -91,6 +91,15 @@ flowchart LR
 | JSONL 台帳 | append-only・URL重複スキップ | 過去行を書き換えず取り消しも新行 | DB化（不変性保証が条件） | personal |
 
 
+### 5.2 環境変数（4件・2026-08-29 に `.claude/docs/architecture.md` から移送＝退役前の受け皿）
+
+| 変数 | 必須 | 用途（読み手） |
+|---|---|---|
+| `ANTHROPIC_API_KEY` | LLM 呼び出し時 | Claude API キー（`collector/llm_classifier.py:63`） |
+| `XAI_API_KEY` | research 時 | xAI Grok API キー（`scripts/run_research.sh:18`・`.envrc` 経由） |
+| `DISPLAY` | Docker 実行時 | X11 ディスプレイ。**VNC コンテナは `:99` 固定**（headless でも必須） |
+| `TZ` | 自動設定 | `Asia/Tokyo` |
+
 ### 5.1 AI 資産（スキル・コマンド・hook）
 
 > 本節は全行 `source_env: personal`（環境側の持ち物・会社データを含まない）。
@@ -116,9 +125,14 @@ flowchart LR
 | 収集クエリの中身 | `scripts/grok_collect_twittora.py` DEFAULT_QUERIES | リンク先 |
 | 群をまたぐ配線・障害史 | vault `02_Ai/x-buzz/notes/x-buzz-architecture.md` | リンク先 |
 | **株アルゴ系統（同 repo のもう1系統）** | `influx-stock-algo-architecture.md`（repo 直下・2026-08-09 新設） | リンク先 |
-| **詳細リファレンス**（環境変数一覧・collect_tweets オプション・インフルエンサーグループ定義・分類カテゴリ・テンプレ対応表） | `.claude/docs/architecture.md`（⚠️ 冒頭のモジュール構成・データフロー節は 5/2 停止＝現況は本書。信頼できるのは §環境変数 以降） | リンク先 |
+| **詳細リファレンス**（分類カテゴリ・テンプレ対応表・データスキーマ） | `.claude/docs/architecture.md`（⚠️ **2026-08-29 退役進行中**: §モジュール構成・§データフローは 5/2 停止／§環境変数は本書 §5.2 へ移送済み／§インフルエンサーグループ定義（文書6群 vs 実体8群）・§collect_tweets オプション（`--scrolls` 文書10 vs 実装20）・「Few-shot 46例」（実 51）は**実装と不一致＝読まない**。カテゴリ定義の正本は `collector/config.py`） | リンク先 |
 
 ## 7. 未反映キュー（機械が積む・人が消す）
+- [ ] 2026-08-15 `gen_center_pin_types.py`、`x_mention_dict.py`、`x_mention_extract.py`、`xprice_watch_run.sh` を更新（この文書への反映を確認）
+- [ ] 2026-08-16 `build_trial_fingerprints.py`、`tdnet_event_profile.py` を更新（この文書への反映を確認）
+- [ ] 2026-08-17 `coverage_census.py`、`price_universe_check.py` を更新（この文書への反映を確認）
+- [ ] 2026-08-19 `check_metric_contract.py`、`fetch_bookmarks.py`、`x_metrics_lib.py` を更新（この文書への反映を確認）
+- [ ] 2026-08-25 `bookmarks_keyword_common.py` を更新（この文書への反映を確認）
 
 <!-- stop-paired-docs-guard が scripts/configs/docker を触ったのに本書未更新の時に1行積む。人が更新したら消す。 -->
 

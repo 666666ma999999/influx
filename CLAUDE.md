@@ -4,12 +4,14 @@
 
 ## プロジェクト概要
 
-X(Twitter)上の株式投資インフルエンサーのツイートを Playwright で自動収集し、キーワードベース分類と Claude API による LLM 分類の 2 段階で 7 カテゴリに分類するシステム。収集データは HTML ビューア（`output/viewer.html`）で閲覧可能。
+**株で勝つ情報を集める**ための収集基盤（目的の正本= `plan.md`「## 目的」）。X の投稿を Playwright で収集し、商品価格の系列・企業の開示と合わせて投資判断の材料にする。
 
-主要モジュール: `collector/`（config, x_collector, classifier, llm_classifier）+ `scripts/`（collect_tweets, classify_tweets 等）。投稿管理は **2026-05-01 Phase 3** で `~/Desktop/biz/autopost/`（旧 tier3_posting）に物理分離済み。
+主要モジュール: `collector/`（Cookie 復号・例外・`SafeXCollector`＝現行の収集器）+ `scripts/`（ブックマーク・トレーサー・週次バズ・価格系列・前向き検証）。投稿管理は **2026-05-01 Phase 3** で `~/Desktop/biz/autopost/`（旧 tier3_posting）に物理分離済み。
 
-**いま何が動いているか（機能マップ）** → `influx-architecture.md`（X収集基盤）／`influx-stock-algo-architecture.md`（株アルゴ研究）／**何がいつ動くか（配管図）** → `docs/pipeline-map.md`。この3枚は毎セッション自動で読み込まれる（`~/.claude/rules/05` §architecture）。
-**詳細リファレンス**（環境変数一覧・カテゴリ定義・データスキーマ）→ `.claude/docs/architecture.md`（⚠️ 冒頭のモジュール構成・データフロー節は 2026-05-02 で停止＝現況は上の機能マップが正本）
+> 🪦 **旧2段階分類パイプライン（`collect_tweets.py`→`classify_tweets.py`→7カテゴリ→`output/viewer.html`）は 2026-08-29 に退役判断**。定期実行は未登録・最後の精度計測は不合格（macro F1 0.3905／合格線 0.80・`output/f1_baseline.json` 2026-04-24）。人手の正解データ（`data/gold_set/`）と例文（`data/few_shot_examples.json`）は資産として残置。
+
+**いま何が動いているか（機能マップ）** → `influx-architecture.md`（X収集基盤）／`influx-stock-algo-architecture.md`（株アルゴ研究）／**何がいつ動くか（配管図）** → `docs/pipeline-map.md`。⚠️ **自動で読み込まれるのは `influx-architecture.md` の1枚だけ**（注入は最初に見つかった1枚で止まる仕様・2026-08-29 実測）。**株アルゴ側・配管図は着手時に自分で Read する**。
+**詳細リファレンス**（カテゴリ定義・データスキーマ）→ `.claude/docs/architecture.md`（⚠️ 2026-08-29 退役進行中＝現況は上の機能マップが正本。**環境変数の一覧は `influx-architecture.md` §5.2**・グループ定義とオプションは実装と不一致で読まない）
 
 ## Docker 実行モード
 
@@ -39,13 +41,15 @@ docker compose run xstock python scripts/classify_tweets.py --input output/tweet
 docker compose run xstock python scripts/check_inactive_accounts.py
 
 # X値上がり検出（日次・launchd com.influx.price-watch 22:10。手動は runner 経由）
-bash scripts/xprice_watch_run.sh   # 収集36クエリ→zスコア判定→検知時Mac通知。台帳 data/x_price_watch/
-# 発火時の受益銘柄は configs/x_shortage_map.json 経由（TOP1000台帳内に限定・22/36クエリで銘柄が出る）
+bash scripts/xprice_watch_run.sh   # 収集→zスコア判定→検知時Mac通知。台帳 data/x_price_watch/
+# クエリ本数は jq '.queries|length' configs/x_price_watch.json で引く（本数をここに書かない＝腐るため）
+# 発火時の受益銘柄は configs/x_shortage_map.json 経由（TOP1000台帳内に限定・一部のクエリのみ銘柄が出る）
 python3 scripts/x_shortage_map.py  # 対応表の自己検証（関門B・符号・網羅。NGなら銘柄付与は自動停止）
 # 品薄の7分類と「なぜ転売プレ値では銘柄を出さないか」は docs/price-watch-universe.md §16a が正本
 
-# B2B価格チェッカー（54系列・launchd com.influx.price-universe 毎週月11:00。手動は runner 経由）
-bash scripts/price_universe_run.sh   # Docker待機→54系列取得→発火/取得低下をMac通知
+# B2B価格チェッカー（launchd com.influx.price-universe 毎週月11:00。手動は runner 経由）
+# 系列数は jq '.series|length' configs/price_universe_sources.json で引く
+bash scripts/price_universe_run.sh   # Docker待機→全系列取得→発火/取得低下をMac通知
 docker compose run --rm xstock python scripts/price_universe_check.py   # 素の実行（通知なし）
 docker exec -e DISPLAY=:99 xstock-vnc python3 /app/scripts/price_watch_discover.py  # 新商品名の候補キュー生成
 docker compose run --rm xstock python scripts/price_watch_forward.py --eval          # 発火の前向き記録を評価（8/15週後）
