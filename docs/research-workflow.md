@@ -66,7 +66,7 @@ git 追跡可否を分けて止める。
 | 種別 | 形式 | git | 例 |
 |---|---|---|---|
 | **探索・使い捨て** | `_tmp_<name>.py` / `_scratch/` 配下 | **追跡外**（下記 gitignore 追加） | `_tmp_btc_corr_check.py` |
-| **再利用ツール / production** | `<name>.py`（無印） | 追跡 | `audit_routing.py` `classify_tweets.py` |
+| **再利用ツール / production** | `<name>.py`（無印） | 追跡 | `audit_routing.py` `fetch_bookmarks.py` |
 | **定常計測ツール（繰り返し回す）** | `measure_*.py` 等（無印・tracked のまま） | 追跡 | `measure_f1.py` `measure_human_accuracy.py` |
 
 判断基準: **「もう一度回すか」**。一度きりの探索・相関チェック・データ覗き見は `_tmp_`。

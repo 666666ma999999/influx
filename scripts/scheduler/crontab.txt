@@ -1,4 +1,4 @@
-# Linux / Docker 用 crontab 雛形（daily_pipeline 自動起動）
+# Linux / Docker 用 crontab 雛形（現在は Cookie 期限の週次チェックのみ）
 #
 # インストール (既存 crontab に追記):
 #   crontab -l > /tmp/cur.cron 2>/dev/null || true
@@ -9,11 +9,11 @@
 #   crontab -l | grep influx
 #
 # 削除:
-#   crontab -l | grep -v 'influx daily_pipeline' | crontab -
+#   crontab -l | grep -v 'influx cron' | crontab -
 
-# TZ は Asia/Tokyo で毎朝 7:00 JST に 1 投稿分のパイプライン実行
+# TZ は Asia/Tokyo
 TZ=Asia/Tokyo
-0 7 * * * cd /Users/masaaki_nagasawa/Desktop/biz/influx && /usr/bin/env python3 scripts/daily_pipeline.py --no-llm-compose >> output/pipeline_log/cron.log 2>&1  # influx daily_pipeline
+# 🪦 daily_pipeline の行は 2026-08-29 に削除（旧2段階分類パイプラインの退役でスクリプトが無くなった）。
 
 # 週次: Cookie 期限切れ早期検知（月曜 6:30 JST）
-30 6 * * 1 cd /Users/masaaki_nagasawa/Desktop/biz/influx && /usr/bin/env python3 scripts/check_inactive_accounts.py >> output/pipeline_log/inactive.log 2>&1  # influx daily_pipeline
+30 6 * * 1 cd /Users/masaaki_nagasawa/Desktop/biz/influx && /usr/bin/env python3 scripts/check_inactive_accounts.py >> output/pipeline_log/inactive.log 2>&1  # influx cron
