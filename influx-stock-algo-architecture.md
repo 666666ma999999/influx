@@ -88,7 +88,7 @@ flowchart LR
 | P13a | 海外上場の受益カード（§16w・2026-08-17 P-08c裁定） | 商品の供給ショックは受益者が海外に偏るため、受益カードに海外銘柄を認める。`market`/`ticker`/`benchmark` 必須・**対TOPIX前向き台帳には入れない**（`skipped_foreign` に理由を残す）・通知は `[IE]Glanbia plc` 形式。初カード= Glanbia plc（dry-whey 系列）。**2026-08-18 時点で15枚**（確証7/仮6/却下2）。同一系列に複数カードが載る（例: ウラン= KAP+CCO）ため、記録は**銘柄単位に畳む**——同一 ticker が系列をまたいで属性違い（benchmark/tier）で登録されていたら警告を出す（2026-08-18 追加） | `foreign_forward.py`（記録＋backfill＋評価）/ `price_universe_check.beneficiaries_display` / `price_watch_forward.record_firings`（除外側） | 本線と同じ（月曜11:00・独立ジョブではない） | ⏰ |
 | P13b | 監視カバレッジの物差し | 「独立ドライバー×稼働取得経路×関門通過カード」の重複除外集合を数える（P-08a 裁定 2026-08-17・入力件数では面積を測らない）。§16v の浸透カード有無で食品ミュートの部分解除も反映。出力= `output/coverage_census.md`。**`--selftest` に実 config の不変条件「確証カードを持つ系列が上昇ミュートで死んでいない」を内蔵**（2026-08-18 P-08e の再発防止・config 不在は FAIL 扱い） | `scripts/coverage_census.py`（判定の正本は `price_universe_check.pass_through_cards`） | 手動（**カード追加のたびに実行**＝鳴らす経路の有無を確認） | 🖐 |
 | P13' | 受益タイプ一覧 | center_pin 977社を型別一覧 md に組む（ラベル正本= `x_mention_dict.PIN_TYPE_LABELS` を共有） | `scripts/gen_center_pin_types.py` → `output/center_pin_types.md` | 手動 | 🖐 |
-| P15 | ニュース供給ショック | 商品名つき供給ショック（禁輸・スト・攻撃）を Google News RSS から検知→受益カード銘柄を型付き通知＋前向き記録（入場条件=§16u・プレレジ凍結 2026-08-16） | `scripts/news_shock_collect.py` / `news_shock_eval.py` / `news_shock_run.sh` → `data/news_shock/news_log.jsonl` | 毎日07:20+19:00（launchd 登録待ち） | ⏰（Docker不要） |
+| P15 | ニュース供給ショック | 商品名つき供給ショック（禁輸・スト・攻撃）を Google News RSS から検知→受益カード銘柄を型付き通知＋前向き記録（入場条件=§16u・プレレジ凍結 2026-08-16） | `scripts/news_shock_collect.py` / `news_shock_eval.py` / `news_shock_run.sh` → `data/news_shock/news_log.jsonl` | 毎日07:20+19:00（launchd **稼働中**（2026-08-16 登録・`launchctl list` に `com.influx.news-shock` と `news-shock-probe` の2本・2026-08-29 実測） | ⏰（Docker不要） |
 | P13'' | TDnet イベント別プロファイル | 112万件の適時開示から表題で機械分類し「翌営業日始値→20営業日後終値」の実績を §0 の定義のまま測る。**記述測定のみ・台帳不算入・α非消費**（閾値探索やフィルタ探しはしない＝設計材料であって合格ではない） | `scripts/tdnet_event_profile.py` | 手動 | 🖐 |
 | P14 | vault ミラー | 当日シグナル・台帳・hash chain を vault へ写す | 上記ジョブに同乗 | 毎朝 | ⏰ |
 
@@ -126,7 +126,7 @@ flowchart LR
 
 | 道具 | うちでの使い方 | 使い方の癖・なぜ | 置き換えが起きうる部分 |
 |---|---|---|---|
-| launchd | 株アルゴ系で8ジョブ（§4-1） | ①**登録はユーザーが `!` で手打ち**（セッションUI経由は過去2回とも実行されなかった）②**fail-closed**＝失敗を沈黙させず通知③朝ジョブに `--audit` を相乗りさせ SLA超過で exit 1 | cron / GitHub Actions。※ TCC（フルディスクアクセス）が移行時の論点 |
+| launchd | 株アルゴ系の定期ジョブ（**本数は書かない**＝正本は `docs/pipeline-map.md` の機械生成表と `launchctl list | grep com.influx`。2026-08-29 に「8ジョブ」の焼き付けを除去＝§4-1 で正本へ委譲したのに隣で違う数字を持っていた） | ①**登録はユーザーが `!` で手打ち**（セッションUI経由は過去2回とも実行されなかった）②**fail-closed**＝失敗を沈黙させず通知③朝ジョブに `--audit` を相乗りさせ SLA超過で exit 1 | cron / GitHub Actions。※ TCC（フルディスクアクセス）が移行時の論点 |
 | Docker / compose（`xstock` イメージ） | 依存管理と検定バッチの実行環境 | ホスト `pip install` を禁止し、**依存を足したら requirements.txt →イメージ再ビルド**の順で通す | — |
 | Python（pandas / numpy のみ） | 検定・集計の主力 | **ML を意図的に使わない**（重み推定は死んだ型として明示的な禁止事項） | 分類器の導入（現状は禁止側） |
 | openpyxl / pypdf / 自作BIFF8 | 月次PDF・xlsx・古い xls の読み取り | **parse_fail を無音にせず要確認リストに出す** | — |
