@@ -27,10 +27,24 @@ XSTOCK_DAEMON_WAIT=${XSTOCK_DAEMON_WAIT:-300}      # Docker daemon 起動待ち�
 XSTOCK_DAEMON_INTERVAL=${XSTOCK_DAEMON_INTERVAL:-30}
 XSTOCK_UP_WAIT=${XSTOCK_UP_WAIT:-120}              # コンテナ起動待ちの上限（秒）
 XSTOCK_WARMUP=${XSTOCK_WARMUP:-15}                 # 起こした直後の暖機（秒）
+XSTOCK_DISPLAY_WAIT=${XSTOCK_DISPLAY_WAIT:-60}     # Xvfb(:99) のソケット待ちの上限（秒）
 XSTOCK_NOTIFY_TITLE=${XSTOCK_NOTIFY_TITLE:-x-buzz}
 
 # 呼び出し後に参照する: 1 = この実行でコンテナを起こした（0 = 元から動いていた）
 XSTOCK_STARTED=0
+
+# 待機値の健全性チェック（2026-08-29 追加・Codex レビュー指摘）。
+# XSTOCK_DAEMON_INTERVAL=0 を渡すと待機ループのカウンタが増えず**無限ループ**になる。
+# 共通部品なので設定事故が5本の runner へ波及する＝ここで弾く。
+xstock_validate_waits() {
+  case "$XSTOCK_DAEMON_INTERVAL" in
+    ''|*[!0-9]*|0) echo "ERROR: XSTOCK_DAEMON_INTERVAL は1以上の整数（現在: '${XSTOCK_DAEMON_INTERVAL}'）" >&2; return 1 ;;
+  esac
+  case "$XSTOCK_DAEMON_WAIT" in
+    ''|*[!0-9]*) echo "ERROR: XSTOCK_DAEMON_WAIT は0以上の整数（現在: '${XSTOCK_DAEMON_WAIT}'）" >&2; return 1 ;;
+  esac
+  return 0
+}
 
 xstock_notify() {
   osascript -e "display notification \"$1\" with title \"${XSTOCK_NOTIFY_TITLE}\"" 2>/dev/null || true
@@ -40,11 +54,27 @@ xstock_container_up() {
   docker ps --format '{{.Names}}' | grep -q "^${XSTOCK_CONTAINER}\$"
 }
 
+# Xvfb の UNIX ソケット（:99）が出来るまで待つ。成功 0 / タイムアウト 1。
+xstock_wait_display() {
+  local waited=0
+  until docker exec "$XSTOCK_CONTAINER" test -S /tmp/.X11-unix/X99 2>/dev/null; do
+    if [ "$waited" -ge "$XSTOCK_DISPLAY_WAIT" ]; then
+      echo "ERROR: ${XSTOCK_CONTAINER} の DISPLAY=:99 が${XSTOCK_DISPLAY_WAIT}秒待っても準備できない" >&2
+      return 1
+    fi
+    sleep 2
+    waited=$((waited + 2))
+  done
+  return 0
+}
+
 # Docker daemon だけを待つ（コンテナは起こさない）。
 # `docker compose run --rm` のようにブラウザ用コンテナを必要としない呼び出し側はこちらを使う
 # ＝ ensure_ready を呼ぶと不要な xstock-vnc（実測 1.79GiB）まで起こしてしまうため。
 # 成功 0 / 失敗 1（呼び出し側で exit する）。失敗時は必ず通知を出す。
 xstock_wait_daemon() {
+  xstock_validate_waits || { xstock_notify "待機設定が不正で実行できませんでした"; return 1; }
+
   if ! docker info >/dev/null 2>&1; then
     echo "Docker daemon 未起動 → Docker Desktop をバックグラウンド起動 (open -ga Docker)"
     open -ga Docker 2>/dev/null || true
@@ -73,7 +103,11 @@ xstock_ensure_ready() {
 
   local waited=0
   if xstock_container_up; then
-    return 0
+    # 名前が docker ps に出ていても、Xvfb(:99) がまだ上がっていない場合がある
+    # （別ジョブが起こした直後に相乗りするとこの窓に入る）。ソケットの実在まで確認する
+    # ＝ us_watchlist_launchd.sh が以前から使っている判定と同じ（2026-08-29 に共通化）。
+    xstock_wait_display && return 0
+    echo "WARN: ${XSTOCK_CONTAINER} は稼働中だが DISPLAY=:99 が準備できていない → 起こし直す" >&2
   fi
 
   echo "${XSTOCK_CONTAINER} 停止 → ${XSTOCK_COMPOSE_CMD} を試行"
@@ -95,6 +129,7 @@ xstock_ensure_ready() {
   # Xvfb(:99)/supervisord の立ち上がり待ち。ここを待たずに docker exec すると
   # DISPLAY 無しで Playwright が落ちる（TargetClosedError・2026-08-03 実測）
   sleep "$XSTOCK_WARMUP"
+  xstock_wait_display || { xstock_notify "${XSTOCK_CONTAINER} の DISPLAY=:99 が準備できませんでした"; return 1; }
   echo "${XSTOCK_CONTAINER} を起動した（起動待ち${waited}秒 + 暖機${XSTOCK_WARMUP}秒）"
   return 0
 }

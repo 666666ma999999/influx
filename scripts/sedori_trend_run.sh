@@ -15,11 +15,14 @@ TARGET_DATE=${TARGET_DATE:-$(date -u -v-1d +%Y-%m-%d)}
 # **自分で起こしてから続行**するようになった（収集・価格監視と同じ挙動＝週次が自力復旧できる）。
 # ⚠️ ここに復旧処理を手書きしないこと。
 if [ -z "${XSTOCK_SKIP_ENSURE:-}" ]; then
+  # 変数は **source の前** に置く。lib は `${VAR:-既定}` で初期化するため、後から代入すると
+  # lib の既定値が先に入ってしまい runner 側の値も環境指定も効かない（2026-08-29 Codex 指摘→実測で確認）。
+  # 優先順位: 環境の XSTOCK_* > runner の MAX_WAIT_SEC/INTERVAL_SEC > lib の既定
+  XSTOCK_NOTIFY_TITLE=${XSTOCK_NOTIFY_TITLE:-"⚠️ せどりトレンド観測 失敗"}
+  XSTOCK_DAEMON_WAIT=${XSTOCK_DAEMON_WAIT:-$MAX_WAIT_SEC}
+  XSTOCK_DAEMON_INTERVAL=${XSTOCK_DAEMON_INTERVAL:-$INTERVAL_SEC}
+  XSTOCK_INFLUX=${XSTOCK_INFLUX:-$INFLUX}
   . "$(dirname "$0")/lib/xstock_vnc.sh"
-  XSTOCK_NOTIFY_TITLE="⚠️ せどりトレンド観測 失敗"
-  XSTOCK_DAEMON_WAIT="$MAX_WAIT_SEC"
-  XSTOCK_DAEMON_INTERVAL="$INTERVAL_SEC"
-  XSTOCK_INFLUX="$INFLUX"
   xstock_ensure_ready || exit 1
 fi
 

@@ -1,5 +1,5 @@
 #!/bin/bash
-# B2B価格週次チェッカーのランナー（launchd com.influx.price-universe から毎週月曜 08:30 に呼ばれる）
+# B2B価格週次チェッカーのランナー（launchd com.influx.price-universe から毎週月曜 11:00 に呼ばれる＝plist 実測 2026-08-29。時刻の正本は config/launchd/com.influx.price-universe.plist）
 # 2026-07-28 新設（P0-③）。xprice_watch_run.sh（日次X版）の週次B2B版で、構成を意図的に揃えている。
 # 流れ: Docker daemon 待機 → チェッカー実行 → 発火 or 異常があれば macOS 通知。
 # 手動実行も同じ経路で: bash scripts/price_universe_run.sh
@@ -23,11 +23,14 @@ trap cleanup EXIT
 # （ensure_ready を呼ぶと不要な xstock-vnc を起こしてしまう。実測 1.79GiB）。
 # ⚠️ ここに待機処理を手書きしないこと。
 if [ -z "${XSTOCK_SKIP_ENSURE:-}" ]; then
+  # 変数は **source の前** に置く。lib は `${VAR:-既定}` で初期化するため、後から代入すると
+  # lib の既定値が先に入ってしまい runner 側の値も環境指定も効かない（2026-08-29 Codex 指摘→実測で確認）。
+  # 優先順位: 環境の XSTOCK_* > runner の MAX_WAIT_SEC/INTERVAL_SEC > lib の既定
+  XSTOCK_NOTIFY_TITLE=${XSTOCK_NOTIFY_TITLE:-"⚠️ B2B価格チェッカー失敗"}
+  XSTOCK_DAEMON_WAIT=${XSTOCK_DAEMON_WAIT:-$MAX_WAIT_SEC}
+  XSTOCK_DAEMON_INTERVAL=${XSTOCK_DAEMON_INTERVAL:-$INTERVAL_SEC}
+  XSTOCK_INFLUX=${XSTOCK_INFLUX:-$INFLUX}
   . "$(dirname "$0")/lib/xstock_vnc.sh"
-  XSTOCK_NOTIFY_TITLE="⚠️ B2B価格チェッカー失敗"
-  XSTOCK_DAEMON_WAIT="$MAX_WAIT_SEC"
-  XSTOCK_DAEMON_INTERVAL="$INTERVAL_SEC"
-  XSTOCK_INFLUX="$INFLUX"
   xstock_wait_daemon || exit 1
 fi
 

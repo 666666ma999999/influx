@@ -15,16 +15,24 @@ ALERTS="${ALERTS_FILE:-$INFLUX/output/price_watch/alerts-$TARGET_DATE.jsonl}"
 COLLECT_CMD=${COLLECT_CMD:-"docker exec -e DISPLAY=:99 xstock-vnc python3 /app/scripts/price_watch_collect.py --date $TARGET_DATE"}
 ALERT_CMD=${ALERT_CMD:-"/usr/bin/python3 $INFLUX/scripts/price_watch_alert.py"}
 
+# 失敗通知（lib を source しない XSTOCK_SKIP_ENSURE 経路でも鳴るよう runner 側に持つ）
+xprice_notify() {
+  osascript -e "display notification \"$1\" with title \"⚠️ X値上がり検出 失敗\"" 2>/dev/null || true
+}
+
 # --- Docker daemon 待機＋コンテナ復旧（共通部品・2026-08-29 に手書きから移行） ---
 # 以前はここに daemon 待機とコンテナ起こしを手書きしていたが、同じ処理が3本に複製され
 # 「片側だけ直る」事故を生んでいた（lib 冒頭の 2026-08-11 の実害を参照）。
 # ⚠️ ここに復旧処理を手書きしないこと。
 if [ -z "${XSTOCK_SKIP_ENSURE:-}" ]; then
+  # 変数は **source の前** に置く。lib は `${VAR:-既定}` で初期化するため、後から代入すると
+  # lib の既定値が先に入ってしまい runner 側の値も環境指定も効かない（2026-08-29 Codex 指摘→実測で確認）。
+  # 優先順位: 環境の XSTOCK_* > runner の MAX_WAIT_SEC/INTERVAL_SEC > lib の既定
+  XSTOCK_NOTIFY_TITLE=${XSTOCK_NOTIFY_TITLE:-"⚠️ X値上がり検出 失敗"}
+  XSTOCK_DAEMON_WAIT=${XSTOCK_DAEMON_WAIT:-$MAX_WAIT_SEC}
+  XSTOCK_DAEMON_INTERVAL=${XSTOCK_DAEMON_INTERVAL:-$INTERVAL_SEC}
+  XSTOCK_INFLUX=${XSTOCK_INFLUX:-$INFLUX}
   . "$(dirname "$0")/lib/xstock_vnc.sh"
-  XSTOCK_NOTIFY_TITLE="⚠️ X値上がり検出 失敗"
-  XSTOCK_DAEMON_WAIT="$MAX_WAIT_SEC"
-  XSTOCK_DAEMON_INTERVAL="$INTERVAL_SEC"
-  XSTOCK_INFLUX="$INFLUX"
   xstock_ensure_ready || exit 1
 fi
 
@@ -39,6 +47,9 @@ if [ "$rc" -ne 0 ]; then
 fi
 if [ "$rc" -ne 0 ]; then
   echo "ERROR: 収集が2回失敗(rc=$rc)。アラート判定はスキップ" >&2
+  # 失敗こそ通知する（機能マップ §5「成功でなく失敗を通知」・2026-08-29 Codex 指摘で追加）。
+  # 従来は stderr に出すだけで、err.log を見るまで止まっていることに気づけなかった。
+  xprice_notify "収集が2回失敗しました (rc=$rc)"
   exit "$rc"
 fi
 
@@ -48,6 +59,7 @@ before=0
 
 $ALERT_CMD --date "$TARGET_DATE"
 alert_rc=$?
+[ "$alert_rc" -ne 0 ] && xprice_notify "アラート判定が失敗しました (rc=$alert_rc)"
 
 after=0
 [ -f "$ALERTS" ] && after=$(wc -l < "$ALERTS" | tr -d ' ')
