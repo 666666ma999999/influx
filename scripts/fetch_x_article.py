@@ -4,8 +4,10 @@
 2026-08-04 新設（攻めネタ棚・敵対レビューA/B一致結論「長文は本文を取ってから判定」）。
 コンテナ内（xstock-vnc）で実行する前提。ホスト側からは:
   docker exec -e DISPLAY=:99 xstock-vnc python3 /app/scripts/fetch_x_article.py <url> [<url>...]
-出力: 1 URL 1行の JSON（{"url","status":"full|failed","title","text"}）を stdout へ。
+出力: 1 URL 1行の JSON（{"url","status":"full|failed","title","text"[, "text_truncated": true]}）を stdout へ。
 fail-closed: 取れなければ status=failed（呼び出し側は本文なしとして扱い、カード化しない）。
+⚠️ 出力契約（P-MKA-35 2026-08-29）: **成功＝ `status == "full" and not text_truncated`**。100,000字の安全弁で切れた時は
+  status=full のまま text_truncated=true を付ける（消費側は印を必ず検査し、切れた本文で合否を出さない）。
 """
 import json
 import re
