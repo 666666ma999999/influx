@@ -1,5 +1,11 @@
 # bookmarks_keyword_extraction_v1 — X検索キーワード群の世代提案プロンプト
 
+> 🪦 **superseded（2026-08-29）**: 実行時にロードされるのは `_v2.md` のみ。
+> 週次ジョブの経路 `~/.claude/launchd/com.masa.x-keywords-weekly.plist` → `~/.claude/bin/obs-x-keywords`
+> → `vault-prompt-runner.sh` → vault `00_General/prompts/scheduled/x-keywords-weekly.md:17` が
+> **v2 を名指し**している（実読で確認）。本ファイルは世代管理のための保存で、編集しても実行には効かない。
+> ※ `~/.claude/docs/x-keywords-plan.md:109` が本ファイルを「正本」と書いたままなのは claude-env 側で修正する。
+
 バージョン: v1（2026-07-11 新設。**このファイルは直接書き換えず、変更時は `_v2.md` を新設**する — influx プロンプトバージョニング規約）
 消費者: headless claude（週次・Sonnet）/ 有人セッションの SubAgent（baseline・Opus）
 機械検証: `scripts/bookmarks_keyword_ingest.py` が出力を全件検証する。**このプロンプトのルールは ingest の reject 条件と 1:1 対応**しており、違反出力は自動却下される。

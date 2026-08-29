@@ -3,7 +3,7 @@ project: influx
 type: architecture
 artifact_role: repo-canonical
 owners: MASA
-last_verified: 2026-08-14
+last_verified: 2026-08-29
 pipeline_map: docs/pipeline-map.md
 sensitivity: mixed
 pair:
@@ -20,7 +20,7 @@ architecture_version: 1
 > 本書は **②X収集基盤**の機能マップ。株アルゴ側は別途 `influx-stock-algo` として扱う（2026-08-08 オーナー裁定で2系統分割）。
 > 目的/成功基準→ plan.md／現在地→ tasks/・司令塔／詳細は各スクリプト。ここは境界・I/O・道具・索引のみ。
 > **2026-08-14 の確認範囲**: §4 の9工程が指すスクリプト9本の実在・launchd 4本の定義・自前スキル2本の置き場・P9 の配線を実測（機能の中身の正しさは未検証＝§8）。
-> 初版の出自: make_article の理解ドキュメント `output/x-collection/understanding/influx-x-infra.md`（2026-08-08・調査報告）を、現行 repo で再確認して再構成（移送でない）。
+> 初版の出自: make_article の理解ドキュメント（2026-08-08・調査報告）を現行 repo で再確認して再構成（移送でない）。⚠️ **その出自ファイルは現存しない**（`output/x-collection/` ごと不在・`output/` は git 非追跡＝復元不可・2026-08-29 実測）。§3 の「出所」列は**現行 scripts での照合**が根拠。
 
 ## 1. 責務と非責務（最初に固定）
 
@@ -56,7 +56,7 @@ flowchart LR
 
 | 機能 | input | output | 出所（ファイル:更新日） | source_env |
 |---|---|---|---|---|
-| P2 ブックマーク→make_article | X ブックマーク画面 | `output/bookmarks.jsonl` → make_article `offense_shelf.py` が読む | `understanding/influx-x-infra.md:2026-08-08`（現行 scripts で照合） | personal |
+| P2 ブックマーク→make_article | X ブックマーク画面 | `output/bookmarks.jsonl` → make_article `offense_shelf.py` が読む | 現行 scripts で照合（2026-08-14・出自ファイルは不在） | personal |
 | P3 トレーサー→vault | `configs/x_watchlist.json` | `output/x_tracer/` + vault `.raw/x-tracer-*.jsonl` | 同上 | personal |
 | P8 計測（make_article 起動） | 投稿 URL 群 | likes/views/RT/reply/bookmark の JSONL | 同上 | personal |
 | Cookie→autopost | ホスト Chrome | `x_profiles/`（autopost が symlink 参照） | `influx/CLAUDE.md:2026-08-02` | personal |
@@ -84,7 +84,7 @@ flowchart LR
 | X の Cookie セッション | 公式API不使用・全部 Cookie+スクレイプ。Cookie正本は influx 1箇所、autopost は symlink | 複製しない（正本一元化） | X API v2（有料）／拡張経由 | personal |
 | X の検索演算子 | `min_faves:` `since:` `until:` `f=top` を組む | **3〜4語まで**（6語ANDは全滅→0件を「市場が空」と誤裁定した実害） | 公式API検索 | personal |
 | Playwright（Python同期API） | headless Chromium で DOM からカード抽出 | 部品をスクリプト間で相互 import して再利用 | Playwright MCP／claude-in-chrome／Selenium | personal |
-| ヘッドレス+Xvfb/noVNC | headless なのに `DISPLAY=:99` 必須・6080でVNC覗ける | 「headless なのに DISPLAY 必須」が定型（教訓L001） | 完全ヘッドレス化 | personal |
+| ヘッドレス+Xvfb/noVNC | headless なのに `DISPLAY=:99` 必須・6080でVNC覗ける | 「headless なのに DISPLAY 必須」が定型（この1行が教訓の全文＝番号簿が無いため 2026-08-29 に ID `L001` を外した） | 完全ヘッドレス化 | personal |
 | Docker（xstock-vnc 1コンテナ集約） | `docker exec -e DISPLAY=:99 xstock-vnc python3 …` の1行で叩く | Docker Desktop 自動起動+5分待ち／起動直後20秒スリープ | 収集単位でコンテナ分割 | personal |
 | launchd | X収集の定時**4本**（ブックマーク日次・トレーサー日3回・週次バズ・キーワード週次。定義は `~/.claude/launchd/`）＋語収集 `com.influx.sedori-trend` 1本。**2026-08-13 に3本停止**（`x-update-proposals` / `xbuzz-weekly-pick` / `xbuzz-weekly-review` → `~/.claude/launchd/_disabled/`）。plist は薄く、リトライ・通知は runner 側 | ログは `~/.claude/state/<job>.{out,err}.log` に集約 | cron／GitHub Actions | personal |
 | macOS 通知（osascript） | 収集失敗・急上昇を通知 | **成功でなく失敗を通知**（8日間気づかれなかった実害から） | Slack/Discord webhook | personal |
@@ -128,16 +128,16 @@ flowchart LR
 | **詳細リファレンス**（分類カテゴリ・テンプレ対応表・データスキーマ） | `.claude/docs/architecture.md`（⚠️ **2026-08-29 退役進行中**: §モジュール構成・§データフローは 5/2 停止／§環境変数は本書 §5.2 へ移送済み／§インフルエンサーグループ定義（文書6群 vs 実体8群）・§collect_tweets オプション（`--scrolls` 文書10 vs 実装20）・「Few-shot 46例」（実 51）は**実装と不一致＝読まない**。カテゴリ定義の正本は `collector/config.py`） | リンク先 |
 
 ## 7. 未反映キュー（機械が積む・人が消す）
-- [ ] 2026-08-15 `gen_center_pin_types.py`、`x_mention_dict.py`、`x_mention_extract.py`、`xprice_watch_run.sh` を更新（この文書への反映を確認）
-- [ ] 2026-08-16 `build_trial_fingerprints.py`、`tdnet_event_profile.py` を更新（この文書への反映を確認）
-- [ ] 2026-08-17 `coverage_census.py`、`price_universe_check.py` を更新（この文書への反映を確認）
-- [ ] 2026-08-19 `check_metric_contract.py`、`fetch_bookmarks.py`、`x_metrics_lib.py` を更新（この文書への反映を確認）
-- [ ] 2026-08-25 `bookmarks_keyword_common.py` を更新（この文書への反映を確認）
+（空。2026-08-29 に 5件を1件ずつ判定して消化＝内訳: **株アルゴ側の対象で本書には載らない** 9本
+〔`gen_center_pin_types` `x_mention_dict` `x_mention_extract` `xprice_watch_run` `build_trial_fingerprints`
+`tdnet_event_profile` `coverage_census` `price_universe_check` `check_metric_contract`〕／**本書に既出で
+追記不要** 3本〔`fetch_bookmarks`= §4 P2・`bookmarks_keyword_common`= §4 P5・`x_metrics_lib`= §4 P8〕。
+※ 見張りは `scripts/` 全体を見るため株アルゴ側の変更もここへ積まれる。積まれたら「本書の対象か」を先に見る。）
 
 <!-- stop-paired-docs-guard が scripts/configs/docker を触ったのに本書未更新の時に1行積む。人が更新したら消す。 -->
 
 ## 8. 矛盾・未確定（結論は書かない・移送先だけ）
 
-- **未確定**: 旧 `plan.md`（4/24）・`.claude/docs/architecture.md`（5/2）は X収集の現行主力スクリプト（7-8月新設）を1本も載せていない＝**現状と食い違う**。→ どちらを正本にするかは influx セッションで裁定（本書は X収集の現行像を repo 正本として提示）。旧 `.claude/docs/architecture.md` は本書へ統合し退役予定（inbound 張替え後）
-- **未確定**: 「X収集基盤14本」の件数（vault 記述）とスクリプト実体の1対1照合は未実施
+- ✅**決着（2026-08-29・断捨離監査 第2周 I-19/I-22）**: 旧 `plan.md` は「## 目的」節を新設して現状へ更新（以下 M0〜M6 は旧構成前提と明記）。`.claude/docs/architecture.md` は**節ごとに読める/読めないを仕分けて退役進行中**（環境変数は本書 §5.2 へ移送済み・カテゴリ定義の正本は `collector/config.py`）。旧2段階分類パイプラインは退役済み
+- **未確定**: 「X収集基盤14本」の件数（vault 記述）とスクリプト実体の1対1照合は未実施（**件数の焼き付け自体が腐る型**＝照合するなら本数は書かず引き方を書く）
 - **未確認**: 週次ピック runner は 7/26 以降不発 →2026-08-08 にループ型で復旧（別途）。※ P9 の配線は 2026-08-14 に実測して §4 に反映済み
