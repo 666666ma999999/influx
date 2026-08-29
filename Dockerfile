@@ -34,4 +34,6 @@ RUN mkdir -p /app/output /app/data /app/x_profile
 RUN chown -R pwuser:pwuser /app
 USER pwuser
 
-CMD ["python", "scripts/collect_tweets.py"]
+# 既定コマンドは置かない（旧 collect_tweets.py は 2026-08-29 退役）。
+# 実行は必ずコマンドを明示する: docker compose run xstock python scripts/<script>.py
+CMD ["python", "-c", "print('influx: 実行するスクリプトを明示してください（例: python scripts/fetch_bookmarks.py）')"]

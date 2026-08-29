@@ -29,14 +29,6 @@
 python3 scripts/import_chrome_cookies.py --chrome-profile "Profile 2" --account kabuki666999
 python3 scripts/import_chrome_cookies.py --chrome-profile "Default"   --account maaaki
 
-# ツイート収集（全グループ、スクロール 10 回。オプション一覧は architecture.md 参照）
-docker compose run xstock python scripts/collect_tweets.py
-docker compose run xstock python scripts/collect_tweets.py --groups group1 group2 --scrolls 5
-
-# LLM 分類 + viewer.html 更新
-docker compose run xstock python scripts/classify_tweets.py
-docker compose run xstock python scripts/classify_tweets.py --input output/tweets_20260214.json
-
 # アカウント状態確認
 docker compose run xstock python scripts/check_inactive_accounts.py
 
