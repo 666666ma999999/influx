@@ -1,4 +1,10 @@
 <!-- ARCHIVE: 新規追記禁止。CLAUDE.md L120 廃止 (2026-05-11) により本ファイルは静的保管。新規教訓は /save で wiki/meta/ に保存。 -->
+<!-- 救出済み 2026-08-29（断捨離監査 第2周 S-5）: X収集系の教訓8本の行き先を確定した。
+     ①②③ bot検知・Chrome Cookie 抽出経路・VNC 経路の全廃 → .claude/skills/refresh-x-cookies/（本文に統合済みと各項が明記）
+     ④ プロファイルのラベルと実アカウントの不一致 → vault wiki/meta/mistakes.md「credential-label-identity-drift」に既出
+     ⑤⑥⑦⑧ Service Worker が GraphQL を阻止／無限スクロールの止め方／launchd の TCC ブロック／`| tail` の exit code マスク
+        → influx-architecture.md §5「道具の一覧」へ移送（2026-08-29）
+     ※ 禁止のはずの追記が 2026-08-16 まで続いている＝新規は /save で vault へ。 -->
 
 # Lessons Learned
 

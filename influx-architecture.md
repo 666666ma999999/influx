@@ -82,6 +82,10 @@ flowchart LR
 | 道具（一般名） | うちでの使い方 | 使い方の癖・なぜ | 置き換えが起きうる部分 | source_env |
 |---|---|---|---|---|
 | X の Cookie セッション | 公式API不使用・全部 Cookie+スクレイプ。Cookie正本は influx 1箇所、autopost は symlink | 複製しない（正本一元化） | X API v2（有料）／拡張経由 | personal |
+| Playwright の DOM スクレイプ | GraphQL 傍受でなく `[data-testid="tweet"]` を読む | **X の Service Worker が GraphQL の傍受を阻止する**（`page.on("response")` も `context.on("response")`＋`service_workers="block"` も 0 件・2026-03-27 実測）＝DOM 一択 | 公式API | personal |
+| 無限スクロールの止め方 | `--max-scrolls` 固定でなく「増えない回数 N 連続＋最大実行時間」の複合条件・逐次 JSONL 保存＋checkpoint | 固定回数だと取り逃す／固定 sleep でなく DOM 要素数の増加を待つ | — | personal |
+| launchd から Desktop 配下を叩く | plist は `/bin/bash -c 'exec …'` のラッパー方式で書く | **直接 python を起動すると macOS の TCC でブロックされ exit 2**（手動実行では Terminal の権限で通るため気づけない・2026-07-06 実害）。登録後は `launchctl kickstart` で即時テスト | — | personal |
+| 長走行ジョブのログ | `> log 2>&1` の直接リダイレクト（`\| tail` を挟まない） | **パイプを挟むと exit code が tail の 0 でマスクされ、失敗が「完了」と通知される**（2026-07-07 に同日2回）。完了判定は通知でなく成果物の実在で行う | — | personal |
 | X の検索演算子 | `min_faves:` `since:` `until:` `f=top` を組む | **3〜4語まで**（6語ANDは全滅→0件を「市場が空」と誤裁定した実害） | 公式API検索 | personal |
 | Playwright（Python同期API） | headless Chromium で DOM からカード抽出 | 部品をスクリプト間で相互 import して再利用 | Playwright MCP／claude-in-chrome／Selenium | personal |
 | ヘッドレス+Xvfb/noVNC | headless なのに `DISPLAY=:99` 必須・6080でVNC覗ける | 「headless なのに DISPLAY 必須」が定型（この1行が教訓の全文＝番号簿が無いため 2026-08-29 に ID `L001` を外した） | 完全ヘッドレス化 | personal |
