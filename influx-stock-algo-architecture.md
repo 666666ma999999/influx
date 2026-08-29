@@ -215,5 +215,7 @@ flowchart LR
 
 - **未確定**: repo の定義本数と `launchctl` 登録本数の食い違い（未ロード4本・うち `edinet-tob` は道具表Aで「稼働中」と書かれている）→ 実態と注意書きは `docs/pipeline-map.md` §4 が持つ。棚卸しは influx セッションで
 - **未確定**: 「18系統」が指す集合が文書ごとに違う（vault ダッシュボード「毎朝18系統」／`config/paper_watchlist.json` は19件〈observation 17・reference 1・hoos_rejected 1〉／`tasks/segment_expansion_review.md`「前向き接続18本」／`tasks/pending_verdict_flow.md` の `awaiting_forward` 18）。→ どれが正しいかは決めない
-- **未確認（本書で裏取りできなかった）**: ① 各 launchd ジョブが**実際に成功しているか**（`launchctl list` の最終 exit code が 0 であることのみ確認・`run_log.jsonl` の中身は未読）② `scripts/` 実装コードの中身（`judge()` の5基準・Bonferroni 分母の実装箇所は catalog の記述の引用であり、コード実読による確認はしていない）
+- ✅**確定（2026-08-29 実読・監査 I-38。旧「未確認」2件を実物で解消）**:
+  ① **ジョブの成否**: `data/monitoring/run_log.jsonl` は **29行すべて `overall_status: success`**（2026-07-17〜08-28・毎朝スクリーンの記録）。ただし**これは全 launchd ジョブの成否ではない**——第2周 I-5 で `price-universe` が台帳 ✅ のまま 8/17 以降停止していた実測がある（`EVIDENCE` 未登録で mtime fallback）。**`launchctl` の exit 0 も台帳の緑も成否の証明にならず、ジョブ別の証跡（このログのような成功マーカー）を見るのが唯一の確認**。
+  ② **`judge()` の5基準（`scripts/kpi_event_study.py:683` 実読）**: `n>=100`／`months_spanned>=24`／**bull・bear 両レジームを跨ぐ**／`lift_ci_low>1.5`／`ev_stop8>=+3%/月`／`avg_monthly_n>=5` の**6条件すべて**を満たして `in_sample_pass_candidate`（最終合格は holdout 確認後・§6プロトコル3⑤）。**Bonferroni 分母（`scripts/kpi_bonferroni_check.py:55,82` 実読）**: `trials.jsonl` の**非空行数**が正本（重複・縮退の注記行も含める＝保守側）で、`ci_level = 1 - 0.05/n_trials`。
 - **参考（矛盾ではない）**: `scripts/unified_shadow_eval.py` は未実装＝ `tasks/unified_shadow_portfolio_preregister.md` の「Codex GO 後に着手」通りの状態

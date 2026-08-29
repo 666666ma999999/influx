@@ -73,6 +73,17 @@ scripts/run_research.sh --phase report
 - **配置先**: `x_profiles/<account>/cookies.json`
 - **再取得経路**: `python3 scripts/import_chrome_cookies.py --chrome-profile "<profile>" --account <account>`
 
+## 設定ファイルの置き場（`config/` と `configs/` の使い分け）
+
+**1字違いの2ディレクトリが両方現役**（統合すると読み手 34ファイルの張替えになるため分けたまま運用する・監査 I-2/I-39 2026-08-29 裁定）。新しい設定を足す時はこの基準で選ぶ:
+
+| 置き場 | 何を置くか | 実例 |
+|---|---|---|
+| `config/` | **株アルゴ研究のチューニング値・銘柄リスト・定期実行の定義** | `paper_watchlist.json`・`screening_grid_v*.json`・`recipe_shelf_meta.json`・`us_universe_seed.json`・`launchd/`（plist） |
+| `configs/` | **アプリ基盤と収集系の設定**（アプリの起動・収集レーンごとの定義） | `app.yaml`・`extensions.enabled.yaml`・`x_price_watch.json`・`price_universe_sources.json`・`news_shock.json`・`sedori_trend.json`・`x_watchlist.json`・`profiles/` |
+
+迷ったら「**株アルゴの検証パラメータか**（→ `config/`）／**収集・アプリの動かし方か**（→ `configs/`）」で判定する。
+
 ## コーディング規約
 
 | 対象 | 規約 | 例 |
