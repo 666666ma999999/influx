@@ -78,7 +78,15 @@ def main() -> int:
                     if not title and body_lines:
                         title = body_lines[0][:80]
                     row["title"] = title
-                    row["text"] = "\n".join(body_lines[start:])[:12000]
+                    # 2026-08-29 P-MKA-34: 上限 12,000→100,000。旧値は実記事
+                    # （「CLAUDE.mdの最強設定」12,000字超）で上限に当たり末尾が欠けた。
+                    # オーナー原則「判定は全文で」＝この上限は暴走DOM対策の安全弁のみ
+                    joined = "\n".join(body_lines[start:])
+                    row["text"] = joined[:100000]
+                    # P-MKA-35 2026-08-29（レビューB#1）: capで切れたのに full と名乗らない。
+                    # 「全文」の完全性フラグ＝下流（棚・全文ストア）が切断を検知できる唯一の証拠
+                    if len(joined) > 100000:
+                        row["text_truncated"] = True
                     row["status"] = "full"
             except Exception as exc:  # noqa: BLE001
                 row["status"] = f"failed_{type(exc).__name__}"
