@@ -114,6 +114,15 @@ INFLUENCER_GROUPS = {
 MAX_FROM_ACCOUNTS = 5
 
 # min_faves引き下げ係数（Xインデックスの概算値ずれを吸収）
+# 🪦 2026-08-29: **呼び手ゼロ**（唯一の利用者 build_search_urls_for_group も呼び手ゼロで、
+#   その先にいた collect_tweets.py は 2026-08-29 に退役）。旧2段階分類パイプラインの遺物。
+#   ⚠️ **現行の収集経路（x_search_collect_twittora.py）へ移植しないこと**。実データで確認済み:
+#     - `--live` 導入前の f=top のみの収集（2026-08-10・185行）で **下限割れ 0.0%**
+#       （汎用窓 floor 50 → 最小 51／ja 窓 floor 20 → 最小 20）＝ X は min_faves を厳密に守っており、
+#       「インデックスの概算値ずれ」という前提が現行経路では観測されない
+#     - 低いいね帯が欲しいという目的は `--live`（下限なしの最新タブ）で達成済み
+#     - 下限を下げても効かないことも実測済み（f=top では min_faves:0 でも 41件中2件=5%
+#       ＝ x_search_collect_twittora.py の build_buzz_search_url docstring）
 MIN_FAVES_SEARCH_RATIO = 0.33
 MIN_FAVES_FLOOR = 3  # 検索用min_favesの最低値
 
@@ -614,7 +623,14 @@ BATCH_SETTINGS = {
     "block_cooldown_sec": 3600,               # ブロック時クールダウン（60分）
 }
 
-# ブロック検知エラーパターン
+# ブロック検知エラーパターン（**現役**: collector/x_collector.py:421 が使用＝us-watchlist の収集経路）
+# ⚠️ 同じ事実が3系統に分かれている（2026-08-29 実測・統合は未着手）:
+#   ①ここ ②scripts/price_watch_collect.py の _BLOCK_MARKERS（「同趣旨」と自己申告した写し。
+#     再掲の理由「当該モジュールは未コミット変更が進行中」は既に解消済み＝写す理由が消えている）
+#   ③scripts/x_search_collect_twittora.py の LoginWallError（**別の関心事**＝ログイン壁の検知で、
+#     ネットワーク遮断・レート制限を見るこの表とは役割が違う。統合対象ではない）
+#   → ①②の統合は「検知が緩む/厳しくなる」挙動変更を伴うため、実エラー文字列での同値確認を
+#     してから行う（安全機構を無検証で触らない）。
 BLOCK_ERROR_PATTERNS = [
     "ERR_CONNECTION_CLOSED", "ERR_CONNECTION_REFUSED",
     "ERR_CONNECTION_RESET", "ERR_CONNECTION_TIMED_OUT",
