@@ -19,7 +19,7 @@ architecture_version: 1
 > ⚠️ **influx は2系統が同居**する: **①株アルゴ研究（repo の約8割・別事業）** と **②X収集基盤（本書の対象）**。
 > 本書は **②X収集基盤**の機能マップ。株アルゴ側は別途 `influx-stock-algo` として扱う（2026-08-08 オーナー裁定で2系統分割）。
 > 目的/成功基準→ plan.md／現在地→ tasks/・司令塔／詳細は各スクリプト。ここは境界・I/O・道具・索引のみ。
-> **2026-08-14 の確認範囲**: §4 の9工程が指すスクリプト9本の実在・launchd 4本の定義・自前スキル2本の置き場・P9 の配線を実測（機能の中身の正しさは未検証＝§8）。
+> **2026-08-14 の確認範囲**: §4 の9工程が指すスクリプト9本の実在・launchd 4本の定義・自前スキル2本の置き場・フォロワー計測の配線を実測（機能の中身の正しさは未検証＝§8）。
 > 初版の出自: make_article の理解ドキュメント（2026-08-08・調査報告）を現行 repo で再確認して再構成（移送でない）。⚠️ **その出自ファイルは現存しない**（`output/x-collection/` ごと不在・`output/` は git 非追跡＝復元不可・2026-08-29 実測）。§3 の「出所」列は**現行 scripts での照合**が根拠。
 
 ## 1. 責務と非責務（最初に固定）
@@ -40,12 +40,12 @@ architecture_version: 1
 
 ```mermaid
 flowchart LR
-    Cookie[P1 Cookie取得<br/>手動] --> BM[P2 ブックマーク日次]
-    Cookie --> TR[P3 ライブトレーサー<br/>日3回]
-    Cookie --> WK[P4 週次バズ収集]
-    Cookie --> KW[P5 キーワード台帳週次]
-    Cookie --> ART[P6/P7 X Articles検索・本文取得]
-    Cookie --> ENG[P8 エンゲージメント計測]
+    Cookie[Cookie取得<br/>手動] --> BM[ブックマーク日次]
+    Cookie --> TR[ライブトレーサー<br/>日3回]
+    Cookie --> WK[週次バズ収集]
+    Cookie --> KW[キーワード台帳週次]
+    Cookie --> ART[X Articles検索・本文取得]
+    Cookie --> ENG[エンゲージメント計測]
     BM --> OFF[make_article offense_shelf]
     TR --> OFF
     WK --> OFF
@@ -56,28 +56,28 @@ flowchart LR
 
 | 機能 | input | output | 出所（ファイル:更新日） | source_env |
 |---|---|---|---|---|
-| P2 ブックマーク→make_article | X ブックマーク画面 | `output/bookmarks.jsonl` → make_article `offense_shelf.py` が読む | 現行 scripts で照合（2026-08-14・出自ファイルは不在） | personal |
-| P3 トレーサー→vault | `configs/x_watchlist.json` | `output/x_tracer/` + vault `.raw/x-tracer-*.jsonl` | 同上 | personal |
-| P8 計測（make_article 起動） | 投稿 URL 群 | likes/views/RT/reply/bookmark の JSONL | 同上 | personal |
+| ブックマーク→make_article | X ブックマーク画面 | `output/bookmarks.jsonl` → make_article `offense_shelf.py` が読む | 現行 scripts で照合（2026-08-14・出自ファイルは不在） | personal |
+| トレーサー→vault | `configs/x_watchlist.json` | `output/x_tracer/` + vault `.raw/x-tracer-*.jsonl` | 同上 | personal |
+| エンゲージメント計測（make_article 起動） | 投稿 URL 群 | likes/views/RT/reply/bookmark の JSONL | 同上 | personal |
 | Cookie→autopost | ホスト Chrome | `x_profiles/`（autopost が symlink 参照） | `influx/CLAUDE.md:2026-08-02` | personal |
 
-## 4. 各機能の役割（9工程）
+## 4. 各機能の役割（工程は名前で呼ぶ＝番号を振らない。2026-08-29 に P1〜P9 の番号を廃止＝外部からの参照が0件で、番号を保つために `P4'`/`P8''` のような派生記号が増えるだけだったため）
 
 | 機能 | 役割（1行） | 実装 | 頻度 | 自動/人手 |
 |---|---|---|---|---|
-| P1 Cookie取得 | ホスト Chrome から X の Cookie を抜く | `scripts/import_chrome_cookies.py` | 不定（期限14日推奨） | 🖐手動 |
-| P2 ブックマーク日次 | 本人ブックマークを取得し make_article へ渡す | `com.masa.bookmarks-daily`→`fetch_bookmarks.py` | 毎日07:25 | ⏰🐳 |
-| P3 ライブトレーサー | watchlist の投稿を監視・急上昇を通知 | `com.masa.xbuzz-tracer`→`x_watchlist_tracer.py` | 日3回 | ⏰🐳 |
-| P4 週次バズ収集 | 検索スクレイプでバズcoーパスを作る | `com.masa.xbuzz-buzz-collect`→`x_search_collect_twittora.py` | 月曜20:30 | ⏰🐳 |
-| P4' 旧Grok経路 | クエリ定義の置き場（実行は停止・7/1切替） | `scripts/grok_collect_twittora.py`（DEFAULT_QUERIES 正本） | 停止 | 🖐 |
-| P5 キーワード台帳 | ブックマーク差分から検索語台帳を更新 | `com.masa.x-keywords-weekly`→`obs-x-keywords` | 土曜10:00 | ⏰🐳 |
-| P6 X Articles形式検索 | 長文記事を `url:x.com/i/article` で拾う。**グローバル検索＋定点著者スコープ（`lane=offense` を6人ずつ `from:` OR・f=live）の2系統**（2026-08-29 追加＝グローバルの Top 1画面では定点著者の記事共有を取りこぼすため） | `scripts/search_x_articles.py` | 手動（launchd未配線） | 🖐🐳 |
-| P7 X Articles本文取得 | 記事 URL から本文を全文取得（fail-closed） | `scripts/fetch_x_article.py` | 手動 | 🖐🐳 |
-| P8 エンゲージメント計測 | 自投稿の実数を取る | `scripts/fetch_engagement.py`（make_article ラッパー起動） | 投稿後24h/72h | 🐳 |
-| P8' 計測の唯一口 | X 投稿の数値（likes/replies/views/bookmarks/RT/quotes）を測る**唯一のオンデマンド計測モジュール**。取得経路（syndication / fxtwitter）を `sources` に残し、取れない値は 0 でなく `null` にする | `scripts/x_metrics_lib.py`（2026-08-19 新設・それまで経路ごとの独自実装で同じ投稿の数字が食い違っていた〔17/17件不一致・「万」パース全損で3万いいね→0保存〕） | 呼ばれた時 | 🐳 |
-| P8'' 契約の見張り | 「0は書かない」契約の違反を検知する report-only の見張り。`output/bookmarks.jsonl` の**凍結行が増減していないか**と、新規行の指標が null かを検査（増えても減っても違反＝差し替え・null 化も拾う） | `scripts/check_metric_contract.py`（⚠️ docstring は「毎日実行」だが **launchd・runner への配線は 0 件**＝実行は手動・2026-08-29 実測。直近実行は `OK: 全267行・数値入り行 243（凍結値 243 と一致）・破損行 0`） | 手動（未配線） | 🖐 |
+| Cookie取得 | ホスト Chrome から X の Cookie を抜く | `scripts/import_chrome_cookies.py` | 不定（期限14日推奨） | 🖐手動 |
+| ブックマーク日次 | 本人ブックマークを取得し make_article へ渡す | `com.masa.bookmarks-daily`→`fetch_bookmarks.py` | 毎日07:25 | ⏰🐳 |
+| ライブトレーサー | watchlist の投稿を監視・急上昇を通知 | `com.masa.xbuzz-tracer`→`x_watchlist_tracer.py` | 日3回 | ⏰🐳 |
+| 週次バズ収集 | 検索スクレイプでバズcoーパスを作る | `com.masa.xbuzz-buzz-collect`→`x_search_collect_twittora.py` | 月曜20:30 | ⏰🐳 |
+| 旧Grok経路（クエリ正本） | クエリ定義の置き場（実行は停止・7/1切替） | `scripts/grok_collect_twittora.py`（DEFAULT_QUERIES 正本） | 停止 | 🖐 |
+| キーワード台帳 | ブックマーク差分から検索語台帳を更新 | `com.masa.x-keywords-weekly`→`obs-x-keywords` | 土曜10:00 | ⏰🐳 |
+| X Articles形式検索 | 長文記事を `url:x.com/i/article` で拾う。**グローバル検索＋定点著者スコープ（`lane=offense` を6人ずつ `from:` OR・f=live）の2系統**（2026-08-29 追加＝グローバルの Top 1画面では定点著者の記事共有を取りこぼすため） | `scripts/search_x_articles.py` | 手動（launchd未配線） | 🖐🐳 |
+| X Articles本文取得 | 記事 URL から本文を全文取得（fail-closed） | `scripts/fetch_x_article.py` | 手動 | 🖐🐳 |
+| エンゲージメント計測 | 自投稿の実数を取る | `scripts/fetch_engagement.py`（make_article ラッパー起動） | 投稿後24h/72h | 🐳 |
+| 計測の唯一口 | X 投稿の数値（likes/replies/views/bookmarks/RT/quotes）を測る**唯一のオンデマンド計測モジュール**。取得経路（syndication / fxtwitter）を `sources` に残し、取れない値は 0 でなく `null` にする | `scripts/x_metrics_lib.py`（2026-08-19 新設・それまで経路ごとの独自実装で同じ投稿の数字が食い違っていた〔17/17件不一致・「万」パース全損で3万いいね→0保存〕） | 呼ばれた時 | 🐳 |
+| 契約の見張り | 「0は書かない」契約の違反を検知する report-only の見張り。`output/bookmarks.jsonl` の**凍結行が増減していないか**と、新規行の指標が null かを検査（増えても減っても違反＝差し替え・null 化も拾う） | `scripts/check_metric_contract.py`（⚠️ docstring は「毎日実行」だが **launchd・runner への配線は 0 件**＝実行は手動・2026-08-29 実測。直近実行は `OK: 全267行・数値入り行 243（凍結値 243 と一致）・破損行 0`） | 手動（未配線） | 🖐 |
 
-> ⚠️ P9 フォロワー計測（`fetch_followers.py`）は**定期実行に配線されていない**。呼び出しは `x_watchlist_tracer.py` の中だけ（2026-08-14 実測 grep）。
+> ⚠️ フォロワー計測（`fetch_followers.py`）は**定期実行に配線されていない**。呼び出しは `x_watchlist_tracer.py` の中だけ（2026-08-14 実測 grep）。
 
 ## 5. 道具の一覧（何を・どう使っているか）
 
@@ -137,9 +137,9 @@ flowchart LR
 （空。2026-08-29 に 5件を1件ずつ判定して消化＝内訳: **株アルゴ側の対象で本書には載らない** 8本
 〔`gen_center_pin_types` `x_mention_dict` `x_mention_extract` `xprice_watch_run` `build_trial_fingerprints`
 `tdnet_event_profile` `coverage_census` `price_universe_check`〕／**本書に既出で追記不要** 3本
-〔`fetch_bookmarks`= §4 P2・`bookmarks_keyword_common`= §4 P5・`x_metrics_lib`= §4 P8'〕／
+〔`fetch_bookmarks`= §4「ブックマーク日次」・`bookmarks_keyword_common`= §4「キーワード台帳」・`x_metrics_lib`= §4「計測の唯一口」〕／
 **⚠️ 訂正（同日中）**: `check_metric_contract` を株アルゴ側と判定したのは誤りで、実体は
-`output/bookmarks.jsonl` を見る **X収集側の見張り**（本書 §4 P8'' へ反映済み）。
+`output/bookmarks.jsonl` を見る **X収集側の見張り**（本書 §4「契約の見張り」へ反映済み）。
 ※ 見張りは `scripts/` 全体を見るため株アルゴ側の変更もここへ積まれる。積まれたら「本書の対象か」を先に見る。）
 
 <!-- stop-paired-docs-guard が scripts/configs/docker を触ったのに本書未更新の時に1行積む。人が更新したら消す。 -->
@@ -148,4 +148,4 @@ flowchart LR
 
 - ✅**決着（2026-08-29・断捨離監査 第2周 I-19/I-22）**: 旧 `plan.md` は「## 目的」節を新設して現状へ更新（以下 M0〜M6 は旧構成前提と明記）。`.claude/docs/architecture.md` は**節ごとに読める/読めないを仕分けて退役進行中**（環境変数は本書 §5.2 へ移送済み・カテゴリ定義の正本は `collector/config.py`）。旧2段階分類パイプラインは退役済み
 - **未確定**: 「X収集基盤14本」の件数（vault 記述）とスクリプト実体の1対1照合は未実施（**件数の焼き付け自体が腐る型**＝照合するなら本数は書かず引き方を書く）
-- **未確認**: 週次ピック runner は 7/26 以降不発 →2026-08-08 にループ型で復旧（別途）。※ P9 の配線は 2026-08-14 に実測して §4 に反映済み
+- **未確認**: 週次ピック runner は 7/26 以降不発 →2026-08-08 にループ型で復旧（別途）。※ フォロワー計測の配線は 2026-08-14 に実測して §4 に反映済み
