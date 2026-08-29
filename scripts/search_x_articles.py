@@ -37,6 +37,15 @@ ARTICLE_QUERIES = [
 ]
 
 
+def _offense_handles():
+    """見張りリスト（lane=offense）のハンドル。読めなければ空リスト＝従来動作に退行するだけ。"""
+    try:
+        wl = json.loads(Path("/app/configs/x_watchlist.json").read_text(encoding="utf-8"))
+        return [h["handle"] for h in wl.get("handles", []) if h.get("lane") == "offense"]
+    except Exception:  # noqa: BLE001
+        return []
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--days", type=int, default=7)
@@ -54,10 +63,20 @@ def main() -> int:
         ctx = browser.new_context(**build_context_kwargs())
         ctx.add_cookies(cookies)
         page = ctx.new_page()
-        for q in ARTICLE_QUERIES:
-            full = (f"{q} url:x.com/i/article min_faves:{args.min_faves} "
-                    f"since:{since} until:{until} -filter:nativeretweets")
-            url = f"https://x.com/search?q={quote(full)}&f=top"
+        searches = [(f"{q} url:x.com/i/article min_faves:{args.min_faves} "
+                     f"since:{since} until:{until} -filter:nativeretweets",
+                     f"[article] {q}", "top") for q in ARTICLE_QUERIES]
+        # P-MKA-33④ 2026-08-29: 定点著者（lane=offense）スコープの形式検索を追加。
+        # グローバル検索は Top1画面ぶんの抽選＝定点著者の記事共有を取りこぼす（実測 2026-08-29:
+        # 母集団を63件へ広げても対象記事が出ず `from:著者 url:x.com/i/article` だけがヒット）。
+        # min_faves は付けない（記事共有はいいねが付きにくい＋著者は既に人選済み）。f=live で網羅。
+        handles = _offense_handles()
+        for i in range(0, len(handles), 6):
+            scope = " OR ".join(f"from:{h}" for h in handles[i:i + 6])
+            searches.append((f"({scope}) url:x.com/i/article since:{since} until:{until}",
+                             f"[article-from] group{i // 6 + 1}", "live"))
+        for full, label, tab in searches:
+            url = f"https://x.com/search?q={quote(full)}&f={tab}"
             try:
                 page.goto(url, timeout=30000)
                 page.wait_for_timeout(6000)
@@ -65,12 +84,12 @@ def main() -> int:
                     if row["url"] in seen:
                         continue
                     seen.add(row["url"])
-                    row["query"] = f"[article] {q}"
+                    row["query"] = label
                     row["format"] = "x_article_share"
                     print(json.dumps(row, ensure_ascii=False))
             except Exception as exc:  # noqa: BLE001
-                print(f'{{"error": "{type(exc).__name__}", "query": "{q}"}}', file=sys.stderr)
-            time.sleep(random.uniform(8, 15))  # 5クエリ×1ページのみ＝軽負荷
+                print(f'{{"error": "{type(exc).__name__}", "query": "{label}"}}', file=sys.stderr)
+            time.sleep(random.uniform(8, 15))  # 全クエリ×1ページのみ＝軽負荷（旧注記「5クエリ」は陳腐化のため更新）
         browser.close()
     return 0
 
