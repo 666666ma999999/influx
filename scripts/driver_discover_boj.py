@@ -10,6 +10,8 @@
   2. `data/tdnet/index/<year>/*.json.gz` の直近 N 日のタイトルを〈価格改定|値上げ|増産|受注停止|出荷停止|
      供給|生産能力|設備投資〉で検索し、会社コードを `data/center_pin/center_pin.jsonl`（TOP1000）と照合。
   3. 上位品目の名前トークンを center_pin の pin/note/name に部分一致させて候補会社を付ける（最大5社／品目）。
+     品目名は SYNONYM_MAP で系統語（フィッシュミール→魚価/飼料/養殖 等）にも広げ、各候補に sign
+     （−＝損失候補: note にコスト側の語と同居 ／ +＝受益候補: pin に一致かつ行の sign=+ ／ ?＝不明）を付ける。
 
 やらないこと: 受益 tier の判定（帰属は別工程 beneficiary-attribution）・configs/*.json の編集。
 
@@ -51,6 +53,17 @@ STOP_TOKENS = {"品目", "類別", "総平均", "その他", "製品", "うち",
                "メディア", "システム", "サービス業"}  # 社名側に頻出する一般語（フジ・メディアHD 等の誤爆）
 TOKEN_MIN_LEN = 3  # 2文字は誤爆（モス→コスモス薬品・地金→アルミ各社）＝Codex レビュー 2026-08-30 で3へ
 MAX_COMPANIES_PER_ITEM = 5
+# 品目名 → 関連する系統語（損失側の発見用・透明な固定表。品目名そのものは center_pin に出てこないことが
+# 多いので、原料・相場の呼び名へ広げる。2026-08-30 敵対レビュー wf_ada84c33-b50 のオーナー裁定 P4）
+SYNONYM_MAP: Dict[str, List[str]] = {
+    "フィッシュミール": ["魚価", "飼料", "養殖"],
+    "荒茶": ["茶葉", "緑茶"],
+    "すず": ["錫", "はんだ"],
+    "コバルト": ["電池", "正極"],
+    "外航タンカー": ["タンカー", "用船"],
+}
+# center_pin の note でこの語と同居していれば「その商材はコスト側」＝値上がりは損失候補（sign −）
+COST_SIDE = re.compile(r"コスト側|仕入|原価|買い手")
 # 同じ品目が別の指数族（契約通貨ベース・消費税除き・参考系列・戦前基準）で重複収録されているため、
 # 円ベース／基本分類だけを採る（上位20が同一品目の写しで埋まるのを防ぐ・2026-08-30 実測）
 DUPLICATE_FAMILY = re.compile(r"契約通貨ベース|消費税を除く|戦前基準|〔参考系列〕|（参考）")
@@ -311,14 +324,50 @@ def item_tokens(name: str) -> List[str]:
     return toks
 
 
+def expand_tokens(toks: List[str], name: str = "") -> List[str]:
+    """トークン列に SYNONYM_MAP の系統語を足す（元の順序を保ち・重複なし）。
+
+    キーは品目名の原文（name）に対して部分一致で引く。「荒茶」「すず」のような TOKEN_MIN_LEN 未満の
+    品目名や「外航タンカー」のように漢字/カタカナ境界で割れる名前でも系統語へ広がるようにするため。
+    """
+    out = list(toks)
+    haystack = name.split("/")[-1] if name else ""
+    keys = [k for k in SYNONYM_MAP if k in toks or (haystack and k in haystack)]
+    for k in keys:
+        if k not in out:   # キー自体も照合語に入れる（人手で選んだ語なので TOKEN_MIN_LEN の例外）
+            out.append(k)
+        for syn in SYNONYM_MAP[k]:
+            if syn not in out:
+                out.append(syn)
+    return out
+
+
+def derive_sign(row: Dict[str, Any], token: str, field: str,
+                all_tokens: Optional[List[str]] = None) -> str:
+    """一致した center_pin 行から候補の向きを決める（透明な3値）。
+
+    − : 品目の**どれかの**トークンが note にあり、同じ note にコスト側の語（コスト側|仕入|原価|買い手）
+        がある＝損失候補（コスト側の明記は pin 一致より優先。TDK「コバルト等はコスト側」が
+        電池@pin の先着で + になる誤りを防ぐ・第2周レビュー一致1）
+    + : 一致語が pin にあり、行の sign が "+"＝受益候補
+    ? : それ以外（判定材料なし。帰属は beneficiary-attribution で別途）
+    """
+    note = row.get("note") or ""
+    if COST_SIDE.search(note) and any(t in note for t in ([token] + list(all_tokens or []))):
+        return "−"
+    if field == "pin" and row.get("sign") == "+":
+        return "+"
+    return "?"
+
+
 def match_companies(name: str, pins: List[Dict[str, Any]],
                     limit: int = MAX_COMPANIES_PER_ITEM) -> List[Dict[str, str]]:
-    """品目名トークンを center_pin の pin/note/name に部分一致させる。
+    """品目名トークン（SYNONYM_MAP で広げたもの）を center_pin の pin/note/name に部分一致させる。
 
     Returns:
-        [{code, name, token, field}] 最大 limit 件（一致トークン数の多い順）。
+        [{code, name, token, field, sign}] 最大 limit 件（一致トークン数の多い順）。
     """
-    toks = item_tokens(name)
+    toks = expand_tokens(item_tokens(name), name)
     if not toks:
         return []
     scored: List[tuple] = []
@@ -333,10 +382,11 @@ def match_companies(name: str, pins: List[Dict[str, Any]],
                     if hit_tok is None:
                         hit_tok, hit_field = t, field
         if n_hit:
-            scored.append((-n_hit, p.get("code", ""), hit_tok, hit_field, p.get("name", "")))
+            scored.append((-n_hit, p.get("code", ""), hit_tok, hit_field, p.get("name", ""),
+                           derive_sign(p, hit_tok, hit_field, toks)))
     scored.sort()
-    return [{"code": c, "name": nm, "token": t, "field": f}
-            for _, c, t, f, nm in scored[:limit]]
+    return [{"code": c, "name": nm, "token": t, "field": f, "sign": sg}
+            for _, c, t, f, nm, sg in scored[:limit]]
 
 
 # ---------------------------------------------------------------- 出力
@@ -392,12 +442,15 @@ def render_markdown(run_date: str, cmd: str, summary: Dict[str, Any],
                          f"{'in' if h['in_top1000'] else 'out'} | {h['pin']} | {link} |")
 
     lines += ["", "## 3. 上位品目の候補会社（center_pin pin/note/name への部分一致・最大5社）", "",
-              "| 品目 | 族 | 前年比% | 出所月 | 照合トークン | 候補会社（コード 社名 ←一致語@欄） |",
+              "- sign: −＝損失候補（note にコスト側の語と同居）／+＝受益候補（pin 一致かつ行 sign=+）／?＝不明。"
+              "照合トークンは SYNONYM_MAP の系統語を含む", "",
+              "| 品目 | 族 | 前年比% | 出所月 | 照合トークン | 候補会社（sign コード 社名 ←一致語@欄） |",
               "|---|---|---|---|---|---|"]
     for c in candidates:
-        comps = "、".join(f"{m['code']} {m['name']} ←{m['token']}@{m['field']}" for m in c["matches"]) or "（一致なし）"
+        comps = "、".join(f"{m.get('sign', '?')} {m['code']} {m['name']} ←{m['token']}@{m['field']}"
+                          for m in c["matches"]) or "（一致なし）"
         lines.append(f"| {c['name']} | {c['family']} | {_fmt(c['yoy_pct'])} | {c['src_date']} | "
-                     f"{' '.join(item_tokens(c['name']))} | {comps} |")
+                     f"{' '.join(expand_tokens(item_tokens(c['name']), c['name']))} | {comps} |")
     lines.append("")
     return "\n".join(lines)
 
@@ -513,6 +566,16 @@ def _selftest() -> int:
     m = match_companies("品目/___酪農品（除バター）", pins)
     chk("候補会社（森永のみ・一致語を明示）", [x["code"] for x in m] == ["2264"] and m[0]["token"] in ("酪農品", "バター"))
     chk("候補は最大5社", len(match_companies("品目/___原料魚価", pins * 10, 5)) == 5)
+    chk("系統語の展開", expand_tokens(["フィッシュミール"]) == ["フィッシュミール", "魚価", "飼料", "養殖"])
+    chk("2文字の品目名（荒茶）も原文から系統語へ", expand_tokens([], "品目/____荒茶") == ["荒茶", "茶葉", "緑茶"])
+    sign_pins = [{"code": "1332", "name": "ニッスイ", "pin": "原料魚価（サーモン）", "sign": "-",
+                  "note": "魚価は仕入原価側"},
+                 {"code": "9101", "name": "日本郵船", "pin": "タンカー用船料", "sign": "+", "note": "運賃=売値"}]
+    fm = match_companies("品目/___フィッシュミール", sign_pins)
+    chk("コスト側 note → sign −（ニッスイ・系統語 魚価）",
+        [x["code"] for x in fm] == ["1332"] and fm[0]["sign"] == "−" and fm[0]["token"] == "魚価")
+    tk = match_companies("品目/___外航タンカー", sign_pins)
+    chk("pin 一致かつ行 sign + → sign +", [x["code"] for x in tk] == ["9101"] and tk[0]["sign"] == "+")
 
     md = render_markdown("2026-08-30", "cmd", {"total": 4, "monitored": 1, "unmonitored": 2, "skipped": 1, "dup": 1},
                          rk, hits, [{"name": "酪農品", "family": "国内", "yoy_pct": 12.0,
