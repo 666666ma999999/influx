@@ -142,6 +142,20 @@ def validate(m: dict | None = None, center_pin: dict | None = None,
                     errors.append(f"{sid}/{kind}: 未知の layer={b.get('layer')} (code={code})")
                 if b.get("sign") not in VALID_SIGNS:
                     errors.append(f"{sid}/{kind}: 未知の sign={b.get('sign')} (code={code})")
+                # 正本(center_pin)との tier 整合（2026-08-30: 4385/8035/3436 の tier ズレが表側に残っていた実測）。
+                # (a) price/secondary 型の subject で confirmed なのに台帳側が watch=none（数量型/不成立）→NG。
+                #     capex/demand 型は「品薄→増産投資→数量で儲かる」設計なので受益者が volume 型でも正常＝免除。
+                # (b) 台帳 note が「不成立/却下」なのに rejected でない→NG（全型）。
+                if row is not None and kind == "beneficiaries":
+                    name = b.get("name") or row.get("name", "")
+                    if (b.get("tier") == "confirmed" and row.get("watch") == "none"
+                            and stype in ("price", "secondary")):
+                        errors.append(f"{code} {name}: tier=confirmed だが center_pin watch=none"
+                                      f"（数量型/不成立）＝正本裁定の未反映か")
+                    if b.get("tier") != "rejected" and any(
+                            w in row.get("note", "") for w in ("不成立", "却下")):
+                        errors.append(f"{code} {name}: center_pin note に不成立/却下があるのに "
+                                      f"tier={b.get('tier')}（rejected 以外）＝正本裁定の未反映か")
                 if not b.get("evidence"):
                     errors.append(f"{sid}/{kind}: code={code} に evidence が無い")
                 elif kind == "beneficiaries" and s.get("actionable"):
