@@ -47,8 +47,9 @@ TDNET_PATTERN = re.compile(r"価格改定|値上げ|増産|受注停止|出荷�
 # 品目名から会社を引く時に捨てる語（総称・接尾語。残すと全社にマッチして意味が無い）
 STOP_TOKENS = {"品目", "類別", "総平均", "その他", "製品", "うち", "除く", "含む", "国内", "輸入", "輸出",
                "指数", "サービス", "業務", "関連", "および", "及び", "もの", "部品", "用品", "機器", "装置",
-               "材料", "加工", "一般", "工業", "産業", "小類別", "中類別", "大類別", "基本分類"}
-TOKEN_MIN_LEN = 2
+               "材料", "加工", "一般", "工業", "産業", "小類別", "中類別", "大類別", "基本分類",
+               "メディア", "システム", "サービス業"}  # 社名側に頻出する一般語（フジ・メディアHD 等の誤爆）
+TOKEN_MIN_LEN = 3  # 2文字は誤爆（モス→コスモス薬品・地金→アルミ各社）＝Codex レビュー 2026-08-30 で3へ
 MAX_COMPANIES_PER_ITEM = 5
 # 同じ品目が別の指数族（契約通貨ベース・消費税除き・参考系列・戦前基準）で重複収録されているため、
 # 円ベース／基本分類だけを採る（上位20が同一品目の写しで埋まるのを防ぐ・2026-08-30 実測）
@@ -166,6 +167,17 @@ def enumerate_boj_items(rows: List[List[str]], dataset: str, exclude: set,
 def rank_items(items: List[Dict[str, Any]], top: int) -> Dict[str, List[Dict[str, Any]]]:
     """前年同月比で上位 top 件と下位 top//2 件（負のみ）に分ける。yoy_pct が None は対象外。"""
     with_yoy = [it for it in items if it["yoy_pct"] is not None]
+    # 階層重複の除外: 同じ系列・族で「商品群/…」と「品目/…」が同値（最新値・前年比が一致）なら
+    # 上位階層（商品群）を落とし、細かい方（品目）だけ残す（Codex レビュー 2026-08-30・上位枠の重複消費対策）
+    seen: set = set()
+    dedup: List[Dict[str, Any]] = []
+    for it in sorted(with_yoy, key=lambda x: (x["name"].startswith("商品群"), x["name"])):
+        key = (it["dataset"], it.get("family"), it["value"], it["yoy_pct"])
+        if key in seen:
+            continue
+        seen.add(key)
+        dedup.append(it)
+    with_yoy = dedup
     up = sorted(with_yoy, key=lambda x: x["yoy_pct"], reverse=True)[:top]
     down = sorted([it for it in with_yoy if it["yoy_pct"] < 0],
                   key=lambda x: x["yoy_pct"])[:max(1, top // 2)]
@@ -432,8 +444,10 @@ def run(days: int, top: int, no_tdnet: bool, out_path: str = OUTPUT_PATH) -> int
     cmd = f"python3 scripts/driver_discover_boj.py --days {days} --top {top}" + (" --no-tdnet" if no_tdnet else "")
     md = render_markdown(today.isoformat(), cmd, summary, ranked, tdnet_hits, candidates, days)
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
-    with open(out_path, "w", encoding="utf-8") as fh:
+    tmp_path = out_path + ".tmp"   # 原子的置換: 途中失敗で古い成果物が「最新」に見えるのを防ぐ
+    with open(tmp_path, "w", encoding="utf-8") as fh:
         fh.write(md)
+    os.replace(tmp_path, out_path)
     print(f"書き出し: {out_path}")
     return 0
 
@@ -495,10 +509,10 @@ def _selftest() -> int:
     chk("品目トークン（区切り・括弧・除）", item_tokens("品目/___酪農品（除バター）") == ["酪農品", "バター"])
     chk("停止語だけなら空", item_tokens("品目/___その他") == [])
     chk("漢字/カタカナ境界で分割・型を落とす",
-        item_tokens("品目/____モス型メモリ集積回路") == ["モス", "メモリ", "集積回路"])
+        item_tokens("品目/____モス型メモリ集積回路") == ["メモリ", "集積回路"])  # 2文字「モス」は TOKEN_MIN_LEN=3 で落ちる
     m = match_companies("品目/___酪農品（除バター）", pins)
     chk("候補会社（森永のみ・一致語を明示）", [x["code"] for x in m] == ["2264"] and m[0]["token"] in ("酪農品", "バター"))
-    chk("候補は最大5社", len(match_companies("品目/___魚価", pins * 10, 5)) == 5)
+    chk("候補は最大5社", len(match_companies("品目/___原料魚価", pins * 10, 5)) == 5)
 
     md = render_markdown("2026-08-30", "cmd", {"total": 4, "monitored": 1, "unmonitored": 2, "skipped": 1, "dup": 1},
                          rk, hits, [{"name": "酪農品", "family": "国内", "yoy_pct": 12.0,
