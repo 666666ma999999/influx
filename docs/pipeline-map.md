@@ -13,7 +13,7 @@
      旧: influx-stock-algo-architecture.md §4-1 の手書き表（2026-08-14 に本ブロックへ移設・向こうはポインタ1行に） -->
 
 <!-- AUTOGEN:start(schedule) -->
-<!-- このブロックは scripts/gen_pipeline_map.py が上書きします（手で編集しない）。件数 17・生成元= git ls-files の plist / workflows -->
+<!-- このブロックは scripts/gen_pipeline_map.py が上書きします（手で編集しない）。件数 18・生成元= git ls-files の plist / workflows -->
 
 | ジョブ（Label / workflow） | いつ動くか | 入口 | 定義ファイル |
 |---|---|---|---|
@@ -26,6 +26,7 @@
 | com.influx.news-shock | 毎日 07:20／毎日 19:00 | `bash ~/Desktop/biz/influx/scripts/news_shock_run.sh` | `config/launchd/com.influx.news-shock.plist` |
 | com.influx.okasira-forward | 月曜 11:15 | `exec ~/Desktop/biz/influx/scripts/fxnia_forward_launchd.sh` | `config/launchd/com.influx.okasira-forward.plist` |
 | com.influx.paper-screen | 月曜 07:30／火曜 07:30／水曜 07:30／木曜 07:30／金曜 07:30 | `exec /usr/bin/python3 ~/Desktop/biz/influx/scripts/daily_screen.py` | `config/launchd/com.influx.paper-screen.plist` |
+| com.influx.price-discover | 日曜 10:40 | `bash ~/Desktop/biz/influx/scripts/price_discover_run.sh` | `config/launchd/com.influx.price-discover.plist` |
 | com.influx.price-universe | 月曜 11:00 | `bash ~/Desktop/biz/influx/scripts/price_universe_run.sh` | `config/launchd/com.influx.price-universe.plist` |
 | com.influx.price-watch | 毎日 22:10 | `bash ~/Desktop/biz/influx/scripts/xprice_watch_run.sh` | `config/launchd/com.influx.price-watch.plist` |
 | com.influx.research-weekly | 土曜 09:00 | `exec ~/Desktop/biz/influx/scripts/research_weekly_launchd.sh` | `config/launchd/com.influx.research-weekly.plist` |
@@ -41,7 +42,7 @@
 
 | 系統 | ジョブ | 機能マップ（正本） |
 |---|---|---|
-| **株アルゴ研究** | `paper-screen` / `tob-forward` / `tob-monthly` / `edinet-tob` / `jsf-archive` / `kpi-clock-sla` / `kpi-loop-weekly` / `price-universe` / `price-watch` / `fxnia-forward` / `okasira-forward`（同スクリプト共用・2026-08-29 P-INF-07） / `research-weekly` | `influx-stock-algo-architecture.md` |
+| **株アルゴ研究** | `paper-screen` / `tob-forward` / `tob-monthly` / `edinet-tob` / `jsf-archive` / `kpi-clock-sla` / `kpi-loop-weekly` / `price-universe` / `price-watch` / `price-discover`（発見器＝X→新商品名の候補キュー・日曜10:40・2026-08-30 再稼働 B-2） / `fxnia-forward` / `okasira-forward`（同スクリプト共用・2026-08-29 P-INF-07） / `research-weekly` | `influx-stock-algo-architecture.md` |
 | **X収集基盤** | `us-watchlist`（インフルエンサー投稿の週次収集・**2026-08-29 に株アルゴ側から移動**＝実体は `recollect_account.py` による X 収集で、保存先も `data/influencer_candidates/`）／`sedori-trend`（語の収集系）／※ `xbuzz-*` は **claude-env 側の launchd から influx のスクリプトを叩く**（定義は `~/.claude/launchd/`） | `influx-architecture.md` |
 
 ## 3. 依存と順序（人が書く）

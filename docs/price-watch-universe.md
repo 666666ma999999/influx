@@ -504,7 +504,7 @@ E1/E2 取得は1銘柄15〜30分の人間作業（新規は月1〜2件想定）�
 
 ## 発見器運用（2026-07-28 稼働開始）
 
-- 実行（週1〜隔日・手動）: `docker exec -e DISPLAY=:99 xstock-vnc python3 /app/scripts/price_watch_discover.py`
+- 実行（週1・launchd `com.influx.price-discover` 日曜10:40・2026-08-30 再稼働。手動は `bash scripts/price_discover_run.sh`。素の実行: `docker exec -e DISPLAY=:99 xstock-vnc python3 /app/scripts/price_watch_discover.py`）
 - 低閾値3クエリ（値上げ/値上がり/品薄・min_faves:20・前日窓）→ ルール抽出（既知語彙差分・複数投稿者必須・
   数字断片除外）→ 候補キュー `data/x_price_watch/discovery_queue.jsonl`（上限20/回・通知なし）
 - LLM精製段は ANTHROPIC_API_KEY 実キー設定時のみ（現状プレースホルダ=スキップ）

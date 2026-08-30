@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.influx.price-discover</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>-lc</string>
+        <string>bash /Users/masaaki_nagasawa/Desktop/biz/influx/scripts/price_discover_run.sh</string>
+    </array>
+
+    <!-- 毎週日曜 10:40（Weekday 0=日）。発見器は X 検索（xstock-vnc・maaaki Cookie）を使うため、
+         同じコンテナを使う price-watch（毎日22:10）・us-watchlist（火10:30）・fxnia/okasira-forward（月10:30/11:15）と
+         時間帯を離し、influx / claude-env（~/.claude/launchd/）のどのジョブとも重ならない枠を選んだ（2026-08-30 実測）。
+         対象は前UTC日の1日窓なので曜日に意味はなく、月曜の price-universe（11:00）レビュー前に候補が揃う日曜にした。
+         2026-08-01 以来手動のみだった発見器の再稼働（tasks/shortage_goods_expansion.md B-2・オーナー裁定）。 -->
+    <key>StartCalendarInterval</key>
+    <array>
+        <dict>
+            <key>Weekday</key>
+            <integer>0</integer>
+            <key>Hour</key>
+            <integer>10</integer>
+            <key>Minute</key>
+            <integer>40</integer>
+        </dict>
+    </array>
+
+    <key>RunAtLoad</key>
+    <false/>
+
+    <key>StandardOutPath</key>
+    <string>/Users/masaaki_nagasawa/.claude/state/price-discover.out.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/masaaki_nagasawa/.claude/state/price-discover.err.log</string>
+</dict>
+</plist>
