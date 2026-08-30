@@ -8,7 +8,7 @@
 | `com.influx.paper-screen.plist` | **稼働中**（`launchctl list`に登録あり） | 月〜金 7:30 JST | `scripts/daily_screen.py`（毎朝スクリーニング・ペーパートレード観察） |
 | `com.influx.research-weekly.plist` | **意図的に未インストール**（`launchctl list`に登録なし。実測確認済み） | 土曜 9:00 JST（設定のみ・未有効化） | `scripts/research_weekly_launchd.sh`（インフルエンサー週次サイクル: `docs/influencer-winrate-spec.md` §8のwinrate_worklist→抽出→ingest→score一式を無人実行する想定） |
 | `com.influx.price-watch.plist` | **稼働中**（2026-07-26 登録） | 毎日 22:10 JST | `scripts/xprice_watch_run.sh`（X値上がり検出: 固定30クエリ日次収集→zスコア判定→検知時Mac通知。台帳 `data/x_price_watch/ledger.jsonl`） |
-| `com.influx.okasira-forward.plist` | **登録 2026-08-29**（P-INF-07・オーナー裁定「今すぐ専用 capture を追加」） | 毎週月曜 11:15 JST（fxnia の後） | `scripts/fxnia_forward_launchd.sh` を `FWD_ACCOUNT=okasira_kanki FWD_START=20260830 FWD_LABEL=okasira` で起動（同スクリプト共用・コピーなし）。出力 `data/influencer_candidates/forward/okasira_kanki.json`・`output/influencer_candidates/okasira_forward/`・台帳 `okasira_forward_ledger.tsv` |
+| `com.influx.okasira-forward.plist` | **稼働中**（2026-08-30 ユーザー `launchctl load`・`launchctl list` で確認。P-INF-07） | 毎週月曜 11:15 JST（fxnia の後） | `scripts/fxnia_forward_launchd.sh` を `FWD_ACCOUNT=okasira_kanki FWD_START=20260830 FWD_LABEL=okasira` で起動（同スクリプト共用・コピーなし）。出力 `data/influencer_candidates/forward/okasira_kanki.json`・`output/influencer_candidates/okasira_forward/`・台帳 `okasira_forward_ledger.tsv` |
 
 ## `com.influx.research-weekly` が未インストールである理由
 
