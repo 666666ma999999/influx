@@ -625,6 +625,66 @@ def pass_through_cards(series: dict) -> list:
     return out
 
 
+def prev_month_metric(prev: list[dict], src_date: str, key: str) -> float | None:
+    """直前の公表月（src_date より前で最も新しい公表月）の指標値を返す。
+
+    エピソード判定（monthly_triggers）の比較相手。同じ公表月の行は含めない（同月再実行は
+    別途 prev_months で抑止する）。該当月が無い・値が無い時は None。
+
+    Args:
+        prev: 当該系列の status==ok 履歴行（universe_weekly.jsonl）。
+        src_date: 今回の公表月（"YYYY-MM" 等・文字列比較で前後を決める）。
+        key: "monthly_pct" or "yoy_pct"。
+    """
+    earlier = [r for r in prev if r.get("src_date") and r["src_date"] < src_date
+               and r.get(key) is not None]
+    if not earlier:
+        return None
+    earlier.sort(key=lambda r: (r["src_date"], r.get("run_at", "")))
+    return float(earlier[-1][key])
+
+
+def monthly_triggers(parsed: dict, status: str, prev: list[dict], th: dict) -> list[str]:
+    """月次レーンの発火判定（前月比・前年同月比）。エピソード単位で1回だけ鳴らす。
+
+    週次の閾値体系（週+5%等）は月次統計の刻み（0.1〜0.5%/月）に対して大きすぎて永久に
+    鳴らないため、前月比を専用閾値で見る。USS等、前月比が季節性で使えない系列は表側の
+    前年同月比で判定する（系列側 alert.yoy_pct を明示したときだけ働く＝キー存在で判定・
+    Codex NIT-6）。判定は status==ok の時のみ（suspect_jump＝50%跳びの取得値で発火して
+    forward台帳を汚染しない・Codex C-2）。
+
+    抑止は2段（2026-08-30 オーナー裁定・敵対レビュー wf_ada84c33-b50）:
+    1. 同じ公表月で毎週鳴らない（prev_months: 前回記録と同じ公表月なら判定しない）
+    2. **エピソード規則**: 閾値を**新たに**跨いだ月だけ鳴らす。直前の公表月の同じ指標が
+       既に閾値以上なら「同じ値上がり局面の継続」なので鳴らさない。指標が閾値未満へ落ちて
+       再び跨いだ時に次のエピソードとして鳴る。実害: 前年同月比は1段の値上がりが12ヶ月
+       閾値上に留まるため毎月鳴り、同じ受益銘柄（例 sppi-road-freight→9075）が前向き台帳に
+       月ごとに重複記録されていた。直前月の値が無い（初回観測・履歴欠落）時は新規跨ぎ扱い。
+
+    Returns:
+        発火文字列のリスト（無ければ空）。
+    """
+    triggers: list[str] = []
+    sd = parsed.get("src_date")
+    if status != "ok" or not sd:
+        return triggers
+    prev_months = {r.get("src_date") for r in prev if r.get("src_date")}
+    if sd in prev_months:
+        return triggers
+    mo = parsed.get("monthly_pct")
+    mo_th = th.get("monthly_pct", 1.0)
+    if mo is not None and mo >= mo_th:
+        last = prev_month_metric(prev, sd, "monthly_pct")
+        if last is None or last < mo_th:
+            triggers.append(f"前月比 {mo:+.2f}%({sd}公表)")
+    yy = parsed.get("yoy_pct")
+    if "yoy_pct" in th and yy is not None and yy >= th["yoy_pct"]:
+        last = prev_month_metric(prev, sd, "yoy_pct")
+        if last is None or last < th["yoy_pct"]:
+            triggers.append(f"前年同月比 {yy:+.2f}%({sd}分)")
+    return triggers
+
+
 def main(only: list[str] | None = None) -> int:
     cfg = json.loads(CONFIG_PATH.read_text())
     # --only: 指定した系列だけ走らせる（新系列の初回投入用・2026-08-19 追加）。
@@ -828,23 +888,7 @@ def main(only: list[str] | None = None) -> int:
                 if row["status"] == "ok" and fa is not None and fa >= th.get("four_week_abs_usd", 30.0):
                     trigger.append(f"4週 {fa:+.1f}USD/T")
             elif s.get("cadence") == "monthly":
-                # 月次レーン: 週次の閾値体系（週+5%等）は月次統計の刻み（0.1〜0.5%/月）に
-                # 対して大きすぎて永久に鳴らない。前月比を専用閾値で見る。
-                # かつ**同じ月の値で毎週鳴らない**よう、前回記録と同じ公表月なら判定しない
-                # 月次判定は status==ok の時のみ（suspect_jump＝50%跳びの取得値で発火して
-                # forward台帳を汚染しない。weekly_src=self/4週累積と同じ安全規約・Codex C-2）
-                prev_months = {r.get("src_date") for r in prev if r.get("src_date")}
-                mo = parsed.get("monthly_pct")
-                if row["status"] == "ok" and parsed.get("src_date") not in prev_months \
-                        and mo is not None and mo >= th.get("monthly_pct", 1.0):
-                    trigger.append(f"前月比 {mo:+.2f}%({parsed['src_date']}公表)")
-                # USS等、前月比が季節性で使えない月次系列は表側の前年同月比で判定する
-                # （系列側 alert.yoy_pct を明示したときだけ働く＝キー存在で判定・Codex NIT-6。
-                # 同じ公表月で毎週鳴らない条件は前月比と同一）
-                yy = parsed.get("yoy_pct")
-                if row["status"] == "ok" and "yoy_pct" in th and yy is not None \
-                        and parsed.get("src_date") not in prev_months and yy >= th["yoy_pct"]:
-                    trigger.append(f"前年同月比 {yy:+.2f}%({parsed['src_date']}分)")
+                trigger.extend(monthly_triggers(parsed, row["status"], prev, th))
             else:
                 # weekly はサイト側の値なら自前履歴と独立なので suspect_jump でも判定する（A-3）。
                 # 自前算出（weekly_src=self）は履歴依存なので four_week と同じく ok の時のみ

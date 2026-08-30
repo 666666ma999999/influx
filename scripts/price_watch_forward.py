@@ -39,8 +39,26 @@ import jq_fetch  # noqa: E402  Canonical データローダ
 import measure_base_rate as mbr  # noqa: E402  Canonical カレンダー/bars
 
 LOG_PATH = APP / "data/price_watch/forward_log.jsonl"
-SPEC_VERSION = 2  # v2=帰属プロトコル受益カード（2026-07-28）。v1発火とは別系列として集計する
+# v2=帰属プロトコル受益カード（2026-07-28）。v1発火とは別系列として集計する
+# v3=トリガー種別の全列挙（週次/4週累積/前月比/前年同月比）＋月次レーンのエピソード規則
+#    （2026-08-30 オーナー裁定・敵対レビュー wf_ada84c33-b50）。評価窓と指標は v2 と同じ
+SPEC_VERSION = 3
 WINDOWS_BD = {"w8": 40, "w15": 75}  # 営業日（≒8週 / ≒15週）
+# エピソード重複排除（月次レーン・v3）: 同じ (series_id, code) を直近 N ヶ月以内に記録済みなら
+# 再記録しない。前年同月比は1段の値上がりが12ヶ月閾値上に留まるため、checker 側の
+# 「新規跨ぎ」規則をすり抜けた再発火（履歴欠落・閾値変更等）でも同じ観測を月ごとに
+# 重複記録しないための第2の関所。6 = 評価窓 w15（75営業日≒3.5ヶ月）を跨いで十分な余裕
+EPISODE_DEDUP_MONTHS = 6
+HYPOTHESIS_V3 = (
+    "商品価格の発火から、受益銘柄が8〜15週で TOPIX を超過する。発火の種別は次の4つ: "
+    "①週次 weekly>=+5% ②4週累積>=+10%（いずれも configs/price_universe_sources.json の alert 既定・"
+    "系列別 alert で上書き可） ③前月比>=閾値（月次系列・系列別 alert.monthly_pct） "
+    "④前年同月比>=閾値（月次系列・系列別 alert.yoy_pct を明示した系列のみ）。"
+    "③④はエピソード規則: 閾値を新たに跨いだ公表月だけ発火し、直前の公表月が既に閾値以上なら"
+    "鳴らさない（閾値未満へ落ちて再び跨いだ時に次のエピソード）。同じ公表月では再発火しない。"
+    f"加えて同じ (系列, 銘柄) は直近{EPISODE_DEDUP_MONTHS}ヶ月以内に記録済みなら再記録しない"
+    "（skipped_dup_reason=episode）"
+)
 CODE_RE = re.compile(r"(?<![0-9A-Za-z])([0-9]{4}|[0-9]{3}[A-Z])(?![0-9A-Za-z])")
 
 
@@ -76,6 +94,17 @@ def close_of(code5: str, day: str) -> float | None:
     return float(rec["AdjC"])
 
 
+def _months_before(day: str, months: int) -> str:
+    """day（YYYY-MM-DD）の months ヶ月前の同日（無い日は月末に丸める）を YYYY-MM-DD で返す。"""
+    y, m, d = (int(x) for x in day.split("-"))
+    total = y * 12 + (m - 1) - months
+    y2, m2 = divmod(total, 12)
+    m2 += 1
+    last = [31, 29 if (y2 % 4 == 0 and (y2 % 100 != 0 or y2 % 400 == 0)) else 28,
+            31, 30, 31, 30, 31, 31, 30, 31, 30, 31][m2 - 1]
+    return f"{y2:04d}-{m2:02d}-{min(d, last):02d}"
+
+
 def append(event: dict) -> None:
     LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
     with LOG_PATH.open("a", encoding="utf-8") as fh:
@@ -103,8 +132,8 @@ def ensure_preregistration() -> None:
     append({
         "type": "preregistration", "spec_version": SPEC_VERSION,
         "registered_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        "hypothesis": "商品価格の発火（weekly>=+5% or 4週累積>=+10%）から、受益銘柄が"
-                      "8〜15週で TOPIX を超過する",
+        "hypothesis": HYPOTHESIS_V3,
+        "episode_dedup_months": EPISODE_DEDUP_MONTHS,
         "entry_rule": "発火日時点の直近営業日 AdjC（look-aheadなし）",
         "windows_bd": WINDOWS_BD,
         "metric": "銘柄リターン - TOPIXリターン（超過リターン）",
@@ -136,8 +165,16 @@ def record_firings(alerts: list, fire_date: str) -> int:
     # 例: wti と brent は別系列だが受益銘柄は同じ 1605/1662 で、同日に両方鳴ると
     # 1銘柄が2観測として数えられ、目標 n>=100 の分母と勝率が水増しされる。
     # 先に鳴った系列に帰属させ、後続系列では skipped_dup に落として理由を残す。
-    seen_codes = {s["code"] for e in read_log() if e.get("type") == "firing"
-                  and e.get("fire_date") == fire_date for s in e.get("stocks", [])}
+    log_firings = [e for e in read_log() if e.get("type") == "firing"]
+    seen_codes = {s["code"] for e in log_firings if e.get("fire_date") == fire_date
+                  for s in e.get("stocks", [])}
+    # エピソード重複排除（v3・月次レーンのみ）: 同じ (series_id, code) を直近
+    # EPISODE_DEDUP_MONTHS ヶ月以内に記録済みなら skipped_dup（reason=episode）に落とす。
+    # 週次レーンの挙動は変えない（オーナー裁定 2026-08-30 は月次レーンが対象）。
+    episode_cutoff = _months_before(fire_date, EPISODE_DEDUP_MONTHS)
+    recent_pairs = {(e.get("series_id"), s["code"]) for e in log_firings
+                    if episode_cutoff <= (e.get("fire_date") or "") < fire_date
+                    for s in e.get("stocks", [])}
 
     n = 0
     for series, row, triggers in alerts:
@@ -159,10 +196,16 @@ def record_firings(alerts: list, fire_date: str) -> int:
             skipped_foreign = []
             code_tiers = [(to_code5(c), "confirmed")
                           for c in CODE_RE.findall(series.get("stocks", ""))]
-        stocks, skipped_dup = [], []
+        stocks, skipped_dup, skipped_reason = [], [], {}
+        monthly = series.get("cadence") == "monthly"
         for c5, tier in code_tiers:
             if c5 in seen_codes:
                 skipped_dup.append(c5)
+                skipped_reason[c5] = "same_day"
+                continue
+            if monthly and (series["id"], c5) in recent_pairs:
+                skipped_dup.append(c5)
+                skipped_reason[c5] = "episode"
                 continue
             px = close_of(c5, base_day)
             if px is not None:
@@ -173,6 +216,7 @@ def record_firings(alerts: list, fire_date: str) -> int:
             "fire_date": fire_date, "series_id": series["id"], "series_jp": series["jp"],
             "driver": series.get("driver", series["id"]),
             "triggers": triggers, "skipped_dup": skipped_dup,
+            "skipped_dup_reason": skipped_reason,  # v3: same_day（同日他系列）/ episode（6ヶ月内既記録）
             "skipped_foreign": skipped_foreign,  # §16w: 別レーンで評価する海外カード
             "commodity": {"value": row.get("value"), "weekly_pct": row.get("weekly_pct"),
                           "four_week_pct": row.get("four_week_pct")},
@@ -222,7 +266,9 @@ def evaluate() -> int:
                                 "hit": bool(ret - tpx_ret > 0), "status": "ok"})
             scored = [r for r in results if r["status"] == "ok"]
             append({
-                "type": "evaluation", "spec_version": SPEC_VERSION,
+                # 評価行は**発火行の spec_version を引き継ぐ**（done 判定のキーと一致させる。
+                # 現行値で書くと v2 発火の評価が毎回「未評価」扱いになり無限に追記される）
+                "type": "evaluation", "spec_version": f.get("spec_version", SPEC_VERSION),
                 "fire_date": f["fire_date"], "series_id": f["series_id"], "window": win,
                 "eval_day": eval_day, "topix_ret_pct": round(tpx_ret, 2),
                 "results": results,
