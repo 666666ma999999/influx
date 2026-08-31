@@ -156,6 +156,18 @@ def validate(m: dict | None = None, center_pin: dict | None = None,
                             w in row.get("note", "") for w in ("不成立", "却下")):
                         errors.append(f"{code} {name}: center_pin note に不成立/却下があるのに "
                                       f"tier={b.get('tier')}（rejected 以外）＝正本裁定の未反映か")
+                # subject_op_pct の定義（docs/price-watch-universe.md §0b・2026-08-31 P-INF-12 Q1）:
+                # 分子=当該商材セグメントの営業利益・分母=連結営業利益。非開示・内訳なしは null。
+                # 0 は「非開示を 0 と書いた」誤記か「実測ゼロ」の主張で、どちらも置けない。
+                # 150 超は分母の取り違え（報告セグメント利益合計など）の疑いが濃い。
+                if b.get("subject_op_pct") is not None and "subject_op_pct" in b:
+                    pct = b["subject_op_pct"]
+                    if pct == 0:
+                        errors.append(f"{code}: subject_op_pct=0 は禁止"
+                                      f"（非開示なら null・実測ゼロならあり得ない）")
+                    elif pct > 150:
+                        errors.append(f"{code}: subject_op_pct={pct} が150超"
+                                      f"（分母=連結営業利益の定義に反する疑い。§0b の定義で再算出する）")
                 if not b.get("evidence"):
                     errors.append(f"{sid}/{kind}: code={code} に evidence が無い")
                 elif kind == "beneficiaries" and s.get("actionable"):
