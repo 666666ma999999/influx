@@ -60,7 +60,9 @@ def main() -> int:
         contrib = {k: sum(v) for k, v in byc.items()}
         worst = max(contrib, key=lambda k: contrib[k])
         ex = [f(r) for r in rows if r["code"] != worst]
-        exev = sum(ex) / len(ex)
+        # 銘柄が1つしかないと ex が空になる（2026-08-31 に ZeroDivisionError で実際に停止）。
+        # その場合 ex_outlier_EV は「計算不能」= NaN とし、c2 は False になる（1銘柄では合格させない）。
+        exev = sum(ex) / len(ex) if ex else float("nan")
         close_rate = close / n
         # 停止則
         months = (datetime.datetime.strptime(a.asof, "%Y%m%d")
