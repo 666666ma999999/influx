@@ -27,9 +27,10 @@ load_key_from_zshrc() {
 load_key_from_zshrc ANTHROPIC_API_KEY
 load_key_from_zshrc XAI_API_KEY
 load_key_from_zshrc COOKIE_ENCRYPTION_KEY
-if [ -z "${ANTHROPIC_API_KEY:-}" ]; then
-    echo "FATAL: ANTHROPIC_API_KEY 未解決" >&2; exit 2
-fi
+# 2026-09-02: ANTHROPIC_API_KEY の FATAL チェックを撤去。本ジョブの実体（recollect_account.py /
+# fxnia_forward_eval.py）はこの鍵を1箇所も参照しない（grep 実測 0 件）。~/.zshrc にあった値は
+# 5文字のダミーで、非空だったためチェックを素通りしていただけ（同日ダミーを削除済み）。
+# 実際に使うのは XAI_API_KEY（1箇所）。無くても収集・採点は動くため FATAL にはしない。
 export ANTHROPIC_API_KEY XAI_API_KEY COOKIE_ENCRYPTION_KEY
 
 docker compose -f docker-compose.vnc.yml up -d || { echo "FATAL: docker compose up 失敗（Docker未起動?）" >&2; exit 3; }
