@@ -72,5 +72,6 @@
 | 運用ルール（誰がいつ直すか） | `~/.claude/rules/05-plan-task-md.md` §architecture |
 
 ## 6. 未反映（対のファイルからの宿題・機械が積む/人が消す）
+- 2026-09-11 棚卸し実測: §4 の未ロード4本は3本（`edinet-tob` はロード済み・未ロードは kpi-loop-weekly／research-weekly／tob-monthly）。`us_price_fetch.py` はどの plist からも呼ばれていない（米国株価の日次取得は定期未配線）
 
 - 該当なし

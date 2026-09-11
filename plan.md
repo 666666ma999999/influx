@@ -38,40 +38,81 @@
 **非ゴール**: 記事の執筆・長文生成（→ `make_article`）／投稿の予約・実行・アカウント運用（→ `autopost`・2026-05-01 に物理分離）／集めた投稿の7カテゴリ分類（旧パイプライン＝2026-08-29 に退役判断・精度は不合格のまま停止）。
 現況の機能は `influx-architecture.md`（X収集基盤）と `influx-stock-algo-architecture.md`（株アルゴ研究）が正本。**本ファイルの以下 M0〜M6 は 2026-04 時点の旧構成（収集＋分類＋投稿インフラ）前提で、現行と一致しない。**
 
-### 肝ツリー v0（叩き台・2026-09-11 オーナー「OK・記録して」・敵対レビュー wf_4a5d7fcd-a17 一致7・報告= vault 02_Ai/influx/reports/influx-kimo-tree-adversarial-review-2026-09-11.md）
+### 肝ツリー v1（叩き台・2026-09-11 全資産棚卸しで中・小を肉付け・検収待ち。v0= オーナー「OK・記録して」同日・敵対レビュー wf_4a5d7fcd-a17 一致7・報告= vault 02_Ai/influx/reports/influx-kimo-tree-adversarial-review-2026-09-11.md）
 
-幹は「目的に対して何を増やすか」で切る。**市場（日本／米国）と全体／個別は幹にせず属性タグ**（3体一致: 市場と向きは直交属性＝幹にすると海外受益カード15枚が2本の幹に属し、KPI と多重比較の分母は日本株専用の単一台帳で共有できない）。幹・枝の言葉はオーナー原文 2026-09-11 を逐語で置き、AI が動かした箇所は〔AI〕。中小の起案は次回。**下の M0〜M6・成功基準表は 2026-04 旧構成＝現在値の根拠にしない。**
+幹は「目的に対して何を増やすか」で切る。**市場（日本／米国）と全体／個別は幹にせず属性タグ**（3体一致: 市場と向きは直交属性＝幹にすると海外受益カード15枚が2本の幹に属し、KPI と多重比較の分母は日本株専用の単一台帳で共有できない）。幹・枝の言葉はオーナー原文 2026-09-11 を逐語で置き、AI が動かした箇所は〔AI〕。中・小は repo 全資産（scripts 248・tasks 67・docs/configs 331・data/output 60・vault 26）の棚卸しから紐付けた**既存物の指し先のみ**（本文は各正本・全件表は vault 報告書 §付録）。**下の M0〜M6・成功基準表は 2026-04 旧構成＝現在値の根拠にしない。**
 
 ```
 株で勝つ情報を収集する（目的）
 ├ 前提（幹の外・心構え）: 忍耐がまず必要／買い時ではなく「未来的にこうなるからナンバーワン株が1番上がるはず」と考える／勝てるものを買えば良い
+│   └ 受け皿0（repo・vault とも該当ノートなし＝ここにだけ書く）
+│
 ├ 大A 共通化する部分
-│   ├ データを整備して傾向を見る
-│   ├ 一次情報の収集（X投稿・商品価格・企業開示）〔AI: 敵対レビュー一致①〕
-│   └ 属性タグ（幹にしない）: 全体の動き or 個別の動き／日本株 or 米国株
+│   ├ A1 データを整備して傾向を見る〈原文〉
+│   │   ├ 土台部品: measure_base_rate.py（+20%到達率の正本・66本が import）／kpi_features.py／collector/business_days.py／x_trade500_universe.py（取引高TOP500 母集団）
+│   │   ├ 銘柄→中心価格の台帳: data/center_pin/center_pin.jsonl 977社（08-15）・output/center_pin_types.md
+│   │   └ 網の面積: coverage_census.py → output/coverage_census.md（08-19 で古い・手動）
+│   ├ A2 一次情報の収集（X投稿・商品価格・企業開示）〔AI: 敵対レビュー一致①〕
+│   │   ├ X投稿: price_watch_collect（毎日22:10・50クエリ・ledger 2271行）／sedori_trend（月曜09:00）／recollect_account（インフル前向き・火/月）／price_watch_discover（日曜10:40・新商品名の候補キュー）
+│   │   ├ 商品価格: price_universe_check（月曜11:00・69系列・universe_weekly 1645行）＋monthly_sources／tokyosteel_scrap／food_bridge_fetch／news_shock_collect（RSS・07:20/19:00＋2h probe・20クエリ・news_log 1583行）／driver_discover_boj（手動・日銀CGPI/SPPI）
+│   │   ├ 企業開示・需給: tdnet_index_fetch（毎朝07:15・index 969週分）／edinet_fetch（平日18:45・大量保有）／jsf_daily_archive（平日12:30/19:30・日証金4系統）／jq_fetch（J-Quants・手動＋ライブラリ）
+│   │   └ 米国〔属性タグ〕: us_price_fetch.py（**定期未配線・07-26 で停止**・Yahoo 規約違反確定 us-tier1:226）／config/us_universe_seed.json 96・AI仮置き／us_watchlist（火曜10:30・インフル投稿のみ）
+│   ├ A3 収集の健全性（止まった系統が0か）〔AI 追加・棚卸しで INBOX 未処理9件中5件がここに集中〕
+│   │   ├ 系統の生存表: 14系統（定期10・生存10・停止疑い1= 米国株価・定期なし3）→ 報告書 §付録 data
+│   │   └ 既知の故障: okasira-forward が毎回0件で success／評価パーサ（bookmarks_keyword_common.py:557・期限超過）／xbuzz-tracer 空振り／food_bridge_fetch.py:66 が TDnet 直叩き／research-weekly・tob-monthly・kpi-loop-weekly 未ロード
+│   └ A4 属性タグ（幹にしない）〈原文〉: 全体の動き or 個別／日本株 or 米国株／受益の型（center_pin pin_type）／海外上場（foreign_forward・15枚・対TOPIX台帳に入れない）
+│
 ├ 大B 上昇サインだけを検知する
-│   ├ 大きく変動しそうな KPI を見つける
-│   └ 200日線（上昇側のみ・既存 E1=SMA200 割れ手仕舞いは catalog:16）
+│   ├ B1 大きく変動しそうな KPI を見つける〈原文〉
+│   │   ├ 台帳: docs/stock-algo-kpi-catalog.md §2 66本（未検証45／pending8／fail7／reject4／枠F候補1／死に筋確定1）
+│   │   ├ 生成器 39本（稼働1・手動38）: 価格系 strev/high52/range_breakout/sh_dip／決算系 PEAD/進捗率/上方修正/SUE／需給系 margin/shortcover/shortup_lowrise／イベント系 activist/tob/event_batch/round23〜38／出来高 volshock（v1〜v3）
+│   │   └ pending の主戦: volshock_5x lift2.34／shortcover_turn 2.29／進捗率 2.20／strev 1.83／uprev 1.72／high52 1.52／S高初押し 3.08（n=246）
+│   ├ B2 200日線〈原文・上昇側のみ〉: 200日線奪回クロス= **fail**（lift0.95）／200日線位置フィルタ= pending（チャンピオン構成の一部）／200週線乖離帯= 記述測定完了（tasks/sma200w_descriptive.md）
+│   ├ B3 商品価格・品薄・ニュースからの上昇サイン〔AI〕
+│   │   ├ X値上がり z判定: price_watch_alert（watch_log 47行）→ price_watch_forward（forward_log 82行・凍結v1）
+│   │   ├ ニュース供給ショック: news_shock（事前登録凍結 2026-08-16・前向き中）
+│   │   ├ 受益カード: configs/x_shortage_map.json 38 subjects（5関門・機械validate）／§16w 海外15枚／§16h「X投稿の波→2段目の上昇に有効」／§16c 言及レーンは「先行しない」
+│   │   └ 不採用の記録: 納期逼迫（§16p）・在庫3本（§16t）・電力（§16b）・医薬二次波及（pharma-secondary-map 3連鎖不成立）
+│   └ B4 仮説の供給〔AI〕: harvest_master_posts（名人投稿→仮説）／catalog §8 バックログ／architecture「仮説の在庫化= **現在停止**」／候補ファクトリー kpi_screen_batch= **現在禁止**
+│
 ├ 大C 売るタイミングを検知する／下がりそうな条件（保有株の売却とショート用）
-│   ├ リリースされる大きなニュースが無くなった
-│   ├ 大口が全部売った〔既存= tasks/bigflow_preregister.md・立花 e支店 API 照会待ち〕
-│   ├ X で呟かれる回数が非常に増えている〔既存= tasks/x_mention_lane.md・data/x_price_watch/mention_alerts.jsonl〕
-│   ├ 新規株限定でロックアップ期間〔既存= catalog:2718 上昇側で不採用・下落側は未着手〕
-│   └ 全体の動き（例: 中東情勢緊迫で日米株が同時安・Yahoo マーケットAIトピックス）
+│   ├ C1 保有株の降り方〔AI: 既存で唯一実測済み〕: E1= SMA200 割れ翌朝手仕舞い／E3= β調整ストップ（catalog §7-A 第12周・固定%より優位）・kpi_exit_study／sue_exit_study／round15_e1・paper_eval の -8%損切り＋20営業日クローズ
+│   ├ C2 リリースされる大きなニュースが無くなった〈原文〉: **実体0**。素材= news_log／first_seen_probe（「出現」の逆＝枯渇は未定義）
+│   ├ C3 大口が全部売った〈原文〉: tasks/bigflow_preregister.md（立花 e支店 API・照会待ち・前向き0行）／data/activist_dictionary.json（07-07）／EDINET 変更報告の減少側は未使用
+│   ├ C4 X で呟かれる回数が非常に増えている〈原文〉: x_mention_extract（毎日22:10・mentions 2714行・mention_alerts 133行）— 売りサインとしては未検証（§16c「ほぼ後追い」）
+│   ├ C5 新規株限定でロックアップ期間〈原文〉: **実体0**（上昇側で不採用 catalog:2718・下落側は未着手）
+│   ├ C6 全体の動き〈原文〉: TOPIX 200日線レジーム= reject（bull限定ゲート）／analyze_calendar_effects「節目×ブレッドス警戒日」（手動）／材料例= Yahoo マーケットAIトピックス
+│   └ C7 買わないための負けフィルタ〔AI: catalog §4 15本＋§2 11本〕: 信用買残パンパン= reject／公募増資・MSワラント・立会外分売・日々公表・増担保解除・空売り価格規制・MAX効果・IVOL・信用評価損益率= **9/11 未検証**
+│
 ├ 大D 勝てそうなモデルを構築する
-│   ├ 買っているインフルエンサーの株に対しての KPI 収集〔既存= scripts/influencer_leaderboard.py・us_forward 週次〕
-│   ├ 1番手の後に2番手・3番手が上がる因果が証明されるかを見る（1番手が米国株の可能性も）〔既存= tasks/attribution_layer_review.md・2026-08-09 裁定 A〕
-│   └ 〔AI: 達成量= 正式合格（片側95%下限>0・前向き）1本→2本〕
-└ 大E 判断材料を毎朝届ける〔AI 追加・オーナー OK 2026-09-11〕
+│   ├ D1 買っているインフルエンサーの株に対しての KPI 収集〈原文〉
+│   │   ├ 前向き: fxnia-forward（月曜10:30）／okasira-forward（月曜11:15・**0件バグ**）／us_watchlist（火曜・rolling14日・凍結仕様「ロングのみ」）／nia_youtube_rss
+│   │   ├ 採点器: influencer_candidate_score／leaderboard／rescore／pick_profile（手動・台帳不算入）・vault influx-influencer-ledger（08-04 手貼り）
+│   │   ├ KPI 化: catalog §2-G 7本= **全未検証**（prospective 蓄積待ち）／docs/influencer-winrate-spec.md F1〜F6
+│   │   └ 停止・却下の記録: research_weekly（Grok 廃止・未ロード）／逆引き発掘= 偽陽性製造装置（第17R）／自動発見・遡及採点はやらない（2026-07-27）／「勝率と EV は無相関」（winrate-ev-summary §1）
+│   ├ D2 1番手の後に2番手・3番手が上がる因果が証明されるかを見る（1番手が米国株の可能性も）〈原文〉
+│   │   ├ 検証済み: spillover_backtest= **unsupported**（2026-08-10 終端・符号逆）／kpi_sector_momentum= fail（lift0.81）
+│   │   ├ 前向き中: pair_forward（KPI×KPI ペア・277行・正式化は12ヶ月後）
+│   │   └ 未着手: catalog §2-F テーマ先行→波及ラグ（テーマ辞書なし）／1番手=米国の検証（米国価格が止まっている＝A2）
+│   ├ D3 検定ループの規律〔AI〕: 事前登録 SHA-256 → 敵対レビュー GO → in-sample → verdict → 前向き（architecture §2）・Bonferroni 分母= trials.jsonl 114行（**07-29 で停止**）・resolutions 82・fingerprints dedup・EV estimand v2・**未解決: winrate-ev-summary §7「現行の合格基準は儲からない方を選んでいた」**
+│   └ D4 前向き競走〔AI〕: config/paper_watchlist.json 19／ledger 1036行（決着918試合 251勝667敗 平均-2.8%）／tob_ledger 81（累計EV +2.72%）／pair 277／枠S・枠F／初回判定 最短 2027-08／候補 13 family
+│
+└ 大E 判断材料を毎朝届ける〔AI 追加・オーナー OK〕
+    ├ E1 毎朝の面: daily_screen（平日07:30）→ build_daily_reco／build_recipe_shelf／build_shikomi_list → vault ミラー（daily-reco・paper_today・recipe-shelf・paper-ledger 08:45）
+    ├ E2 死活監視: kpi_clock_sla（平日08:45・sla_log 41）／run_log 39・hashchain
+    ├ E3 読み方の面: vault influx-morning-3min（**07-29 で古い**）／influx-kpi-cockpit（**07-16 停滞**・棚と不一致）
+    └ E4 個別銘柄への適用: notes/influx-ihi-7013-add-buy-eval（叩き台）
 ```
 
 | 大 | 役割1行（何をどれだけ増やせるか） | 現在値の再現 | 2026-09-11 の値 |
 |---|---|---|---|
-| A | 一次情報が週にいくつ台帳へ届くか。数より「止まった系統が0か」 | `wc -l data/x_price_watch/ledger.jsonl data/news_shock/news_log.jsonl data/tdnet/receipts.jsonl data/price_watch/universe_weekly.jsonl`（直近7日は日付で絞る） | 直近7日 350／109／32／69（概算） |
+| A | 一次情報が週にいくつ台帳へ届くか。数より「止まった系統が0か」 | 系統の生存表（報告書 §付録 data・`wc -l`＋最終更新日） | 定期10系統中 生存10・停止疑い1（米国株価 07-26）・定期なし3 |
 | B | 上昇サインの KPI で正式合格に近づく family 数 | `sed -n '5p' output/recipe_shelf.md` | 候補 13 family 競走中・初回判定 最短 2027-08 |
-| C | 売り・下落条件で事前登録まで進んだ本数 | `ls tasks/*preregister*.md` のうち下落側 | 0 本（大口フローは照会待ち・未確認） |
-| D | 正式合格 1本→2本（階段式） | `sed -n '5p' output/recipe_shelf.md; wc -l < data/kpi_trials/trials.jsonl` | 実戦投入可 0本／試行台帳 114 行 |
+| C | 売り・下落条件で事前登録まで進んだ本数 | `ls tasks/*preregister*.md` のうち下落側 | 0 本（大口フローは照会待ち・負けフィルタ 9/11 未検証） |
+| D | 正式合格 1本→2本（階段式） | `sed -n '5p' output/recipe_shelf.md; wc -l < data/kpi_trials/trials.jsonl` | 実戦投入可 0本／試行台帳 114 行（07-29 停止） |
 | E | 毎朝の面が営業日に欠けず出るか | `wc -l < data/monitoring/run_log.jsonl; head -3 output/daily_reco.md` | 39 行・直近 success |
+
+棚卸しで見つかった正本のズレ（§8 へ移送・結論は書かない）: pipeline-map の未ロード4本→実測3本（edinet-tob はロード済み）／architecture:222「us_price_fetch は launchd 登録中」→実際は us_watchlist が呼ぶのは recollect_account と nia_youtube_rss のみ／configs/extensions.enabled.yaml に退役済み9件が enabled／config/fdr_sim_spec.draft.json が FROZEN のまま（起案は棄却済み）／output/research が 07-08 で停止（research-weekly 未ロード）。
 
 ## プロジェクトの軸
 
