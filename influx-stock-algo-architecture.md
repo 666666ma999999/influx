@@ -208,6 +208,7 @@ flowchart LR
 | **詳細リファレンス**（環境変数一覧・分類カテゴリ等） | `.claude/docs/architecture.md`（⚠️ モジュール構成・データフロー節は 5/2 停止・X収集寄り） | リンク先 |
 
 ## 7. 未反映キュー（機械が積む・人が消す）
+- [ ] 2026-09-02 `fxnia_forward_eval.py`、`fxnia_forward_launchd.sh` を更新（この文書への反映を確認）
 （空。2026-08-29 に3件を1件ずつ判定して消化＝内訳: **本書へ反映した** 2本〔`build_trial_fingerprints`→ §4「既試行の重複照合」・`tdnet_event_profile`→ §4「TDnet イベント別プロファイル」〕／**X収集側の対象で本書には載らない** 4本〔`check_metric_contract` `fetch_bookmarks` `x_metrics_lib` `bookmarks_keyword_common` → `influx-architecture.md`〕。
 ※ 見張りは `scripts/` 全体を見るため両系統の変更がここへ積まれる。積まれたら「本書の対象か」を先に見る。）
 
@@ -218,6 +219,7 @@ flowchart LR
 
 - **未確定**: repo の定義本数と `launchctl` 登録本数の食い違い（未ロード4本・うち `edinet-tob` は道具表Aで「稼働中」と書かれている）→ 実態と注意書きは `docs/pipeline-map.md` §4 が持つ。棚卸しは influx セッションで
 - **未確定**: 「18系統」が指す集合が文書ごとに違う（vault ダッシュボード「毎朝18系統」／`config/paper_watchlist.json` は19件〈observation 17・reference 1・hoos_rejected 1〉／`tasks/segment_expansion_review.md`「前向き接続18本」／`tasks/pending_verdict_flow.md` の `awaiting_forward` 18）。→ どれが正しいかは決めない
+- **未確定（2026-09-11 敵対レビュー wf_4a5d7fcd-a17 A#2/#9）**: 道具表 :136「Alpha Vantage 採用予定・APIキー取得待ち」は陳腐化の疑い（`scripts/us_price_fetch.py` 実在・launchd `com.influx.us-watchlist` 登録中・`docs/us-tier1-price-foundation.md:226` は現行の Yahoo 取得を「規約に反する」と確定）／§4-3 :106「ペア（対銘柄）」と :121「S3 KPI×KPI ペア」は同一レーンで呼称不一致（事前登録の実体は KPI×KPI）→ 棚卸しは influx セッションで
 - ✅**確定（2026-08-29 実読・監査 I-38。旧「未確認」2件を実物で解消）**:
   ① **ジョブの成否**: `data/monitoring/run_log.jsonl` は **29行すべて `overall_status: success`**（2026-07-17〜08-28・毎朝スクリーンの記録）。ただし**これは全 launchd ジョブの成否ではない**——第2周 I-5 で `price-universe` が台帳 ✅ のまま 8/17 以降停止していた実測がある（`EVIDENCE` 未登録で mtime fallback）。**`launchctl` の exit 0 も台帳の緑も成否の証明にならず、ジョブ別の証跡（このログのような成功マーカー）を見るのが唯一の確認**。
   ② **`judge()` の5基準（`scripts/kpi_event_study.py:683` 実読）**: `n>=100`／`months_spanned>=24`／**bull・bear 両レジームを跨ぐ**／`lift_ci_low>1.5`／`ev_stop8>=+3%/月`／`avg_monthly_n>=5` の**6条件すべて**を満たして `in_sample_pass_candidate`（最終合格は holdout 確認後・§6プロトコル3⑤）。**Bonferroni 分母（`scripts/kpi_bonferroni_check.py:55,82` 実読）**: `trials.jsonl` の**非空行数**が正本（重複・縮退の注記行も含める＝保守側）で、`ci_level = 1 - 0.05/n_trials`。
