@@ -177,3 +177,4 @@ forward監視の主対象にせず、四半期に一度など不定期に再中�
 - **Key Evidence**: url 欠落 2,484/4,461（55.7%）・jp_forward 11 ∩ 凍結34 = 0・signals 前向き 15件（全て ≤7/8・日本株 9）・8/11 週は jp 11/11 が 0 件・`winrate_ingest.py:187` 終了コード逆・`collector/signal_extractor.py:22` haiku 固定
 - **If Still Failing**: A を選ぶ場合、先に spec §3 非ゴール（research-weekly を未インストールにした理由）を実読し、解除の裁定を取る。KPI 化（catalog:164）は n_20bd 基準で再開後 6ヶ月以上
 - 付随: `docs/winrate-ev-summary.md` 注記（97b5a5d）・catalog §8-5 注記（b58e83b）は commit 済み・未 push
+- **2026-09-12 裁定**: P-INF-14 → **A（既存 research-weekly を直して有効化）**。実装計画の叩き台= `tasks/research_weekly_p3_unattended.md`（以後の進捗はそちら・本ファイルの P-INF-14 は閉）
