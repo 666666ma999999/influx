@@ -22,6 +22,7 @@ from scripts.research_influencers import (  # noqa: E402
 )
 
 FROZEN_LIST_PATH = "data/influencer_list_frozen_2026-07-05.json"
+EXPECTED_RESEARCH_ACCOUNTS = 34  # 凍結34（S1）。数が違えば凍結ファイル事故＝fail-closed
 WEEKLY_LOG_PATH = os.path.join(RESEARCH_DIR, "weekly_log.md")
 COLLECT_LOOKBACK_DAYS = 8  # 週次(7日)+1日のオーバーラップ猶予
 
@@ -32,12 +33,22 @@ def _load_frozen_list(path: str) -> dict:
 
 
 def _to_candidates(frozen: dict) -> list:
-    """凍結 research_accounts（34 username文字列）を candidates 形式へ変換する。"""
-    return [
-        {"username": username.strip(), "score": 0}
-        for username in frozen.get("research_accounts", [])
-        if username.strip()
-    ]
+    """凍結 research_accounts（34 username文字列）を candidates 形式へ変換する。
+
+    Raises:
+        ValueError: research_accounts が文字列配列でない／空白除去後に
+            EXPECTED_RESEARCH_ACCOUNTS 件・ユニークでない（S1 の不変条件）。
+    """
+    raw = frozen.get("research_accounts")
+    if not isinstance(raw, list) or any(not isinstance(u, str) for u in raw):
+        raise ValueError("research_accounts は文字列配列である必要があります")
+    usernames = [u.strip() for u in raw if u.strip()]
+    if len(usernames) != EXPECTED_RESEARCH_ACCOUNTS or len(set(usernames)) != EXPECTED_RESEARCH_ACCOUNTS:
+        raise ValueError(
+            f"research_accounts は {EXPECTED_RESEARCH_ACCOUNTS} 件ユニークである必要があります: "
+            f"{len(usernames)} 件・ユニーク {len(set(usernames))}"
+        )
+    return [{"username": u, "score": 0} for u in usernames]
 
 
 def _contrarian_usernames(frozen: dict) -> set:
@@ -82,7 +93,11 @@ def main() -> int:
     ensure_research_dir()
 
     frozen = _load_frozen_list(FROZEN_LIST_PATH)
-    candidates = _to_candidates(frozen)
+    try:
+        candidates = _to_candidates(frozen)
+    except ValueError as e:
+        print(f"エラー: 凍結リストが不正: {e}")
+        return 1
     contrarian_usernames = _contrarian_usernames(frozen)
     print(f"凍結リストから{len(candidates)}アカウントを読み込み: {FROZEN_LIST_PATH}")
     if contrarian_usernames:

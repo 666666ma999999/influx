@@ -24,12 +24,21 @@ class TestWeeklyCollection(unittest.TestCase):
         self.assertEqual({c['username'] for c in candidates}, set(frozen['research_accounts']))
 
     def test_contrarian_intersects_research_accounts(self):
-        frozen = {'research_accounts': ['inside', 'ordinary'], 'collection_groups': {
+        names = [f'u{i}' for i in range(34)]
+        frozen = {'research_accounts': names, 'collection_groups': {
             'inverse': {'is_contrarian': True, 'accounts': [
-                {'username': 'inside'}, {'username': 'outside'}]},
-            'normal': {'accounts': [{'username': 'ordinary'}]},
+                {'username': 'u0'}, {'username': 'outside'}]},
+            'normal': {'accounts': [{'username': 'u1'}]},
         }}
-        self.assertEqual(research_weekly._contrarian_usernames(frozen), {'inside'})
+        self.assertEqual(research_weekly._contrarian_usernames(frozen), {'u0'})
+
+    def test_research_accounts_must_be_34_unique_strings(self):
+        names = [f'u{i}' for i in range(34)]
+        for bad in (names[:33], names + ['u34'], names[:33] + ['u0'], names[:33] + [7], 'notalist'):
+            with self.subTest(bad=str(bad)[:40]):
+                with self.assertRaises(ValueError):
+                    research_weekly._to_candidates({'research_accounts': bad})
+        self.assertEqual(len(research_weekly._to_candidates({'research_accounts': [' ' + n for n in names]})), 34)
 
     def test_summary_counts_missing_and_empty_accounts_without_evaluation(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -47,6 +56,7 @@ class TestWeeklyCollection(unittest.TestCase):
                  patch.object(research_weekly, 'ensure_research_dir'), \
                  patch.object(research_weekly, '_load_frozen_list', return_value={
                      'research_accounts': ['posted', 'empty', 'missing']}), \
+                 patch.object(research_weekly, 'EXPECTED_RESEARCH_ACCOUNTS', 3), \
                  patch.object(research_weekly, 'phase_collect', return_value=[str(posted), str(empty)]), \
                  patch('scripts.research_influencers.phase_evaluate', side_effect=AssertionError('legacy evaluation called')), \
                  contextlib.redirect_stdout(output):
@@ -73,6 +83,26 @@ class TestIngestExitCode(unittest.TestCase):
 
     def test_all_rejected_is_exit_two(self):
         self.assertEqual(self.run_ingest([{}, 'invalid']), 2)
+
+    def test_mark_processed_appends_worklist_urls_once(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            worklist = Path(tmp) / 'worklist.json'
+            worklist.write_text(json.dumps({'worklist': [
+                {'tweet_url': 'https://x.com/a/status/1'}, {'tweet_url': 'https://x.com/a/status/2'}, {'text': 'no url'}]}))
+            self.assertEqual(winrate_ingest.mark_processed(str(worklist), tmp), 2)
+            self.assertEqual(winrate_ingest.mark_processed(str(worklist), tmp), 0)
+            lines = (Path(tmp) / winrate_ingest.PROCESSED_LEDGER_FILENAME).read_text().splitlines()
+            self.assertEqual(len(lines), 2)
+            self.assertTrue(json.loads(lines[0])['batch'].startswith('research-weekly-'))
+
+    def test_worklist_file_error_is_nonzero(self):
+        from scripts import winrate_worklist
+        with tempfile.TemporaryDirectory() as tmp:
+            (Path(tmp) / 'tweets_broken.json').write_text('{not json')
+            with patch.object(sys, 'argv', ['winrate_worklist.py', '--tweets-glob', str(Path(tmp) / 'tweets_*.json'),
+                                           '--research-dir', tmp, '--output', str(Path(tmp) / 'out.json')]), \
+                 contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(winrate_worklist.main(), 1)
 
     def test_partial_rejection_and_duplicates_are_success(self):
         signal = {
@@ -116,8 +146,13 @@ if name == "docker":
 elif name == "claude":
     assert "ANTHROPIC_API_KEY" not in os.environ, "claude -p に API 鍵が渡ると購読でなく API 課金になる"
     assert "FIXED PROMPT CONTENT" in sys.stdin.read()
-    assert args == ["-p", "--output-format", "text", "--model", os.environ.get("CLAUDE_MODEL", "sonnet"), "--tools", "",
-                    "--disallowedTools", "Write", "Edit", "NotebookEdit", "Bash", "Agent", "WebFetch", "WebSearch"]
+    # 契約ごとに検証（引数順や無害なオプション追加で壊れないように）
+    assert args[0] == "-p"
+    assert args[args.index("--output-format") + 1] == "text"
+    assert args[args.index("--model") + 1] == os.environ.get("CLAUDE_MODEL", "sonnet")
+    assert args[args.index("--tools") + 1] == ""
+    banned = set(args[args.index("--disallowedTools") + 1:])
+    assert {"Write", "Edit", "Bash", "Agent", "WebFetch", "WebSearch"} <= banned, banned
     if scenario == "claude_fail": sys.exit(7)
     print("broken [ []" if scenario == "bad_json" else "[]" if scenario == "empty_signals" else
           json.dumps([{"ticker": "7203.T"}, {"extraction_model": "kept/prompt-v2", "extracted_at": "kept"}]))
@@ -165,8 +200,9 @@ elif name == "python3":
         self.assertIn("週次完了: 収集18/抽出2/取込1", calls)
         self.assertEqual(records[0][0]["extraction_model"], "custom/prompt-v2")
         self.assertIn("T", records[0][0]["extracted_at"])
-        self.assertEqual(records[0][1]["extraction_model"], "kept/prompt-v2")
-        self.assertEqual(records[0][1]["extracted_at"], "kept")
+        # モデルが偽の証跡を返してもラッパー値で上書きされる（S2/S4）
+        self.assertEqual(records[0][1]["extraction_model"], "custom/prompt-v2")
+        self.assertNotEqual(records[0][1]["extracted_at"], "kept")
 
     def test_fail_closed_stages(self):
         cases = [("collect_fail", 4, "winrate_worklist.py"), ("cookie", 4, "winrate_worklist.py"),

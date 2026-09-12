@@ -175,6 +175,14 @@ def main() -> int:
     parser.add_argument("--input", required=True, help="サブエージェント抽出結果JSON（トップレベル配列）のパス")
     parser.add_argument("--research-dir", default=RESEARCH_DIR)
     parser.add_argument("--dry-run", action="store_true", help="実際にはsignals.jsonlへ書き込まず検証結果のみ表示する")
+    parser.add_argument(
+        "--mark-processed",
+        default=None,
+        metavar="WORKLIST_JSON",
+        help="取り込み成功後に、この worklist（winrate_worklist.py 出力）の全 tweet_url を"
+             " processed_tweet_urls.jsonl（シグナルなし判定込みの処理済み台帳）へ追記する。"
+             "--dry-run・全件拒否(rc=2) では追記しない",
+    )
     args = parser.parse_args()
 
     if not os.path.exists(args.input):
@@ -190,7 +198,53 @@ def main() -> int:
     for r in result["rejected"]:
         print(f"  - [index={r['index']}] {r['error']} (tweet_url={r['raw_tweet_url']!r})")
 
-    return 2 if result["input_records"] > 0 and result["rejected_count"] == result["input_records"] else 0
+    rc = 2 if result["input_records"] > 0 and result["rejected_count"] == result["input_records"] else 0
+    if rc == 0 and args.mark_processed and not args.dry_run:
+        added = mark_processed(args.mark_processed, args.research_dir)
+        print(f"処理済み台帳へ追記: {added}件 → {PROCESSED_LEDGER_FILENAME}")
+    return rc
+
+
+PROCESSED_LEDGER_FILENAME = "processed_tweet_urls.jsonl"
+
+
+def mark_processed(worklist_path: str, research_dir: str) -> int:
+    """worklist の全 tweet_url を処理済み台帳へ追記する（既存 URL は重複追記しない）。
+
+    抽出サブエージェントに提示して「シグナルなし」と判定された投稿も含めて処理済みに
+    するため、winrate_worklist.py が毎週同じ投稿を再投入しない（2026-09-12 Codex レビュー Major 4）。
+
+    Returns:
+        追記した件数
+    """
+    with open(worklist_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    items = data.get("worklist") if isinstance(data, dict) else None
+    if not isinstance(items, list):
+        raise SystemExit(f"FATAL: worklist 配列がありません: {worklist_path}")
+    ledger_path = os.path.join(research_dir, PROCESSED_LEDGER_FILENAME)
+    existing = set()
+    if os.path.exists(ledger_path):
+        with open(ledger_path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line:
+                    try:
+                        existing.add(json.loads(line).get("tweet_url"))
+                    except json.JSONDecodeError:
+                        continue
+    stamp = datetime.now().astimezone().isoformat()
+    batch = f"research-weekly-{datetime.now().strftime('%Y%m%d')}"
+    added = 0
+    with open(ledger_path, "a", encoding="utf-8") as f:
+        for item in items:
+            url = str(item.get("tweet_url", "")).strip() if isinstance(item, dict) else ""
+            if not url or url in existing:
+                continue
+            f.write(json.dumps({"tweet_url": url, "processed_at": stamp, "batch": batch}, ensure_ascii=False) + "\n")
+            existing.add(url)
+            added += 1
+    return added
 
 
 if __name__ == "__main__":

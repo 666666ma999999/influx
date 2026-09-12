@@ -41,7 +41,8 @@ export PATH="$(dirname "$CLAUDE_BIN"):$PATH"
 research_notify() {
     local msg
     msg=$(printf '%s' "$1" | tr -d '"\\')
-    osascript -e "display notification \"${msg}\" with title \"influx 週次リサーチ\"" 2>/dev/null || true
+    osascript -e "display notification \"${msg}\" with title \"influx 週次リサーチ\"" 2>/dev/null \
+        || echo "警告: Mac 通知に失敗（osascript）: ${msg}" >&2
 }
 
 fail() {
@@ -128,8 +129,8 @@ for key in ("accounts", "collected_files", "zero_post_accounts", "total_tweets")
     if type(s.get(key)) is not int or s[key] < 0:
         raise SystemExit("RW_SUMMARY の件数が不正")
 threshold = int(sys.argv[2])
-if threshold < 1 or s["accounts"] < 1:
-    raise SystemExit("閾値または対象口座数が不正")
+if threshold < 1 or s["accounts"] != 34:
+    raise SystemExit(f"閾値または対象口座数が不正（凍結34 を想定・実際 {s['accounts']}）")
 if max(s["collected_files"], s["zero_post_accounts"]) > s["accounts"]:
     raise SystemExit("RW_SUMMARY の口座数が不整合")
 if s["zero_post_accounts"] >= threshold:
@@ -194,8 +195,9 @@ if not isinstance(records, list) or any(not isinstance(r, dict) for r in records
     raise SystemExit("抽出結果はオブジェクトの JSON 配列が必要")
 stamp = datetime.now().astimezone().isoformat()
 for record in records:
-    record.setdefault("extraction_model", sys.argv[3] + "/prompt-v2")
-    record.setdefault("extracted_at", stamp)
+    # 証跡はラッパーが決める（モデル出力の値は信用しない・S4/S2）
+    record["extraction_model"] = sys.argv[3] + "/prompt-v2"
+    record["extracted_at"] = stamp
 Path(sys.argv[2]).write_text(json.dumps(records, ensure_ascii=False, indent=2) + "\n")
 print(len(records))
 PY_EXTRACT
@@ -206,7 +208,7 @@ PY_EXTRACT
     fail 5 "週次停止: 抽出結果 JSON が不正（生出力: ~/Library/Logs/influx-research-weekly-extraction-failed.txt）"
 }
 
-python3 scripts/winrate_ingest.py --input "$RESULT" 2>&1 | tee "$RUN_TMP/ingest.log"
+python3 scripts/winrate_ingest.py --input "$RESULT" --mark-processed "$WORKLIST" 2>&1 | tee "$RUN_TMP/ingest.log"
 RC=$?
 [ "$RC" -eq 0 ] || fail "$RC" "週次停止: 取込失敗 (rc=$RC)"
 INGESTED=$(python3 - "$RUN_TMP/ingest.log" <<'PY_INGEST'

@@ -216,6 +216,9 @@ def main() -> int:
         print(f"警告: 読み込み失敗 {len(result['file_errors'])}件")
         for err in result["file_errors"]:
             print(f"  - {err['file']}: {err['error']}")
+        # 無人ラッパー（research_weekly_launchd.sh）が fail-closed できるよう非0で返す
+        # （2026-09-12 Codex レビュー Major 3: 欠けた worklist を後段へ流さない）
+        return 1
     return 0
 
 
