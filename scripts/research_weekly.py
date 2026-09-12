@@ -1,20 +1,9 @@
-"""週次インフルエンサー勝率リサーチ（凍結34アカウント・回収案R3）。
+"""週次インフルエンサー収集（凍結34 research_accounts）。
 
-data/influencer_list_frozen_2026-07-05.json の34アカウントを対象に、
-scripts/research_influencers.py の phase_collect / phase_evaluate をそのまま
-再利用して「直近8日分の収集 → シグナル抽出・評価」を行い、
-output/research/weekly_log.md に簡易サマリを1行追記する（累積の実体は
-ResearchStore の signals.jsonl / evaluations.jsonl・重複はsignal_idで自動排除）。
-
-凍結リストは research_influencers.py の discovery_*.json とスキーマが異なる
-（collection_groups入れ子）ため、本スクリプトは phase_collect() が要求する
-candidates 形式（{"candidates": [{"username": ...}, ...]}）への変換アダプタ
-のみを担う。収集・評価ロジック自体は research_influencers.py の既存実装を
-呼び出すだけで、重複実装は行わない（Canonical Module原則）。
-
-phase_evaluate() は今回収集した tweet_files のみに限定して呼び出す
-（デフォルトのNone挙動＝output/research/tweets_*.json全件だと、過去に
-収集済みの全ツイートを毎週再抽出してAPIコストが際限なく増える）。
+凍結リストの research_accounts を phase_collect() 用 candidates に変換し、
+直近8日分を収集する。抽出・取り込み・採点はラッパー側で行う。
+stdout の RW_SUMMARY JSON で対象数・成功ファイル数・投稿0件の口座数・
+総投稿数を渡し、output/research/weekly_log.md に1行追記する。
 
 Usage（Docker VNCコンテナ内での実行を想定）:
     python scripts/research_weekly.py
@@ -30,7 +19,6 @@ from scripts.research_influencers import (  # noqa: E402
     RESEARCH_DIR,
     ensure_research_dir,
     phase_collect,
-    phase_evaluate,
 )
 
 FROZEN_LIST_PATH = "data/influencer_list_frozen_2026-07-05.json"
@@ -44,14 +32,12 @@ def _load_frozen_list(path: str) -> dict:
 
 
 def _to_candidates(frozen: dict) -> list:
-    """凍結リスト(collection_groups入れ子)を phase_collect() 用の candidates 形式へ変換する。"""
-    candidates = []
-    for group in frozen.get("collection_groups", {}).values():
-        for acc in group.get("accounts", []):
-            username = acc.get("username", "").strip()
-            if username:
-                candidates.append({"username": username, "score": 0})
-    return candidates
+    """凍結 research_accounts（34 username文字列）を candidates 形式へ変換する。"""
+    return [
+        {"username": username.strip(), "score": 0}
+        for username in frozen.get("research_accounts", [])
+        if username.strip()
+    ]
 
 
 def _contrarian_usernames(frozen: dict) -> set:
@@ -60,6 +46,7 @@ def _contrarian_usernames(frozen: dict) -> set:
     phase_collect() はGrok discovery候補用に作られておりis_contrarianを
     知らないため、collector/config.py の INFLUENCER_GROUPS と同じ
     グループ単位のフラグを凍結リストから読み直して後段で補完する。
+    research_accounts と交差しない口座は除外する。
     """
     usernames = set()
     for group in frozen.get("collection_groups", {}).values():
@@ -68,7 +55,7 @@ def _contrarian_usernames(frozen: dict) -> set:
                 username = acc.get("username", "").strip()
                 if username:
                     usernames.add(username)
-    return usernames
+    return usernames & {c["username"] for c in _to_candidates(frozen)}
 
 
 def _apply_contrarian_flag(collected_files: list, contrarian_usernames: set) -> None:
@@ -136,23 +123,33 @@ def main() -> int:
         _apply_contrarian_flag(collected_files, contrarian_usernames)
 
     total_tweets = 0
+    accounts_with_posts = set()
     for fp in collected_files:
-        try:
-            with open(fp, "r", encoding="utf-8") as f:
-                total_tweets += len(json.load(f))
-        except (OSError, json.JSONDecodeError) as e:
-            print(f"警告: {fp} の読み込みに失敗: {e}")
+        with open(fp, "r", encoding="utf-8") as f:
+            tweets = json.load(f)
+        if not isinstance(tweets, list):
+            raise ValueError(f"収集結果は投稿配列である必要があります: {fp}")
+        total_tweets += len(tweets)
+        if tweets:
+            username = os.path.splitext(os.path.basename(fp))[0].removeprefix("tweets_")
+            accounts_with_posts.add(username)
 
-    if collected_files:
-        eval_count = phase_evaluate(tweet_files=collected_files)
-    else:
-        print("収集ファイルが0件のためシグナル抽出をスキップ")
-        eval_count = 0
+    # phase_collect は投稿0件・収集エラーの口座のファイルを返さない。
+    # 今回返された非空ファイルだけを数え、過去のファイルで成功を水増ししない。
+    zero_post_accounts = sum(
+        c["username"] not in accounts_with_posts for c in candidates
+    )
+    print("RW_SUMMARY " + json.dumps({
+        "accounts": len(candidates),
+        "collected_files": len(collected_files),
+        "zero_post_accounts": zero_post_accounts,
+        "total_tweets": total_tweets,
+    }, ensure_ascii=False), flush=True)
 
     summary_line = (
         f"- {datetime.now().strftime('%Y-%m-%d %H:%M')} JST: "
         f"対象{len(candidates)}アカウント中{len(collected_files)}件収集成功・"
-        f"ツイート{total_tweets}件・評価{eval_count}件"
+        f"ツイート{total_tweets}件・投稿0件{zero_post_accounts}口座・抽出はラッパー側"
     )
     with open(WEEKLY_LOG_PATH, "a", encoding="utf-8") as f:
         f.write(summary_line + "\n")

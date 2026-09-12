@@ -61,3 +61,4 @@ influx-architecture.md §2（機能マップ）が代替（rules/05 K-308）。�
 
 ## Session Handoff
 - 2026-09-12: 叩き台 v0 作成・コード未着手・P0-1 未実測（権限却下）。次= オーナー検収 → P0-1 → T1〜T7。
+- **2026-09-12 Phase 0 実測（オーナー `!` 実行）**: `env -i HOME PATH` のみ → `Not logged in`／`USER`・`LOGNAME`・`TMPDIR` を足す → `OK`。認証は Keychain `Claude Code-credentials`（ファイル無し）で、Keychain 参照に `USER` が要る。launchd は `USER`/`HOME`/`TMPDIR` を既定で渡すため無人成立の見込み（**T7 の1周で最終確認**）。ラッパーは `USER`/`LOGNAME` 未設定なら `id -un` で補う。費用= 購読内（`--model haiku` 1回・請求なし・未計測）。

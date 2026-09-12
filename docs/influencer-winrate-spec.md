@@ -24,6 +24,7 @@
 
 **非ゴール**
 - 完全無人化（週 1 回のセッション起動は許容。将来の launchd 化は P3 オプション）
+  - **2026-09-12 解除（P-INF-14 オーナー裁定 A）**: P3 を実施。`config/launchd/com.influx.research-weekly.plist` を〈名簿=凍結34 research_accounts／抽出 prompt v2（`claude -p`）／fail-closed〉に直して登録する。計画= `tasks/research_weekly_p3_unattended.md`・裁定= vault decisions 2026-09-12
 - 新規アカウントの発見・リスト拡張（凍結リストの時点管理を壊すため。追加は日付付き新版でのみ）
 - 抽出精度 100%（人間のツイートは曖昧。confidence 付きで確率的に扱う）
 
@@ -79,6 +80,7 @@
 ### F6 運用トリガー
 - P1: ユーザーが週 1 回「インフルエンサー週次回して」と言う（このセッション or 新セッション。手順は本 spec §8 のランブック）
 - P3（任意・後日）: 既存の scheduled-prompt 基盤（`vault-prompt-runner.sh` + launchd。ユーザー環境で稼働実績あり）に週次プロンプトとして登録し完全自動化
+  - **2026-09-12 実施**: scheduled-prompt 基盤ではなく既存の `research_weekly_launchd.sh` 内で `claude -p`（prompt v2）を直接呼ぶ形で無人化（Phase 0 実測: Keychain 認証には `USER` が要る・launchd は既定で渡す）
 
 ## 6. 非機能要件・制約
 

@@ -9,6 +9,9 @@ docs/influencer-winrate-spec.md §5 F2 の後段を担う。Claude セッショ�
 出力には不要。ResearchStore.get_signal_id と同一のハッシュ規則を使うため計算し直しても
 既存レコードと衝突しない）。
 
+終了コード: 正当な入力0件は0、入力1件以上が全件拒否された場合は2、それ以外は0。
+入力ファイルの読み込み・JSON解析などの実行エラーは非0で終了する。
+
 Usage:
     python3 scripts/winrate_ingest.py --input /path/to/extraction_result.json
     python3 scripts/winrate_ingest.py --input /path/to/extraction_result.json --dry-run
@@ -165,7 +168,10 @@ def ingest(input_path: str, research_dir: str, dry_run: bool) -> dict:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="抽出結果の検証・signals.jsonl取り込み（インフルエンサー勝率アルゴ P1）")
+    parser = argparse.ArgumentParser(
+        description="抽出結果の検証・signals.jsonl取り込み（インフルエンサー勝率アルゴ P1）",
+        epilog="終了コード: 入力0件=0、入力1件以上の全件拒否=2、それ以外=0（実行エラーは非0）。",
+    )
     parser.add_argument("--input", required=True, help="サブエージェント抽出結果JSON（トップレベル配列）のパス")
     parser.add_argument("--research-dir", default=RESEARCH_DIR)
     parser.add_argument("--dry-run", action="store_true", help="実際にはsignals.jsonlへ書き込まず検証結果のみ表示する")
@@ -184,7 +190,7 @@ def main() -> int:
     for r in result["rejected"]:
         print(f"  - [index={r['index']}] {r['error']} (tweet_url={r['raw_tweet_url']!r})")
 
-    return 0 if result["input_records"] > 0 else 1
+    return 2 if result["input_records"] > 0 and result["rejected_count"] == result["input_records"] else 0
 
 
 if __name__ == "__main__":
