@@ -62,3 +62,9 @@ influx-architecture.md §2（機能マップ）が代替（rules/05 K-308）。�
 ## Session Handoff
 - 2026-09-12: 叩き台 v0 作成・コード未着手・P0-1 未実測（権限却下）。次= オーナー検収 → P0-1 → T1〜T7。
 - **2026-09-12 Phase 0 実測（オーナー `!` 実行）**: `env -i HOME PATH` のみ → `Not logged in`／`USER`・`LOGNAME`・`TMPDIR` を足す → `OK`。認証は Keychain `Claude Code-credentials`（ファイル無し）で、Keychain 参照に `USER` が要る。launchd は `USER`/`HOME`/`TMPDIR` を既定で渡すため無人成立の見込み（**T7 の1周で最終確認**）。ラッパーは `USER`/`LOGNAME` 未設定なら `id -un` で補う。費用= 購読内（`--model haiku` 1回・請求なし・未計測）。
+- **2026-09-12 T1〜T4 実装 commit 5dd3a19**（Codex gpt-5.6-sol・Astra は容量上限2回で切替・オーナー裁定）。統括の実読で追加修正1点: ラッパーの `ANTHROPIC_API_KEY` 必須を撤去（`~/.zshrc` に無く毎回 exit 2 になる／鍵が渡ると `claude -p` が API 課金に変わる）→ 抽出前に `env -u ANTHROPIC_API_KEY`。ゲート 354件 OK。
+- **試走1**（16:41〜16:51・Bash 10分上限で打切り）: ログイン確認 OK・口座ごとに収集が進行（investramza/kabu1000/kabu_kabuki のファイル更新）・打切り時に trap で Docker 撤収を実測。**34口座の収集は10分超**＝launchd 土曜 9:00 なら問題なし。
+- **試走2**（16:52:40〜・nohup 切り離し・ログ `$TMPDIR/rw_trial2.log`）: 結果待ち。launchd 登録（`ln -s` + `launchctl load`）は AI 権限で却下＝**オーナーの `!` 実行待ち**（手順は本ファイル T7）。
+- **試走2 結果（16:52〜19:07）**: 収集= 34口座・21ファイル・480投稿・投稿0件13口座（閾値17未満）・`RW_SUMMARY` 実測。**抽出段で fail-closed 発動 rc=5**＝`--tools ""` だけでは道具が有効のままで、claude が stdout に JSON を返さず `extraction_result_20260912.json` 書き出し＋ signals.jsonl 取込（28件・19:04）を自走。→ 修正 commit 7367d79（`--disallowedTools` 明示・指示文強化・失敗時の生出力を `~/Library/Logs/influx-research-weekly-extraction-failed.txt` へ退避）。残り段は手動で完走: `winrate_score.py` 722件中 555 評価・scoreboard 19:07・vault 鏡更新。
+- **既知の穴（追加）**: 1周 約2時間15分（投稿0件口座の再試行 10/20/40秒が主因）＝土曜9:00 の無人なら実害なし／worklist は過去ファイル含む全 `tweets_*.json` を走査（今回 906件・設計どおり）／`processed_tweet_urls.jsonl` は 07-11 から未更新（誰が書くかは未確認）。
+- **未確認**: 道具禁止後の抽出段が stdout に JSON 配列を返すか（単独再試験 19:07 起動・結果は次の記帳で）。

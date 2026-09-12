@@ -72,6 +72,7 @@
 | 運用ルール（誰がいつ直すか） | `~/.claude/rules/05-plan-task-md.md` §architecture |
 
 ## 6. 未反映（対のファイルからの宿題・機械が積む/人が消す）
-- 2026-09-11 棚卸し実測: §4 の未ロード4本は3本（`edinet-tob` はロード済み・未ロードは kpi-loop-weekly／research-weekly／tob-monthly）。`us_price_fetch.py` はどの plist からも呼ばれていない（米国株価の日次取得は定期未配線）
+- 2026-09-11 棚卸し実測: §4 の未ロード4本は3本（`edinet-tob` はロード済み・未ロードは kpi-loop-weekly／research-weekly／tob-monthly）。
+- 2026-09-12 P-INF-14 裁定 A: `research-weekly` は P3 実施（ラッパー改修＋試走1周・commit 5dd3a19/7367d79）。**登録はオーナーの `launchctl load` 待ち**＝ロード後に §4 の未ロード一覧から外す（正本= `config/launchd/README.md`）。`us_price_fetch.py` はどの plist からも呼ばれていない（米国株価の日次取得は定期未配線）
 
 - 該当なし

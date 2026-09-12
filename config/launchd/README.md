@@ -6,11 +6,13 @@
 |---|---|---|---|
 | `com.influx.jsf-archive.plist` | **稼働中**（`launchctl list`に登録あり） | 月〜金 12:30/19:30 JST（計10回/週） | `scripts/jsf_daily_archive.py`（日証金の日次アーカイブ蓄積。§7-I I3で言及の日次データ収集元） |
 | `com.influx.paper-screen.plist` | **稼働中**（`launchctl list`に登録あり） | 月〜金 7:30 JST | `scripts/daily_screen.py`（毎朝スクリーニング・ペーパートレード観察） |
-| `com.influx.research-weekly.plist` | **意図的に未インストール**（`launchctl list`に登録なし。実測確認済み） | 土曜 9:00 JST（設定のみ・未有効化） | `scripts/research_weekly_launchd.sh`（インフルエンサー週次サイクル: `docs/influencer-winrate-spec.md` §8のwinrate_worklist→抽出→ingest→score一式を無人実行する想定） |
+| `com.influx.research-weekly.plist` | **P3 実施中（2026-09-12 P-INF-14 裁定 A）**: ラッパー改修＋試走1周済み（commit 5dd3a19・7367d79）。**登録（`launchctl load`）はオーナー操作待ち**＝稼働の有無は `launchctl list \| grep com.influx.research-weekly` で引く | 土曜 9:00 JST | `scripts/research_weekly_launchd.sh`（凍結34 research_accounts を収集→`winrate_worklist`→`claude -p`（prompt v2・道具無効・購読内）→`winrate_ingest`→`winrate_score`。fail-closed: Cookie 失効／投稿0件≥17口座／各段 rc≠0 で停止＋Mac通知。1周 約2時間・計画= `tasks/research_weekly_p3_unattended.md`） |
 | `com.influx.price-watch.plist` | **稼働中**（2026-07-26 登録） | 毎日 22:10 JST | `scripts/xprice_watch_run.sh`（X値上がり検出: 固定30クエリ日次収集→zスコア判定→検知時Mac通知。台帳 `data/x_price_watch/ledger.jsonl`） |
 | `com.influx.okasira-forward.plist` | **稼働中**（2026-08-30 ユーザー `launchctl load`・`launchctl list` で確認。P-INF-07） | 毎週月曜 11:15 JST（fxnia の後） | `scripts/fxnia_forward_launchd.sh` を `FWD_ACCOUNT=okasira_kanki FWD_START=20260830 FWD_LABEL=okasira` で起動（同スクリプト共用・コピーなし）。出力 `data/influencer_candidates/forward/okasira_kanki.json`・`output/influencer_candidates/okasira_forward/`・台帳 `okasira_forward_ledger.tsv` |
 
-## `com.influx.research-weekly` が未インストールである理由
+## `com.influx.research-weekly` が未インストールだった理由（〜2026-09-12・P3 解除済み）
+
+> **2026-09-12**: 下記の P3 は P-INF-14 オーナー裁定 A で実施に転じた（spec §3/F6 に注記済み）。以下は当時の経緯の記録。
 
 `docs/influencer-winrate-spec.md` の非ゴール（§3）およびF6運用トリガーで、本フェーズ(P1)は
 **ユーザーが週1回「インフルエンサー週次回して」と明示的に言うセッション内実行が正式**と定義されている。
