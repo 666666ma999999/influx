@@ -170,3 +170,10 @@ forward監視の主対象にせず、四半期に一度など不定期に再中�
   実装: `scripts/nia_youtube_rss.py`（**公式RSSフィード**=規約上正規の低頻度取得・新旧2ch・
   videoId去重・追記専用 `jp_forward/nia_youtube.jsonl`）を週次火曜wrapperへ組込み。
   初回17本保存（新ch2本+米国ch15本）。以後、動画タイトルの銘柄リストがX captureと並ぶ前向き素材になる。
+
+## Session Handoff（2026-09-11・P-INF-14「X 投稿から KPI 候補を増やす方法」）
+- **Start Here**: vault `02_Ai/influx/notes/influx-x-kpi-mining-adversarial-review-2026-09-11.md` §5-2（第2周の一致6・単独6・裁定案）。オーナー判断待ち= A) 既存の無人サイクル `config/launchd/com.influx.research-weekly.plist`（README:9「意図的に未インストール」）を〈名簿=凍結34 research_accounts／抽出を v1 haiku→prompt v2／fail-closed〉で直して有効化 ／ B) やめる（第22R 前向き保存のみ） ／ C) 第3周レビュー
+- **Avoid Repeating**: ①逆引き（7/25 打切り）②23家系在庫（7/18・7/29 全閉・catalog §8-5 は化石表記＝9/11 注記済み）③工場の穴5本（7/29 batch_v4 実行済み・生存0）＝いずれも再提案しない。「在庫」を提案する前に同ファイルの次節と trials.jsonl/output を引く（vault mistakes `stale-inventory-table-read-as-backlog`）
+- **Key Evidence**: url 欠落 2,484/4,461（55.7%）・jp_forward 11 ∩ 凍結34 = 0・signals 前向き 15件（全て ≤7/8・日本株 9）・8/11 週は jp 11/11 が 0 件・`winrate_ingest.py:187` 終了コード逆・`collector/signal_extractor.py:22` haiku 固定
+- **If Still Failing**: A を選ぶ場合、先に spec §3 非ゴール（research-weekly を未インストールにした理由）を実読し、解除の裁定を取る。KPI 化（catalog:164）は n_20bd 基準で再開後 6ヶ月以上
+- 付随: `docs/winrate-ev-summary.md` 注記（97b5a5d）・catalog §8-5 注記（b58e83b）は commit 済み・未 push
