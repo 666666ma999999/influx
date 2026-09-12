@@ -70,3 +70,12 @@ influx-architecture.md §2（機能マップ）が代替（rules/05 K-308）。�
 - **未確認**: 道具禁止後の抽出段が stdout に JSON 配列を返すか（単独再試験 19:07 起動・結果は次の記帳で）。
 - **抽出段 単独再試験（19:07:42〜19:10・道具禁止フラグ付き・worklist 890件）**: `claude rc=0`・stdout 9,295 bytes・JSON 配列 18件を parse・末尾は ```` ``` ```` のみ（ラッパー許容内）＝**S2 合格**。`MultiEdit` は「既知の道具でない」警告のため一覧から除去（commit 次項）。
 - **Session Handoff（2026-09-12 19:15）**: 実装・試走とも完了（commit 5dd3a19→7367d79→e0ee441＋本 commit）。**残= T7 登録のみ（オーナーの `!` で `ln -s` + `launchctl load`）**。ロード後に `config/launchd/README.md` の行と `docs/pipeline-map.md` §4 未ロード一覧を「稼働中」へ更新する（次セッションの先頭作業）。
+
+## Decision Log（仕様差分・implementation-checklist STEP 2.7）
+| 項目 | 種別 | 内容 |
+|---|---|---|
+| 実装担当 | deviation（オーナー裁定） | オーダー「Astra で実装」→ Astra 容量上限2回 → カードで Sol（gpt-5.6-sol）に切替を裁定 |
+| ANTHROPIC_API_KEY | interpreted | 叩き台に無かった変更。`~/.zshrc` に鍵が無く毎回 exit 2 になる＋鍵が渡ると `claude -p` が API 課金へ切替わるため、必須解除＋抽出前 `env -u` |
+| 道具禁止 | deviation（実害起点） | 叩き台は `--tools ""` 想定→試走2で無効と判明→`--disallowedTools` 明示（7367d79・998bf43） |
+| 試走の完走 | interpreted | 抽出段の fail-closed 後、残り段（採点）は統括が手動実行して1周を完成。次回の無人1周（土曜）が S5 の最終確認 |
+| launchd 登録 | open-question | AI 権限で `ln -s`/`launchctl load` が却下＝オーナー操作待ち |
