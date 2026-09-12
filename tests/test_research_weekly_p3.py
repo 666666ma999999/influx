@@ -117,7 +117,7 @@ elif name == "claude":
     assert "ANTHROPIC_API_KEY" not in os.environ, "claude -p に API 鍵が渡ると購読でなく API 課金になる"
     assert "FIXED PROMPT CONTENT" in sys.stdin.read()
     assert args == ["-p", "--output-format", "text", "--model", os.environ.get("CLAUDE_MODEL", "sonnet"), "--tools", "",
-                    "--disallowedTools", "Write", "Edit", "MultiEdit", "NotebookEdit", "Bash", "Agent", "WebFetch", "WebSearch"]
+                    "--disallowedTools", "Write", "Edit", "NotebookEdit", "Bash", "Agent", "WebFetch", "WebSearch"]
     if scenario == "claude_fail": sys.exit(7)
     print("broken [ []" if scenario == "bad_json" else "[]" if scenario == "empty_signals" else
           json.dumps([{"ticker": "7203.T"}, {"extraction_model": "kept/prompt-v2", "extracted_at": "kept"}]))

@@ -68,3 +68,5 @@ influx-architecture.md §2（機能マップ）が代替（rules/05 K-308）。�
 - **試走2 結果（16:52〜19:07）**: 収集= 34口座・21ファイル・480投稿・投稿0件13口座（閾値17未満）・`RW_SUMMARY` 実測。**抽出段で fail-closed 発動 rc=5**＝`--tools ""` だけでは道具が有効のままで、claude が stdout に JSON を返さず `extraction_result_20260912.json` 書き出し＋ signals.jsonl 取込（28件・19:04）を自走。→ 修正 commit 7367d79（`--disallowedTools` 明示・指示文強化・失敗時の生出力を `~/Library/Logs/influx-research-weekly-extraction-failed.txt` へ退避）。残り段は手動で完走: `winrate_score.py` 722件中 555 評価・scoreboard 19:07・vault 鏡更新。
 - **既知の穴（追加）**: 1周 約2時間15分（投稿0件口座の再試行 10/20/40秒が主因）＝土曜9:00 の無人なら実害なし／worklist は過去ファイル含む全 `tweets_*.json` を走査（今回 906件・設計どおり）／`processed_tweet_urls.jsonl` は 07-11 から未更新（誰が書くかは未確認）。
 - **未確認**: 道具禁止後の抽出段が stdout に JSON 配列を返すか（単独再試験 19:07 起動・結果は次の記帳で）。
+- **抽出段 単独再試験（19:07:42〜19:10・道具禁止フラグ付き・worklist 890件）**: `claude rc=0`・stdout 9,295 bytes・JSON 配列 18件を parse・末尾は ```` ``` ```` のみ（ラッパー許容内）＝**S2 合格**。`MultiEdit` は「既知の道具でない」警告のため一覧から除去（commit 次項）。
+- **Session Handoff（2026-09-12 19:15）**: 実装・試走とも完了（commit 5dd3a19→7367d79→e0ee441＋本 commit）。**残= T7 登録のみ（オーナーの `!` で `ln -s` + `launchctl load`）**。ロード後に `config/launchd/README.md` の行と `docs/pipeline-map.md` §4 未ロード一覧を「稼働中」へ更新する（次セッションの先頭作業）。
