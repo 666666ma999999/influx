@@ -79,4 +79,5 @@ influx-architecture.md §2（機能マップ）が代替（rules/05 K-308）。�
 | 道具禁止 | deviation（実害起点） | 叩き台は `--tools ""` 想定→試走2で無効と判明→`--disallowedTools` 明示（7367d79・998bf43） |
 | 試走の完走 | interpreted | 抽出段の fail-closed 後、残り段（採点）は統括が手動実行して1周を完成。次回の無人1周（土曜）が S5 の最終確認 |
 | launchd 登録 | open-question | AI 権限で `ln -s`/`launchctl load` が却下＝オーナー操作待ち |
+- **S6 達成（2026-09-13）**: オーナー `launchctl load` → `launchctl list | grep` = `-	0	com.influx.research-weekly`（実測）。S5 は初回無人実行 09-19 土 9:00 のログで判定。
 - **Codex レビュー（gpt-5.6-sol・2026-09-12 19:20・Critical 0／Major 5／Minor 2）→ 採用6・open 1**: M1 証跡をラッパーで強制上書き／M2 凍結34ユニークを不変条件化（research_weekly.py `EXPECTED_RESEARCH_ACCOUNTS`・ラッパー `accounts != 34` で停止）／M3 `winrate_worklist.py` は読込失敗で rc=1／M4 `winrate_ingest.py --mark-processed` で処理済み台帳を更新（worklist の無限再投入を止める）／Minor1 通知失敗を stderr に残す／Minor2 テストの引数一致を契約検証に緩和。**M5（S5 無人1周完走・S6 登録）は未達のまま open**＝オーナーの `launchctl load` 後、次の土曜 9:00 の1周で判定。

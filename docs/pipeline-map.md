@@ -55,8 +55,7 @@
 ## 4. 落とし穴（実測・人が書く）
 
 - **定義の置き場が2種**: `config/launchd/`（plist・本数は `ls config/launchd/*.plist | wc -l` で引く）・`scripts/scheduler/crontab.txt`（Linux/Docker 用の雛形・Mac では動かない）。※ `scripts/scheduler/` の plist は 2026-08-29 に旧 daily_pipeline を退役して 0 本になった。探すときは両方見る。
-- **repo にある定義と、実際に動いている本数は一致しない**。未ロードは `edinet-tob` / `kpi-loop-weekly` /
-  `research-weekly` / `tob-monthly` の4本（2026-08-29 に1本ずつ照合）。
+- **repo にある定義と、実際に動いている本数は一致しない**。未ロードは `kpi-loop-weekly` / `tob-monthly` の2本（2026-08-29 に4本を照合→ `edinet-tob` は 09-11 にロード済みと判明・`research-weekly` は 2026-09-13 にロード）。
   **この表は repo 側の定義を数える**（マシン非依存）ので、稼働数は `launchctl list | grep com.influx` で引く（数を書かない）。
 - **plist のコメントに `--` を書くと XML として壊れ、機械が読めなくなる**。`com.influx.tob-monthly.plist` が
   この状態だった（2026-08-14 修理済み）。コメントでオプションを書くときは `- -` と離す。
@@ -73,6 +72,6 @@
 
 ## 6. 未反映（対のファイルからの宿題・機械が積む/人が消す）
 - 2026-09-11 棚卸し実測: §4 の未ロード4本は3本（`edinet-tob` はロード済み・未ロードは kpi-loop-weekly／research-weekly／tob-monthly）。
-- 2026-09-12 P-INF-14 裁定 A: `research-weekly` は P3 実施（ラッパー改修＋試走1周・commit 5dd3a19/7367d79）。**登録はオーナーの `launchctl load` 待ち**＝ロード後に §4 の未ロード一覧から外す（正本= `config/launchd/README.md`）。`us_price_fetch.py` はどの plist からも呼ばれていない（米国株価の日次取得は定期未配線）
+- 2026-09-13: `research-weekly` をロード（P-INF-14 裁定 A・オーナー `launchctl load`・`launchctl list` 実測）。§4 の未ロードは kpi-loop-weekly／tob-monthly の2本に減った。初回無人実行 2026-09-19 土 9:00 の結果で S5 判定（`~/Library/Logs/influx-research-weekly.log`）。`us_price_fetch.py` はどの plist からも呼ばれていない（米国株価の日次取得は定期未配線）
 
 - 該当なし
