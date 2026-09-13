@@ -208,19 +208,29 @@ def parse_dramexchange(html: str, item: str = "512Gb TLC", header: str = "weekly
     # ヘッダ列順・更新日を同じ節の中だけで読む（固定幅3000字の窓だと隣の表のヘッダ/更新日を
     # 拾う＝Codex 2026-09-13 R1: 別表 Daily + 対象表 Weekly の合成入力で誤って値を返した）
     lu_re = re.compile(r"Last\s*Update:?\s*([A-Za-z]{3})\.?\s*(\d{1,2})\s+(\d{4})")
+    t_open = re.compile(r"<table\b", re.I)
     valid_rows: list[tuple[list[float], str, str]] = []
     for m in re.finditer(re.escape(item), html):
         end = html.find("</tr>", m.start())
         if end < 0:
             continue  # </tr> 不在の断片を「行」扱いしない（Codex R1-2）
-        lus = list(lu_re.finditer(html, 0, m.start()))
+        # 行が属する表= 直前の <table 開始〜行。ヘッダ列順はその表の中だけで照合する（隣表のヘッダを借りない）
+        opens = [t.start() for t in t_open.finditer(html, 0, m.start())]
+        if not opens:
+            continue
+        tstart = opens[-1]
+        if not header_re.search(html[tstart:m.start()]):
+            continue
+        # 更新日= 「前の価格表のヘッダ（Session Average）より後〜行」の間にある最後の Last Update
+        # （表の直前の見出し or 表内 caption）。前の価格表に属する更新日は借りない
+        # （Codex 2026-09-13 R1: caption 内 Last Update の合成入力で再現）。実ページは見出しと表の間に
+        # 小さな装飾テーブルが閉じるため </table> 基準だと自表の見出しを落とす（9/13 実測で両系列 None）
+        prev_hdrs = list(re.finditer(r"Session\s*Average", html[:tstart]))
+        prev_end = prev_hdrs[-1].end() if prev_hdrs else 0
+        lus = list(lu_re.finditer(html, prev_end, m.start()))
         if not lus:
-            continue  # 節の見出しが無い＝どの表か決められない
+            continue  # この表に属する更新日が無い＝どの節か決められない
         lu = lus[-1]
-        section = html[lu.start():m.start()]
-        # 節内にヘッダ列順の一致を要求し、節内の表が1つだけであることも要求（列並べ替え・別表マッチは欠測へ）
-        if not header_re.search(section) or len(re.findall(r"<table\b", section, re.I)) != 1:
-            continue  # 表タグは大小文字非依存で数える（<TABLE> で節判定をすり抜けた Codex R1 再現）
         row = html[m.start():end]
         cells = [float(c) for c in re.findall(r"<td[^>]*>\s*([0-9]+(?:\.[0-9]+)?)\s*</td>", row)]
         if len(cells) != 5:
@@ -1143,6 +1153,30 @@ def _selftest() -> int:
     bad = dram.replace("Sep.11 2026", "Sep.99 2026")
     b = parse_dramexchange(bad, item=DR, header="daily")
     chk("dx 実在しない日付→src_date空", bool(b) and b["src_date"] == "")
+    # 前表の caption 内に Last Update・対象表は <TABLE> Weekly（前表のヘッダ/更新日を借りてはいけない）
+    cap = ("<table><caption>Last Update: Sep.11 2026</caption><tr><td>Item</td><td>Daily High</td>"
+           "<td>Daily Low</td><td>Session High</td><td>Session Low</td><td>Session Average</td></tr>"
+           "<tr><td>DDR4 8Gb</td><td>8</td><td>4</td><td>8</td><td>4</td><td>5</td></tr></table>"
+           "<TABLE><tr><td>Item</td><td>Weekly High</td><td>Weekly Low</td><td>Session High</td>"
+           f"<td>Session Low</td><td>Session Average</td></tr><tr><td>{DR}</td><td>1</td><td>1</td>"
+           "<td>1</td><td>1</td><td>1</td></tr></TABLE>")
+    chk("dx caption更新日+隣表→None", parse_dramexchange(cap, item=DR, header="daily") is None)
+    # 表内 caption に更新日がある正常形は通る
+    cap_ok = cap.replace("<TABLE>", "<TABLE><caption>Last Update: Sep.12 2026</caption>")
+    c = parse_dramexchange(cap_ok, item=DR, header="weekly")
+    chk("dx 自表caption更新日を採る", bool(c) and c["src_date"] == "2026-09-12" and c["value"] == 1.0)
+
+    # 実ページ固定 fixture（2026-09-13 取得・合成入力だけでは表境界の変更で両系列 None を見逃した実害）
+    fx = Path(__file__).resolve().parents[1] / "tests" / "fixtures" / "dramexchange_top_20260913.html.gz"
+    if fx.exists():
+        import gzip
+        live = gzip.open(fx, "rt", encoding="utf-8", errors="ignore").read()
+        n = parse_dramexchange(live)
+        d = parse_dramexchange(live, item=DR, header="daily", layout="dramexchange_ddr5_16gb")
+        chk("dx 実ページ NAND 20.708/2026-08-31", bool(n) and n["value"] == 20.708 and n["src_date"] == "2026-08-31")
+        chk("dx 実ページ DRAM 54.333/2026-09-11", bool(d) and d["value"] == 54.333 and d["src_date"] == "2026-09-11")
+    else:
+        chk("dx 実ページ fixture 不在", False)
 
     print(f"[selftest] {'FAIL: ' + ', '.join(fails) if fails else 'all ok'}")
     return 1 if fails else 0
