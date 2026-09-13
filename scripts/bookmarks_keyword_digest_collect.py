@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Xブックマーク→キーワード抽出パイプライン: digest収集CLI（Docker実行・xai_sdk依存）。
 
-設計正本: ~/.claude/docs/x-keywords-plan.md 末尾セクション
+設計正本: docs/x-keywords-plan.md 末尾セクション
 「Plan: x-keywords v2 — AI 検索代行ダイジェスト」§詳細設計v2/§アーキテクチャ（C1バッチ）。
 
 `<inbox>/latest_snapshot.json`（呼び出し側がkeywords_latest.jsonをコピーして置く）の

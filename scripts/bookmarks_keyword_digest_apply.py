@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Xブックマーク→キーワード抽出パイプライン: digest確定CLI（host柵・stdlibのみ）。
 
-設計正本: ~/.claude/docs/x-keywords-plan.md 末尾セクション
+設計正本: docs/x-keywords-plan.md 末尾セクション
 「Plan: x-keywords v2 — AI 検索代行ダイジェスト」§詳細設計v2/§アーキテクチャ（C1バッチ）。
 
 inbox内の最新digest_raw/digest_statusペアを検証し、台帳（keywords_ledger.jsonl）へ

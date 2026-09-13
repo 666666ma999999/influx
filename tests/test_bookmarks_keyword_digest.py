@@ -1,7 +1,7 @@
 """bookmarks_keyword_digest_collect.py / bookmarks_keyword_digest_apply.py のfixtureテスト。
 
 Xブックマーク→キーワード抽出パイプラインの「候補記事ダイジェスト」機能（収集はDocker実行の
-xai_sdk依存、確定はhost柵のstdlibのみ）を検証する。設計正本: ~/.claude/docs/x-keywords-plan.md
+xai_sdk依存、確定はhost柵のstdlibのみ）を検証する。設計正本: docs/x-keywords-plan.md
 末尾セクション「Plan: x-keywords v2 — AI 検索代行ダイジェスト」（C1バッチ）。
 
 collect側はpureヘルパー（プロンプト組立・item正規化・status構築・min_faves中央値算出）のみを

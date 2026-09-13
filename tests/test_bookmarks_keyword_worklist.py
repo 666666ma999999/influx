@@ -2,7 +2,7 @@
 
 X ブックマーク→キーワード抽出パイプラインの共通庫（正規化・照合・URL正規キー・
 台帳I/O）とworklist生成CLIの振る舞いを検証する。設計正本:
-~/.claude/docs/x-keywords-plan.md §A/§B/§D/§E（B2バッチ）。
+docs/x-keywords-plan.md §A/§B/§D/§E（B2バッチ）。
 
 Docker・ネットワーク不要、stdlib unittestのみで完結する（全fixtureはtempdir）。
 

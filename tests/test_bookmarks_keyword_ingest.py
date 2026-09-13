@@ -2,7 +2,7 @@
 
 X ブックマーク→キーワード抽出パイプラインのingest CLI（検証→generationイベント
 append→latest.json再導出→ノートrender）を検証する。設計正本:
-~/.claude/docs/x-keywords-plan.md §B/§C/§D/§F/§G（B3バッチ）。
+docs/x-keywords-plan.md §B/§C/§D/§F/§G（B3バッチ）。
 
 Docker・ネットワーク不要、stdlib unittestのみで完結する（全fixtureはtempdir。
 実データ書込は一切しない）。

@@ -3,7 +3,7 @@
 
 worklist生成（bookmarks_keyword_worklist.py）とingest（bookmarks_keyword_ingest.py・
 別バッチで実装予定）の双方から import される正規化・照合・URL正規キー・台帳I/Oの
-一元実装。設計正本: ~/.claude/docs/x-keywords-plan.md §A/§D/§E。
+一元実装。設計正本: docs/x-keywords-plan.md §A/§D/§E。
 
 ## 提供API
 

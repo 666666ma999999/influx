@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Xブックマーク→キーワード抽出パイプライン: ingest CLI（柵・台帳・render）。
 
-設計正本: ~/.claude/docs/x-keywords-plan.md §B/§C/§D/§F/§G（B3バッチ）。
+設計正本: docs/x-keywords-plan.md §B/§C/§D/§F/§G（B3バッチ）。
 LLM が生成した result md（``` json x-keywords-generation フェンス1個）を検証し、
 台帳（keywords_ledger.jsonl）へ generation イベントを追記、latest.json を再導出、
 Vault ノートを決定的に render する。bookmarks_keyword_common.py（共通庫）の

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Xブックマーク→キーワード抽出パイプライン: digest収集CLI（無料ブラウザ収集版・xai_sdk不要）。
 
-設計正本: ~/.claude/docs/x-keywords-plan.md 末尾セクション
+設計正本: docs/x-keywords-plan.md 末尾セクション
 「Plan: x-keywords v2 — AI 検索代行ダイジェスト」§詳細設計v2/§アーキテクチャ（C1バッチ）。
 
 bookmarks_keyword_digest_collect.py（xai_sdk/API課金版）の無料版ツイン。

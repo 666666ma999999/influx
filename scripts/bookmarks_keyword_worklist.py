@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Xブックマーク→キーワード抽出パイプライン: worklist生成CLI。
 
-設計正本: ~/.claude/docs/x-keywords-plan.md §A-2/§B/§D（B2バッチ）。
+設計正本: docs/x-keywords-plan.md §A-2/§B/§D（B2バッチ）。
 bookmarks_keyword_common.py（共通庫）を用いて、raw取得済みブックマーク・台帳
 （keywords_ledger.jsonl）・Vaultノートの評価マークから、次回LLM生成の材料と
 なるworklist.jsonを生成する。台帳・ノートへの書込みはこのCLI自身は行わない

@@ -7,7 +7,7 @@ HTML（CSS/JSインライン）を決定的に生成する。評価（✅🔁�
 ページ内のボタンでlocalStorageへ蓄積し、「評価を保存」ボタンでJSON（schema:
 x-keywords-evals/1）を~/Downloadsへダウンロードする。週次worklist（--downloads-dir）
 がそのJSONを回収して台帳のevaluation_batchイベントへ反映する（設計正本:
-~/.claude/docs/x-keywords-plan.md §B・§F）。Obsidianノートの評価列は引き続き有効
+docs/x-keywords-plan.md §B・§F）。Obsidianノートの評価列は引き続き有効
 （併用可）。
 
 デザインはoutput/bookmarks_viewer.html（ダークX風テーマ・sticky header・検索
