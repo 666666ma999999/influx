@@ -204,17 +204,22 @@ def parse_dramexchange(html: str, item: str = "512Gb TLC", header: str = "weekly
     header_re = re.compile(
         rf"Item.{{0,200}}?{hi_lo}\s*High.{{0,200}}?{hi_lo}\s*Low.{{0,200}}?"
         r"Session\s*High.{0,200}?Session\s*Low.{0,200}?Session\s*Average", re.S)
-    valid_rows: list[tuple[list[float], str]] = []
-    seen_ends: set[int] = set()
+    # 節（section）= 直前の「Last Update」見出しから行まで。ページは表ごとに Last Update を持つので、
+    # ヘッダ列順・更新日を同じ節の中だけで読む（固定幅3000字の窓だと隣の表のヘッダ/更新日を
+    # 拾う＝Codex 2026-09-13 R1: 別表 Daily + 対象表 Weekly の合成入力で誤って値を返した）
+    lu_re = re.compile(r"Last\s*Update:?\s*([A-Za-z]{3})\.?\s*(\d{1,2})\s+(\d{4})")
+    valid_rows: list[tuple[list[float], str, str]] = []
     for m in re.finditer(re.escape(item), html):
         end = html.find("</tr>", m.start())
         if end < 0:
             continue  # </tr> 不在の断片を「行」扱いしない（Codex R1-2）
-        if end in seen_ends:
-            continue  # 同一行内の2回目の出現（リンク title 等）を別行と数えない
-        seen_ends.add(end)
-        # 直前3000字にヘッダ列順の一致を要求（列並べ替え・別表マッチは欠測へ。Codex R2-1）
-        if not header_re.search(html[max(0, m.start() - 3000):m.start()]):
+        lus = list(lu_re.finditer(html, 0, m.start()))
+        if not lus:
+            continue  # 節の見出しが無い＝どの表か決められない
+        lu = lus[-1]
+        section = html[lu.start():m.start()]
+        # 節内にヘッダ列順の一致を要求し、節内の表が1つだけであることも要求（列並べ替え・別表マッチは欠測へ）
+        if not header_re.search(section) or section.count("<table") != 1:
             continue
         row = html[m.start():end]
         cells = [float(c) for c in re.findall(r"<td[^>]*>\s*([0-9]+(?:\.[0-9]+)?)\s*</td>", row)]
@@ -223,10 +228,10 @@ def parse_dramexchange(html: str, item: str = "512Gb TLC", header: str = "weekly
         wk_hi, wk_lo, se_hi, se_lo, avg = cells
         if not (wk_hi >= wk_lo and se_hi >= se_lo and se_lo <= avg <= se_hi and avg > 0):
             continue  # ヘッダ一致後の数値健全性（欠損・桁化けの検知）
-        valid_rows.append((cells, row))
+        valid_rows.append((cells, row, lu.group(0)))
     if len(valid_rows) != 1:
         return None  # 0=構造変化・2以上=どれが正か決められない。誤セル記録より欠測を選ぶ
-    cells, row = valid_rows[0]
+    cells, row, lu_text = valid_rows[0]
     # 符号は up.gif / down.gif の排他的出現時のみ採用（両方・どちらも無し=方向不明でNone。Codex R2-2）
     pm = re.search(r"([0-9]+(?:\.[0-9]+)?)\s*%", row)
     has_up, has_down = "up.gif" in row, "down.gif" in row
@@ -234,10 +239,8 @@ def parse_dramexchange(html: str, item: str = "512Gb TLC", header: str = "weekly
         day_pct = -float(pm.group(1)) if has_down else float(pm.group(1))
     else:
         day_pct = None
-    # 更新日はページ先頭でなく「採用した行の近傍窓」から採る（別セクションのLast Update誤採用防止）
-    row_start = html.find(row)
-    near = html[max(0, row_start - 3000):row_start + len(row)]
-    dm = re.search(r"Last\s*Update:?\s*([A-Za-z]{3})\.?\s*(\d{1,2})\s+(\d{4})", near)
+    # 更新日は採用した行と同じ節の Last Update（別セクションの誤採用防止）
+    dm = lu_re.search(lu_text)
     months = {"Jan": 1, "Feb": 2, "Mar": 3, "Apr": 4, "May": 5, "Jun": 6,
               "Jul": 7, "Aug": 8, "Sep": 9, "Oct": 10, "Nov": 11, "Dec": 12}
     src_date = (f"{dm.group(3)}-{months[dm.group(1)]:02d}-{int(dm.group(2)):02d}"
@@ -1037,7 +1040,7 @@ def main(only: list[str] | None = None) -> int:
 
 
 def _selftest() -> int:
-    """USS/遊々亭パーサの境界回帰テスト（Codex NIT-7）。ネットワーク不要・fixtures内蔵。
+    """USS/遊々亭/dramexchange パーサの境界回帰テスト（Codex NIT-7）。ネットワーク不要・fixtures内蔵。
 
     実行: python scripts/price_universe_check.py --selftest
     """
@@ -1090,6 +1093,36 @@ def _selftest() -> int:
     y = parse_yuyutei("".join(card(100) for _ in range(50))
                       + "card-product<strong>9,999 円</strong>")
     chk("yuyu 非商品ブロック除外", bool(y) and y["n_items"] == 50)
+
+    # 7) dramexchange: 節（Last Update〜行）単位のヘッダ・更新日（Codex 2026-09-13 R1/R2）
+    def dx_section(title: str, date: str, hi_lo: str, rows: list[tuple[str, list]]) -> str:
+        hdr = (f"<tr><td>Item</td><td>{hi_lo} High</td><td>{hi_lo} Low</td><td>Session High</td>"
+               "<td>Session Low</td><td>Session Average</td><td>Change</td></tr>")
+        trs = "".join(f"<tr><td><a>{n}</a></td>" + "".join(f"<td>{c}</td>" for c in v)
+                      + "<td>0.00 %</td></tr>" for n, v in rows)
+        return f"<div>{title} Last Update: {date}</div><table>{hdr}{trs}</table>"
+
+    DR = "DDR5 16Gb (2Gx8) 4800/5600"
+    dram = dx_section("DRAM Spot Price", "Sep.11 2026", "Daily", [(DR, [66.0, 39.0, 66.0, 39.0, 54.333])])
+    modl = dx_section("Module Spot Price", "Aug.31 2026", "Weekly", [("DDR5 UDIMM 16GB", [245, 220, 245, 220, 230.0])])
+    nand = dx_section("Flash Spot Price", "Aug.31 2026", "Weekly", [("512Gb TLC", [22.0, 17.5, 22.0, 17.5, 20.708])])
+    page = dram + modl + nand
+    d = parse_dramexchange(page, item=DR, header="daily", layout="x")
+    chk("dx DRAM 値と同節の更新日", bool(d) and d["value"] == 54.333 and d["src_date"] == "2026-09-11")
+    n = parse_dramexchange(page)
+    chk("dx NAND 既定引数で従来値", bool(n) and n["value"] == 20.708 and n["src_date"] == "2026-08-31")
+    chk("dx ヘッダ種別違い→None", parse_dramexchange(page, item=DR, header="weekly") is None)
+    chk("dx 行不在→None", parse_dramexchange(page, item="DDR9 zzz", header="daily") is None)
+    # 別表(Daily)が直前・対象表は Weekly → 固定幅窓なら通ってしまう合成入力。節単位なら None
+    swapped = (dx_section("DRAM Spot Price", "Sep.11 2026", "Daily", [("DDR4 8Gb", [8.0, 4.0, 8.0, 4.0, 5.0])])
+               + dx_section("Flash Spot Price", "Aug.31 2026", "Weekly", [(DR, [1.0, 1.0, 1.0, 1.0, 1.0])]))
+    chk("dx 隣表ヘッダで通さない", parse_dramexchange(swapped, item=DR, header="daily") is None)
+    # 同名行が2つの表に在る（どれが正か決められない）→ None
+    dup = dram + dx_section("Other", "Sep.11 2026", "Daily", [(DR, [2.0, 1.0, 2.0, 1.0, 1.5])])
+    chk("dx 別行重複→None", parse_dramexchange(dup, item=DR, header="daily") is None)
+    # 同一行内でアンカーが2回出る（title 属性と本文）→ 従来どおり候補2件で None（fail-closed・挙動不変）
+    twice = dram.replace(f"<a>{DR}</a>", f"<a title='{DR}'>{DR}</a>")
+    chk("dx 同一行内重複→None(従来挙動)", parse_dramexchange(twice, item=DR, header="daily") is None)
 
     print(f"[selftest] {'FAIL: ' + ', '.join(fails) if fails else 'all ok'}")
     return 1 if fails else 0

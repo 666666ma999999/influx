@@ -19,6 +19,7 @@
   - https://www.techtimes.com/articles/326837/20260907/memory-runs-dry-samsung-sk-hynix-drop-below-10-day-supply-hbm4-devours-capacity.htm
   - https://www.networkworld.com/article/4113772/samsung-warns-of-memory-shortages-driving-industry-wide-price-surge-in-2026.html
 - **DRAM スポットの起点日（2026-09-13 追記・P-INF-16 裁定a）**: 系列 `dram_spot_ddr5_16gb`（dramexchange DDR5 16Gb 2Gx8 4800/5600・セッション平均 USD）を価格台帳に登録。履歴（daytrading.monster snapshot・TrendForce 系二次・週次終値）で見ると **底= 2026-03-30 週 37.00 → 上昇開始= 2026-04-13 週（+4.0%）→ 4週比 +10% を初めて超えた週= 2026-06-15（46.00）→ 2026-09-07 週 54.33（底比 +46.8%）**。**直近4週は +3.0% で横ばい**＝スポットの急騰は 4〜7 月で、9/11 の X 投稿は価格の起点から約5ヶ月後。月次終値: 1月 37.2／4月 39.0／6月 46.8／8月 53.9／9月 54.3。
+  - 再現: 履歴は `data/price_watch/dram_spot_history_dtm_20260913.json`（daytrading.monster snapshot・2026-09-13 取得）の `weekly["DDR5 16Gb (2Gx8) 4800/5600"]` の close。算式= 底= 最小 close の週／上昇開始= 底の後で最初に週次 +1% 超の週／急騰認定= close ÷ 4週前 close − 1 が初めて +10% を超えた週（既定の 4週閾値 10% と同じ）／現在= 最終週 close ÷ 底 − 1。確度= 二次資料（TrendForce 系の転載・未調整）。
   - 注意: 自前台帳の日次記録は 2026-09-13 から（それ以前は上記二次資料）。同ページの NAND 表は 8/31 で更新が止まっている（DRAM 表は 9/11）。
 - 帰属ルール: `docs/price-watch-universe.md` §0a/§0b（受益カード5関門。セグメント営業利益 ≥30%＝確証／10〜30%＝暫定／買う側＝符号−）。既存台帳 `configs/x_shortage_map.json` subjects[dram] の 19 行（受益13＋買う側6）は判定をそのまま転記し、覆していない。
 - 凡例: 符号 ＋=受益／−=逆風／0=中立。関門判定= 確証／暫定／未確認／却下。株価判定= 反応済／未反応（超過3M の符号）。
