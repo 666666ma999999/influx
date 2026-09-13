@@ -185,8 +185,12 @@ def parse_yuyutei(html: str) -> dict | None:
             "n_items": n, "src_date": "", "layout": "yuyutei_sar_v1"}
 
 
-def parse_dramexchange(html: str) -> dict | None:
-    """DRAMeXchange 無料トップの NAND スポット（512Gb TLC）セッション平均(USD)を採る。
+def parse_dramexchange(html: str, item: str = "512Gb TLC", header: str = "weekly",
+                       layout: str = "dramexchange_512gb_tlc") -> dict | None:
+    """DRAMeXchange 無料トップのスポット表から1行（既定= NAND 512Gb TLC）のセッション平均(USD)を採る。
+
+    2026-09-13 P-INF-16: `item`（行アンカー）と `header`（"weekly"= Weekly High/Low 表・"daily"= Daily
+    High/Low 表＝DRAM Spot）を引数化し DRAM DDR5 16Gb を同じ関数で採る。既定値は NAND の従来挙動と同一。
 
     波3前倒し（2026-08-03 ユーザー裁定B・tasks/expand_30_categories.md）。
     行構造: 「512Gb TLC」アンカー後の数値 td 並び = [日中高値, 日中安値, セッション高値,
@@ -196,14 +200,19 @@ def parse_dramexchange(html: str) -> dict | None:
     """
     # 列の意味はヘッダ行ラベルの順序で固定する（Codex R2: 数値の大小関係だけでは列順を一意にできない）。
     # 実測ヘッダ: Item | Weekly High | Weekly Low | Session High | Session Low | Session Average | Average Change
+    hi_lo = {"weekly": "Weekly", "daily": "Daily"}[header]
     header_re = re.compile(
-        r"Item.{0,200}?Weekly\s*High.{0,200}?Weekly\s*Low.{0,200}?"
+        rf"Item.{{0,200}}?{hi_lo}\s*High.{{0,200}}?{hi_lo}\s*Low.{{0,200}}?"
         r"Session\s*High.{0,200}?Session\s*Low.{0,200}?Session\s*Average", re.S)
     valid_rows: list[tuple[list[float], str]] = []
-    for m in re.finditer(r"512Gb TLC", html):
+    seen_ends: set[int] = set()
+    for m in re.finditer(re.escape(item), html):
         end = html.find("</tr>", m.start())
         if end < 0:
             continue  # </tr> 不在の断片を「行」扱いしない（Codex R1-2）
+        if end in seen_ends:
+            continue  # 同一行内の2回目の出現（リンク title 等）を別行と数えない
+        seen_ends.add(end)
         # 直前3000字にヘッダ列順の一致を要求（列並べ替え・別表マッチは欠測へ。Codex R2-1）
         if not header_re.search(html[max(0, m.start() - 3000):m.start()]):
             continue
@@ -234,7 +243,7 @@ def parse_dramexchange(html: str) -> dict | None:
     src_date = (f"{dm.group(3)}-{months[dm.group(1)]:02d}-{int(dm.group(2)):02d}"
                 if dm and dm.group(1) in months else "")
     return {"value": cells[4], "day_pct": day_pct, "weekly_pct": None,
-            "monthly_pct": None, "src_date": src_date, "layout": "dramexchange_512gb_tlc"}
+            "monthly_pct": None, "src_date": src_date, "layout": layout}
 
 
 def parse_scfi(payload: dict) -> dict | None:
@@ -760,7 +769,10 @@ def main(only: list[str] | None = None) -> int:
             elif s["type"] == "tanaka":
                 parsed = parse_tanaka(fetch("https://gold.tanaka.co.jp/commodity/souba/"))
             elif s["type"] == "dramexchange":
-                parsed = parse_dramexchange(fetch("https://www.dramexchange.com/"))
+                parsed = parse_dramexchange(
+                    fetch("https://www.dramexchange.com/"),
+                    item=s.get("item", "512Gb TLC"), header=s.get("header", "weekly"),
+                    layout=s.get("layout", "dramexchange_512gb_tlc"))
             elif s["type"] == "uss":
                 parsed = parse_uss(fetch("https://www.ussnet.co.jp/ir/library/monthly/index.html"))
             elif s["type"] == "yuyutei":

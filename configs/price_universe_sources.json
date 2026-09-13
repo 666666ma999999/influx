@@ -2560,6 +2560,17 @@
       ]
     },
     {
+      "id": "dram_spot_ddr5_16gb",
+      "label": "DRAM DDR5 16Gb (2Gx8) 4800/5600 Spot",
+      "type": "dramexchange",
+      "item": "DDR5 16Gb (2Gx8) 4800/5600",
+      "header": "daily",
+      "layout": "dramexchange_ddr5_16gb",
+      "jp": "DRAMスポット価格(DDR5 16Gb)",
+      "beneficiaries": [],
+      "note": "2026-09-13 P-INF-16 裁定a で登録（DRAM不足の急騰起点日を機械で出すため）。同一ページの DRAM Spot 表（Daily High/Low 列・Last Update は NAND 表より新しい＝9/13 実測で DRAM=Sep.11・Flash=Aug.31）。受益カードは結線しない: 日本株の DRAM 受益は装置・材料の数量型（configs/x_shortage_map.json subjects[dram] が正本・§11 装置=数量型は価格系列に非掲載）、価格受益の本体（Micron/SK hynix/Samsung/Nanya/Winbond）は海外＝§16w の決算実読が別 task。履歴の裏取りは daytrading.monster/tools/dram/snapshot.json（TrendForce 系二次・45日日次＋30週週次）。"
+    },
+    {
       "id": "memory-asp-estat",
       "label": "e-Stat Current Production Memory implied ASP",
       "type": "estat_asp",

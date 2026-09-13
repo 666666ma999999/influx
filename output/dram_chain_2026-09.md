@@ -18,7 +18,8 @@
 - Samsung/SK hynix の完成品 DRAM 在庫が 10 日分未満（TechTimes 2026-09-07）。汎用 DRAM 契約価格は 1Q26 +90〜95% q/q・2Q26 +58〜63%（TrendForce 経由）。HBM4 は従来 DRAM 比 3 倍のウエハを消費し、2026 年の HBM は 3 社とも完売。
   - https://www.techtimes.com/articles/326837/20260907/memory-runs-dry-samsung-sk-hynix-drop-below-10-day-supply-hbm4-devours-capacity.htm
   - https://www.networkworld.com/article/4113772/samsung-warns-of-memory-shortages-driving-industry-wide-price-surge-in-2026.html
-- 手元の価格台帳（`data/price_watch/universe_weekly.jsonl`）は NAND スポットのみ登録で **DRAM スポット系列は未登録**（実測）。DRAM 価格の起点日は自前データでは特定できない（§7 残タスク）。
+- **DRAM スポットの起点日（2026-09-13 追記・P-INF-16 裁定a）**: 系列 `dram_spot_ddr5_16gb`（dramexchange DDR5 16Gb 2Gx8 4800/5600・セッション平均 USD）を価格台帳に登録。履歴（daytrading.monster snapshot・TrendForce 系二次・週次終値）で見ると **底= 2026-03-30 週 37.00 → 上昇開始= 2026-04-13 週（+4.0%）→ 4週比 +10% を初めて超えた週= 2026-06-15（46.00）→ 2026-09-07 週 54.33（底比 +46.8%）**。**直近4週は +3.0% で横ばい**＝スポットの急騰は 4〜7 月で、9/11 の X 投稿は価格の起点から約5ヶ月後。月次終値: 1月 37.2／4月 39.0／6月 46.8／8月 53.9／9月 54.3。
+  - 注意: 自前台帳の日次記録は 2026-09-13 から（それ以前は上記二次資料）。同ページの NAND 表は 8/31 で更新が止まっている（DRAM 表は 9/11）。
 - 帰属ルール: `docs/price-watch-universe.md` §0a/§0b（受益カード5関門。セグメント営業利益 ≥30%＝確証／10〜30%＝暫定／買う側＝符号−）。既存台帳 `configs/x_shortage_map.json` subjects[dram] の 19 行（受益13＋買う側6）は判定をそのまま転記し、覆していない。
 - 凡例: 符号 ＋=受益／−=逆風／0=中立。関門判定= 確証／暫定／未確認／却下。株価判定= 反応済／未反応（超過3M の符号）。
 
@@ -333,7 +334,7 @@ DRAM を買う側（符号−）のサーバ・PC メーカーが 3 ヶ月で大
 - **有価証券報告書「主要な販売先」の直接実読は 0 件**（firecrawl 本日上限・WebSearch 要約経由）。日本株 L1 の顧客別 % は台帳既載のディスコ TSMC 11.0% 以外すべて未確認。
 - Hanwha Semitech・Team Group はティッカー未確定。Micron の 17% 顧客は匿名開示（Nvidia は推定）。
 - 海外騰落は Yahoo 未調整終値（分割・配当未補正）。香港・蘭・中国は指数未取得。
-- DRAM スポット系列が自前台帳に無い → `price_universe_sources.json` へ dramexchange 系列を登録すれば起点日を機械で出せる（別 task・price-source-onboarding）。
+- ~~DRAM スポット系列が自前台帳に無い~~ → 2026-09-13 に `dram_spot_ddr5_16gb` を登録（§1）。初回の週次自動実行は launchd `com.influx.price-universe` 2026-09-14 11:00（終了コード確認まで未完）。海外 DRAM メーカーの受益カード（§16w・決算実読）は別 task。
 - 「未反応」は 6/10 起点の 3 ヶ月窓に依存。起点を変えると Samsung/SK hynix・キオクシアは反応済に変わる。
 
 再現: `python3 scripts/_tmp_dram_chain_returns.py <コード...> --base 20260910`（TOPIX= data/jquants/topix.json.gz・分割は AdjFactor 累積で補正）。海外= scratchpad `fetch_returns.py`（Yahoo chart API）。
