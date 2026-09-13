@@ -707,7 +707,8 @@ def fetch_iata() -> dict | None:
 #   ２０２６年度７月輸出船契約実績  ← 表題（全角数字）
 #   <4,026,569> <610,420> <297,478> <312,948> <646,862> <403,390> <1,660,678> <2,597,776>  ← CGT 行
 #   (84.5) (117.1) (106.0) (74.9) (104.1) (221.4) (110.7) (108.5)                            ← 前年度同月比
-# 列順= 前年度計・3月・4月・…・当月・4〜当月・1〜当月（当月＝後ろから3番目）。
+# 列順= 8列固定: 前年度計・直近4か月の窓（先頭は「4～6月」型の集計列のことあり）・当月・4〜当月・1〜当月。
+# 当月の位置は月ラベル行の後ろから3番目で確定（2026-09-13 バックテストで 2015年度〜136本の全月を検証）。
 
 _JSEA_RESULTS = "https://www.jsea.or.jp/results/"
 _ZEN2HAN = str.maketrans("０１２３４５６７８９", "0123456789")
@@ -718,9 +719,14 @@ def parse_jsea(txt: str) -> dict | None:
 
     「輸出船契約実績」の節（「輸出船通関実績」の表題より前）にスコープし、表題
     「YYYY年度M月輸出船契約実績」（全角数字あり）から対象月を採る。年度→暦年は 1〜3月なら翌年。
-    自己検証2つ（列取り違えの検知・合わなければ None）:
-      1. 月列の本数（3月〜当月）が表題の月と一致する
-      2. 4月〜当月の CGT 合計 ＝「4〜当月」列（後ろから2番目）±0.5%
+    表は全期間（2015年度〜）**8列固定**: 前年度計｜直近4か月の窓（先頭は「4～6月」のような集計列のことがある）
+    ｜当月｜4〜当月｜1〜当月。当月の位置は月ラベル行（例「3月 4月 5月 6月 7月 4～7月 1～7月」）の
+    後ろから3番目で確定する（2026-09-13 バックテストで判明: 旧実装は「月列本数＝表題の月」を仮定して
+    おり 7月分しか読めなかった＝136本中12本）。
+    自己検証（列取り違えの検知・合わなければ None）:
+      1. ラベル行の当月 ＝ 表題の月
+      2. 窓のうち当年度分 ＋ 当月 の CGT 合計 ＝「4〜当月」列 ±0.5%
+      3. 前年同月比行が 8 列で取れる（唯一の判定指標なので欠ければ失敗）
     """
     end = txt.find("輸出船通関実績")
     scope = txt[:end] if end > 0 else txt
@@ -733,31 +739,45 @@ def parse_jsea(txt: str) -> dict | None:
     fy, mth = int(d.group(1)), int(d.group(2))
     if not 1 <= mth <= 12:
         return None
+    hdr = re.search(r"^((?:\s*(?:\d{4}年)?\d+(?:～\d+)?月\s*){7})$", norm, re.M)
+    if not hdr:
+        return None
+    labels = hdr.group(1).split()
+    if labels[-3] != f"{mth}月":
+        return None  # 当月ラベルが表題と食い違う＝列位置を信用しない
     cgt_line = re.search(r"^(?:\s*<[0-9][0-9,]*>\s*){5,}$", norm, re.M)
     if not cgt_line:
         return None
     cgt = [_num(v) for v in re.findall(r"<([0-9][0-9,]*)>", cgt_line.group(0))]
-    n = len(cgt)
-    m_eff = mth if mth >= 4 else mth + 12  # 年度内の通し月（4月=4 … 3月=15）
-    if n - 1 != m_eff:  # 列= 前年度計 + (3月〜当月: m_eff-2本) + 4〜当月 + 1〜当月
+    if len(cgt) != 8:
         return None
-    fy_sum = sum(cgt[2:n - 2])  # 4月〜当月
-    if cgt[-2] <= 0 or abs(fy_sum / cgt[-2] - 1) > 0.005:
+
+    def _eff(m: int) -> int:  # 年度内の通し月（4月=4 … 3月=15）
+        return m if m >= 4 else m + 12
+
+    me = _eff(mth)
+    fy_sum = cgt[5]
+    for lab, v in zip(labels[:4], cgt[1:5]):
+        lm = re.match(r"(?:\d{4}年)?(?:4～)?(\d+)月", lab)
+        if not lm:
+            return None
+        x = _eff(int(lm.group(1)))
+        in_fy = (x < me) if "～" in lab else (4 <= x < me)
+        if "～" in lab and x < 4:
+            in_fy = False
+        if in_fy:
+            fy_sum += v
+    if cgt[6] <= 0 or abs(fy_sum / cgt[6] - 1) > 0.005:
         return None
-    value = cgt[-3]
-    yoy = None
     yoy_line = re.search(r"^(?:\s*\([0-9]+(?:\.[0-9]+)?\)\s*){5,}$", norm[cgt_line.end():], re.M)
-    if yoy_line:
-        ratios = [float(v) for v in re.findall(r"\(([0-9]+(?:\.[0-9]+)?)\)", yoy_line.group(0))]
-        if len(ratios) == n:
-            yoy = round(ratios[-3] - 100, 2)
-    if yoy is None:
-        # 前年同月比は本系列の唯一の判定指標（前月比は無効化）。欠けたまま ok にすると通知不能の月が
-        # 台帳に残り、後日正常取得しても同月重複抑止で鳴らない（Codex 2026-09-13）。parse_seaj と同じく失敗扱い
+    if not yoy_line:
+        return None  # 前年同月比は唯一の判定指標（Codex 2026-09-13）＝欠けた月を ok にしない
+    ratios = [float(v) for v in re.findall(r"\(([0-9]+(?:\.[0-9]+)?)\)", yoy_line.group(0))]
+    if len(ratios) != 8:
         return None
     year = fy + 1 if mth <= 3 else fy
-    return {"value": value, "day_pct": None, "weekly_pct": None, "monthly_pct": None,
-            "yoy_pct": yoy, "src_date": f"{year}-{mth:02d}", "layout": "jsea_pdf_v1"}
+    return {"value": cgt[5], "day_pct": None, "weekly_pct": None, "monthly_pct": None,
+            "yoy_pct": round(ratios[5] - 100, 2), "src_date": f"{year}-{mth:02d}", "layout": "jsea_pdf_v1"}
 
 
 def fetch_jsea() -> dict | None:
@@ -922,28 +942,39 @@ def _selftest() -> int:  # noqa: C901
         parse_iata("released data for July 2026: Total demand, measured in revenue passenger kilometers "
                    "(RPK), was up 75.0% compared to July 2025.") is None)
     # JSEA（2026-09-13 新設・三井E&S 7003）。固定行は output/_tmp_jsea_2026_07.pdf の pypdf 抽出そのまま
-    _jsea = ("２０２６年度７月輸出船契約実績\n貨物船 21 1,232,194 1 11,400\n計\n"
+    _jsea = ("２０２６年度７月輸出船契約実績\n隻 総トン 隻 総トン\n3月 4月 5月 6月 7月 4～7月 1～7月\n"
+             "貨物船 21 1,232,194 1 11,400\n計\n"
              "<4,026,569> <610,420> <297,478> <312,948> <646,862> <403,390> <1,660,678> <2,597,776>\n"
              "(84.5) (117.1) (106.0) (74.9) (104.1) (221.4) (110.7) (108.5)\n"
              " (   ) は前年度同月比。\n２０２６年度７月輸出船通関実績\n"
              "<9,999,999> <1> <2> <3> <4> <5> <6> <7>\n(50.0) (50.0) (50.0) (50.0) (50.0) (50.0) (50.0) (50.0)\n")
     js = parse_jsea(_jsea)
-    chk("jsea 当月CGT=後ろから3番目/前年比−100/暦年月（通関実績の表は読まない）",
+    chk("jsea 当月CGT=ラベル行の当月位置/前年比−100/暦年月（通関実績の表は読まない）",
         bool(js) and js["value"] == 403390.0 and js["yoy_pct"] == 121.4
         and js["src_date"] == "2026-07" and js["monthly_pct"] is None)
     chk("jsea 4〜当月の合計≠累計列→None（列取り違えの検知）",
         parse_jsea(_jsea.replace("<403,390>", "<503,390>")) is None)  # 累計と6%ずれ
-    chk("jsea 月列本数が表題の月と不一致→None",
+    chk("jsea 当月ラベル≠表題の月→None",
         parse_jsea(_jsea.replace("２０２６年度７月輸出船契約実績", "２０２６年度８月輸出船契約実績")) is None)
-    _jan = ("２０２６年度１月輸出船契約実績\n"
-            "<100> " + " ".join(f"<{i}>" for i in range(1, 12)) + " <65> <200>\n")
-    js = parse_jsea(_jan + " ".join("(110.0)" for _ in range(14)) + "\n")
+    # 8月分以降は8列固定のまま窓がずれる（実PDF 2025年8月分の型: 窓の先頭が「4～5月」の集計列）
+    _aug = ("２０２５年度８月輸出船契約実績\n4～5月 6月 7月 8月 4～8月 1～8月\n"
+            "2024年4～5月 6月 7月 8月 4～8月 1～8月\n")
+    _aug = ("２０２５年度８月輸出船契約実績\n4～5月 6月 7月 8月 4～8月 1～8月 12月\n")
+    _aug = ("２０２５年度８月輸出船契約実績\n3月 4～5月 6月 7月 8月 4～8月 1～8月\n"
+            "<100> <20> <30> <40> <50> <60> <180> <300>\n"
+            "(90.0) (100.0) (100.0) (100.0) (100.0) (150.0) (100.0) (100.0)\n")
+    js = parse_jsea(_aug)
+    chk("jsea 8月分（窓の先頭が集計列）も8列固定で当月を採る（2026-09-13 バックテストの回帰）",
+        bool(js) and js["value"] == 60.0 and js["yoy_pct"] == 50.0 and js["src_date"] == "2025-08")
+    _jan = ("２０２６年度１月輸出船契約実績\n3月 10月 11月 12月 1月 4～1月 1～1月\n"
+            "<100> <5> <6> <7> <8> <9> <30> <200>\n")
+    js = parse_jsea(_jan + " ".join("(110.0)" for _ in range(8)) + "\n")
     chk("jsea 1〜3月は翌暦年（年度→暦年）",
-        bool(js) and js["src_date"] == "2027-01" and js["value"] == 11.0 and js["yoy_pct"] == 10.0)
+        bool(js) and js["src_date"] == "2027-01" and js["value"] == 9.0 and js["yoy_pct"] == 10.0)
     chk("jsea 前年比行なし→None（唯一の判定指標が欠けた月を ok にしない・Codex 指摘）",
         parse_jsea(_jan) is None)
     chk("jsea 前年比行の列数不一致→None",
-        parse_jsea(_jan + " ".join("(110.0)" for _ in range(13)) + "\n") is None)
+        parse_jsea(_jan + " ".join("(110.0)" for _ in range(7)) + "\n") is None)
     chk("jsea 契約実績の節が無ければ None",
         parse_jsea("２０２６年度７月輸出船通関実績\n<1> <2> <3> <4> <5>\n") is None)
 
