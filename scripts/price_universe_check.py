@@ -219,8 +219,8 @@ def parse_dramexchange(html: str, item: str = "512Gb TLC", header: str = "weekly
         lu = lus[-1]
         section = html[lu.start():m.start()]
         # 節内にヘッダ列順の一致を要求し、節内の表が1つだけであることも要求（列並べ替え・別表マッチは欠測へ）
-        if not header_re.search(section) or section.count("<table") != 1:
-            continue
+        if not header_re.search(section) or len(re.findall(r"<table\b", section, re.I)) != 1:
+            continue  # 表タグは大小文字非依存で数える（<TABLE> で節判定をすり抜けた Codex R1 再現）
         row = html[m.start():end]
         cells = [float(c) for c in re.findall(r"<td[^>]*>\s*([0-9]+(?:\.[0-9]+)?)\s*</td>", row)]
         if len(cells) != 5:
@@ -243,8 +243,12 @@ def parse_dramexchange(html: str, item: str = "512Gb TLC", header: str = "weekly
     dm = lu_re.search(lu_text)
     months = {"Jan": 1, "Feb": 2, "Mar": 3, "Apr": 4, "May": 5, "Jun": 6,
               "Jul": 7, "Aug": 8, "Sep": 9, "Oct": 10, "Nov": 11, "Dec": 12}
-    src_date = (f"{dm.group(3)}-{months[dm.group(1)]:02d}-{int(dm.group(2)):02d}"
-                if dm and dm.group(1) in months else "")
+    src_date = ""
+    if dm and dm.group(1) in months:
+        try:  # 実在しない日付（Sep.99 等）は空にして下流の strptime 例外を防ぐ（Codex 2026-09-13 S2）
+            src_date = datetime(int(dm.group(3)), months[dm.group(1)], int(dm.group(2))).strftime("%Y-%m-%d")
+        except ValueError:
+            src_date = ""
     return {"value": cells[4], "day_pct": day_pct, "weekly_pct": None,
             "monthly_pct": None, "src_date": src_date, "layout": layout}
 
@@ -827,6 +831,13 @@ def main(only: list[str] | None = None) -> int:
                     (datetime.strptime(today, "%Y-%m-%d")
                      - datetime.strptime(parsed["src_date"], "%Y-%m-%d")).days > 3:
                 status = "stale"
+            # DRAM スポット（dramexchange DRAM 表）は営業日日次更新。同ページの Flash 表が 2026-08-31 で
+            # 止まったまま ok を返し続けた実測（9/13）を受け、7日超の古さは stale（週次ジョブ＋週末・祝日の余裕）。
+            # NAND（layout dramexchange_512gb_tlc）は既存挙動維持のため対象外＝オーナー裁定待ち（P-INF-16 残）
+            if parsed.get("layout") == "dramexchange_ddr5_16gb" and parsed.get("src_date") and \
+                    (datetime.strptime(today, "%Y-%m-%d")
+                     - datetime.strptime(parsed["src_date"], "%Y-%m-%d")).days > 7:
+                status = "stale"
             # FMBIは営業日日次10:30JST公表。通常3日・三連休4日空き、年末年始/GWは最大11日
             # （実測）なので閾値は5日。年2回程度の誤 stale は許容する
             if parsed.get("layout") == "fmbi_json" and parsed.get("src_date") and \
@@ -1123,6 +1134,15 @@ def _selftest() -> int:
     # 同一行内でアンカーが2回出る（title 属性と本文）→ 従来どおり候補2件で None（fail-closed・挙動不変）
     twice = dram.replace(f"<a>{DR}</a>", f"<a title='{DR}'>{DR}</a>")
     chk("dx 同一行内重複→None(従来挙動)", parse_dramexchange(twice, item=DR, header="daily") is None)
+
+    # 大文字 <TABLE> ＋対象表に Last Update 無し → 前表の節に吸われて通ってはいけない（Codex R1 残存経路）
+    upper = dram.replace(DR, "DDR4 8Gb") + ("<TABLE><tr><td>Item</td><td>Weekly High</td><td>Weekly Low</td>"
+                                            "<td>Session High</td><td>Session Low</td><td>Session Average</td></tr>"
+                                            f"<tr><td>{DR}</td><td>1</td><td>1</td><td>1</td><td>1</td><td>1</td></tr></TABLE>")
+    chk("dx 大文字TABLE+更新日欠落→None", parse_dramexchange(upper, item=DR, header="daily") is None)
+    bad = dram.replace("Sep.11 2026", "Sep.99 2026")
+    b = parse_dramexchange(bad, item=DR, header="daily")
+    chk("dx 実在しない日付→src_date空", bool(b) and b["src_date"] == "")
 
     print(f"[selftest] {'FAIL: ' + ', '.join(fails) if fails else 'all ok'}")
     return 1 if fails else 0
