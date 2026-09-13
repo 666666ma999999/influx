@@ -335,7 +335,7 @@ DRAM を買う側（符号−）のサーバ・PC メーカーが 3 ヶ月で大
 - **有価証券報告書「主要な販売先」の直接実読は 0 件**（firecrawl 本日上限・WebSearch 要約経由）。日本株 L1 の顧客別 % は台帳既載のディスコ TSMC 11.0% 以外すべて未確認。
 - Hanwha Semitech・Team Group はティッカー未確定。Micron の 17% 顧客は匿名開示（Nvidia は推定）。
 - 海外騰落は Yahoo 未調整終値（分割・配当未補正）。香港・蘭・中国は指数未取得。
-- ~~DRAM スポット系列が自前台帳に無い~~ → 2026-09-13 に `dram_spot_ddr5_16gb` を登録（§1）。初回の週次自動実行は launchd `com.influx.price-universe` 2026-09-14 11:00（終了コード確認まで未完）。DRAM 系列は公表日 7 日超で stale（アラート抑止）。**未確定（オーナー裁定待ち）: 同ページの NAND 表は 8/31 で更新停止のまま ok 扱い＝同じ stale 規則を NAND にも当てるか**（当てると既存 285A カードの発火条件が変わる）。海外 DRAM メーカーの受益カード（§16w・決算実読）は別 task。
+- ~~DRAM スポット系列が自前台帳に無い~~ → 2026-09-13 に `dram_spot_ddr5_16gb` を登録（§1）。初回の週次自動実行は launchd `com.influx.price-universe` 2026-09-14 11:00（終了コード確認まで未完）。DRAM 系列は公表日 7 日超で stale（アラート抑止）。Codex レビュー3周（R1 表境界）: 実ページ構造は fixture で固定・合成の敵対 HTML（前表 tfoot 内の更新日／閉じた入れ子表）では別表借用が残る＝仕様準拠 FAIL 判定のまま据え置き（3-Fix 到達・完全保証は HTML パーサ置換の別 task）。**未確定（オーナー裁定待ち）: 同ページの NAND 表は 8/31 で更新停止のまま ok 扱い＝同じ stale 規則を NAND にも当てるか**（当てると既存 285A カードの発火条件が変わる）。海外 DRAM メーカーの受益カード（§16w・決算実読）は別 task。
 - 「未反応」は 6/10 起点の 3 ヶ月窓に依存。起点を変えると Samsung/SK hynix・キオクシアは反応済に変わる。
 
 再現: `python3 scripts/_tmp_dram_chain_returns.py <コード...> --base 20260910`（TOPIX= data/jquants/topix.json.gz・分割は AdjFactor 累積で補正）。海外= scratchpad `fetch_returns.py`（Yahoo chart API）。

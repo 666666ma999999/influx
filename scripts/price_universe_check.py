@@ -207,6 +207,10 @@ def parse_dramexchange(html: str, item: str = "512Gb TLC", header: str = "weekly
     # 節（section）= 直前の「Last Update」見出しから行まで。ページは表ごとに Last Update を持つので、
     # ヘッダ列順・更新日を同じ節の中だけで読む（固定幅3000字の窓だと隣の表のヘッダ/更新日を
     # 拾う＝Codex 2026-09-13 R1: 別表 Daily + 対象表 Weekly の合成入力で誤って値を返した）
+    # 既知の限界（Codex 2026-09-13 第3回・3-Fix 到達で据え置き＝オーナー報告済み）: 正規表現ベースのため
+    # 〈前表の <tfoot> 内 Last Update〉〈閉じた入れ子表のヘッダ/caption〉を持つ敵対的 HTML では別表を借用しうる。
+    # 実ページ（tests/fixtures/dramexchange_top_20260913.html.gz）にその構造は無く fixture で回帰を固定。
+    # 完全な表境界保証は HTML パーサ（html.parser のタグ深さ追跡）への置換が要る＝別 task。
     lu_re = re.compile(r"Last\s*Update:?\s*([A-Za-z]{3})\.?\s*(\d{1,2})\s+(\d{4})")
     t_open = re.compile(r"<table\b", re.I)
     valid_rows: list[tuple[list[float], str, str]] = []
