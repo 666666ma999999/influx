@@ -712,6 +712,7 @@ def fetch_iata() -> dict | None:
 
 _JSEA_RESULTS = "https://www.jsea.or.jp/results/"
 _ZEN2HAN = str.maketrans("０１２３４５６７８９", "0123456789")
+_JSEA_LABEL = re.compile(r"(?:\d{4}年)?(?:(?P<a>\d{1,2})～)?(?P<b>\d{1,2})月")
 
 
 def parse_jsea(txt: str) -> dict | None:
@@ -739,12 +740,29 @@ def parse_jsea(txt: str) -> dict | None:
     fy, mth = int(d.group(1)), int(d.group(2))
     if not 1 <= mth <= 12:
         return None
-    hdr = re.search(r"^((?:\s*(?:\d{4}年)?\d+(?:～\d+)?月\s*){7})$", norm, re.M)
-    if not hdr:
-        return None
-    labels = hdr.group(1).split()
-    if labels[-3] != f"{mth}月":
-        return None  # 当月ラベルが表題と食い違う＝列位置を信用しない
+    # 月ラベル行: 行ごとに分割し各トークンを fullmatch（1本の正規表現に \s* を重ねると ReDoS の余地・Codex 指摘）
+    labels = None
+    for line in norm.splitlines():
+        toks = line.split()
+        if len(toks) == 7 and all(_JSEA_LABEL.fullmatch(t) for t in toks):
+            labels = toks
+            break
+    if labels is None or labels[-3] != f"{mth}月":
+        return None  # 当月ラベルが無い/表題と食い違う＝列位置を信用しない
+    # 窓の4列は当月の直前4か月（暦月）と連続していること。先頭だけ「4～K月」型の集計列を許す（K=期待月）
+    expect = [((mth - 1 - k - 1) % 12) + 1 for k in range(3, -1, -1)]  # mth-4 … mth-1
+    win: list[tuple[int, bool]] = []  # (暦月, 集計列か)
+    for i, lab in enumerate(labels[:4]):
+        lm = _JSEA_LABEL.fullmatch(lab)
+        a, b = lm.group("a"), int(lm.group("b"))
+        if a is not None:
+            if i != 0 or int(a) != 4 or b != expect[i]:
+                return None
+            win.append((b, True))
+        else:
+            if b != expect[i]:
+                return None
+            win.append((b, False))
     cgt_line = re.search(r"^(?:\s*<[0-9][0-9,]*>\s*){5,}$", norm, re.M)
     if not cgt_line:
         return None
@@ -757,15 +775,8 @@ def parse_jsea(txt: str) -> dict | None:
 
     me = _eff(mth)
     fy_sum = cgt[5]
-    for lab, v in zip(labels[:4], cgt[1:5]):
-        lm = re.match(r"(?:\d{4}年)?(?:4～)?(\d+)月", lab)
-        if not lm:
-            return None
-        x = _eff(int(lm.group(1)))
-        in_fy = (x < me) if "～" in lab else (4 <= x < me)
-        if "～" in lab and x < 4:
-            in_fy = False
-        if in_fy:
+    for (x, agg), v in zip(win, cgt[1:5]):
+        if _eff(x) < me:  # 当年度分（集計列「4～K月」も K が当年度内なら丸ごと当年度）
             fy_sum += v
     if cgt[6] <= 0 or abs(fy_sum / cgt[6] - 1) > 0.005:
         return None
@@ -960,17 +971,25 @@ def _selftest() -> int:  # noqa: C901
     _aug = ("２０２５年度８月輸出船契約実績\n4～5月 6月 7月 8月 4～8月 1～8月\n"
             "2024年4～5月 6月 7月 8月 4～8月 1～8月\n")
     _aug = ("２０２５年度８月輸出船契約実績\n4～5月 6月 7月 8月 4～8月 1～8月 12月\n")
-    _aug = ("２０２５年度８月輸出船契約実績\n3月 4～5月 6月 7月 8月 4～8月 1～8月\n"
-            "<100> <20> <30> <40> <50> <60> <180> <300>\n"
+    _aug = ("２０２５年度８月輸出船契約実績\n4月 5月 6月 7月 8月 4～8月 1～8月\n"
+            "<100> <20> <30> <40> <50> <60> <200> <300>\n"
             "(90.0) (100.0) (100.0) (100.0) (100.0) (150.0) (100.0) (100.0)\n")
     js = parse_jsea(_aug)
     chk("jsea 8月分（窓の先頭が集計列）も8列固定で当月を採る（2026-09-13 バックテストの回帰）",
         bool(js) and js["value"] == 60.0 and js["yoy_pct"] == 50.0 and js["src_date"] == "2025-08")
-    _jan = ("２０２６年度１月輸出船契約実績\n3月 10月 11月 12月 1月 4～1月 1～1月\n"
-            "<100> <5> <6> <7> <8> <9> <30> <200>\n")
+    _jan = ("２０２６年度１月輸出船契約実績\n9月 10月 11月 12月 1月 4～1月 1～1月\n"
+            "<100> <5> <6> <7> <8> <9> <35> <200>\n")
     js = parse_jsea(_jan + " ".join("(110.0)" for _ in range(8)) + "\n")
     chk("jsea 1〜3月は翌暦年（年度→暦年）",
         bool(js) and js["src_date"] == "2027-01" and js["value"] == 9.0 and js["yoy_pct"] == 10.0)
+    _may = ("２０２６年度５月輸出船契約実績\n4～1月 2月 3月 4月 5月 4～5月 1～5月\n"
+            "<100> <500> <6> <7> <8> <9> <17> <200>\n" + " ".join("(120.0)" for _ in range(8)) + "\n")
+    js = parse_jsea(_may)
+    chk("jsea 窓の先頭が前年度の集計列（4～1月）でも当月と当年度累計を正しく採る（実PDF 2026年5月分の型）",
+        bool(js) and js["value"] == 9.0 and js["yoy_pct"] == 20.0 and js["src_date"] == "2026-05")
+    chk("jsea 窓の月が当月の直前4か月と連続しなければ None（期間不一致を通さない・Codex 指摘）",
+        parse_jsea(_may.replace("4～1月 2月 3月 4月", "4～1月 2月 9月 10月")) is None)
+    chk("jsea ラベル行の要素が7個でなければ None", parse_jsea(_may.replace(" 1～5月", "")) is None)
     chk("jsea 前年比行なし→None（唯一の判定指標が欠けた月を ok にしない・Codex 指摘）",
         parse_jsea(_jan) is None)
     chk("jsea 前年比行の列数不一致→None",
