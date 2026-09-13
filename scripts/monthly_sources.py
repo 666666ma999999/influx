@@ -12,6 +12,8 @@ price_universe_check.py の series type からディスパッチされる（type
 - 三鬼商事は robots.txt が xlsx/PDF を Disallow のため **HTMLページのみ** 使う（規約遵守）
 - 農水省CSVは連番が不規則・非単調のため一覧の最初のリンク＝最新（中身の header 月で自己検証）
 - JNTO xlsx は年別シート・「総数」行に値と前年同月比（伸率）が対で入る
+- IATA/JSEA（2026-09-13 追加・tasks/ihi_type_series_onboarding.md）: IATA は月次 release の本文
+  から RPK 前年比を、JSEA は年度ブロックの最新月 PDF から当月 CGT を採る（各関数の docstring 参照）
 
 パーサ（parse_*）は fetch から分離し、fixtureで selftest 可能にしている
 （実行: python scripts/monthly_sources.py --selftest）。
@@ -623,6 +625,155 @@ def fetch_boj_bulk(dataset: str, data_code: str, today: str | None = None,
 
 
 
+# ---------------------------------------------------------------- IATA（航空旅客需要 RPK・IHI 7013 のセンターピン）
+# 2026-09-13 実証（tasks/ihi_type_series_onboarding.md）: プレスルーム一覧の href に "passenger-demand" を含む
+# release（例 /en/pressroom/2026-releases/08-31-air-passenger-demand-grows-july/）の本文に
+# 「Total demand, measured in revenue passenger kilometers (RPK), was up 0.2% compared to July 2025」。
+# URL は月ごとに命名が変わる（"grows"/"slows" 等の語が入る）ため一覧から辿る。
+
+_IATA_PRESSROOM = "https://www.iata.org/en/pressroom/"
+_IATA_YOY_ABS_MAX = 60.0  # RPK 前年比の通常帯は 2025〜26 で +0〜+10%。±60 を超える値は誤読とみなす
+_EN_MONTHS = {m: i for i, m in enumerate(
+    ["january", "february", "march", "april", "may", "june", "july", "august",
+     "september", "october", "november", "december"], 1)}
+_IATA_UP = ("up", "grew", "rose", "increased", "expanded", "climbed")
+_IATA_DOWN = ("down", "fell", "declined", "decreased", "dropped", "contracted")
+
+
+def parse_iata(html: str) -> dict | None:
+    """IATA 月次プレスリリース本文から Total RPK の前年同月比(%)を採る。
+
+    **数量型で value 自体を前年同月比%にする**（RPK の水準は本文に無い・jmtba の value=水準とは違う）。
+    符号は語で決める（up/grew/rose/increased=+、down/fell/declined/decreased=−）。
+    対象月の決め方（Codex 2026-09-13 指摘の修正: 「compared to」と「in」を同じ捕捉にして一律翌年に
+    していたため `grew 2.0% year-on-year in July 2026` が 2027-07 になっていた）:
+      1. 「released data for <Month> <Year>」があれば当月＝それ
+      2. 無ければ、同じ文の「compared to/versus/from <Month> <Year>」＝**前年**なので翌年、
+         「in <Month> <Year>」＝**当月**なのでそのまま。候補同士が食い違えば None
+    fail-closed: 本文に "RPK" が無い／文が取れない／|yoy|>60／年月が決まらない は None。
+    """
+    import html as _html
+    t = _html.unescape(re.sub(r"<[^>]+>", " ", html))
+    t = " ".join(t.split())
+    if "RPK" not in t:
+        return None
+    words = "|".join(_IATA_UP + _IATA_DOWN)
+    m = re.search(
+        r"Total demand, measured in revenue passenger kilometers \(RPKs?\),?\s+"
+        rf"(?:was |were )?({words})(?: by)?\s+([0-9]+(?:\.[0-9]+)?)\s*%", t)
+    if not m:
+        return None
+    yoy = float(m.group(2)) * (1 if m.group(1) in _IATA_UP else -1)
+    if abs(yoy) > _IATA_YOY_ABS_MAX:
+        return None
+    # 同じ文の続きだけを見る（別段落の年月を拾わない）。"vs." の略語ピリオドで文を切らない（Codex 再レビュー指摘）
+    tail = re.split(r"\.(?:\s|$)", t[m.end():m.end() + 160].replace("vs.", "vs"))[0]
+
+    def _ym(mo: str, yr: str) -> str | None:
+        return f"{int(yr)}-{_EN_MONTHS[mo.lower()]:02d}" if mo.lower() in _EN_MONTHS else None
+
+    cands: list[str] = []
+    d = re.search(r"released data for ([A-Z][a-z]+) (20\d{2})", t)
+    if d and _ym(d.group(1), d.group(2)):
+        cands.append(_ym(d.group(1), d.group(2)))
+    c = re.search(r"(?:compared to|versus|vs\.?|from)\s+([A-Z][a-z]+)\s+(20\d{2})", tail)
+    if c and _ym(c.group(1), c.group(2)):
+        cands.append(f"{int(c.group(2)) + 1}-{_EN_MONTHS[c.group(1).lower()]:02d}")  # 前年→翌年が当月
+    i = re.search(r"\bin\s+([A-Z][a-z]+)\s+(20\d{2})", tail)
+    if i and _ym(i.group(1), i.group(2)):
+        cands.append(_ym(i.group(1), i.group(2)))
+    if not cands or len(set(cands)) != 1:
+        return None  # 年月が決まらない／候補同士が食い違う＝誤った月で記録しない
+    return {"value": round(yoy, 2), "day_pct": None, "weekly_pct": None, "monthly_pct": None,
+            "yoy_pct": round(yoy, 2), "src_date": cands[0], "layout": "iata_html_v1"}
+
+
+def fetch_iata() -> dict | None:
+    idx = _get(_IATA_PRESSROOM).text
+    cands = []
+    for href in re.findall(r'href="([^"]*passenger-demand[^"]*)"', idx):
+        m = re.search(r"/(20\d{2})-releases/(\d{2})-(\d{2})-", href)
+        if m:
+            cands.append(((int(m.group(1)), int(m.group(2)), int(m.group(3))), href))
+    if not cands:
+        return None  # 一覧に該当 release が無い＝ページ構造変化（推測で別 release を読まない）
+    latest = max(cands)[1]
+    return parse_iata(_get(urljoin(_IATA_PRESSROOM, latest)).text)
+
+
+# ---------------------------------------------------------------- 日本船舶輸出組合（輸出船契約実績・三井E&S 7003）
+# 2026-09-13 実証: https://www.jsea.or.jp/results/ の年度ブロック（<th rowspan="2">2026年度</th> に続く
+# <a href=".../wp-content/uploads/YYYY/MM/<hash>.pdf">4月</a> …）。PDF 内の表（pypdf 抽出）は
+#   ２０２６年度７月輸出船契約実績  ← 表題（全角数字）
+#   <4,026,569> <610,420> <297,478> <312,948> <646,862> <403,390> <1,660,678> <2,597,776>  ← CGT 行
+#   (84.5) (117.1) (106.0) (74.9) (104.1) (221.4) (110.7) (108.5)                            ← 前年度同月比
+# 列順= 前年度計・3月・4月・…・当月・4〜当月・1〜当月（当月＝後ろから3番目）。
+
+_JSEA_RESULTS = "https://www.jsea.or.jp/results/"
+_ZEN2HAN = str.maketrans("０１２３４５６７８９", "0123456789")
+
+
+def parse_jsea(txt: str) -> dict | None:
+    """輸出船契約実績 PDF のテキストから当月 CGT と前年同月比を採る。
+
+    「輸出船契約実績」の節（「輸出船通関実績」の表題より前）にスコープし、表題
+    「YYYY年度M月輸出船契約実績」（全角数字あり）から対象月を採る。年度→暦年は 1〜3月なら翌年。
+    自己検証2つ（列取り違えの検知・合わなければ None）:
+      1. 月列の本数（3月〜当月）が表題の月と一致する
+      2. 4月〜当月の CGT 合計 ＝「4〜当月」列（後ろから2番目）±0.5%
+    """
+    end = txt.find("輸出船通関実績")
+    scope = txt[:end] if end > 0 else txt
+    if "輸出船契約実績" not in scope:
+        return None
+    norm = scope.translate(_ZEN2HAN)
+    d = re.search(r"(20\d{2})\s*年度\s*(\d{1,2})\s*月\s*輸出船契約実績", norm)
+    if not d:
+        return None
+    fy, mth = int(d.group(1)), int(d.group(2))
+    if not 1 <= mth <= 12:
+        return None
+    cgt_line = re.search(r"^(?:\s*<[0-9][0-9,]*>\s*){5,}$", norm, re.M)
+    if not cgt_line:
+        return None
+    cgt = [_num(v) for v in re.findall(r"<([0-9][0-9,]*)>", cgt_line.group(0))]
+    n = len(cgt)
+    m_eff = mth if mth >= 4 else mth + 12  # 年度内の通し月（4月=4 … 3月=15）
+    if n - 1 != m_eff:  # 列= 前年度計 + (3月〜当月: m_eff-2本) + 4〜当月 + 1〜当月
+        return None
+    fy_sum = sum(cgt[2:n - 2])  # 4月〜当月
+    if cgt[-2] <= 0 or abs(fy_sum / cgt[-2] - 1) > 0.005:
+        return None
+    value = cgt[-3]
+    yoy = None
+    yoy_line = re.search(r"^(?:\s*\([0-9]+(?:\.[0-9]+)?\)\s*){5,}$", norm[cgt_line.end():], re.M)
+    if yoy_line:
+        ratios = [float(v) for v in re.findall(r"\(([0-9]+(?:\.[0-9]+)?)\)", yoy_line.group(0))]
+        if len(ratios) == n:
+            yoy = round(ratios[-3] - 100, 2)
+    if yoy is None:
+        # 前年同月比は本系列の唯一の判定指標（前月比は無効化）。欠けたまま ok にすると通知不能の月が
+        # 台帳に残り、後日正常取得しても同月重複抑止で鳴らない（Codex 2026-09-13）。parse_seaj と同じく失敗扱い
+        return None
+    year = fy + 1 if mth <= 3 else fy
+    return {"value": value, "day_pct": None, "weekly_pct": None, "monthly_pct": None,
+            "yoy_pct": yoy, "src_date": f"{year}-{mth:02d}", "layout": "jsea_pdf_v1"}
+
+
+def fetch_jsea() -> dict | None:
+    idx = _get(_JSEA_RESULTS).text
+    # 年度ブロック（rowspan の <th>）の出現順＝新しい年度が先。リンクを1本以上持つ最初のブロックの
+    # 末尾リンク＝最新月（年度替わり直後は新年度ブロックが空なので前年度へ落ちる）
+    blocks = re.split(r'<th[^>]*rowspan="2"[^>]*>', idx)[1:]
+    for blk in blocks:
+        if not re.match(r"\s*20\d{2}年度", blk):
+            continue
+        links = re.findall(r'href="([^"]*wp-content/uploads/\d{4}/\d{2}/[^"]+\.pdf)"', blk)
+        if links:
+            return parse_jsea(_pdf_text(_get(urljoin(_JSEA_RESULTS, links[-1])).content))
+    return None  # 年度ブロックが読めない＝ページ構造変化
+
+
 # ---------------------------------------------------------------- selftest
 
 def _selftest() -> int:  # noqa: C901
@@ -739,6 +890,63 @@ def _selftest() -> int:  # noqa: C901
     chk("seaj 前年同月比欠落→None",
         parse_seaj("2026 年 6 月度の販売高は 513,610 百万円 前月比 2.4％減 だった。") is None)
 
+    # IATA（2026-09-13 新設・IHI 7013）。value=前年同月比%そのもの（数量型・水準は本文に無い）
+    _iata_ok = ("<p>Geneva &ndash; The International Air Transport Association (IATA) released data for "
+                "July 2026 global passenger demand: Total demand, measured in revenue passenger kilometers "
+                "(RPK), was up 0.2% compared to July 2025. Excluding the Middle East, demand grew by 1.2%.</p>")
+    ia = parse_iata(_iata_ok)
+    chk("iata 前年比/対象月（released data for が第一候補）", bool(ia) and ia["value"] == 0.2
+        and ia["yoy_pct"] == 0.2 and ia["src_date"] == "2026-07" and ia["monthly_pct"] is None)
+    ia = parse_iata("data for March 2026 ... Total demand, measured in revenue passenger kilometers (RPK), "
+                    "was down 3.5% compared to March 2025.")
+    chk("iata down=負", bool(ia) and ia["value"] == -3.5 and ia["src_date"] == "2026-03")
+    ia = parse_iata("Total demand, measured in revenue passenger kilometers (RPK), fell 1.1% compared to "
+                    "January 2025.")
+    chk("iata fell=負・released data for 無しは compared to の翌年", bool(ia) and ia["value"] == -1.1
+        and ia["src_date"] == "2026-01")
+    ia = parse_iata("Total demand, measured in revenue passenger kilometers (RPK), grew 2.0% year-on-year "
+                    "in July 2026. Capacity rose 1.0%.")
+    chk("iata 「in <当月>」は翌年にしない（Codex 指摘の回帰）", bool(ia) and ia["value"] == 2.0
+        and ia["src_date"] == "2026-07")
+    chk("iata 「in <当月>」と「compared to <前年>」が食い違えば None",
+        parse_iata("Total demand, measured in revenue passenger kilometers (RPK), was up 1.0% in July 2026 "
+                   "compared to June 2025.") is None)
+    chk("iata 「vs.」の略語で文を切らず食い違いを検知（Codex 再レビューの回帰）",
+        parse_iata("Total demand, measured in revenue passenger kilometers (RPK), was up 2.0% in July 2026 "
+                   "vs. June 2025.") is None)
+    chk("iata 年月が無ければ None",
+        parse_iata("Total demand, measured in revenue passenger kilometers (RPK), was up 1.0%.") is None)
+    chk("iata 本文に RPK 無し→None（空を成功にしない）",
+        parse_iata("released data for July 2026: Total demand was up 0.2% compared to July 2025.") is None)
+    chk("iata レンジ外(|yoy|>60)→None",
+        parse_iata("released data for July 2026: Total demand, measured in revenue passenger kilometers "
+                   "(RPK), was up 75.0% compared to July 2025.") is None)
+    # JSEA（2026-09-13 新設・三井E&S 7003）。固定行は output/_tmp_jsea_2026_07.pdf の pypdf 抽出そのまま
+    _jsea = ("２０２６年度７月輸出船契約実績\n貨物船 21 1,232,194 1 11,400\n計\n"
+             "<4,026,569> <610,420> <297,478> <312,948> <646,862> <403,390> <1,660,678> <2,597,776>\n"
+             "(84.5) (117.1) (106.0) (74.9) (104.1) (221.4) (110.7) (108.5)\n"
+             " (   ) は前年度同月比。\n２０２６年度７月輸出船通関実績\n"
+             "<9,999,999> <1> <2> <3> <4> <5> <6> <7>\n(50.0) (50.0) (50.0) (50.0) (50.0) (50.0) (50.0) (50.0)\n")
+    js = parse_jsea(_jsea)
+    chk("jsea 当月CGT=後ろから3番目/前年比−100/暦年月（通関実績の表は読まない）",
+        bool(js) and js["value"] == 403390.0 and js["yoy_pct"] == 121.4
+        and js["src_date"] == "2026-07" and js["monthly_pct"] is None)
+    chk("jsea 4〜当月の合計≠累計列→None（列取り違えの検知）",
+        parse_jsea(_jsea.replace("<403,390>", "<503,390>")) is None)  # 累計と6%ずれ
+    chk("jsea 月列本数が表題の月と不一致→None",
+        parse_jsea(_jsea.replace("２０２６年度７月輸出船契約実績", "２０２６年度８月輸出船契約実績")) is None)
+    _jan = ("２０２６年度１月輸出船契約実績\n"
+            "<100> " + " ".join(f"<{i}>" for i in range(1, 12)) + " <65> <200>\n")
+    js = parse_jsea(_jan + " ".join("(110.0)" for _ in range(14)) + "\n")
+    chk("jsea 1〜3月は翌暦年（年度→暦年）",
+        bool(js) and js["src_date"] == "2027-01" and js["value"] == 11.0 and js["yoy_pct"] == 10.0)
+    chk("jsea 前年比行なし→None（唯一の判定指標が欠けた月を ok にしない・Codex 指摘）",
+        parse_jsea(_jan) is None)
+    chk("jsea 前年比行の列数不一致→None",
+        parse_jsea(_jan + " ".join("(110.0)" for _ in range(13)) + "\n") is None)
+    chk("jsea 契約実績の節が無ければ None",
+        parse_jsea("２０２６年度７月輸出船通関実績\n<1> <2> <3> <4> <5>\n") is None)
+
     print(f"[selftest] {'FAIL: ' + ', '.join(fails) if fails else 'all ok'}")
     return 1 if fails else 0
 
@@ -751,4 +959,4 @@ if __name__ == "__main__":
     if fn:
         print(fn())
     else:
-        print("usage: monthly_sources.py --selftest | <jmtba|seaj|jama|miki|tamago|rice|jnto>")
+        print("usage: monthly_sources.py --selftest | <jmtba|seaj|jama|miki|tamago|rice|jnto|iata|jsea>")

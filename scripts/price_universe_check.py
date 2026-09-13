@@ -771,7 +771,8 @@ def main(only: list[str] | None = None) -> int:
                 # （type="boj"）には総平均しか無く、細目はこちらでしか取れない（2026-08-19 実証）
                 import monthly_sources
                 parsed = monthly_sources.fetch_boj_bulk(s["dataset"], s["data_code"], today[:7])
-            elif s["type"] in ("jmtba", "seaj", "jama", "miki", "tamago", "rice", "jnto", "estat_asp"):
+            elif s["type"] in ("jmtba", "seaj", "jama", "miki", "tamago", "rice", "jnto", "estat_asp",
+                               "iata", "jsea"):
                 # 波2の月次データ源（30カテゴリ拡張・2026-08-02）。取得実装と fixtures は
                 # monthly_sources.py に分離。type名 → fetch_<type>() の明示対応（allowlist方式）
                 import monthly_sources
@@ -793,6 +794,11 @@ def main(only: list[str] | None = None) -> int:
             if s["type"] == "spread":
                 suspect = bool(prev and prev[-1].get("value") is not None and
                                abs(parsed["value"] - prev[-1]["value"]) > 200)
+            elif parsed.get("layout") == "iata_html_v1":
+                # value 自体が前年比%（0近傍・負もある）＝比率ガードだと 0.2→2.0 が 50%超で永久 suspect
+                # になり基準値も更新されず通知が止まる（Codex 2026-09-13 再現）。%ポイント差 30 超で判定
+                suspect = bool(prev and prev[-1].get("value") is not None and
+                               abs(parsed["value"] - prev[-1]["value"]) > 30)
             else:
                 suspect = bool(prev and prev[-1].get("value") and
                                abs(parsed["value"] / prev[-1]["value"] - 1) > 0.5)
@@ -814,6 +820,13 @@ def main(only: list[str] | None = None) -> int:
                 status = "stale"
             # 東京製鐵は改定のたびの公表（2026年は平均7.8日間隔・最長27日を実測）。
             # 日付一致は要求せず45日以上の据え置きを異常とみなす
+            # IATA（翌月末公表）・JSEA（翌月中旬公表）は月次。対象月が4ヶ月以上前なら公表停止/一覧構造変化
+            # で古いページを読み続けている疑い（Codex 2026-09-13 警告: 未検知が問題）
+            if parsed.get("layout") in ("iata_html_v1", "jsea_pdf_v1") and parsed.get("src_date"):
+                _y, _m = (int(x) for x in parsed["src_date"].split("-")[:2])
+                _ty, _tm = (int(x) for x in today.split("-")[:2])
+                if (_ty - _y) * 12 + (_tm - _m) >= 4:
+                    status = "stale"
             if parsed.get("layout") == "tokyosteel_pdf_v1" and parsed.get("src_date") and \
                     (datetime.strptime(today, "%Y-%m-%d")
                      - datetime.strptime(parsed["src_date"], "%Y-%m-%d")).days > 45:
@@ -835,6 +848,8 @@ def main(only: list[str] | None = None) -> int:
                 # 比率が+方向に出て誤発火する・レビュー指摘）。絶対差(USD/T)で持つ
                 if s["type"] == "spread":
                     four_w_abs = round(parsed["value"] - cands[-1]["value"], 2)
+                elif parsed.get("layout") == "iata_html_v1":
+                    four_w = None  # 前年比%同士の比は無意味（Codex 2026-09-13）
                 else:
                     four_w = (parsed["value"] / cands[-1]["value"] - 1) * 100
                 # 組成ジャンプガード（Codex C-1・遊々亭SAR）: 中央値は「同一カード集合の価格」
