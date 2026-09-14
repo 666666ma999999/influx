@@ -3,7 +3,8 @@ project: influx（株アルゴ研究系統）
 type: architecture
 artifact_role: repo-canonical
 owners: MASA
-last_verified: 2026-08-29
+last_verified: 2026-09-14
+点検 2026-09-14: 実体 203 本・変更 27 本・直した行 7
 sensitivity: personal
 pair:
   - scripts
@@ -84,7 +85,8 @@ flowchart LR
 | 多重比較の感度確認 | 分母＝台帳行数で調整後CIを見る | `scripts/kpi_bonferroni_check.py` | 周次 | 🐳 |
 | 一括スクリーニング | 宣言グリッドを FDR で流す | `scripts/kpi_screen_batch.py` | **現在禁止**（catalog §6拡張5項） | 🐳 |
 | EV estimand v2 | 月等ウェイト two-stage で EV を出す | `scripts/ev_estimand_v2.py` / `kpi_event_study.ev_v2_summary` | 改定時 | 🐳 |
-| 商品価格レーン | 外部価格の発火→受益カード→前向き記録（発火・通知・evaluation 行に受益タイプを付与 2026-08-15）。**仕込み型の閲覧面は `output/daily_reco.md` の「🌱 仕込み型」節に一本化**（2026-08-16・毎朝 daily_screen 経由で対TOPIX超過を再計算。`build_shikomi_list.build_rows()` が計算の Canonical・同モジュールは永続ファイルを書かない＝第二の閲覧面を作らない。週次ジョブは forward_log の更新のみ担当） | `scripts/price_universe_check.py`（`--only <系列ID>` で新系列1本だけ投入可・2026-08-19）/ `monthly_sources.fetch_boj_bulk`（日銀の一括ファイルから品目別を取る `type: boj_bulk`・§16y） / `monthly_sources.fetch_iata`・`fetch_jsea`（IATA 旅客RPK 前年比・日本船舶輸出組合の輸出船契約CGT＝IHI型スクリーニング候補のセンターピン系列 `type: iata`/`jsea`・§16z・2026-09-13）/ `build_shikomi_list.py` / `xprice_watch_run.sh` | 月曜11:00＋毎日22:10 | ⏰ |
+| 商品価格レーン | 外部価格の発火→受益カード→前向き記録（発火・通知・evaluation 行に受益タイプを付与 2026-08-15）。**仕込み型の閲覧面は `output/daily_reco.md` の「🌱 仕込み型」節に一本化**（2026-08-16・毎朝 daily_screen 経由で対TOPIX超過を再計算。`build_shikomi_list.build_rows()` が計算の Canonical・同モジュールは永続ファイルを書かない＝第二の閲覧面を作らない。週次ジョブは forward_log の更新のみ担当） | `scripts/price_universe_check.py`（`--only <系列ID>` で新系列1本だけ投入可・2026-08-19）/ `monthly_sources.fetch_boj_bulk`（日銀の一括ファイルから品目別を取る `type: boj_bulk`・§16y） / `monthly_sources.fetch_iata`・`fetch_jsea`（IATA 旅客RPK 前年比・日本船舶輸出組合の輸出船契約CGT＝IHI型スクリーニング候補のセンターピン系列 `type: iata`/`jsea`・§16z・2026-09-13）/ `price_universe_check.parse_dramexchange`（DRAM DDR5 16Gb スポット `dram_spot_ddr5_16gb` を 2026-09-13 登録＝P-INF-16 裁定a・**受益カードは結線しない**〔装置は数量型・DRAM 本体の価格受益は海外§16w の別 task〕） / `build_shikomi_list.py` / `xprice_watch_run.sh` / `x_shortage_map.py`（X品薄レーンの受益銘柄マップのローダ＝B2B価格レーンと同じ帰属規律を X 側にも通す共有部品。**`confirmed` の定義は「E1/E2 の証拠が1つ以上 **かつ** center_pin の `pin` が当該生産連鎖と同定義」で `docs/price-watch-universe.md` §0b と同文に一本化**〔2026-08-31 P-INF-12 Q2〕・`subject_op_pct` は非開示なら 0 でなく null・分母は連結〔同 Q1〕） | 月曜11:00＋毎日22:10 | ⏰ |
+| 月次レーンのエピソード規則（2026-08-30 P-INF-11・事前登録 spec_version 3） | 月次系列は**閾値を新たに跨いだ公表月だけ発火**（毎月同じ発火を数え上げない）＋前向き台帳は同じ (系列, 銘柄) を**6ヶ月以内は再記録しない**＝1つの値上がり局面を1エピソードとして数える。トリガー4種は事前登録側に明記 | `scripts/price_universe_check.py` / `scripts/price_watch_forward.py` | 月曜11:00 | ⏰ |
 | 発見器（新商品名の候補キュー） | 低閾値の汎用3クエリ（値上げ/値上がり/品薄・min_faves:20・前UTC日1日窓）を X から集め、ユニバース台帳に無い商品名候補をルール抽出→採点→`data/x_price_watch/discovery_queue.jsonl` へ append（上限20/回・**候補は通知の対象ではなく週次レビュー用**・売買判断には5チェック必須＝`docs/price-watch-universe.md` §発見器運用）。2026-08-01 以来手動のみだったものを **2026-08-30 に launchd `com.influx.price-discover` で再稼働**（オーナー裁定・`tasks/shortage_goods_expansion.md` B-1〜B-3）。runner は候補ありなら件数を Mac 通知・ログイン壁/失敗は失敗通知。LLM精製段はコンテナ内 `ANTHROPIC_API_KEY` が実キーの時のみ（2026-08-30 実走ではプレースホルダで**スキップ＝ルール候補のみ**） | `scripts/price_watch_discover.py`（xstock-vnc 内・maaaki Cookie）/ `scripts/price_discover_run.sh` / `config/launchd/com.influx.price-discover.plist` | 日曜10:40 | ⏰ |
 | 発見器②（一次統計の未監視ドライバー） | 日銀 CGPI/SPPI の一括 zip **全品目**（重複指数族を除外）を読み、`price_universe_sources.json` で未監視の品目を前年同月比の大きい順に列挙＋TDnet 直近90日の供給側語（価格改定/値上げ/増産/受注停止/出荷停止/供給/生産能力/設備投資）を TOP1000 と照合＋上位品目に center_pin の pin/note/name をキーワード照合（3文字以上・系統語 map・**sign 列= ＋受益候補／−損失候補／?**・コスト側 note が優先）。**候補であって tier ではない**（帰属は `beneficiary-attribution`）。手動実行・定期化なし（2026-08-30 新設・P-INF-10 裁定 a の主入口。初回で外航タンカー/フィッシュミール/コバルト/すず/荒茶の5系列を新設） | `scripts/driver_discover_boj.py` → `output/driver_discover.md` | 手動 | 🖐 |
 | 海外上場の受益カード（§16w・2026-08-17 P-08c裁定） | 商品の供給ショックは受益者が海外に偏るため、受益カードに海外銘柄を認める。`market`/`ticker`/`benchmark` 必須・**対TOPIX前向き台帳には入れない**（`skipped_foreign` に理由を残す）・通知は `[IE]Glanbia plc` 形式。初カード= Glanbia plc（dry-whey 系列）。**2026-08-18 時点で15枚**（確証7/仮6/却下2）。同一系列に複数カードが載る（例: ウラン= KAP+CCO）ため、記録は**銘柄単位に畳む**——同一 ticker が系列をまたいで属性違い（benchmark/tier）で登録されていたら警告を出す（2026-08-18 追加） | `foreign_forward.py`（記録＋backfill＋評価）/ `price_universe_check.beneficiaries_display` / `price_watch_forward.record_firings`（除外側） | 本線と同じ（月曜11:00・独立ジョブではない） | ⏰ |
@@ -92,6 +94,7 @@ flowchart LR
 | 受益タイプ一覧 | center_pin 977社を型別一覧 md に組む（ラベル正本= `x_mention_dict.PIN_TYPE_LABELS` を共有） | `scripts/gen_center_pin_types.py` → `output/center_pin_types.md` | 手動 | 🖐 |
 | ニュース供給ショック | 商品名つき供給ショック（禁輸・スト・攻撃）を Google News RSS から検知→受益カード銘柄を型付き通知＋前向き記録（入場条件=§16u・プレレジ凍結 2026-08-16） | `scripts/news_shock_collect.py` / `news_shock_eval.py` / `news_shock_run.sh` → `data/news_shock/news_log.jsonl` | 毎日07:20+19:00（launchd **稼働中**（2026-08-16 登録・`launchctl list` に `com.influx.news-shock` と `news-shock-probe` の2本・2026-08-29 実測） | ⏰（Docker不要） |
 | TDnet イベント別プロファイル | 112万件の適時開示から表題で機械分類し「翌営業日始値→20営業日後終値」の実績を §0 の定義のまま測る。**記述測定のみ・台帳不算入・α非消費**（閾値探索やフィルタ探しはしない＝設計材料であって合格ではない） | `scripts/tdnet_event_profile.py` | 手動 | 🖐 |
+| 週次インフルエンサー勝率リサーチ（無人週次サイクル） | 凍結34アカウントの直近8日分を収集 →未抽出ツイートの洗い出し →**シグナル抽出は `claude -p`（購読内・API 課金に落ちないよう実行直前に `ANTHROPIC_API_KEY` を unset し `--disallowedTools Write Edit NotebookEdit Bash Agent WebFetch WebSearch` で道具を明示禁止）** →検証つき取り込み（`--mark-processed` で処理済み台帳に印を付け同じツイートを再抽出しない）→採点、までを人手なしで1周する（2026-09-12 P-INF-14 裁定A で P3 仕様へ改修）。**fail-closed**= 凍結リストが34件でない／worklist 作成失敗／抽出JSONが壊れている時は先へ進まず停止し Mac 通知。完了時も「収集n/抽出n/取込n」を通知する | `scripts/research_weekly_launchd.sh`（入口）→ `scripts/research_weekly.py` / `winrate_worklist.py` / `winrate_ingest.py` / `winrate_score.py` → `output/research/`（`signals.jsonl`・`weekly_log.md`・scoreboard） | 土曜09:00（`com.influx.research-weekly`・2026-09-13 ロード） | ⏰🐳 |
 | vault ミラー | 当日シグナル・台帳・hash chain を vault へ写す | 上記ジョブに同乗 | 毎朝 | ⏰ |
 
 ### 4-1. 定期実行（配管図が正本）
@@ -132,7 +135,7 @@ flowchart LR
 | TDnet インデックス（適時開示） | `scripts/tdnet_index_fetch.py` で寄付前に当日シグナルを判定 | 表題を NFKC正規化→空白除去→**評価順を固定した regex 5段**で凍結。境界ケースの golden test を同梱し sha256 で固定 | 第三者API単一依存を EDINET 副系統で緩和中 |
 | 日証金（貸借・逆日歩） | `scripts/jsf_daily_archive.py` で日次アーカイブ | **「取れる時に貯めておく」型**（過去に遡れないので使う予定が立つ前から貯める） | — |
 | e-Stat（生産動態統計・無料） | 無認証DLで「金額÷数量＝実効単価」を機械算出 | 古い .xls を**自作 BIFF8 パーサ**で読む（既存月の突合で検証PASS） | 現在は1系列のみに縮小（受益マッピング不成立） |
-| DRAMeXchange / TrendForce | メモリのスポット価格を週次取得し受益カードに結線 | パーサが**4重 fail-closed**（ヘッダ順一致・有効行一意・符号排他・日付近傍窓）。壊れたら黙って通さず止める | 会社側の開示縮小で契約価格が唯一の代理窓という制約 |
+| DRAMeXchange / TrendForce | メモリのスポット価格を週次取得し受益カードに結線 | パーサが**4重 fail-closed**（ヘッダ順一致・有効行一意・符号排他・日付近傍窓）。壊れたら黙って通さず止める。2026-09-13 に節（`Last Update` 〜）単位のヘッダ・更新日検査へ変更し、ヘッダ照合は**その行が属する表の中だけ**・更新日は直前の価格表ヘッダ以降だけを見る（DRAM 表と NAND 表で更新日が違うため。⚠️ 敵対的 HTML が別表の見出しを借りる経路は 3-Fix 到達で**既知の限界として据え置き**＝docstring に明記） | 会社側の開示縮小で契約価格が唯一の代理窓という制約 |
 | Alpha Vantage（無料枠） | 米国株ウォッチリストの価格取得に採用予定（**APIキー取得待ち**） | キー取得後の最初の作業を「無料枠で本当に取れるか **1リクエストで実測**」と決めてある（推測で設計しない） | Yahoo自動取得・Stooq 迂回は**規約上NGで確定**（迂回策を封じてある） |
 | yfinance | 勝率採点・周辺分析でのみ使用 | 本体の検定は J-Quants 側で完結・yfinance は周辺限定 | 米国レーンで Alpha Vantage と役割が重なる |
 | X（Twitter）本文の自前収集 | ①価格上昇の兆し `price_watch` ②銘柄言及の抽出 ③インフルエンサーの前向き capture | **クエリを凍結して sha で実効化**（検索語を後から足すと時系列が壊れる）。上限つき・追加は死に筆との入替のみ | 「件数を数える」→「本文を読む」への転換は済 |
@@ -143,6 +146,7 @@ flowchart LR
 | 道具 | うちでの使い方 | 使い方の癖・なぜ | 置き換えが起きうる部分 |
 |---|---|---|---|
 | launchd | 株アルゴ系の定期ジョブ（**本数は書かない**＝正本は `docs/pipeline-map.md` の機械生成表と `launchctl list \| grep com.influx`。2026-08-29 に「8ジョブ」の焼き付けを除去＝§4-1 で正本へ委譲したのに隣で違う数字を持っていた） | ①**登録はユーザーが `!` で手打ち**（セッションUI経由は過去2回とも実行されなかった）②**fail-closed**＝失敗を沈黙させず通知③朝ジョブに `--audit` を相乗りさせ SLA超過で exit 1 | cron / GitHub Actions。※ TCC（フルディスクアクセス）が移行時の論点 |
+| runner 共通部品 `scripts/lib/xstock_vnc.sh` | ブラウザ用コンテナ `xstock-vnc` を「使える状態にしてから返す」処理（Docker daemon 待ち→無ければ `up -d` で起こす→暖機→`xstock_notify` での失敗通知）を1箇所に集約。runner は `. lib/xstock_vnc.sh` して `xstock_ensure_ready` を呼ぶだけ | 2026-08-29 に `price_universe_run.sh` / `sedori_trend_run.sh` / `xprice_watch_run.sh` を統合（同じ処理が別々に手書きされ、書き忘れた runner だけが `No such container` で止まった実害）。**新しく手書きしない**／誤復旧の停止・通知の安全化は Codex 2巡の指摘を反映済み | 常駐化（compose `restart:`）＝メモリ 1.79GiB 常時占有で不採用 |
 | Docker / compose（`xstock` イメージ） | 依存管理と検定バッチの実行環境 | ホスト `pip install` を禁止し、**依存を足したら requirements.txt →イメージ再ビルド**の順で通す | — |
 | Python（pandas / numpy のみ） | 検定・集計の主力 | **ML を意図的に使わない**（重み推定は死んだ型として明示的な禁止事項） | 分類器の導入（現状は禁止側） |
 | openpyxl / pypdf / 自作BIFF8 | 月次PDF・xlsx・古い xls の読み取り | **parse_fail を無音にせず要確認リストに出す** | — |
@@ -208,9 +212,8 @@ flowchart LR
 | **詳細リファレンス**（環境変数一覧・分類カテゴリ等） | `.claude/docs/architecture.md`（⚠️ モジュール構成・データフロー節は 5/2 停止・X収集寄り） | リンク先 |
 
 ## 7. 未反映キュー（機械が積む・人が消す）
-- [ ] 2026-09-02 `fxnia_forward_eval.py`、`fxnia_forward_launchd.sh` を更新（この文書への反映を確認）
-- [ ] 2026-09-13 `_tmp_dram_chain_returns.py` を更新（この文書への反映を確認）
-（空。2026-08-29 に3件を1件ずつ判定して消化＝内訳: **本書へ反映した** 2本〔`build_trial_fingerprints`→ §4「既試行の重複照合」・`tdnet_event_profile`→ §4「TDnet イベント別プロファイル」〕／**X収集側の対象で本書には載らない** 4本〔`check_metric_contract` `fetch_bookmarks` `x_metrics_lib` `bookmarks_keyword_common` → `influx-architecture.md`〕。
+（空。2026-09-14 の点検で2件を消化＝`fxnia_forward_eval.py`・`fxnia_forward_launchd.sh` は**本書 §4-3 のインフルエンサー前向きレーンに既出**（2026-09-02 の変更は銘柄1件でのゼロ除算修正と、実体が参照しない `ANTHROPIC_API_KEY` の FATAL チェック撤去＝どちらも境界・I/O を変えないので行の追加なし）／`_tmp_dram_chain_returns.py` は `_tmp_*` の使い捨て（§1 Skip 対象）。
+2026-08-29 には3件を1件ずつ判定して消化＝内訳: **本書へ反映した** 2本〔`build_trial_fingerprints`→ §4「既試行の重複照合」・`tdnet_event_profile`→ §4「TDnet イベント別プロファイル」〕／**X収集側の対象で本書には載らない** 4本〔`check_metric_contract` `fetch_bookmarks` `x_metrics_lib` `bookmarks_keyword_common` → `influx-architecture.md`〕。
 ※ 見張りは `scripts/` 全体を見るため両系統の変更がここへ積まれる。積まれたら「本書の対象か」を先に見る。）
 
 ## 8. 矛盾・未確定（結論は書かない・移送先だけ）
@@ -221,7 +224,7 @@ flowchart LR
 - **未確定**: repo の定義本数と `launchctl` 登録本数の食い違い（未ロード4本・うち `edinet-tob` は道具表Aで「稼働中」と書かれている）→ 実態と注意書きは `docs/pipeline-map.md` §4 が持つ。棚卸しは influx セッションで
 - **未確定**: 「18系統」が指す集合が文書ごとに違う（vault ダッシュボード「毎朝18系統」／`config/paper_watchlist.json` は19件〈observation 17・reference 1・hoos_rejected 1〉／`tasks/segment_expansion_review.md`「前向き接続18本」／`tasks/pending_verdict_flow.md` の `awaiting_forward` 18）。→ どれが正しいかは決めない
 - **未確定（2026-09-11 敵対レビュー wf_4a5d7fcd-a17 A#2/#9）**: 道具表 :136「Alpha Vantage 採用予定・APIキー取得待ち」は陳腐化の疑い（`scripts/us_price_fetch.py` 実在・launchd `com.influx.us-watchlist` 登録中・`docs/us-tier1-price-foundation.md:226` は現行の Yahoo 取得を「規約に反する」と確定）／§4-3 :106「ペア（対銘柄）」と :121「S3 KPI×KPI ペア」は同一レーンで呼称不一致（事前登録の実体は KPI×KPI）→ 棚卸しは influx セッションで
-- **未確定（2026-09-11 全資産棚卸し・6体）**: :222「us_price_fetch は launchd us-watchlist 登録中」は誤り疑い（`us_watchlist_launchd.sh` が呼ぶのは recollect_account と nia_youtube_rss のみ・`data/us/receipts.jsonl` は 07-26 で停止）／`configs/extensions.enabled.yaml` に退役済み9件が enabled のまま／`config/fdr_sim_spec.draft.json` が FROZEN のまま（起案は 2026-07-22 棄却）／`output/research/` が 07-08 で停止（research-weekly 未ロード）〔**2026-09-12 動きあり**: P-INF-14 裁定 A で research-weekly を P3 仕様へ改修（凍結34・prompt v2・fail-closed）・試走1周で `output/research/` が再稼働（signals +28・scoreboard 19:07 更新）。launchd 登録はオーナー操作待ち＝`config/launchd/README.md`〕／§4-3 の走行4レーンは pipeline-map §4 の未ロード「4本」と食い違う（実測は3本・edinet-tob はロード済み）→ 棚卸し表= vault reports/influx-kimo-tree-adversarial-review-2026-09-11 §付録
+- **未確定（2026-09-11 全資産棚卸し・6体）**: :222「us_price_fetch は launchd us-watchlist 登録中」は誤り疑い（`us_watchlist_launchd.sh` が呼ぶのは recollect_account と nia_youtube_rss のみ・`data/us/receipts.jsonl` は 07-26 で停止）／`configs/extensions.enabled.yaml` に退役済み9件が enabled のまま／`config/fdr_sim_spec.draft.json` が FROZEN のまま（起案は 2026-07-22 棄却）／`output/research/` が 07-08 で停止（research-weekly 未ロード）〔**2026-09-12 動きあり**: P-INF-14 裁定 A で research-weekly を P3 仕様へ改修（凍結34・prompt v2・fail-closed）・試走1周で `output/research/` が再稼働（signals +28・scoreboard 19:07 更新）。**launchd `com.influx.research-weekly` は 2026-09-13 にロード済み**（土曜09:00・初回無人実行は 2026-09-19・機能の行は §4「週次インフルエンサー勝率リサーチ」）〕／§4-3 の走行4レーンは pipeline-map §4 の未ロード「4本」と食い違う（実測は3本・edinet-tob はロード済み）→ 棚卸し表= vault reports/influx-kimo-tree-adversarial-review-2026-09-11 §付録
 - ✅**確定（2026-08-29 実読・監査 I-38。旧「未確認」2件を実物で解消）**:
   ① **ジョブの成否**: `data/monitoring/run_log.jsonl` は **29行すべて `overall_status: success`**（2026-07-17〜08-28・毎朝スクリーンの記録）。ただし**これは全 launchd ジョブの成否ではない**——第2周 I-5 で `price-universe` が台帳 ✅ のまま 8/17 以降停止していた実測がある（`EVIDENCE` 未登録で mtime fallback）。**`launchctl` の exit 0 も台帳の緑も成否の証明にならず、ジョブ別の証跡（このログのような成功マーカー）を見るのが唯一の確認**。
   ② **`judge()` の5基準（`scripts/kpi_event_study.py:683` 実読）**: `n>=100`／`months_spanned>=24`／**bull・bear 両レジームを跨ぐ**／`lift_ci_low>1.5`／`ev_stop8>=+3%/月`／`avg_monthly_n>=5` の**6条件すべて**を満たして `in_sample_pass_candidate`（最終合格は holdout 確認後・§6プロトコル3⑤）。**Bonferroni 分母（`scripts/kpi_bonferroni_check.py:55,82` 実読）**: `trials.jsonl` の**非空行数**が正本（重複・縮退の注記行も含める＝保守側）で、`ci_level = 1 - 0.05/n_trials`。

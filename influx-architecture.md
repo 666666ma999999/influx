@@ -3,7 +3,8 @@ project: influx
 type: architecture
 artifact_role: repo-canonical
 owners: MASA
-last_verified: 2026-08-29
+last_verified: 2026-09-14
+点検 2026-09-14: 実体 203 本・変更 27 本・直した行 4
 pipeline_map: docs/pipeline-map.md
 sensitivity: mixed
 pair:
@@ -72,7 +73,7 @@ flowchart LR
 | 旧Grok経路（クエリ正本） | クエリ定義の置き場（実行は停止・7/1切替） | `scripts/grok_collect_twittora.py`（DEFAULT_QUERIES 正本） | 停止 | 🖐 |
 | キーワード台帳 | ブックマーク差分から検索語台帳を更新 | `com.masa.x-keywords-weekly`→`obs-x-keywords` | 土曜10:00 | ⏰🐳 |
 | X Articles形式検索 | 長文記事を `url:x.com/i/article` で拾う。**グローバル検索＋定点著者スコープ（`lane=offense` を6人ずつ `from:` OR・f=live）の2系統**（2026-08-29 追加＝グローバルの Top 1画面では定点著者の記事共有を取りこぼすため） | `scripts/search_x_articles.py` | 手動（launchd未配線） | 🖐🐳 |
-| X Articles本文取得 | 記事 URL から本文を全文取得（fail-closed） | `scripts/fetch_x_article.py` | 手動 | 🖐🐳 |
+| X Articles本文取得 | 記事 URL から本文を全文取得（fail-closed）。**保存上限は 100,000 字**（2026-08-29 に 12,000 から引き上げ＝長文が途中で切れたまま判定に回っていた）。**出力契約（P-MKA-35）= 成功は `status == "full"` かつ `text_truncated` が無い時だけ**——上限で切れた行は `status=full` のまま `text_truncated: true` が付くので、消費側はこの印を必ず検査する（切れた本文で合否を出さない） | `scripts/fetch_x_article.py` | 手動 | 🖐🐳 |
 | エンゲージメント計測 | 自投稿の実数を取る | `scripts/fetch_engagement.py`（make_article ラッパー起動） | 投稿後24h/72h | 🐳 |
 | 計測の唯一口 | X 投稿の数値（likes/replies/views/bookmarks/RT/quotes）を測る**唯一のオンデマンド計測モジュール**。取得経路（syndication / fxtwitter）を `sources` に残し、取れない値は 0 でなく `null` にする | `scripts/x_metrics_lib.py`（2026-08-19 新設・それまで経路ごとの独自実装で同じ投稿の数字が食い違っていた〔17/17件不一致・「万」パース全損で3万いいね→0保存〕） | 呼ばれた時 | 🐳 |
 | 契約の見張り | 「0は書かない」契約の違反を検知する report-only の見張り。`output/bookmarks.jsonl` の**凍結行が増減していないか**と、新規行の指標が null かを検査（増えても減っても違反＝差し替え・null 化も拾う） | `scripts/check_metric_contract.py`（⚠️ docstring は「毎日実行」だが **launchd・runner への配線は 0 件**＝実行は手動・2026-08-29 実測。直近実行は `OK: 全267行・数値入り行 243（凍結値 243 と一致）・破損行 0`） | 手動（未配線） | 🖐 |
@@ -91,7 +92,7 @@ flowchart LR
 | X の検索演算子 | `min_faves:` `since:` `until:` `f=top` を組む | **3〜4語まで**（6語ANDは全滅→0件を「市場が空」と誤裁定した実害） | 公式API検索 | personal |
 | Playwright（Python同期API） | headless Chromium で DOM からカード抽出 | 部品をスクリプト間で相互 import して再利用 | Playwright MCP／claude-in-chrome／Selenium | personal |
 | ヘッドレス+Xvfb/noVNC | headless なのに `DISPLAY=:99` 必須・6080でVNC覗ける | 「headless なのに DISPLAY 必須」が定型（この1行が教訓の全文＝番号簿が無いため 2026-08-29 に ID `L001` を外した） | 完全ヘッドレス化 | personal |
-| Docker（xstock-vnc 1コンテナ集約） | `docker exec -e DISPLAY=:99 xstock-vnc python3 …` の1行で叩く | Docker Desktop 自動起動+5分待ち／起動直後20秒スリープ | 収集単位でコンテナ分割 | personal |
+| Docker（xstock-vnc 1コンテナ集約） | `docker exec -e DISPLAY=:99 xstock-vnc python3 …` の1行で叩く | Docker Desktop 自動起動+5分待ち／起動直後20秒スリープ。**この「待つ→無ければ起こす→暖機する」処理は runner 共通部品 `scripts/lib/xstock_vnc.sh`（`xstock_ensure_ready`）に集約**し、各 runner は source して呼ぶだけ（2026-08-29 に `price_universe_run.sh` / `sedori_trend_run.sh` / `xprice_watch_run.sh` を統合＝手書きが3箇所に散って tracer だけ復旧処理が無く止まった実害から。**新しく手書きしない**） | 収集単位でコンテナ分割 | personal |
 | launchd | X収集の定時**4本**（ブックマーク日次・トレーサー日3回・週次バズ・キーワード週次。定義は `~/.claude/launchd/`）＋語収集 `com.influx.sedori-trend` 1本＋発見器 `com.influx.price-discover`（週次日曜10:40・X検索→新商品名の候補キュー・2026-08-30 再稼働。定義は influx `config/launchd/`・機能の正本は `influx-stock-algo-architecture.md` 商品価格レーン直下）。**2026-08-13 に3本停止**（`x-update-proposals` / `xbuzz-weekly-pick` / `xbuzz-weekly-review` → `~/.claude/launchd/_disabled/`）。plist は薄く、リトライ・通知は runner 側 | ログは `~/.claude/state/<job>.{out,err}.log` に集約 | cron／GitHub Actions | personal |
 | macOS 通知（osascript） | 収集失敗・急上昇を通知 | **通知方針の正本はここ1枚**（2026-08-29 集約・株アルゴ側 §5 はここを指す）。原則3つ= ①**成功でなく失敗を通知**（8日間気づかれなかった実害から）②「沈黙＝順調」に見えないよう**成功語だけを watch せず全終端（成功・失敗・ハング）を拾う** ③実装は runner 共通部品 `scripts/lib/xstock_vnc.sh` の `xstock_notify`（AppleScript を壊す文字を落としてから渡す・各所の独自実装はここへ寄せる） | Slack/Discord webhook | personal |
 | JSONL 台帳 | append-only・URL重複スキップ | 過去行を書き換えず取り消しも新行 | DB化（不変性保証が条件） | personal |
@@ -134,7 +135,8 @@ flowchart LR
 | **詳細リファレンス**（分類カテゴリ・テンプレ対応表・データスキーマ） | `.claude/docs/architecture.md`（⚠️ **2026-08-29 退役進行中**: §モジュール構成・§データフローは 5/2 停止／§環境変数は本書 §5.2 へ移送済み／§インフルエンサーグループ定義（文書6群 vs 実体8群）・§collect_tweets オプション（`--scrolls` 文書10 vs 実装20）・「Few-shot 46例」（実 51）は**実装と不一致＝読まない**。カテゴリ定義の正本は `collector/config.py`） | リンク先 |
 
 ## 7. 未反映キュー（機械が積む・人が消す）
-（空。2026-08-29 に 5件を1件ずつ判定して消化＝内訳: **株アルゴ側の対象で本書には載らない** 8本
+（空。2026-09-14 の点検で2件を消化＝**どちらも本書の対象外**: `fxnia_forward_eval.py`・`fxnia_forward_launchd.sh`（2026-09-02 のゼロ除算修正と不要な `ANTHROPIC_API_KEY` チェック撤去）は**株アルゴ側のインフルエンサー前向きレーン**（→ `influx-stock-algo-architecture.md` §4-3）／`_tmp_dram_chain_returns.py` は `_tmp_*` の使い捨て（§1 Skip 対象）。
+2026-08-29 には 5件を1件ずつ判定して消化＝内訳: **株アルゴ側の対象で本書には載らない** 8本
 〔`gen_center_pin_types` `x_mention_dict` `x_mention_extract` `xprice_watch_run` `build_trial_fingerprints`
 `tdnet_event_profile` `coverage_census` `price_universe_check`〕／**本書に既出で追記不要** 3本
 〔`fetch_bookmarks`= §4「ブックマーク日次」・`bookmarks_keyword_common`= §4「キーワード台帳」・`x_metrics_lib`= §4「計測の唯一口」〕／

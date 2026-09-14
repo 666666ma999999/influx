@@ -4,7 +4,7 @@
 > `influx-architecture.md`（X収集基盤）と `influx-stock-algo-architecture.md`（株アルゴ研究）が正本で、
 > ここには書かない。**本数・時刻・入口の表は機械生成**（`~/.claude/scripts/gen_pipeline_map.py`）＝手で書き足さない。
 > 人が書くのは §2 の系統分け・§3 の依存・§4 の落とし穴だけ。
-> 2026-08-14 新設（グローバル運用ルール タスクE・定期実行5本以上のため必須）。**本数はここに書かない**＝§1 の機械生成表と `ls config/launchd/*.plist` / `launchctl list | grep com.influx` が正本。last_verified: 2026-08-29
+> 2026-08-14 新設（グローバル運用ルール タスクE・定期実行5本以上のため必須）。**本数はここに書かない**＝§1 の機械生成表と `ls config/launchd/*.plist` / `launchctl list | grep com.influx` が正本。last_verified: 2026-09-14（機械生成ブロックを再生成し `--check` [OK]）
 
 ## 1. スケジュール（機械生成・手で編集しない）
 
@@ -42,7 +42,7 @@
 
 | 系統 | ジョブ | 機能マップ（正本） |
 |---|---|---|
-| **株アルゴ研究** | `paper-screen` / `tob-forward` / `tob-monthly` / `edinet-tob` / `jsf-archive` / `kpi-clock-sla` / `kpi-loop-weekly` / `price-universe` / `price-watch` / `price-discover`（発見器＝X→新商品名の候補キュー・日曜10:40・2026-08-30 再稼働 B-2） / `fxnia-forward` / `okasira-forward`（同スクリプト共用・2026-08-29 P-INF-07） / `research-weekly` | `influx-stock-algo-architecture.md` |
+| **株アルゴ研究** | `paper-screen` / `tob-forward` / `tob-monthly` / `edinet-tob` / `jsf-archive` / `kpi-clock-sla` / `kpi-loop-weekly` / `price-universe` / `price-watch` / `price-discover`（発見器＝X→新商品名の候補キュー・日曜10:40・2026-08-30 再稼働 B-2） / `fxnia-forward` / `okasira-forward`（同スクリプト共用・2026-08-29 P-INF-07） / `research-weekly`（凍結34アカウントの週次勝率リサーチ＝収集→抽出→取込→採点を無人で1周・2026-09-12 に P3 仕様へ・09-13 ロード） | `influx-stock-algo-architecture.md` |
 | **X収集基盤** | `us-watchlist`（インフルエンサー投稿の週次収集・**2026-08-29 に株アルゴ側から移動**＝実体は `recollect_account.py` による X 収集で、保存先も `data/influencer_candidates/`）／`sedori-trend`（語の収集系）／※ `xbuzz-*` は **claude-env 側の launchd から influx のスクリプトを叩く**（定義は `~/.claude/launchd/`） | `influx-architecture.md` |
 
 ## 3. 依存と順序（人が書く）
@@ -66,7 +66,7 @@
 | 情報 | 正本 |
 |---|---|
 | 機能の境界・道具（X収集基盤） | `influx-architecture.md`（本ファイルと一緒に毎セッション自動注入） |
-| 機能の境界・道具（株アルゴ研究・14工程） | `influx-stock-algo-architecture.md` |
+| 機能の境界・道具（株アルゴ研究） | `influx-stock-algo-architecture.md`（工程の本数は書かない＝向こうの §4 が正本） |
 | 前向きレーンの台帳・事前登録 | 同上 §4-2 と `tasks/*_preregister.md` |
 | 運用ルール（誰がいつ直すか） | `~/.claude/rules/05-plan-task-md.md` §architecture |
 
