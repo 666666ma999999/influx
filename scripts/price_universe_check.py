@@ -845,10 +845,10 @@ def main(only: list[str] | None = None) -> int:
                     (datetime.strptime(today, "%Y-%m-%d")
                      - datetime.strptime(parsed["src_date"], "%Y-%m-%d")).days > 3:
                 status = "stale"
-            # DRAM スポット（dramexchange DRAM 表）は営業日日次更新。同ページの Flash 表が 2026-08-31 で
+            # dramexchange のスポット表（DRAM・NAND とも）は営業日日次更新。Flash 表が 2026-08-31 で
             # 止まったまま ok を返し続けた実測（9/13）を受け、7日超の古さは stale（週次ジョブ＋週末・祝日の余裕）。
-            # NAND（layout dramexchange_512gb_tlc）は既存挙動維持のため対象外＝オーナー裁定待ち（P-INF-16 残）
-            if parsed.get("layout") == "dramexchange_ddr5_16gb" and parsed.get("src_date") and \
+            # NAND への適用= オーナー裁定 P-INF-16b a（2026-09-14）
+            if parsed.get("layout") in ("dramexchange_ddr5_16gb", "dramexchange_512gb_tlc") and parsed.get("src_date") and \
                     (datetime.strptime(today, "%Y-%m-%d")
                      - datetime.strptime(parsed["src_date"], "%Y-%m-%d")).days > 7:
                 status = "stale"
