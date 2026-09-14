@@ -5,7 +5,8 @@
 
 ## 0. 3行サマリ（平易）
 
-> 🗺 **図解（DRAM 株を起点・1枚）**: `file:///Users/masaaki_nagasawa/Desktop/biz/influx/output/dram_chain_map_2026-09.html`（ローカル HTML・2026-09-13・git 非追跡＝output/*.html。再生成は本ファイル §2 から手で）
+> 🌳 **ツリー図（DRAM 株を根に・折りたたみ式・2026-09-14 オーナー「ツリー状に」）**: `file:///Users/masaaki_nagasawa/Desktop/biz/influx/output/dram_chain_tree_2026-09.html`
+> 🗺 図解（5 列の相関図・旧）: `file:///Users/masaaki_nagasawa/Desktop/biz/influx/output/dram_chain_map_2026-09.html`（ローカル HTML・2026-09-13・git 非追跡＝output/*.html。再生成は本ファイル §2 から手で）
 
 1. **DRAM を作る側（Micron・Nanya・Winbond）と、その「後工程・検査」（アドバンテスト・KOKUSAI・住友ベーク）は株価がもう反応済み**。韓国2社（Samsung・SK hynix）は3ヶ月では指数並みだが直近1ヶ月で +17%/+30% と急騰中。
 2. **まだ上がっていない産業は3つ**: 〈前工程の装置（日本の東エレク・SCREEN・ローツェ、米国の ASML・Lam・AMAT・KLA）〉〈日本の材料（信越・東京応化・扶桑化学・日東紡・HOYA・ステラケミファ）〉〈台湾のメモリモジュール（ADATA・Transcend・Apacer＝利益は記録的なのに株価は指数割れ）〉。
