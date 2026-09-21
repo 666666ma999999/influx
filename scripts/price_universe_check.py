@@ -76,13 +76,16 @@ def parse_te(html: str, slug: str, label: str) -> dict | None:
         #   一覧(/commodities): [%Chg, Weekly, Monthly, YTD, YoY] = 5個 → weekly は pcts[1]
         #   個別(/commodity/x): [Day, Month, Year]                = 3個 → **weekly 列は存在しない**
         # 未知の列数は誤ラベルを避けるため値を採らない（parse_fail にする）。
+        # 2026-09-21 オーナー指摘「年単位の比較がない」: 一覧の YTD/YoY・個別の Year を捨てずに残す
+        #（判定には使わない＝閾値は従来どおり weekly/monthly/yoy_pct の設定キーで決まる）
         n_pct = len(pcts)
         if n_pct >= 5:
             return {"value": value, "day_pct": pcts[0], "weekly_pct": pcts[1],
-                    "monthly_pct": pcts[2], "src_date": src_date, "layout": "index5"}
+                    "monthly_pct": pcts[2], "ytd_pct": pcts[3], "yoy_pct": pcts[4],
+                    "src_date": src_date, "layout": "index5"}
         if n_pct == 3:
             return {"value": value, "day_pct": pcts[0], "weekly_pct": None,
-                    "monthly_pct": pcts[1], "src_date": src_date, "layout": "detail3"}
+                    "monthly_pct": pcts[1], "yoy_pct": pcts[2], "src_date": src_date, "layout": "detail3"}
         return None
     return None
 
@@ -1101,6 +1104,18 @@ def _selftest() -> int:
     # 3) 同一年月が別値で重複（過去年度表の併載など）→ 静かに誤値を採らず parse_fail
     u = parse_uss(uss_html([mrow("4月", "1,221", "114.6%"), mrow("4月", "1,999", "100.0%")]))
     chk("uss 年月衝突→None", u is None)
+
+    # 2b) TE 一覧(5%列)は YTD/YoY を、個別(3%列)は Year を yoy_pct に残す（2026-09-21）
+    te_row = ('<tr><td><a href="/commodity/copper">Copper</a></td><td>4.52</td><td>0.01</td>'
+              '<td>0.2%</td><td>1.5%</td><td>3.1%</td><td>12.0%</td><td>25.5%</td><td>Sep/14</td></tr>')
+    t = parse_te(te_row, "copper", "Copper")
+    chk("te index5 yoy=25.5/ytd=12.0/weekly=1.5", bool(t) and t["yoy_pct"] == 25.5 and t["ytd_pct"] == 12.0
+        and t["weekly_pct"] == 1.5 and t["layout"] == "index5")
+    te_det = ('<tr><td><a href="/commodity/copper">Copper</a></td><td>4.52</td>'
+              '<td>0.2%</td><td>3.1%</td><td>25.5%</td><td>Sep/14</td></tr>')
+    t = parse_te(te_det, "copper", "Copper")
+    chk("te detail3 yoy=25.5/weekly=None", bool(t) and t["yoy_pct"] == 25.5 and t["weekly_pct"] is None
+        and t["monthly_pct"] == 3.1)
 
     def card(price: int) -> str:
         return ('card-product<a href="https://yuyu-tei.jp/sell/poc/card/m06/1"></a>'
