@@ -4878,6 +4878,24 @@
       "actionable": false,
       "reason": "2026-08-09 修理: 8/7クエリ入替でmap未更新→validate NG5件→銘柄付与が全停止していた（レビュアーA発見・統括実測確認）。gen4は§16qの新語彙で既存subjectへ機械的に寄せると符号事故のため、銘柄非提示の仮置き。正式割当はユーザー/次周裁定。",
       "beneficiaries": []
+    },
+    {
+      "id": "downside-generic",
+      "label": "値下がり側の汎用クエリ（値下がり／暴落／供給過剰・過剰在庫／投げ売り・在庫処分／値下げ・価格引き下げ）",
+      "queries": [
+        "gen5-nesagari-generic",
+        "gen5-bouraku-generic",
+        "gen5-kyoukyu-kajou",
+        "gen5-nagcuri",
+        "gen5-nesage-kaitei"
+      ],
+      "shortage_type": "broad",
+      "actionable": false,
+      "reason": "2026-09-21 オーナー裁定（需給のゴール= 品薄・値上がり・値下がり）で追加した『値下がり側』の言葉。主題が特定できない汎用語であり、かつ値下がり側の受益（誰が得するか）の帰属ルールは docs/price-watch-universe.md §0b に未定義＝銘柄は出さない。用途は観測（watch）と、経産省 IIP 在庫発見器③（inventory_discover_iip.py）の供給過剰候補との突合材料。",
+      "lag_note": "",
+      "beneficiaries": [],
+      "traps": [],
+      "group": "C-consumer-broad-disruption"
     }
   ],
   "actionable_rule": "subject.actionable = shortage_types[type].actionable かつ beneficiaries が非空。型が対象でも TOP1000内に受益銘柄が居なければ非対象（無理に銘柄を立てない）",

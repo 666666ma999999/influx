@@ -326,6 +326,37 @@
       "lane": "industrial",
       "q": "特需",
       "min_faves": 0
+    },
+    {
+      "id": "gen5-nesagari-generic",
+      "q": "値下がり",
+      "min_faves": 100,
+      "lane": "downside"
+    },
+    {
+      "id": "gen5-bouraku-generic",
+      "q": "暴落",
+      "min_faves": 100,
+      "lane": "downside"
+    },
+    {
+      "id": "gen5-kyoukyu-kajou",
+      "q": "(供給過剰 OR 過剰在庫 OR 在庫過多)",
+      "min_faves": 10,
+      "lane": "downside"
+    },
+    {
+      "id": "gen5-nagcuri",
+      "q": "(投げ売り OR 在庫処分 OR 叩き売り)",
+      "min_faves": 10,
+      "lane": "downside"
+    },
+    {
+      "id": "gen5-nesage-kaitei",
+      "q": "(値下げ OR 価格引き下げ) (メーカー OR 卸 OR 相場)",
+      "min_faves": 10,
+      "lane": "downside"
     }
-  ]
+  ],
+  "_downside_note": "2026-09-21 オーナー裁定（品薄・値上がり・値下がりの3指標）: lane=downside の gen5 5本は『値下がり側』の言葉。発火判定は現行の波条件（28日比2.0）を共用＝値下がりの語の投稿が増えたら鳴る。x_shortage_map の受益銘柄は付けない（値下がり側の帰属ルールは未定義・docs/price-watch-universe.md §0b の対象外）。較正（陽性/陰性カテゴリ）は未実施＝当面は watch 表示の観測用。"
 }
