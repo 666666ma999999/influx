@@ -46,6 +46,7 @@
 
 ## Stuck
 
+- 2026-09-21 16:10 オンライン取得の実走: 同日に同ファイルを 6 回以上取ったあとは HTTP 200 でも 0 bytes（配信側の抑制と推定・未確認）→ fail-closed が exit 2 で停止し md を書かない（意図どおり）。翌日以降に 1 回だけ実走して 200/171KB を確認すること（`python3 scripts/inventory_discover_iip.py --out /tmp/inv_online.md`）。
 - 品目別ワークブックは未特定: `b2020_ygzosm1je.xlsx` は再取得できたが中身は「製造工業生産予測指数」（在庫でない）。在庫の品目別は別ファイルか e-Stat 側＝後便。連続取得時の HTTP 202・0 bytes は約 10 分空けると 200 に戻った（配信側の抑制と推定・未確認）。
 
 ## Session Handoff
