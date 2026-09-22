@@ -27,7 +27,9 @@ until docker info >/dev/null 2>&1; do
 done
 
 cd "$INFLUX" || exit 1
-docker compose run --rm xstock python scripts/flea_panel_track.py 2>&1 | tee "$OUT"
+# 観測日はホスト（JST）で決めて渡す＝コンテナの UTC 時計に依存しない
+TODAY=${TODAY:-$(date +%Y-%m-%d)}
+docker compose run --rm xstock python scripts/flea_panel_track.py --date "$TODAY" 2>&1 | tee "$OUT"
 rc=${PIPESTATUS[0]}
 
 summary=$(grep -E '^--- flea_panel' "$OUT" | tail -1)

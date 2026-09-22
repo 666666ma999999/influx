@@ -36,7 +36,7 @@ import sys
 import time
 import urllib.parse
 import urllib.request
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -262,7 +262,9 @@ def run(cfg: Dict[str, Any], today: str, data_dir: Path, fetch=fetch_html) -> in
 
 def main(argv: Optional[List[str]] = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--date", default=datetime.now().strftime("%Y-%m-%d"), help="観測日（既定= 今日・ローカル）")
+    # 既定は日本時間の今日（Docker コンテナの時計は UTC＝深夜 0〜9 時 JST に走ると前日扱いになる・2026-09-23 launchd 実走で実害）
+    jst_today = datetime.now(timezone(timedelta(hours=9))).strftime("%Y-%m-%d")
+    ap.add_argument("--date", default=jst_today, help="観測日（既定= 今日・JST）")
     ap.add_argument("--config", default=str(DEFAULT_CONFIG))
     ap.add_argument("--data-dir", default=str(DATA_DIR))
     a = ap.parse_args(argv)
