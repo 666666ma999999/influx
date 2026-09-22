@@ -18,7 +18,7 @@
 | ジョブ（Label / workflow） | いつ動くか | 入口 | 定義ファイル |
 |---|---|---|---|
 | com.influx.edinet-tob | 月曜 18:45／火曜 18:45／水曜 18:45／木曜 18:45／金曜 18:45 | `exec /usr/bin/python3 ~/Desktop/biz/influx/scripts/edinet_fetch.py --dataset documents_all` | `config/launchd/com.influx.edinet-tob.plist` |
-| com.influx.flea-panel | 毎日 21:40 | `bash ~/Desktop/biz/influx/scripts/flea_panel_run.sh` | `config/launchd/com.influx.flea-panel.plist`（2026-09-22 新設・P-INF-19。**launchctl 登録はオーナー手番＝未登録**） |
+| com.influx.flea-panel | 毎日 21:40 | `bash ~/Desktop/biz/influx/scripts/flea_panel_run.sh` | `config/launchd/com.influx.flea-panel.plist`（2026-09-22 新設・P-INF-19・2026-09-23 登録済み） |
 | com.influx.fxnia-forward | 月曜 10:30 | `exec ~/Desktop/biz/influx/scripts/fxnia_forward_launchd.sh` | `config/launchd/com.influx.fxnia-forward.plist` |
 | com.influx.jsf-archive | 月曜 12:30／月曜 19:30／火曜 12:30／火曜 19:30／水曜 12:30／水曜 19:30／木曜 12:30／木曜 19:30／金曜 12:30／金曜 19:30 | `exec /usr/bin/python3 ~/Desktop/biz/influx/scripts/jsf_daily_archive.py` | `config/launchd/com.influx.jsf-archive.plist` |
 | com.influx.kpi-clock-sla | 月曜 08:45／火曜 08:45／水曜 08:45／木曜 08:45／金曜 08:45 | `exec /usr/bin/python3 ~/Desktop/biz/influx/scripts/kpi_clock_sla.py` | `config/launchd/com.influx.kpi-clock-sla.plist` |
