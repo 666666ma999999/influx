@@ -99,3 +99,5 @@ data/paper_trades/recent_signals_cache.json
 # TDnet インデックス raw（再取得可・第三者API由来のため再配布しない）
 # data/tdnet/receipts.jsonl は取得証跡なので追跡対象のまま残す
 data/tdnet/index/
+# flea_panel の生観測（1日≈400KB・daily.jsonl と state.json は追跡する）
+data/flea_panel/snapshots/
