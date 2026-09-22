@@ -64,13 +64,51 @@ class RunTest(unittest.TestCase):
             self.assertEqual(state["q1:z2"]["first_seen"], "2026-09-01")
             self.assertTrue((dd / "snapshots" / "2026-09-09.jsonl").exists())
 
-    def test_same_day_rerun_replaces_row(self):
+    def test_same_day_rerun_keeps_counts(self):
+        """Codex P1-1: 同日再実行で new_open / sold_new が 0 に化けない（件数は state の日付から導く）。"""
+        with tempfile.TemporaryDirectory() as d:
+            dd = Path(d)
+            self._run("2026-09-01", [item(1, "OPEN", 100)], [item(9, "SOLD", 95)], dd)
+            self._run("2026-09-01", [item(1, "OPEN", 100)], [item(9, "SOLD", 95)], dd)
+            rows = [json.loads(l) for l in (dd / "daily.jsonl").read_text().splitlines()]
+            self.assertEqual(len(rows), 1)
+            self.assertEqual(rows[0]["new_open"], 1)
+            self.assertEqual(rows[0]["sold_new"], 1)
+            self.assertEqual(rows[0]["sold_new_median"], 95.0)
+
+    def test_stale_counts_only_current_open_set(self):
+        """Codex P2-4: 朝は古い A・再実行で新しい B だけ → stale_n は最新の観測（B）で数えるので 0。"""
         with tempfile.TemporaryDirectory() as d:
             dd = Path(d)
             self._run("2026-09-01", [item(1, "OPEN", 100)], [], dd)
+            self._run("2026-09-09", [item(1, "OPEN", 100)], [], dd)      # 朝: A は stale
+            self._run("2026-09-09", [item(2, "OPEN", 120)], [], dd)      # 再実行: B だけ
+            row = [json.loads(l) for l in (dd / "daily.jsonl").read_text().splitlines() if '"2026-09-09"' in l][0]
+            self.assertEqual(row["open_n"], 1)
+            self.assertEqual(row["stale_n"], 0)
+
+    def test_relist_after_sold_is_counted_again(self):
+        """Codex P2-5: SOLD→OPEN（再出品）で sold_seen が解除され、再成約・滞留が再び数えられる。"""
+        with tempfile.TemporaryDirectory() as d:
+            dd = Path(d)
             self._run("2026-09-01", [item(1, "OPEN", 100)], [], dd)
-            rows = (dd / "daily.jsonl").read_text().splitlines()
-            self.assertEqual(len(rows), 1)
+            self._run("2026-09-02", [], [item(1, "SOLD", 100)], dd)
+            self._run("2026-09-03", [item(1, "OPEN", 130)], [], dd)      # 再出品
+            self._run("2026-09-11", [item(1, "OPEN", 130)], [], dd)      # 8 日後もまだ出品中 → stale
+            rows = {json.loads(l)["date"]: json.loads(l) for l in (dd / "daily.jsonl").read_text().splitlines()}
+            self.assertEqual(rows["2026-09-03"]["new_open"], 1)
+            self.assertEqual(rows["2026-09-11"]["stale_n"], 1)
+            self._run("2026-09-12", [], [item(1, "SOLD", 125)], dd)
+            rows = {json.loads(l)["date"]: json.loads(l) for l in (dd / "daily.jsonl").read_text().splitlines()}
+            self.assertEqual(rows["2026-09-12"]["sold_new"], 1)
+            state = json.loads((dd / "state.json").read_text())
+            self.assertEqual(state["q1:z1"]["relisted"], 1)
+
+    def test_zero_after_status_filter_is_error(self):
+        """Codex P1-2: 生の件数はあるが OPEN/SOLD 以外だけ → error・exit 2。"""
+        with tempfile.TemporaryDirectory() as d:
+            rc = self._run("2026-09-01", [item(1, "CLOSED", 100)], [item(2, "CANCELLED", 90)], Path(d))
+            self.assertEqual(rc, 2)
 
     def test_zero_both_sides_is_error_exit2(self):
         with tempfile.TemporaryDirectory() as d:

@@ -14,7 +14,7 @@
 |---|---|
 | Status | active（初回実走済み・launchd 登録待ち） |
 | 開始日時 | 2026-09-22 21:50 |
-| 最終更新 | 2026-09-22 22:10 |
+| 最終更新 | 2026-09-22 22:40 |
 | 担当 | Claude（統括 fable-5-1） |
 | 裁定 | vault decisions 2026-09-22 P-INF-19 a／報告 [[influx-flea-demand-supply-review-2026-09-22]] |
 
@@ -26,6 +26,7 @@
 - [x] 2026-09-22 `scripts/flea_panel_track.py`・`configs/flea_panel.json`・`tests/test_flea_panel_track.py`（7 件 OK・一括 364 件 OK）
 - [x] 2026-09-22 初回実走（Docker）: 6/6 クエリ・出品 ID 1,186 件・snapshot 1,186 行。同日再実行で置換を確認（daily 6 行のまま）
 - [x] 2026-09-22 `scripts/flea_panel_run.sh`・`config/launchd/com.influx.flea-panel.plist`（bash -n / plutil OK）・故障注入（遮断ページ→exit 2）
+- [x] 2026-09-22 Codex（gpt-6-astra）実装後レビュー 7 件を全件修正: 件数を state の日付から導出（同日再実行で 0 に化けない）／OPEN・SOLD に絞った後の 0 件ガード／再出品（SOLD→OPEN）で sold_seen 解除＋relisted／stale_n は今回の OPEN 集合だけ／一時ファイル→置換の原子的書き込み／runner は件数が数値でなければ exit 3／読み方の限界（先頭100件の頭打ち= sold_new_capped）を docstring に。回帰テスト 4 件追加（計 10 件・一括 367 件 OK）
 - [x] 2026-09-22 配管図・機能マップ・gitignore（snapshots 非追跡）・vault decisions／提案履歴／pokeca INBOX
 - [ ] **launchd 登録（オーナー手番・AI の launchctl は権限拒否）**: `cp config/launchd/com.influx.flea-panel.plist ~/Library/LaunchAgents/ && launchctl load ~/Library/LaunchAgents/com.influx.flea-panel.plist`
 - [ ] 2026-09-29 以降: 7 日分たまったら stale_n／sold_new の実値を見て閾値（何倍で「急増」と言うか）を決める

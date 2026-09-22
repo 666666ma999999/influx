@@ -41,7 +41,10 @@ if [ -z "$summary" ]; then
 fi
 planned=$(printf '%s' "$summary" | sed -n 's/.*queries_planned=\([0-9]*\).*/\1/p')
 processed=$(printf '%s' "$summary" | sed -n 's/.*processed=\([0-9]*\).*/\1/p')
-if [ -n "$planned" ] && [ "$planned" != "$processed" ]; then
+case "$planned:$processed" in
+  *[!0-9:]*|:*|*:) notify "集計行から件数を読めない: ${summary}" "⚠️ フリマパネル 要確認"; exit 3 ;;
+esac
+if [ "$planned" != "$processed" ]; then
   notify "渡した ${planned} 件のうち処理 ${processed} 件" "⚠️ フリマパネル 未完"
   exit 4
 fi

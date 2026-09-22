@@ -4226,7 +4226,7 @@
 "first_seen": "2026-09-22",
 "last_seen_open": "2026-09-22",
 "sold_seen": null,
-"price": 80000,
+"price": 79000,
 "first_price": 80000
 },
 "lizardon-psa10:z688707094": {
@@ -4276,7 +4276,7 @@
 "first_seen": "2026-09-22",
 "last_seen_open": "2026-09-22",
 "sold_seen": null,
-"price": 70000,
+"price": 69800,
 "first_price": 70000
 },
 "lizardon-psa10:z687083150": {
@@ -4346,7 +4346,7 @@
 "first_seen": "2026-09-22",
 "last_seen_open": "2026-09-22",
 "sold_seen": null,
-"price": 21500,
+"price": 20000,
 "first_price": 21500
 },
 "lizardon-psa10:z688191174": {
@@ -4626,7 +4626,7 @@
 "first_seen": "2026-09-22",
 "last_seen_open": "2026-09-22",
 "sold_seen": null,
-"price": 9110,
+"price": 9105,
 "first_price": 9110
 },
 "lizardon-psa10:z677068534": {
@@ -11918,5 +11918,115 @@
 "sold_seen": "2026-09-22",
 "price": 31000,
 "first_price": 31000
+},
+"switch2-honntai:z689427264": {
+"query_id": "switch2-honntai",
+"id": "z689427264",
+"title": "Nintendo Switch 2 本体 セット 完品 動作確認済",
+"first_seen": "2026-09-22",
+"last_seen_open": "2026-09-22",
+"sold_seen": null,
+"price": 49800,
+"first_price": 49800,
+"relisted": 0
+},
+"switch2-honntai:z689222302": {
+"query_id": "switch2-honntai",
+"id": "z689222302",
+"title": "お値下げ不可 ニンテンドースイッチライト Switch ブルー",
+"first_seen": "2026-09-22",
+"last_seen_open": "2026-09-22",
+"sold_seen": null,
+"price": 17999,
+"first_price": 17999,
+"relisted": 0
+},
+"switch2-honntai:z675785276": {
+"query_id": "switch2-honntai",
+"id": "z675785276",
+"title": "Nintendo Switch 2 本体 日本語・国内専用モデル",
+"first_seen": "2026-09-22",
+"last_seen_open": null,
+"sold_seen": "2026-09-22",
+"price": 48000,
+"first_price": 48000,
+"relisted": 0
+},
+"ps5-honntai:z619686602": {
+"query_id": "ps5-honntai",
+"id": "z619686602",
+"title": "PlayStation5 PS5 本体 CFI-1200B01 デジタルエディション",
+"first_seen": "2026-09-22",
+"last_seen_open": "2026-09-22",
+"sold_seen": null,
+"price": 48000,
+"first_price": 48000,
+"relisted": 0
+},
+"ps5-honntai:z664265792": {
+"query_id": "ps5-honntai",
+"id": "z664265792",
+"title": "SONY PlayStation 5 PS5 デジタルエディション CFI-2200B01 日本語専用モデル 本体",
+"first_seen": "2026-09-22",
+"last_seen_open": null,
+"sold_seen": "2026-09-22",
+"price": 39850,
+"first_price": 39850,
+"relisted": 0
+},
+"lizardon-psa10:h1230967568": {
+"query_id": "lizardon-psa10",
+"id": "h1230967568",
+"title": "【PSA10】ポケモンカード リザードンex UR sv3 黒炎の支配者 139/108 ポケカ",
+"first_seen": "2026-09-22",
+"last_seen_open": "2026-09-22",
+"sold_seen": null,
+"price": 22000,
+"first_price": 22000,
+"relisted": 0
+},
+"lizardon-psa10:z684531498": {
+"query_id": "lizardon-psa10",
+"id": "z684531498",
+"title": "PSA10 MリザードンEX 091/087 SR CP6 20th Anniversary ポケモンカード",
+"first_seen": "2026-09-22",
+"last_seen_open": "2026-09-22",
+"sold_seen": null,
+"price": 799999,
+"first_price": 799999,
+"relisted": 0
+},
+"pokeca-151-box:z689433960": {
+"query_id": "pokeca-151-box",
+"id": "z689433960",
+"title": "ポケモンカード 30th CELEBRATION BOX 新品未開封 イオン購入　ペリペリあり　シュリンクなし",
+"first_seen": "2026-09-22",
+"last_seen_open": "2026-09-22",
+"sold_seen": null,
+"price": 21500,
+"first_price": 21500,
+"relisted": 0
+},
+"pokeca-151-box:z677179682": {
+"query_id": "pokeca-151-box",
+"id": "z677179682",
+"title": "ポケモンカードゲーム スカーレット＆バイオレット 強化拡張パック ポケモンカード151 BOX シュリンク付き",
+"first_seen": "2026-09-22",
+"last_seen_open": null,
+"sold_seen": "2026-09-22",
+"price": 51500,
+"first_price": 51500,
+"relisted": 0
+},
+"figure-onepiece-pop:z665906984": {
+"query_id": "figure-onepiece-pop",
+"id": "z665906984",
+"title": "P.O.P DX 不死鳥マルコ フィギュア",
+"first_seen": "2026-09-22",
+"last_seen_open": null,
+"sold_seen": "2026-09-22",
+"price": 2200,
+"first_price": 2200,
+"relisted": 0
 }
 }
