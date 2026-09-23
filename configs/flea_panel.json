@@ -1,5 +1,5 @@
 {
-  "_comment": "Yahoo!フリマ 固定パネル（P-INF-19 オーナー裁定 a・2026-09-22）。指数の無い消費財の〈値上がり／売れ残り増／成約急増〉を出品ID単位で日次追跡する。板は Yahoo!フリマ 1 枚（出品中= 既定URL・売却済= ?sold=1・各先頭100件）。クエリは商品群表 docs/product-groups.md の消費財 group id に紐づける。銘柄は付けない（受益カードは別系統）。 2026-09-23 改訂: 売却済は endTime の新しい順で前日分を頁送り（max_pages）・出品中の総数 totalResultsAvailable を在庫として記録。must/exclude はタイトルの必須語/除外語（省略可）。",
+  "_comment": "Yahoo!フリマ 固定パネル（P-INF-19 オーナー裁定 a・2026-09-22）。指数の無い消費財の〈値上がり／売れ残り増／成約急増〉を出品ID単位で日次追跡する。板は Yahoo!フリマ 1 枚（出品中= 既定URL・売却済= ?sold=1・各先頭100件）。クエリは商品群表 docs/product-groups.md の消費財 group id に紐づける。銘柄は付けない（受益カードは別系統）。 2026-09-23 改訂: 売却済は endTime の新しい順で前日分を頁送り（max_pages）・出品中の総数 totalResultsAvailable を在庫として記録。must/exclude はタイトルの必須語/除外語（省略可）。 2026-09-23 P-INF-20: 観測台帳（docs/product-groups.md §5）の一致行でフリマ列ありを追加（group= 銘柄コード・resale=true は列挙のみで株に起因に数えない）。",
   "board": "yahoo_flea",
   "search_url": "https://paypayfleamarket.yahoo.co.jp/search/{query}",
   "sold_param": "sold=1",
@@ -10,7 +10,7 @@
     {
       "id": "switch2-honntai",
       "query": "Switch 2 本体",
-      "group": "game-console",
+      "group": "7974",
       "must": [
         "switch 2"
       ],
@@ -20,12 +20,14 @@
         "ケース",
         "フィルム",
         "ソフト"
-      ]
+      ],
+      "resale": true,
+      "company": "任天堂"
     },
     {
       "id": "ps5-honntai",
       "query": "PS5 本体",
-      "group": "game-console",
+      "group": "6758",
       "must": [
         "ps5"
       ],
@@ -35,7 +37,9 @@
         "ケース",
         "カバー",
         "スタンド"
-      ]
+      ],
+      "resale": true,
+      "company": "ソニーグループ"
     },
     {
       "id": "lizardon-psa10",
@@ -43,7 +47,8 @@
       "group": "toreka",
       "must": [
         "psa10"
-      ]
+      ],
+      "resale": true
     },
     {
       "id": "pokeca-151-box",
@@ -54,7 +59,8 @@
       ],
       "exclude": [
         "カード単品"
-      ]
+      ],
+      "resale": true
     },
     {
       "id": "rtx5090",
@@ -74,12 +80,279 @@
         "macbook",
         "デスクトップ",
         "bto"
-      ]
+      ],
+      "resale": true
     },
     {
       "id": "figure-onepiece-pop",
       "query": "ワンピース P.O.P フィギュア",
-      "group": "figure-plamo"
+      "group": "7832",
+      "resale": true,
+      "company": "バンダイナムコホールディングス"
+    },
+    {
+      "id": "285a-kioxia-ssd",
+      "query": "KIOXIA SSD",
+      "group": "285A",
+      "company": "キオクシアホールディングス",
+      "resale": false,
+      "must": [
+        "KIOXIA",
+        "SSD"
+      ],
+      "exclude": [
+        "ジャンク",
+        "ケースのみ",
+        "microSD"
+      ]
+    },
+    {
+      "id": "7965-象印-炊飯器",
+      "query": "象印 炊飯器",
+      "group": "7965",
+      "company": "象印マホービン",
+      "resale": false,
+      "must": [
+        "象印"
+      ],
+      "exclude": [
+        "ジャンク",
+        "内釜のみ",
+        "部品",
+        "蓋のみ"
+      ]
+    },
+    {
+      "id": "7599-中古車-車体",
+      "query": "中古車 車体",
+      "group": "7599",
+      "company": "ＩＤＯＭ",
+      "resale": false,
+      "must": [
+        "中古車"
+      ],
+      "exclude": [
+        "パーツ",
+        "ミニカー",
+        "おもちゃ",
+        "部品取り"
+      ]
+    },
+    {
+      "id": "7936-アシックス-スニーカー-未使用",
+      "query": "アシックス スニーカー 未使用",
+      "group": "7936",
+      "company": "アシックス",
+      "resale": false,
+      "must": [
+        "アシックス"
+      ],
+      "exclude": [
+        "キッズ",
+        "ジャンク",
+        "インソールのみ",
+        "レプリカ"
+      ]
+    },
+    {
+      "id": "7740-tamron-レンズ",
+      "query": "TAMRON レンズ",
+      "group": "7740",
+      "company": "タムロン",
+      "resale": false,
+      "must": [
+        "TAMRON"
+      ],
+      "exclude": [
+        "ジャンク",
+        "キャップ",
+        "フード"
+      ]
+    },
+    {
+      "id": "7731-nikon-z-ボディ",
+      "query": "Nikon Z ボディ",
+      "group": "7731",
+      "company": "ニコン",
+      "resale": false,
+      "must": [
+        "Nikon",
+        "Z"
+      ],
+      "exclude": [
+        "ジャンク",
+        "フィルム",
+        "ケース",
+        "ストラップ"
+      ]
+    },
+    {
+      "id": "8022-ミズノ-グローブ",
+      "query": "ミズノ グローブ",
+      "group": "8022",
+      "company": "美津濃",
+      "resale": false,
+      "must": [
+        "ミズノ"
+      ],
+      "exclude": [
+        "ジャンク",
+        "少年用",
+        "レプリカ"
+      ]
+    },
+    {
+      "id": "6586-マキタ-18v-本体",
+      "query": "マキタ 18V 本体",
+      "group": "6586",
+      "company": "マキタ",
+      "resale": false,
+      "must": [
+        "マキタ"
+      ],
+      "exclude": [
+        "ジャンク",
+        "互換",
+        "バッテリーのみ",
+        "ケースのみ"
+      ]
+    },
+    {
+      "id": "6952-g-shock-新品",
+      "query": "G-SHOCK 新品",
+      "group": "6952",
+      "company": "カシオ計算機",
+      "resale": false,
+      "must": [
+        "G-SHOCK"
+      ],
+      "exclude": [
+        "ジャンク",
+        "ベルトのみ",
+        "バンド",
+        "ベゼル"
+      ]
+    },
+    {
+      "id": "7832-ガンプラ-未組立",
+      "query": "ガンプラ 未組立",
+      "group": "7832",
+      "company": "バンダイナムコホールディングス",
+      "resale": true,
+      "must": [
+        "ガンプラ",
+        "未組立"
+      ],
+      "exclude": [
+        "完成品",
+        "ジャンク",
+        "パーツ"
+      ]
+    },
+    {
+      "id": "8050-グランドセイコー",
+      "query": "グランドセイコー",
+      "group": "8050",
+      "company": "セイコーグループ",
+      "resale": false,
+      "must": [
+        "グランドセイコー"
+      ],
+      "exclude": [
+        "ジャンク",
+        "ベルト",
+        "箱のみ"
+      ]
+    },
+    {
+      "id": "7867-ベイブレードx",
+      "query": "ベイブレードX",
+      "group": "7867",
+      "company": "タカラトミー",
+      "resale": true,
+      "must": [
+        "ベイブレード"
+      ],
+      "exclude": [
+        "ジャンク",
+        "パーツ",
+        "ランチャーのみ"
+      ]
+    },
+    {
+      "id": "7309-シマノ-コンポーネント",
+      "query": "シマノ コンポーネント",
+      "group": "7309",
+      "company": "シマノ",
+      "resale": false,
+      "must": [
+        "シマノ"
+      ],
+      "exclude": [
+        "ジャンク",
+        "釣り",
+        "リール"
+      ]
+    },
+    {
+      "id": "9766-遊戯王-25th-クォーターセンチュリー",
+      "query": "遊戯王 25th クォーターセンチュリー",
+      "group": "9766",
+      "company": "コナミグループ",
+      "resale": true,
+      "must": [
+        "遊戯王"
+      ],
+      "exclude": [
+        "まとめ売り",
+        "引退",
+        "オリパ"
+      ]
+    },
+    {
+      "id": "7951-ヤマハ-電子ピアノ",
+      "query": "ヤマハ 電子ピアノ",
+      "group": "7951",
+      "company": "ヤマハ",
+      "resale": false,
+      "must": [
+        "ヤマハ"
+      ],
+      "exclude": [
+        "ジャンク",
+        "バイク",
+        "楽譜"
+      ]
+    },
+    {
+      "id": "7990-ダイワ-リール",
+      "query": "ダイワ リール",
+      "group": "7990",
+      "company": "グローブライド",
+      "resale": false,
+      "must": [
+        "ダイワ"
+      ],
+      "exclude": [
+        "ジャンク",
+        "部品",
+        "スプールのみ"
+      ]
+    },
+    {
+      "id": "6630-ヤーマン-美顔器",
+      "query": "ヤーマン 美顔器",
+      "group": "6630",
+      "company": "ヤーマン",
+      "resale": false,
+      "must": [
+        "ヤーマン"
+      ],
+      "exclude": [
+        "ジャンク",
+        "付属品のみ",
+        "ジェルのみ"
+      ]
     }
   ],
   "max_pages": 3
