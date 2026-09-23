@@ -68,6 +68,12 @@ def fetch_html(url: str, user_agent: str, timeout: int = 30) -> str:
                 raise
             print(f"[429] rate limited; waiting {wait}s (attempt {attempt + 1}/{len(RETRY_WAITS)})", file=sys.stderr)
             time.sleep(wait)
+        except (urllib.error.URLError, OSError) as e:
+            # 名前解決の失敗・接続断（コンテナの DNS が長時間実行の途中で落ちる実害 2026-09-23）は短く待って再試行
+            if wait is None:
+                raise
+            print(f"[net] {e}; waiting 30s (attempt {attempt + 1}/{len(RETRY_WAITS)})", file=sys.stderr)
+            time.sleep(30)
     raise RuntimeError("unreachable")
 
 
