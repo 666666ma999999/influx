@@ -71,7 +71,24 @@ class FilterTest(unittest.TestCase):
         cfg2 = dict(cfg, max_pages=2)
         w2 = fpt.fetch_window(cfg2, {"query": "x"}, sold=True, sort_key="endTime", start=start, end=end,
                               fetch=lambda u, ua: page(full))
-        self.assertTrue(w2["capped"]); self.assertEqual(w2["pages"], 2); self.assertEqual(len(w2["items"]), 200)
+        self.assertTrue(w2["capped"]); self.assertEqual(w2["pages"], 2)
+        self.assertEqual(len(w2["items"]), 100)   # 同じ 100 ID が 2 頁に出ても重複計上しない（Codex 2026-09-23 #2）
+
+    def test_fetch_window_all_today_pages_is_capped(self):
+        """全頁が当日分（窓の後ろ）で前日に届かない → items 0 でも capped=True（Codex 2026-09-23 #1）。"""
+        import datetime as _dt
+        jst = _dt.timezone(_dt.timedelta(hours=9))
+        start = _dt.datetime(2026, 9, 8, tzinfo=jst); end = _dt.datetime(2026, 9, 9, tzinfo=jst)
+        today_full = [item(i, "SOLD", 100, day="2026-09-09") for i in range(100)]
+        cfg = dict(CFG, request_interval_sec=0, max_pages=3)
+        w = fpt.fetch_window(cfg, {"query": "x"}, sold=True, sort_key="endTime", start=start, end=end,
+                             fetch=lambda u, ua: page(today_full))
+        self.assertEqual(len(w["items"]), 0); self.assertTrue(w["capped"]); self.assertEqual(w["pages"], 3)
+
+    def test_parse_total_no_regex_fallback(self):
+        """search.result が無い時は None（別モジュールの 0 を拾わない・Codex 2026-09-23 #5）。"""
+        html = '<script id="__NEXT_DATA__">{"props":{"initialState":{"searchState":{"search":{}}}},"other":{"totalResultsAvailable":0}}</script>'
+        self.assertIsNone(fpt.parse_total(html))
 
     def test_fetch_window_non_monotonic_scans_all_pages(self):
         """出品中の openTime 順は古い物が混ざる＝古い 1 件で止めず頁を読み切る（2026-09-23 実害: new_open_d1 が全て 0）。"""
@@ -83,7 +100,7 @@ class FilterTest(unittest.TestCase):
         cfg = dict(CFG, request_interval_sec=0, max_pages=2)
         w = fpt.fetch_window(cfg, {"query": "x"}, sold=False, sort_key="openTime", start=start, end=end,
                              fetch=lambda u, ua: page(mixed), monotonic=False)
-        self.assertEqual(w["pages"], 2); self.assertEqual(len(w["items"]), 98 * 2); self.assertTrue(w["capped"])
+        self.assertEqual(w["pages"], 2); self.assertEqual(len(w["items"]), 98); self.assertTrue(w["capped"])
         w_mono = fpt.fetch_window(cfg, {"query": "x"}, sold=False, sort_key="openTime", start=start, end=end,
                                   fetch=lambda u, ua: page(mixed), monotonic=True)
         self.assertEqual(len(w_mono["items"]), 0)   # 旧挙動＝古い 1 件で停止して 0 になる

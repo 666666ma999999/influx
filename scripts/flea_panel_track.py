@@ -13,14 +13,14 @@
   → data/flea_panel/snapshots/<date>.jsonl に生の観測（同日再実行は上書き・run 名=日付）
   → data/flea_panel/state.json（出品ID ごとの first_seen / last_seen_open / sold_seen / price / relisted）
   → data/flea_panel/daily.jsonl に 1クエリ1日1行（同日行は置換）
-      3 指標: ①値上がり= sold_d1_median（＋open_median）／②売れ残り= open_total の推移と sell_through_d1（= sold_d1 / open_total）
+      3 指標: ①値上がり= sold_d1_median（＋open_median）／②売れ残り= open_total の推移と sold_d1_over_open_total（= 絞った前日成約 / 絞り無しの総在庫・母集団が違う目安値）
              ／③成約急増= sold_d1（前日比は prev7 列）
   「前日」= --date の前の暦日（JST）。21:40 の定期実行は前日 1 日分を確定値として記録する。
 
 読み方の限界:
   頁送りは max_pages（既定 5 頁= 500 件）まで＝前日の成約が 500 件超の商品では sold_d1 が頭打ち（sold_d1_capped=true）。
   出品中の openTime 順は関連度と混ざる（厳密な降順でない）＝ new_open_d1 は max_pages 内に見えた前日出品の数（下限値）。
-  売れ残りは open_total（総在庫）と sell_through_d1（= 前日成約 / 総在庫）で読む。stale_n（既定順 100 件中の 7 日以上前初見）は補助。
+  売れ残りは open_total（総在庫）と sold_d1_over_open_total で読む。sold_d1_capped=true の行の sold_d1 は下限値（prev7 側にも capped 列あり）。stale_n（既定順 100 件中の 7 日以上前初見）は補助。
   検索語の同定はタイトルの必須語/除外語（config の must / exclude・省略可）で絞る。無い語はノイズ混入あり（RTX 5090 に PC 本体等）。
 
 fail-closed:
@@ -136,8 +136,7 @@ def parse_total(html: str) -> Optional[int]:
         v = d["props"]["initialState"]["searchState"]["search"]["result"].get("totalResultsAvailable")
         return int(v) if v is not None else None
     except (KeyError, TypeError, ValueError, json.JSONDecodeError):
-        mm = re.search(r'"totalResultsAvailable":\s*(\d+)', html)
-        return int(mm.group(1)) if mm else None
+        return None   # 経路が変わったら取得不能として扱う（先頭一致に戻すと別モジュールの 0 を拾う）
 
 
 def title_ok(title: Optional[str], q: Dict[str, Any]) -> bool:
@@ -170,6 +169,7 @@ def fetch_window(cfg: Dict[str, Any], q: Dict[str, Any], sold: bool, sort_key: s
     max_pages = int(cfg.get("max_pages", 5))
     interval = float(cfg.get("request_interval_sec", 2.0))
     items: List[Dict[str, Any]] = []
+    seen_ids: set = set()
     total: Optional[int] = None
     capped = False
     pages = 0
@@ -196,12 +196,16 @@ def fetch_window(cfg: Dict[str, Any], q: Dict[str, Any], sold: bool, sort_key: s
                     break
                 continue
             in_window_this_page += 1
+            if it.get("id") in seen_ids:      # 頁送り中の新着挿入で同じ ID が次頁に流れる＝重複計上を防ぐ
+                continue
+            seen_ids.add(it.get("id"))
             if title_ok(it.get("title"), q):
                 items.append(slim(it))
         if reached_start or len(raw) < 100:
             break
         if page == max_pages:
-            capped = in_window_this_page > 0
+            # 開始境界にも結果末尾にも届かず頁上限で終了＝窓内の件数は下限値（窓内 0 件でも capped）
+            capped = True
     return {"items": items, "total": total, "capped": capped, "pages": pages}
 
 
@@ -370,16 +374,18 @@ def run(cfg: Dict[str, Any], today: str, data_dir: Path, fetch=fetch_html) -> in
         row["sold_d1"] = len(sold_items)
         row["sold_d1_capped"] = sold_w["capped"]
         row["sold_d1_median"] = median([it["price"] for it in sold_items])
-        row["sell_through_d1"] = (round(len(sold_items) / open_total, 4) if open_total else None)
+        # 分子= 同定欄で絞った前日成約・分母= 検索結果の総在庫（絞り無し）＝母集団が違う比率。傾向の目安にだけ使う
+        row["sold_d1_over_open_total"] = (round(len(sold_items) / open_total, 4) if open_total else None)
         row["pages_fetched"] = 1 + new_w["pages"] + sold_w["pages"]
         row["sold_d1_prev7"] = prev_value(daily, qid, today, 7, "sold_d1")
+        row["sold_d1_capped_prev7"] = prev_value(daily, qid, today, 7, "sold_d1_capped")
         row["sold_d1_median_prev7"] = prev_value(daily, qid, today, 7, "sold_d1_median")
         row["open_total_prev7"] = prev_value(daily, qid, today, 7, "open_total")
         daily.append(row)
         processed += 1
         print(f"[ok] {qid}: open_total={open_total} new_open_d1={row['new_open_d1']} sold_d1={row['sold_d1']}"
               f"{'(capped)' if sold_w['capped'] else ''} sold_d1_med={row['sold_d1_median']} "
-              f"sell_through={row['sell_through_d1']} open_med={row['open_median']}")
+              f"sold/open_total={row['sold_d1_over_open_total']} open_med={row['open_median']}")
 
     # 書き順= 生観測 → 日次 → state（全て一時ファイル→置換）。件数は state の日付から導くので途中失敗後の再実行でも同じ値になる
     write_jsonl(snap_path, snaps)

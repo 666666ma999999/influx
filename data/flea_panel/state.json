@@ -4616,7 +4616,7 @@
 "first_seen": "2026-09-22",
 "last_seen_open": "2026-09-23",
 "sold_seen": null,
-"price": 27400,
+"price": 27200,
 "first_price": 27600
 },
 "lizardon-psa10:z687606000": {
@@ -8296,7 +8296,7 @@
 "first_seen": "2026-09-22",
 "last_seen_open": "2026-09-23",
 "sold_seen": null,
-"price": 1800000,
+"price": 1650000,
 "first_price": 1730000
 },
 "rtx5090:z669400756": {
@@ -15349,6 +15349,72 @@
 "sold_seen": null,
 "price": 53000,
 "first_price": 53000,
+"relisted": 0
+},
+"ps5-honntai:z688929470": {
+"query_id": "ps5-honntai",
+"id": "z688929470",
+"title": "PS5 DualSense ホワイト",
+"first_seen": "2026-09-23",
+"last_seen_open": "2026-09-23",
+"sold_seen": null,
+"price": 8800,
+"first_price": 8800,
+"relisted": 0
+},
+"lizardon-psa10:z689905868": {
+"query_id": "lizardon-psa10",
+"id": "z689905868",
+"title": "PSA10 メガリザードンX ex 223/193 MA ポケモンカード GEM MT 10",
+"first_seen": "2026-09-23",
+"last_seen_open": "2026-09-23",
+"sold_seen": null,
+"price": 15000,
+"first_price": 15000,
+"relisted": 0
+},
+"lizardon-psa10:z689903434": {
+"query_id": "lizardon-psa10",
+"id": "z689903434",
+"title": "PSA10 ディズニー ロルカナ バズ・ライトイヤー アイコニック #241",
+"first_seen": "2026-09-23",
+"last_seen_open": "2026-09-23",
+"sold_seen": null,
+"price": 300000,
+"first_price": 300000,
+"relisted": 0
+},
+"lizardon-psa10:z689099396": {
+"query_id": "lizardon-psa10",
+"id": "z689099396",
+"title": "【PSA10】メガリザードンex MA [M2a 193/223](ハイクラスパック「MEGAドリームex」) GEM MT",
+"first_seen": "2026-09-23",
+"last_seen_open": "2026-09-23",
+"sold_seen": null,
+"price": 12500,
+"first_price": 12500,
+"relisted": 0
+},
+"figure-onepiece-pop:z689847514": {
+"query_id": "figure-onepiece-pop",
+"id": "z689847514",
+"title": "【未開封】P.O.P ワンピース SA-MAXIMUM バウンドマン Ver.2",
+"first_seen": "2026-09-23",
+"last_seen_open": "2026-09-23",
+"sold_seen": null,
+"price": 25000,
+"first_price": 25000,
+"relisted": 0
+},
+"figure-onepiece-pop:z563420456": {
+"query_id": "figure-onepiece-pop",
+"id": "z563420456",
+"title": "ワンピース P.O.P レベッカ フィギュア POP REBECCA",
+"first_seen": "2026-09-23",
+"last_seen_open": "2026-09-23",
+"sold_seen": null,
+"price": 15000,
+"first_price": 15000,
 "relisted": 0
 }
 }
