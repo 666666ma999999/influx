@@ -14,7 +14,7 @@
 |---|---|
 | Status | active（launchd 登録済み・初回自動実行 2026-09-23 21:40 待ち） |
 | 開始日時 | 2026-09-22 21:50 |
-| 最終更新 | 2026-09-23 12:10 |
+| 最終更新 | 2026-09-23 15:40 |
 | 担当 | Claude（統括 fable-5-1） |
 | 裁定 | vault decisions 2026-09-22 P-INF-19 a／報告 [[influx-flea-demand-supply-review-2026-09-22]] |
 
@@ -30,6 +30,7 @@
 - [x] 2026-09-22 配管図・機能マップ・gitignore（snapshots 非追跡）・vault decisions／提案履歴／pokeca INBOX
 - [x] 2026-09-23 launchd 経由の実走 2 回（kickstart）: 1 回目で観測日が 9/22 と記録される穴（コンテナ時計= UTC）を発見 → 観測日を JST 既定＋runner がホスト日付を `--date` で渡す形に修正 → 2 回目 9/23 行 6/6・new_open 0・sold_new 1（前日比の初値）
 - [x] 2026-09-23 敵対レビュー wf_f9df2ee3-706（検索語拡張の指示文）の A1 で **売却済の並びが関連度順＝毎日同じ 100 件で成約を数えていなかった**と判明（PS5 SOLD 共通 100/100 を再現）→ 売却日時順（`sort=endTime&order=desc`）の前日窓を頁送り（max_pages 3）・総件数 `totalResultsAvailable`・出品中の新規は openTime 順（非単調なので読み切り）・must/exclude の同定欄・429 は 60/180/420 秒待ちで再試行・間隔 6 秒。列= open_total／new_open_d1／sold_d1（capped）／sold_d1_median／sell_through_d1。実走 9/23: 6/6・PS5 在庫 15,765・前日成約 52・売却中央値 8,090（ソフト等の混入あり・除外語で継続調整）
+- [x] 2026-09-23 P-INF-20 裁定 1a/2a/3a → 3 モデル独立生成（A 114・B 120・C 108 行）→ 銘柄コードで突合: 一致 111（非転売 107）・単独 41・対立 0 → `docs/product-groups.md` §5 に 7 欄の観測台帳（叩き台・検収待ち）。フリマ列ありの一致行で `configs/flea_panel.json` を 6→23 語（転売型 5 語は resale=true）。23 語の実走 23/23・約 25 分（DNS 落ち→30 秒再試行を追加）
 - [x] 2026-09-23 launchd 登録（オーナーが `!` で実行・`launchctl list` → `-\t0\tcom.influx.flea-panel`）
 - [ ] 2026-09-29 以降: 7 日分たまったら stale_n／sold_new の実値を見て閾値（何倍で「急増」と言うか）を決める
 
