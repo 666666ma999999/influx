@@ -1,17 +1,86 @@
 {
-  "_comment": "Yahoo!フリマ 固定パネル（P-INF-19 オーナー裁定 a・2026-09-22）。指数の無い消費財の〈値上がり／売れ残り増／成約急増〉を出品ID単位で日次追跡する。板は Yahoo!フリマ 1 枚（出品中= 既定URL・売却済= ?sold=1・各先頭100件）。クエリは商品群表 docs/product-groups.md の消費財 group id に紐づける。銘柄は付けない（受益カードは別系統）。",
+  "_comment": "Yahoo!フリマ 固定パネル（P-INF-19 オーナー裁定 a・2026-09-22）。指数の無い消費財の〈値上がり／売れ残り増／成約急増〉を出品ID単位で日次追跡する。板は Yahoo!フリマ 1 枚（出品中= 既定URL・売却済= ?sold=1・各先頭100件）。クエリは商品群表 docs/product-groups.md の消費財 group id に紐づける。銘柄は付けない（受益カードは別系統）。 2026-09-23 改訂: 売却済は endTime の新しい順で前日分を頁送り（max_pages）・出品中の総数 totalResultsAvailable を在庫として記録。must/exclude はタイトルの必須語/除外語（省略可）。",
   "board": "yahoo_flea",
   "search_url": "https://paypayfleamarket.yahoo.co.jp/search/{query}",
   "sold_param": "sold=1",
   "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 Safari/605.1.15",
-  "request_interval_sec": 2.0,
+  "request_interval_sec": 6.0,
   "stale_days": 7,
   "queries": [
-    {"id": "switch2-honntai", "query": "Switch 2 本体", "group": "game-console"},
-    {"id": "ps5-honntai", "query": "PS5 本体", "group": "game-console"},
-    {"id": "lizardon-psa10", "query": "リザードン PSA10", "group": "toreka"},
-    {"id": "pokeca-151-box", "query": "ポケモンカード 151 BOX シュリンク付き", "group": "toreka"},
-    {"id": "rtx5090", "query": "RTX 5090", "group": "gpu-graphics"},
-    {"id": "figure-onepiece-pop", "query": "ワンピース P.O.P フィギュア", "group": "figure-plamo"}
-  ]
+    {
+      "id": "switch2-honntai",
+      "query": "Switch 2 本体",
+      "group": "game-console",
+      "must": [
+        "switch 2"
+      ],
+      "exclude": [
+        "lite",
+        "有機el",
+        "ケース",
+        "フィルム",
+        "ソフト"
+      ]
+    },
+    {
+      "id": "ps5-honntai",
+      "query": "PS5 本体",
+      "group": "game-console",
+      "must": [
+        "ps5"
+      ],
+      "exclude": [
+        "ソフト",
+        "コントローラー",
+        "ケース",
+        "カバー",
+        "スタンド"
+      ]
+    },
+    {
+      "id": "lizardon-psa10",
+      "query": "リザードン PSA10",
+      "group": "toreka",
+      "must": [
+        "psa10"
+      ]
+    },
+    {
+      "id": "pokeca-151-box",
+      "query": "ポケモンカード 151 BOX シュリンク付き",
+      "group": "toreka",
+      "must": [
+        "151"
+      ],
+      "exclude": [
+        "カード単品"
+      ]
+    },
+    {
+      "id": "rtx5090",
+      "query": "RTX 5090",
+      "group": "gpu-graphics",
+      "must": [
+        "5090"
+      ],
+      "exclude": [
+        "ゲーミングpc",
+        "ノート",
+        "galleria",
+        "omen",
+        "パソコン",
+        "電源",
+        "クーラー",
+        "macbook",
+        "デスクトップ",
+        "bto"
+      ]
+    },
+    {
+      "id": "figure-onepiece-pop",
+      "query": "ワンピース P.O.P フィギュア",
+      "group": "figure-plamo"
+    }
+  ],
+  "max_pages": 3
 }

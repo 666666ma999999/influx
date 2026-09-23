@@ -4,19 +4,24 @@
 目的（オーナー原文）: 「Aという商品の ①値段が上がった ②売れない商品が増えた ③売買成立がすごく増えた」を
 指数の無い消費財について測る。板は Yahoo!フリマ 1 枚。
 
-流れ:
-  configs/flea_panel.json のクエリごとに
-    出品中（既定URL・先頭100件）と 売却済（?sold=1・先頭100件）の埋め込み JSON（__NEXT_DATA__）を取る
-  → data/flea_panel/snapshots/<date>.jsonl に生の観測を残す（同日再実行は上書き・run 名=日付）
-  → data/flea_panel/state.json（出品ID ごとの first_seen / last_seen_open / sold_seen / price）を更新
-  → data/flea_panel/daily.jsonl に 1クエリ1日1行の要約を追記（同日行は置換）
-      open_n / new_open / stale_n（stale_days 以上前に初見でまだ出品中）/ sold_new（今日初めて売却済で観測）
-      / open_median / sold_median / sold_median_prev7（7日前の売却中央値・比較用）
+流れ（2026-09-23 改訂・敵対レビュー wf_f9df2ee3-706 A1: 既定の並び＝関連度順では売却済 100 件が毎日同じで成約が数えられなかった）:
+  configs/flea_panel.json のクエリごとに、Yahoo!フリマ検索の埋め込み JSON（__NEXT_DATA__）から
+    a) 出品中・既定順 1 ページ         → open_total（totalResultsAvailable＝在庫の総数）・open_median・出品 ID
+    b) 出品中・新しい順（sort=openTime&order=desc）を前日 0:00 JST まで頁送り → new_open_d1（前日の新規出品数）
+    c) 売却済・売却日時の新しい順（sold=1&sort=endTime&order=desc）を前日 0:00 まで頁送り
+                                       → sold_d1（前日の成約数）・sold_d1_median（前日成約の中央値）・sold_total
+  → data/flea_panel/snapshots/<date>.jsonl に生の観測（同日再実行は上書き・run 名=日付）
+  → data/flea_panel/state.json（出品ID ごとの first_seen / last_seen_open / sold_seen / price / relisted）
+  → data/flea_panel/daily.jsonl に 1クエリ1日1行（同日行は置換）
+      3 指標: ①値上がり= sold_d1_median（＋open_median）／②売れ残り= open_total の推移と sell_through_d1（= sold_d1 / open_total）
+             ／③成約急増= sold_d1（前日比は prev7 列）
+  「前日」= --date の前の暦日（JST）。21:40 の定期実行は前日 1 日分を確定値として記録する。
 
-読み方の限界（Codex レビュー 2026-09-22 P1-3）:
-  各面は先頭 100 件だけ＝1日の成約が 100 件を超える商品では sold_new が頭打ち（sold_new_capped=true）。
-  初回は全出品が new_open・全売却済が sold_new（基準日）。並び順の変化で過去の売却済が現れると sold_new に数わる。
-  ＝ sold_new / stale_n は「観測窓内の初見売却済／継続出品」であり、市場全体の成約数・在庫数ではない。
+読み方の限界:
+  頁送りは max_pages（既定 5 頁= 500 件）まで＝前日の成約が 500 件超の商品では sold_d1 が頭打ち（sold_d1_capped=true）。
+  出品中の openTime 順は関連度と混ざる（厳密な降順でない）＝ new_open_d1 は max_pages 内に見えた前日出品の数（下限値）。
+  売れ残りは open_total（総在庫）と sell_through_d1（= 前日成約 / 総在庫）で読む。stale_n（既定順 100 件中の 7 日以上前初見）は補助。
+  検索語の同定はタイトルの必須語/除外語（config の must / exclude・省略可）で絞る。無い語はノイズ混入あり（RTX 5090 に PC 本体等）。
 
 fail-closed:
   埋め込み JSON が無い・OPEN/SOLD に絞った後で両面 0 件 → そのクエリは status=error で記録し exit 2
@@ -34,6 +39,7 @@ import re
 import statistics
 import sys
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import date, datetime, timedelta, timezone
@@ -47,10 +53,22 @@ NEXT_DATA_RE = re.compile(r'<script id="__NEXT_DATA__"[^>]*>(.*?)</script>', re.
 
 
 # ---------------------------------------------------------------- 取得・解析
+RETRY_WAITS = (60, 180, 420)   # 429（Too Many Requests）時の待ち秒・2026-09-23 実走で 3 クエリ目から 429 が出た
+
+
 def fetch_html(url: str, user_agent: str, timeout: int = 30) -> str:
+    """HTTP GET。429 は RETRY_WAITS の回数だけ待って再試行し、それでも 429 なら例外（error 行として記録される）。"""
     req = urllib.request.Request(url, headers={"User-Agent": user_agent, "Accept-Language": "ja"})
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
-        return resp.read().decode("utf-8", errors="ignore")
+    for attempt, wait in enumerate((*RETRY_WAITS, None)):
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                return resp.read().decode("utf-8", errors="ignore")
+        except urllib.error.HTTPError as e:
+            if e.code != 429 or wait is None:
+                raise
+            print(f"[429] rate limited; waiting {wait}s (attempt {attempt + 1}/{len(RETRY_WAITS)})", file=sys.stderr)
+            time.sleep(wait)
+    raise RuntimeError("unreachable")
 
 
 def parse_items(html: str) -> Optional[List[Dict[str, Any]]]:
@@ -92,9 +110,99 @@ def slim(item: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def build_url(cfg: Dict[str, Any], query: str, sold: bool) -> str:
+def build_url(cfg: Dict[str, Any], query: str, sold: bool, sort: Optional[str] = None,
+              order: Optional[str] = None, page: int = 1) -> str:
     url = cfg["search_url"].format(query=urllib.parse.quote(query))
-    return f"{url}?{cfg['sold_param']}" if sold else url
+    params: List[str] = []
+    if sold:
+        params.append(cfg["sold_param"])
+    if sort:
+        params.append(f"sort={sort}&order={order or 'desc'}")
+    if page > 1:
+        params.append(f"page={page}")
+    return f"{url}?{'&'.join(params)}" if params else url
+
+
+def parse_total(html: str) -> Optional[int]:
+    """検索結果の総件数（search.result.totalResultsAvailable）。無ければ None。
+
+    正規表現の先頭一致は別モジュール（auctionItemsModule 等）の 0 を拾う実害があったので JSON の経路で取る。
+    """
+    m = NEXT_DATA_RE.search(html)
+    if not m:
+        return None
+    try:
+        d = json.loads(m.group(1))
+        v = d["props"]["initialState"]["searchState"]["search"]["result"].get("totalResultsAvailable")
+        return int(v) if v is not None else None
+    except (KeyError, TypeError, ValueError, json.JSONDecodeError):
+        mm = re.search(r'"totalResultsAvailable":\s*(\d+)', html)
+        return int(mm.group(1)) if mm else None
+
+
+def title_ok(title: Optional[str], q: Dict[str, Any]) -> bool:
+    """config の must（全部含む）/ exclude（どれも含まない）でタイトルを絞る。両方無ければ常に True。"""
+    t = (title or "").lower()
+    must = [w.lower() for w in q.get("must", [])]
+    excl = [w.lower() for w in q.get("exclude", [])]
+    return all(w in t for w in must) and not any(w in t for w in excl)
+
+
+def parse_ts(v: Optional[str]) -> Optional[datetime]:
+    if not v:
+        return None
+    try:
+        return datetime.fromisoformat(v)
+    except ValueError:
+        return None
+
+
+def fetch_window(cfg: Dict[str, Any], q: Dict[str, Any], sold: bool, sort_key: str, start: datetime, end: datetime,
+                 fetch, monotonic: bool = True) -> Dict[str, Any]:
+    """新しい順に頁送りし、時刻 sort_key（openTime / endTime）が [start, end) の商品を集める。
+
+    monotonic=True（売却済の endTime 順・2026-09-23 実測で厳密に降順）: start より古い商品が出た頁で止める。
+    monotonic=False（出品中の openTime 順・実測では関連度と混ざり降順でない＝2025-10 の出品が 1 頁目に混在）:
+      古い商品で止めず max_pages まで読み、窓内の件数を数える。
+    end 以降（今日分）は読み飛ばす。max_pages で頭打ち（capped＝最終頁にも窓内があった）。
+    返り値: items（窓内・タイトル絞り込み後）・total・capped・pages。
+    """
+    max_pages = int(cfg.get("max_pages", 5))
+    interval = float(cfg.get("request_interval_sec", 2.0))
+    items: List[Dict[str, Any]] = []
+    total: Optional[int] = None
+    capped = False
+    pages = 0
+    for page in range(1, max_pages + 1):
+        html = fetch(build_url(cfg, q["query"], sold=sold, sort=sort_key, order="desc", page=page), cfg["user_agent"])
+        time.sleep(interval)
+        raw = parse_items(html)
+        pages += 1
+        if raw is None:
+            raise RuntimeError(f"no __NEXT_DATA__ on page {page} ({'sold' if sold else 'open'} by {sort_key})")
+        if total is None:
+            total = parse_total(html)
+        reached_start = False
+        in_window_this_page = 0
+        for it in raw:
+            ts = parse_ts(it.get(sort_key))
+            if ts is None:
+                continue
+            if ts >= end:
+                continue
+            if ts < start:
+                if monotonic:
+                    reached_start = True
+                    break
+                continue
+            in_window_this_page += 1
+            if title_ok(it.get("title"), q):
+                items.append(slim(it))
+        if reached_start or len(raw) < 100:
+            break
+        if page == max_pages:
+            capped = in_window_this_page > 0
+    return {"items": items, "total": total, "capped": capped, "pages": pages}
 
 
 # ---------------------------------------------------------------- 状態更新・要約
@@ -212,29 +320,39 @@ def run(cfg: Dict[str, Any], today: str, data_dir: Path, fetch=fetch_html) -> in
     planned = len(cfg["queries"])
     processed = 0
 
+    jst = timezone(timedelta(hours=9))
+    day = datetime.fromisoformat(today).replace(tzinfo=jst)
+    win_start, win_end = day - timedelta(days=1), day          # 「前日」= [D-1 00:00, D 00:00) JST
+    interval = float(cfg.get("request_interval_sec", 2.0))
+
     for q in cfg["queries"]:
         qid, query = q["id"], q["query"]
         row: Dict[str, Any] = {"date": today, "query_id": qid, "query": query, "group": q.get("group"),
-                               "board": cfg["board"], "status": "ok"}
+                               "board": cfg["board"], "window": f"{win_start.date()}", "status": "ok"}
         try:
-            open_raw = parse_items(fetch(build_url(cfg, query, sold=False), cfg["user_agent"]))
-            time.sleep(cfg.get("request_interval_sec", 2.0))
-            sold_raw = parse_items(fetch(build_url(cfg, query, sold=True), cfg["user_agent"]))
-            time.sleep(cfg.get("request_interval_sec", 2.0))
-        except Exception as e:  # noqa: BLE001 — 通信失敗は error 行として残す
-            open_raw, sold_raw, row["error"] = None, None, f"fetch: {e}"
+            open_html = fetch(build_url(cfg, query, sold=False), cfg["user_agent"])
+            time.sleep(interval)
+            open_raw = parse_items(open_html)
+            if open_raw is None:
+                raise RuntimeError("no __NEXT_DATA__ (open, default order)")
+            open_total = parse_total(open_html)
+            new_w = fetch_window(cfg, q, sold=False, sort_key="openTime", start=win_start, end=win_end, fetch=fetch,
+                                 monotonic=False)
+            sold_w = fetch_window(cfg, q, sold=True, sort_key="endTime", start=win_start, end=win_end, fetch=fetch)
+        except Exception as e:  # noqa: BLE001 — 通信・構造の失敗は error 行として残す
+            row["status"], row["error"] = "error", f"{e}"
+            errors += 1
+            daily.append(row)
+            print(f"[ERROR] {qid}: {row['error']}", file=sys.stderr)
+            continue
 
-        open_items = [slim(i) for i in (open_raw or []) if i.get("itemStatus") == "OPEN"]
-        sold_items = [slim(i) for i in (sold_raw or []) if i.get("itemStatus") == "SOLD"]
-        if open_raw is None or sold_raw is None:
+        open_items = [slim(i) for i in open_raw if i.get("itemStatus") == "OPEN" and title_ok(i.get("title"), q)]
+        sold_items = [i for i in sold_w["items"] if i.get("status") == "SOLD"]
+        if not open_items and not sold_items:
+            # 生の件数ではなく絞った後で判定する（状態名の変更・遮断・きつすぎる必須語を「該当なし」として通さない）
             row["status"] = "error"
-            row.setdefault("error", "no __NEXT_DATA__ (page shape changed or blocked)")
-        elif not open_items and not sold_items:
-            # 生の件数ではなく OPEN/SOLD に絞った後で判定する（状態名の変更を「該当なし」として通さない）
-            row["status"] = "error"
-            row["error"] = (f"0 OPEN/SOLD items after status filter (raw open={len(open_raw)} sold={len(sold_raw)}; "
-                            "treat as failure, not as 'no listings')")
-        if row["status"] == "error":
+            row["error"] = (f"0 OPEN/SOLD items after filter (open_total={open_total}, "
+                            f"(raw open={len(open_raw)}; treat as failure, not as 'no listings')")
             errors += 1
             daily.append(row)
             print(f"[ERROR] {qid}: {row['error']}", file=sys.stderr)
@@ -244,12 +362,24 @@ def run(cfg: Dict[str, Any], today: str, data_dir: Path, fetch=fetch_html) -> in
             snaps.append({"date": today, "query_id": qid, **it})
         row.update(update_state(state, qid, today, open_items, sold_items))
         row["stale_n"] = count_stale(state, qid, today, int(cfg.get("stale_days", 7)), open_items)
-        row["sold_median_prev7"] = prev_value(daily, qid, today, 7, "sold_median")
-        row["sold_new_prev7"] = prev_value(daily, qid, today, 7, "sold_new")
+        # 3 指標の本体（2026-09-23 改訂）
+        row["open_total"] = open_total
+        row["sold_total"] = sold_w["total"]
+        row["new_open_d1"] = len(new_w["items"])
+        row["new_open_d1_capped"] = new_w["capped"]
+        row["sold_d1"] = len(sold_items)
+        row["sold_d1_capped"] = sold_w["capped"]
+        row["sold_d1_median"] = median([it["price"] for it in sold_items])
+        row["sell_through_d1"] = (round(len(sold_items) / open_total, 4) if open_total else None)
+        row["pages_fetched"] = 1 + new_w["pages"] + sold_w["pages"]
+        row["sold_d1_prev7"] = prev_value(daily, qid, today, 7, "sold_d1")
+        row["sold_d1_median_prev7"] = prev_value(daily, qid, today, 7, "sold_d1_median")
+        row["open_total_prev7"] = prev_value(daily, qid, today, 7, "open_total")
         daily.append(row)
         processed += 1
-        print(f"[ok] {qid}: open={row['open_n']} new_open={row['new_open']} stale={row['stale_n']} "
-              f"sold_new={row['sold_new']} open_med={row['open_median']} sold_med={row['sold_median']}")
+        print(f"[ok] {qid}: open_total={open_total} new_open_d1={row['new_open_d1']} sold_d1={row['sold_d1']}"
+              f"{'(capped)' if sold_w['capped'] else ''} sold_d1_med={row['sold_d1_median']} "
+              f"sell_through={row['sell_through_d1']} open_med={row['open_median']}")
 
     # 書き順= 生観測 → 日次 → state（全て一時ファイル→置換）。件数は state の日付から導くので途中失敗後の再実行でも同じ値になる
     write_jsonl(snap_path, snaps)

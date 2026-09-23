@@ -14,7 +14,7 @@
 |---|---|
 | Status | active（launchd 登録済み・初回自動実行 2026-09-23 21:40 待ち） |
 | 開始日時 | 2026-09-22 21:50 |
-| 最終更新 | 2026-09-22 22:40 |
+| 最終更新 | 2026-09-23 12:10 |
 | 担当 | Claude（統括 fable-5-1） |
 | 裁定 | vault decisions 2026-09-22 P-INF-19 a／報告 [[influx-flea-demand-supply-review-2026-09-22]] |
 
@@ -29,12 +29,15 @@
 - [x] 2026-09-22 Codex（gpt-6-astra）実装後レビュー 7 件を全件修正: 件数を state の日付から導出（同日再実行で 0 に化けない）／OPEN・SOLD に絞った後の 0 件ガード／再出品（SOLD→OPEN）で sold_seen 解除＋relisted／stale_n は今回の OPEN 集合だけ／一時ファイル→置換の原子的書き込み／runner は件数が数値でなければ exit 3／読み方の限界（先頭100件の頭打ち= sold_new_capped）を docstring に。回帰テスト 4 件追加（計 10 件・一括 367 件 OK）
 - [x] 2026-09-22 配管図・機能マップ・gitignore（snapshots 非追跡）・vault decisions／提案履歴／pokeca INBOX
 - [x] 2026-09-23 launchd 経由の実走 2 回（kickstart）: 1 回目で観測日が 9/22 と記録される穴（コンテナ時計= UTC）を発見 → 観測日を JST 既定＋runner がホスト日付を `--date` で渡す形に修正 → 2 回目 9/23 行 6/6・new_open 0・sold_new 1（前日比の初値）
+- [x] 2026-09-23 敵対レビュー wf_f9df2ee3-706（検索語拡張の指示文）の A1 で **売却済の並びが関連度順＝毎日同じ 100 件で成約を数えていなかった**と判明（PS5 SOLD 共通 100/100 を再現）→ 売却日時順（`sort=endTime&order=desc`）の前日窓を頁送り（max_pages 3）・総件数 `totalResultsAvailable`・出品中の新規は openTime 順（非単調なので読み切り）・must/exclude の同定欄・429 は 60/180/420 秒待ちで再試行・間隔 6 秒。列= open_total／new_open_d1／sold_d1（capped）／sold_d1_median／sell_through_d1。実走 9/23: 6/6・PS5 在庫 15,765・前日成約 52・売却中央値 8,090（ソフト等の混入あり・除外語で継続調整）
 - [x] 2026-09-23 launchd 登録（オーナーが `!` で実行・`launchctl list` → `-\t0\tcom.influx.flea-panel`）
 - [ ] 2026-09-29 以降: 7 日分たまったら stale_n／sold_new の実値を見て閾値（何倍で「急増」と言うか）を決める
 
 ## Stuck / 既知の穴
-- 商品名同定は検索語まかせ（例: 「RTX 5090」の売却済中央値 684,000 円＝PC 本体の混入）。同定ルールは 7 日分の実値を見てから足す。
-- 初日は全出品が new_open／全売却が sold_new になる（基準日）。比較は 2 日目以降。
+- 商品名同定は must/exclude 欄で絞るが不十分（9/23: 「RTX 5090」前日成約 2 件・中央値 932,250 円＝PC 混入が残る／PS5 の売却中央値 8,090 円＝周辺機器の混入）。除外語は日次の実値を見て足す。
+- 高回転の語は max_pages 3（300 件）で前日に届かず capped（9/23 Switch 2 本体: 当日だけで 300 件超・sold_d1=24 は下限値）。語を具体化するか max_pages を上げる（429 との兼ね合い）。
+- 429（Too Many Requests）: 9/23 に 2 秒間隔×約 20 リクエストで発生・約 30 分続いた。6 秒間隔＋待ち再試行で運用。
+- 旧列（new_open／sold_new／stale_n）は出品 ID 追跡の補助として残置。3 指標は新列で読む。
 - 指数側の週次チェッカー（price_universe）は 9/21 に TE 不達で FATAL・未修理（別件・レビュー A1）。
 
 ## Session Handoff

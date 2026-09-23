@@ -9,14 +9,16 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 import flea_panel_track as fpt  # noqa: E402
 
 
-def page(items):
-    data = {"props": {"initialState": {"searchState": {"search": {"result": {"items": items}}}}}}
+def page(items, total=None):
+    res = {"items": items, "totalResultsAvailable": total if total is not None else len(items), "totalResultsReturned": len(items)}
+    data = {"props": {"initialState": {"searchState": {"search": {"result": res}}}}}
     return f'<html><script id="__NEXT_DATA__" type="application/json">{json.dumps(data)}</script></html>'
 
 
-def item(i, status, price, title="Switch 2 本体"):
+def item(i, status, price, title="Switch 2 本体", day="2026-08-31"):
+    # openTime/endTime は「前日」窓（--date の前の暦日）に入る時刻を既定にする
     return {"id": f"z{i}", "title": title, "price": price, "itemStatus": status,
-            "openTime": "2026-09-22T10:00:00+09:00", "endTime": "2026-09-22T11:00:00+09:00",
+            "openTime": f"{day}T10:00:00+09:00", "endTime": f"{day}T11:00:00+09:00",
             "condition": "used20", "isPriceDown": False}
 
 
@@ -38,10 +40,69 @@ class ParseTest(unittest.TestCase):
         self.assertNotIn("?", fpt.build_url(CFG, "Switch 2 本体", sold=False))
 
 
+class FilterTest(unittest.TestCase):
+    def test_title_must_exclude(self):
+        q = {"must": ["5090"], "exclude": ["ゲーミングpc"]}
+        self.assertTrue(fpt.title_ok("RTX 5090 単体", q))
+        self.assertFalse(fpt.title_ok("RTX 4090", q))
+        self.assertFalse(fpt.title_ok("ゲーミングPC RTX 5090 搭載", q))
+        self.assertTrue(fpt.title_ok("anything", {}))
+
+    def test_build_url_sort_page(self):
+        u = fpt.build_url(CFG, "PS5 本体", sold=True, sort="endTime", order="desc", page=2)
+        self.assertIn("sold=1", u); self.assertIn("sort=endTime&order=desc", u); self.assertIn("page=2", u)
+
+    def test_fetch_window_stops_at_start_and_caps(self):
+        import datetime as _dt
+        jst = _dt.timezone(_dt.timedelta(hours=9))
+        start = _dt.datetime(2026, 9, 8, tzinfo=jst); end = _dt.datetime(2026, 9, 9, tzinfo=jst)
+        # 1 頁目: 今日分 1 件（読み飛ばし）＋前日分 2 件＋前々日 1 件（ここで停止）
+        items = [item(1, "SOLD", 100, day="2026-09-09"), item(2, "SOLD", 100, day="2026-09-08"),
+                 item(3, "SOLD", 100, day="2026-09-08"), item(4, "SOLD", 100, day="2026-09-07")]
+        calls = []
+        def f(url, ua):
+            calls.append(url); return page(items, total=999)
+        cfg = dict(CFG, request_interval_sec=0, max_pages=5)
+        w = fpt.fetch_window(cfg, {"query": "x"}, sold=True, sort_key="endTime", start=start, end=end, fetch=f)
+        self.assertEqual(len(w["items"]), 2); self.assertEqual(w["total"], 999)
+        self.assertEqual(len(calls), 1); self.assertFalse(w["capped"])
+        # 全頁が前日分で埋まる → max_pages で capped
+        full = [item(i, "SOLD", 100, day="2026-09-08") for i in range(100)]
+        cfg2 = dict(cfg, max_pages=2)
+        w2 = fpt.fetch_window(cfg2, {"query": "x"}, sold=True, sort_key="endTime", start=start, end=end,
+                              fetch=lambda u, ua: page(full))
+        self.assertTrue(w2["capped"]); self.assertEqual(w2["pages"], 2); self.assertEqual(len(w2["items"]), 200)
+
+    def test_fetch_window_non_monotonic_scans_all_pages(self):
+        """出品中の openTime 順は古い物が混ざる＝古い 1 件で止めず頁を読み切る（2026-09-23 実害: new_open_d1 が全て 0）。"""
+        import datetime as _dt
+        jst = _dt.timezone(_dt.timedelta(hours=9))
+        start = _dt.datetime(2026, 9, 8, tzinfo=jst); end = _dt.datetime(2026, 9, 9, tzinfo=jst)
+        mixed = [item(1, "OPEN", 100, day="2026-09-09"), item(2, "OPEN", 100, day="2025-10-25"),
+                 item(3, "OPEN", 100, day="2026-09-08")] + [item(i, "OPEN", 100, day="2026-09-08") for i in range(10, 107)]
+        cfg = dict(CFG, request_interval_sec=0, max_pages=2)
+        w = fpt.fetch_window(cfg, {"query": "x"}, sold=False, sort_key="openTime", start=start, end=end,
+                             fetch=lambda u, ua: page(mixed), monotonic=False)
+        self.assertEqual(w["pages"], 2); self.assertEqual(len(w["items"]), 98 * 2); self.assertTrue(w["capped"])
+        w_mono = fpt.fetch_window(cfg, {"query": "x"}, sold=False, sort_key="openTime", start=start, end=end,
+                                  fetch=lambda u, ua: page(mixed), monotonic=True)
+        self.assertEqual(len(w_mono["items"]), 0)   # 旧挙動＝古い 1 件で停止して 0 になる
+
+
 class RunTest(unittest.TestCase):
-    def _run(self, day, open_items, sold_items, data_dir):
+    def _run(self, day, open_items, sold_items, data_dir, open_total=None):
+        """前日窓に入るよう各 item の日付を day-1 に揃えてから返す。page>1 は空。"""
+        import datetime as _dt
+        d1 = (_dt.date.fromisoformat(day) - _dt.timedelta(days=1)).isoformat()
+        def stamp(items):
+            return [dict(it, openTime=f"{d1}T10:00:00+09:00", endTime=f"{d1}T11:00:00+09:00") for it in items]
+        oi, si = stamp(open_items), stamp(sold_items)
         def fake_fetch(url, ua):
-            return page(sold_items) if "sold=1" in url else page(open_items)
+            if "page=" in url:
+                return page([], total=0)
+            if "sold=1" in url:
+                return page(si)
+            return page(oi, total=open_total)
         return fpt.run(CFG, day, data_dir, fetch=fake_fetch)
 
     def test_two_days_state_transitions(self):
@@ -59,6 +120,10 @@ class RunTest(unittest.TestCase):
             self.assertEqual(day2["stale_n"], 1)       # z1（9/1 初見・まだ出品中）
             self.assertEqual(day2["sold_new"], 1)      # z2 だけ（z9 は 9/1 に売却済で観測済み）
             self.assertEqual(day2["sold_median"], 100.0)
+            self.assertEqual(day2["sold_d1"], 2)             # 前日窓の成約（z2・z9）
+            self.assertEqual(day2["new_open_d1"], 2)         # 前日窓の新規出品（z1・z3 の openTime）
+            self.assertEqual(day2["open_total"], 2)
+            self.assertEqual(day2["window"], "2026-09-08")
             state = json.loads((dd / "state.json").read_text())
             self.assertEqual(state["q1:z2"]["sold_seen"], "2026-09-09")
             self.assertEqual(state["q1:z2"]["first_seen"], "2026-09-01")
