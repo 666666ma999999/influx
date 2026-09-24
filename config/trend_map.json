@@ -1,0 +1,67 @@
+{
+  "_about": "トレンド株リスト（scripts/trend_stock_screen.py）の判定表。トレンドは東証33業種ではなく、センターピン台帳（data/center_pin/center_pin.jsonl）の pin（利益を動かすもの）と sign（+ = 上がると利益が増える）で会社ごとに判定する。台帳にない会社・pin が狭い会社は overrides / candidates に決算の事業別利益の裏取りつきで書く（30%以上で確証）。2026-09-24 作成",
+  "defaults": {
+    "min_mcap_million_yen": 50000,
+    "max_drawdown": -0.25,
+    "high_window_days": 250,
+    "max_missing_days": 5,
+    "require_above_ma50": true
+  },
+  "trends": [
+    {
+      "id": "ai",
+      "label": "1 AIそのもの",
+      "pin_include": ["AI SaaS", "生成AI", "Arm"],
+      "pin_exclude": []
+    },
+    {
+      "id": "ai_capex",
+      "label": "2 AIの設備投資",
+      "pin_include": ["AI", "DC", "データセンター", "サーバ", "EUV", "WFE", "HBM", "半導体", "ICパッケージ", "送配電", "光ファイバ", "NAND", "DRAM"],
+      "pin_exclude": ["車載半導体", "車載・産機", "パワー半導体", "自動車生産"]
+    },
+    {
+      "id": "resource",
+      "label": "3 資源",
+      "pin_types": ["commodity"],
+      "pin_include": ["原油", "天然ガス", "LNG", "銅", "金価格", "金・", "銀", "ニッケル", "ヨウ素", "鉄鉱石", "原料炭", "石炭", "アルミ", "非鉄", "貴金属", "イリジウム", "ルテニウム"],
+      "pin_exclude": []
+    },
+    {
+      "id": "state",
+      "label": "4 国の予算",
+      "pin_include": ["防衛", "公共投資", "港湾・洋上風力", "洋上風力", "原発", "原子力", "宇宙", "造船", "国土強靭"],
+      "pin_exclude": ["港湾取扱"]
+    },
+    {
+      "id": "rate",
+      "label": "5 金利",
+      "pin_types": ["rate"],
+      "pin_include": [],
+      "pin_exclude": []
+    }
+  ],
+  "overrides": {
+    "7013": {
+      "trend": "state",
+      "mark": "△",
+      "reason": "台帳の pin は民間航空エンジンだが、決算短信（2026年3月期）の事業別営業利益で航空・宇宙・防衛が 1,124／1,655 億円＝68%。部門内の民間と防衛の内訳は非開示",
+      "source": "https://www.ihi.co.jp/ir/library/statements/_cms_conf01/__icsFiles/afieldfile/2026/05/25/FY2025_KT_c.pdf"
+    }
+  },
+  "candidates_not_in_ledger": {
+    "3687": {"trend": "ai", "note": "AI向けソフト"},
+    "3692": {"trend": "ai", "note": "セキュリティ"},
+    "4259": {"trend": "ai", "note": "AI"},
+    "5541": {"trend": "resource", "note": "ニッケル"},
+    "6330": {"trend": "state", "note": "プラント（国の予算／資源）"},
+    "6524": {"trend": "ai_capex", "note": "光通信部品"},
+    "6613": {"trend": "ai_capex", "note": "光半導体"},
+    "6777": {"trend": "ai_capex", "note": "光通信"},
+    "6779": {"trend": "ai_capex", "note": "水晶部品"},
+    "6855": {"trend": "ai_capex", "note": "半導体検査部品"},
+    "186A": {"trend": "state", "note": "宇宙"},
+    "4107": {"trend": "resource", "note": "ヨウ素"},
+    "6366": {"trend": "resource", "note": "LNGプラント"}
+  }
+}

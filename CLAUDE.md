@@ -50,6 +50,11 @@ docker compose run --rm xstock python scripts/price_watch_forward.py --eval     
 # 銘柄→センターピン（利益を動かす中心の価格）の全977社台帳: data/center_pin/center_pin.jsonl
 # 帰属ルール（誤帰属の防ぎ方）と系列の罠は docs/price-watch-universe.md §0a/§0b が正本
 
+# トレンド株リスト（時価総額・高値からの下落率・50日線で絞り、センターピン台帳でトレンド判定→200日線に近い順）
+python3 scripts/trend_stock_screen.py                 # 既定=500億円以上・高値から-25%以下・50日線の上 → output/trend_list_<日付>.md
+python3 scripts/trend_stock_screen.py --max-dd -0.30 --no-ma50   # 条件を変える時
+# トレンドの分け方・台帳にない会社の候補・決算で裏取りした例外（IHI 等）は config/trend_map.json
+
 # Grok リサーチパイプライン（.envrc 自動読み込み + docker exec ラッパー）
 scripts/run_research.sh --phase evaluate
 scripts/run_research.sh --phase report
