@@ -1,5 +1,5 @@
 {
-  "_about": "トレンド株リスト（scripts/trend_stock_screen.py）の判定表。トレンドは東証33業種ではなく、センターピン台帳（data/center_pin/center_pin.jsonl）の pin（利益を動かすもの）と sign（+ = 上がると利益が増える）で会社ごとに判定する。台帳にない会社・pin が狭い会社は overrides / candidates に決算の事業別利益の裏取りつきで書く（30%以上で確証）。2026-09-24 作成",
+  "_about": "トレンド株リスト（scripts/trend_stock_screen.py）の判定表。トレンドは東証33業種ではなく、センターピン台帳（data/center_pin/center_pin.jsonl）の pin（利益を動かすもの）と sign（+ = 上がると利益が増える）で会社ごとに判定する。台帳にない会社・pin が狭い会社は overrides / candidates に決算の事業別利益の裏取りつきで書く（30%以上で確証）。2026-09-24 作成。candidates_not_in_ledger の verdict（確証／△／却下）は決算短信のセグメント表で判定（30%以上=確証・10〜30%=△・10%未満や無関係=却下。単一セグメントは売上比で代用し reason に明記）。verdict の無い行は未確認",
   "defaults": {
     "min_mcap_million_yen": 50000,
     "max_drawdown": -0.25,
@@ -11,32 +11,89 @@
     {
       "id": "ai",
       "label": "1 AIそのもの",
-      "pin_include": ["AI SaaS", "生成AI", "Arm"],
+      "pin_include": [
+        "AI SaaS",
+        "生成AI",
+        "Arm"
+      ],
       "pin_exclude": []
     },
     {
       "id": "ai_capex",
       "label": "2 AIの設備投資",
-      "pin_include": ["AI", "DC", "データセンター", "サーバ", "EUV", "WFE", "HBM", "半導体", "ICパッケージ", "送配電", "光ファイバ", "NAND", "DRAM"],
-      "pin_exclude": ["車載半導体", "車載・産機", "パワー半導体", "自動車生産"]
+      "pin_include": [
+        "AI",
+        "DC",
+        "データセンター",
+        "サーバ",
+        "EUV",
+        "WFE",
+        "HBM",
+        "半導体",
+        "ICパッケージ",
+        "送配電",
+        "光ファイバ",
+        "NAND",
+        "DRAM"
+      ],
+      "pin_exclude": [
+        "車載半導体",
+        "車載・産機",
+        "パワー半導体",
+        "自動車生産"
+      ]
     },
     {
       "id": "resource",
       "label": "3 資源",
-      "pin_types": ["commodity"],
-      "pin_include": ["原油", "天然ガス", "LNG", "銅", "金価格", "金・", "銀", "ニッケル", "ヨウ素", "鉄鉱石", "原料炭", "石炭", "アルミ", "非鉄", "貴金属", "イリジウム", "ルテニウム"],
+      "pin_types": [
+        "commodity"
+      ],
+      "pin_include": [
+        "原油",
+        "天然ガス",
+        "LNG",
+        "銅",
+        "金価格",
+        "金・",
+        "銀",
+        "ニッケル",
+        "ヨウ素",
+        "鉄鉱石",
+        "原料炭",
+        "石炭",
+        "アルミ",
+        "非鉄",
+        "貴金属",
+        "イリジウム",
+        "ルテニウム"
+      ],
       "pin_exclude": []
     },
     {
       "id": "state",
       "label": "4 国の予算",
-      "pin_include": ["防衛", "公共投資", "港湾・洋上風力", "洋上風力", "原発", "原子力", "宇宙", "造船", "国土強靭"],
-      "pin_exclude": ["港湾取扱"]
+      "pin_include": [
+        "防衛",
+        "公共投資",
+        "港湾・洋上風力",
+        "洋上風力",
+        "原発",
+        "原子力",
+        "宇宙",
+        "造船",
+        "国土強靭"
+      ],
+      "pin_exclude": [
+        "港湾取扱"
+      ]
     },
     {
       "id": "rate",
       "label": "5 金利",
-      "pin_types": ["rate"],
+      "pin_types": [
+        "rate"
+      ],
       "pin_include": [],
       "pin_exclude": []
     }
@@ -50,18 +107,109 @@
     }
   },
   "candidates_not_in_ledger": {
-    "3687": {"trend": "ai", "note": "AI向けソフト"},
-    "3692": {"trend": "ai", "note": "セキュリティ"},
-    "4259": {"trend": "ai", "note": "AI"},
-    "5541": {"trend": "resource", "note": "ニッケル"},
-    "6330": {"trend": "state", "note": "プラント（国の予算／資源）"},
-    "6524": {"trend": "ai_capex", "note": "光通信部品"},
-    "6613": {"trend": "ai_capex", "note": "光半導体"},
-    "6777": {"trend": "ai_capex", "note": "光通信"},
-    "6779": {"trend": "ai_capex", "note": "水晶部品"},
-    "6855": {"trend": "ai_capex", "note": "半導体検査部品"},
-    "186A": {"trend": "state", "note": "宇宙"},
-    "4107": {"trend": "resource", "note": "ヨウ素"},
-    "6366": {"trend": "resource", "note": "LNGプラント"}
+    "3687": {
+      "trend": "ai",
+      "note": "AI向けソフト",
+      "verdict": "却下",
+      "reason": "利益はSolution事業（NANDファームウェア・高速化受託）がほぼ全額。AI比率は非開示・AIを掲げるSaaS事業は赤字（26/9期3Q累計）",
+      "source": "https://finance-frontend-pc-dist.west.edge.storage-yahoo.jp/disclosure/20260807/20260807515254.pdf",
+      "checked": "2026-09-24"
+    },
+    "3692": {
+      "trend": "state",
+      "note": "防衛・安全保障のサイバー",
+      "verdict": "確証",
+      "reason": "AIではなく国の予算（防衛・安全保障のサイバー）。ナショナルセキュリティ・サービスが売上の33.2%（売上比・利益内訳は非開示・27/3期1Q）",
+      "source": "https://finance-frontend-pc-dist.west.edge.storage-yahoo.jp/disclosure/20260813/20260716595283.pdf",
+      "checked": "2026-09-24"
+    },
+    "4259": {
+      "trend": "ai",
+      "note": "AI",
+      "verdict": "確証",
+      "reason": "セグメント利益968百万円の100%がAIプロダクト＋AIソリューション（27/3期1Q）。AIプロダクトは粗利率が低下中",
+      "source": "https://finance-frontend-pc-dist.west.edge.storage-yahoo.jp/disclosure/20260812/20260812518004.pdf",
+      "checked": "2026-09-24"
+    },
+    "5541": {
+      "trend": "resource",
+      "note": "ニッケル",
+      "verdict": "確証",
+      "reason": "売上の90.6%がニッケル事業（売上比）。LMEニッケル+13.1%で赤字が△3,078→△793百万円に縮小。本業は赤字で、黒字は鉱山会社の持分法利益頼み（27/3期1Q）",
+      "source": "https://www.pacific-metals.co.jp/file/news/260806_1129_2027年３月期第１四半期決算短信_日本基準_連結.pdf",
+      "checked": "2026-09-24"
+    },
+    "6330": {
+      "trend": "state",
+      "note": "プラント（国の予算／資源）",
+      "verdict": "却下",
+      "reason": "単一セグメント。石油・ガスは完成工事高の15.8%で肥料・石化・化学に分散。国の予算との結びつきは確認できない（27/3期1Q）",
+      "source": "https://www.nikkei.com/markets/ir/irftp/data/tdnr/tdnetg3/20260807/g2ak1w/140120260805510596.pdf",
+      "checked": "2026-09-24"
+    },
+    "6524": {
+      "trend": "ai_capex",
+      "note": "光通信部品",
+      "verdict": "△",
+      "reason": "光部品が利益の81%だが主力は海底ケーブル向け。AI・データセンター向けの内訳は非開示（26/12期中間）",
+      "source": "https://contents.xj-storage.jp/xcontents/AS80848/0998aeac/ae51/41f8/91fd/8e1892955869/140120260805510640.pdf",
+      "checked": "2026-09-24"
+    },
+    "6613": {
+      "trend": "ai_capex",
+      "note": "光半導体",
+      "verdict": "却下",
+      "reason": "会社全体が赤字。増収は加工装置・センサ・血液分析用レーザで、データセンター関連の量子ドットレーザは95.5%減（27/3期1Q）",
+      "source": "https://finance-frontend-pc-dist.west.edge.storage-yahoo.jp/disclosure/20260810/20260728501194.pdf",
+      "checked": "2026-09-24"
+    },
+    "6777": {
+      "trend": "ai_capex",
+      "note": "光通信",
+      "verdict": "確証",
+      "reason": "光測定器が利益の91%。短信に「データセンタ投資の拡大で光通信用光測定器が好調」と明記（光通信用の比率は非開示・27/3期1Q）",
+      "source": "https://finance-frontend-pc-dist.west.edge.storage-yahoo.jp/disclosure/20260807/20260806513067.pdf",
+      "checked": "2026-09-24"
+    },
+    "6779": {
+      "trend": "ai_capex",
+      "note": "水晶部品",
+      "verdict": "△",
+      "reason": "単一セグメント。AIデータセンター中心の産業機器向けが売上の11%（通期予想15%）・車載が56%（売上比・27/3期1Q）",
+      "source": "https://finance-frontend-pc-dist.west.edge.storage-yahoo.jp/disclosure/20260807/20260806512443.pdf",
+      "checked": "2026-09-24"
+    },
+    "6855": {
+      "trend": "ai_capex",
+      "note": "半導体検査部品",
+      "verdict": "確証",
+      "reason": "半導体検査用部品（プローブカード）が利益のほぼ100%。生成AIのデータセンター向けメモリー需要が主因と明記（メモリー市況に連動・27/3期1Q）",
+      "source": "https://www.jem-net.co.jp/images/top/pdf/2026/260807_261qtanshin.pdf",
+      "checked": "2026-09-24"
+    },
+    "186A": {
+      "trend": "state",
+      "note": "宇宙",
+      "verdict": "確証",
+      "reason": "単一セグメント・赤字。政府補助金収入がプロジェクト収益の41.0%（売上比・27/4期1Q）",
+      "source": "https://contents.xj-storage.jp/xcontents/AS82438/92b9a578/48f6/4d1a/841e/f4919f3fabf6/140120260911535119.pdf",
+      "checked": "2026-09-24"
+    },
+    "4107": {
+      "trend": "resource",
+      "note": "ヨウ素",
+      "verdict": "確証",
+      "reason": "ヨウ素及び天然ガス事業が営業利益の約101%（4,175／4,136百万円）。今期は数量減と原燃料高で減益（26/12期中間）",
+      "source": "https://www.nikkei.com/markets/ir/irftp/data/tdnr/tdnetg3/20260730/g1if56/140120260722597866.pdf",
+      "checked": "2026-09-24"
+    },
+    "6366": {
+      "trend": "resource",
+      "note": "LNGプラント",
+      "verdict": "△",
+      "reason": "LNGプラントが売上の42.9%・受注残の52.1%（売上・受注比）。ただし資源価格ではなくLNG設備投資のサイクルで動き、固定価格契約の工事損失リスクあり（27/3期1Q）",
+      "source": "https://www.nikkei.com/markets/ir/irftp/data/tdnr/tdnetg3/20260803/g1t6iu/140120260727599910.pdf",
+      "checked": "2026-09-24"
+    }
   }
 }

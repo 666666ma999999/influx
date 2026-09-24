@@ -44,12 +44,23 @@ class ClassifyTest(unittest.TestCase):
         self.assertEqual((r["group"], r["trend"], r["mark"]), ("override", "state", "△"))
 
     def test_not_in_ledger(self):
-        self.assertEqual(t.classify(None, "6613", TMAP)["group"], "candidate")
+        tm = {"trends": TMAP["trends"], "overrides": {},
+              "candidates_not_in_ledger": {"1111": {"trend": "ai", "note": "未確認"}}}
+        self.assertEqual(t.classify(None, "1111", tm)["group"], "candidate")
         self.assertEqual(t.classify(None, "9999", TMAP)["group"], "no_ledger")
 
     def test_rate_by_pin_type(self):
         r = t.classify(_cp("国内金利(政策金利・長期金利)", "+", "rate"), "5838", TMAP)
         self.assertEqual(r["trend"], "rate")
+
+    def test_candidate_verdicts(self):
+        tm = {"trends": TMAP["trends"], "overrides": {}, "candidates_not_in_ledger": {
+            "1111": {"trend": "ai", "note": "x", "verdict": "確証", "reason": "AI 80%"},
+            "2222": {"trend": "ai", "note": "x", "verdict": "△", "reason": "AI 20%"},
+            "3333": {"trend": "ai", "note": "x", "verdict": "却下", "reason": "AI 0%"}}}
+        self.assertEqual((t.classify(None, "1111", tm)["group"], t.classify(None, "1111", tm)["mark"]), ("override", ""))
+        self.assertEqual(t.classify(None, "2222", tm)["mark"], "△")
+        self.assertEqual(t.classify(None, "3333", tm)["group"], "out")
 
     def test_port_cargo_not_state(self):
         r = t.classify(_cp("港湾取扱貨物量（コンテナ等）"), "9364", TMAP)

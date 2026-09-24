@@ -50,6 +50,12 @@ def classify(cp: Optional[Dict[str, Any]], code4: str, tmap: Dict[str, Any]) -> 
     if cp is None:
         c = tmap.get("candidates_not_in_ledger", {}).get(code4)
         if c:
+            v = c.get("verdict")  # 決算で裏取りした結果（確証／△／却下）。無ければ未確認
+            if v == "却下":
+                return {"group": "out", "trend": None, "why": f"決算で却下: {c.get('reason', '')}", "mark": ""}
+            if v in ("確証", "△"):
+                return {"group": "override", "trend": c["trend"], "why": c.get("reason", c["note"]),
+                        "mark": "△" if v == "△" else ""}
             return {"group": "candidate", "trend": c["trend"], "why": c["note"], "mark": ""}
         return {"group": "no_ledger", "trend": None, "why": "台帳なし", "mark": ""}
     if cp.get("sign") != "+":
@@ -181,7 +187,7 @@ def render(date: str, base: int, df: pd.DataFrame, args, tmap: Dict[str, Any]) -
            "- 並び順: 200 日線の上にいる株が先、下の株は「抜けるのに必要な上昇率」が小さい順",
            "- 作成: scripts/trend_stock_screen.py", ""]
     sec = [("ledger", "A. 台帳でトレンドと確認できた会社"),
-           ("override", "B. 台帳の pin は狭いが、決算の事業別利益で当たる会社"),
+           ("override", "B. 台帳の pin が狭い・台帳にないが、決算の事業別利益で当たると確かめた会社"),
            ("candidate", "C. 台帳にないが、商売の中身がトレンドに当たる可能性が高い会社（判定は未確認）")]
     for g, title in sec:
         sub = order(df[df.group == g]) if n else df
