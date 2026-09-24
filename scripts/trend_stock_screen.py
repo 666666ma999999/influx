@@ -221,7 +221,7 @@ def render(date: str, base: int, df: pd.DataFrame, args, tmap: Dict[str, Any]) -
            f"- 台帳で照合: {n}／{n} 社（台帳あり {nl}・台帳なし {n - nl}）",
            "- トレンド判定: センターピン台帳の pin が config/trend_map.json のトレンドに当たり sign が +（東証33業種では判定しない）",
            "- 並び順: 200 日線の上にいる株が先、下の株は「抜けるのに必要な上昇率」が小さい順",
-           f"- アクティビストの新規5%報告: 直近 {args.activist_days} 営業日に、提出者が data/activist_dictionary.json に載る大量保有報告書（新規のみ・変更と訂正は除く）が出た会社（EDINET は {getattr(args, 'activist_end', '')} 提出分まで読む＝株価の日付より後の報告も含む。最終日の提出分は翌営業日の扱いで入らない。英字入りのコード〈186A 等〉は判定元が未対応で拾えない）。9/14 の計測で先行きにプラスだった唯一の大口情報（tasks/bigholder_free3.md）",
+           f"- アクティビストの新規5%報告: 直近 {args.activist_days} 営業日に、提出者が data/activist_dictionary.json に載る大量保有報告書（新規のみ・変更と訂正は除く）が出た会社（EDINET は {getattr(args, 'activist_end', '')} 提出分まで読む＝株価の日付より後の報告も含む。最終日の提出分は翌営業日の扱いで入らない。英字入りのコード〈186A 等〉は判定元が未対応で拾えない）。9/14 の計測（tasks/bigholder_free3.md S5・n=219・120営業日の中央値 +4.2pt）では先行きにプラスだった唯一の大口情報。ただし株アルゴのカタログ（docs/stock-algo-kpi-catalog.md §2-E activist_5pct）の正式判定は fail（n=18・lift 0.0）で、両者の統合はオーナー裁定待ち＝参考の印",
            "- 作成: scripts/trend_stock_screen.py", ""]
     sec = [("ledger", "A. 台帳でトレンドと確認できた会社"),
            ("override", "B. 台帳の pin が狭い・台帳にないが、決算の事業別利益で当たると確かめた会社"),
