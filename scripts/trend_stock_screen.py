@@ -150,7 +150,43 @@ def screen(args, tmap: Dict[str, Any]):
             "s50": MA50[c].iloc[-1] / MA50[c].iloc[-11] - 1, "g200": p / m200 - 1 if m200 == m200 else np.nan,
             "in_ledger": cp is not None, "pin": cp["pin"] if cp else "", **j,
         })
-    return C.index[-1], base, pd.DataFrame(rows)
+    df = pd.DataFrame(rows)
+    k = min(max(args.activist_days, 1), len(C.index))
+    act = activist_flags(C.index[-k].replace("-", ""), args.asof.replace("-", "") if args.asof else None)
+    args.activist_end = (act or {}).get("_end", "")
+    if len(df):
+        df["activist"] = [(act or {}).get(c, "—") if act is not None else "取得できず" for c in df.code]
+    return C.index[-1], base, df
+
+
+def activist_flags(start_bd: str, end_bd: Optional[str]) -> Optional[Dict[str, str]]:
+    """期間内にアクティビストが新規5%報告（大量保有報告書）を出した会社を {4桁コード: "提出者（提出日）"} で返す.
+
+    判定は kpi_activist_signals.generate_activist_signals（提出者名を data/activist_dictionary.json と照合・
+    変更報告と訂正は除く）をそのまま使う。9/14 の計測で先行きにプラスだった唯一の大口情報
+    （tasks/bigholder_free3.md S5・120 営業日で中央値 +4.2pt）。EDINET の取得が欠けていれば None。
+    """
+    import sys
+    sys.path.insert(0, os.path.join(ROOT, "scripts"))
+    import kpi_activist_signals as ka
+    if end_bd is None:
+        files = sorted(f for f in os.listdir(os.path.join(ROOT, "data", "edinet")) if f.endswith(".json.gz"))
+        if not files:
+            print("[warn] アクティビスト判定を省略: data/edinet に大量保有報告のキャッシュがない")
+            return None
+        end_bd = files[-1][:8]
+    try:
+        sig, _ = ka.generate_activist_signals(start_bd, end_bd)
+    except SystemExit as e:  # EDINET キャッシュ欠け（edinet_fetch.py で補う）
+        print(f"[warn] アクティビスト判定を省略: {str(e).splitlines()[0]}")
+        return None
+    out: Dict[str, str] = {"_end": end_bd}
+    if sig.empty:
+        return out
+    for r in sig.sort_values("submission_date").itertuples():
+        d = r.submission_date
+        out[r.code[:4]] = f"{r.filer_name[:24]}（{d[:4]}-{d[4:6]}-{d[6:]}）"
+    return out
 
 
 def order(df: pd.DataFrame) -> pd.DataFrame:
@@ -170,8 +206,8 @@ def fmt_row(r, labels: Dict[str, str]) -> str:
     else:
         need = "あと+{:.1f}%".format((1 / (1 + r.g200) - 1) * 100)
     s50 = "上向き" if r.s50 > 0 else "下向き"
-    return "| {}（{}） | {}{} | {} | {:.0f}% | {:+.0f}%・{} | {} |".format(
-        r.name, r.code, labels[r.trend], r.mark, r.why, r.dd * 100, r.g50 * 100, s50, need)
+    return "| {}（{}） | {}{} | {} | {:.0f}% | {:+.0f}%・{} | {} | {} |".format(
+        r.name, r.code, labels[r.trend], r.mark, r.why, r.dd * 100, r.g50 * 100, s50, need, r.activist)
 
 
 def render(date: str, base: int, df: pd.DataFrame, args, tmap: Dict[str, Any]) -> str:
@@ -179,12 +215,13 @@ def render(date: str, base: int, df: pd.DataFrame, args, tmap: Dict[str, Any]) -
     n = len(df)
     nl = int(df.in_ledger.sum()) if n else 0
     cond = "高値から {:.0f}% 以下".format(args.max_dd * 100) + (" かつ 50 日線の上" if args.ma50 else "")
-    hdr = "| 社名（コード） | トレンド | 利益を動かすもの（上がると利益＋） | 高値からの下落率 | 50日線との差・向き | 200日線 |\n|---|---|---|---|---|---|"
+    hdr = "| 社名（コード） | トレンド | 利益を動かすもの（上がると利益＋） | 高値からの下落率 | 50日線との差・向き | 200日線 | アクティビストの新規5%報告 |\n|---|---|---|---|---|---|---|"
     out = [f"# トレンド株リスト（{date} 終値）", "",
            f"- 母集団: 時価総額 {args.min_mcap / 100:,.0f} 億円以上で、{args.high_window} 日の株価の欠けが {args.max_missing} 日以下の {base:,} 社 → {cond} = {n}／{base:,} 社",
            f"- 台帳で照合: {n}／{n} 社（台帳あり {nl}・台帳なし {n - nl}）",
            "- トレンド判定: センターピン台帳の pin が config/trend_map.json のトレンドに当たり sign が +（東証33業種では判定しない）",
            "- 並び順: 200 日線の上にいる株が先、下の株は「抜けるのに必要な上昇率」が小さい順",
+           f"- アクティビストの新規5%報告: 直近 {args.activist_days} 営業日に、提出者が data/activist_dictionary.json に載る大量保有報告書（新規のみ・変更と訂正は除く）が出た会社（EDINET は {getattr(args, 'activist_end', '')} 提出分まで読む＝株価の日付より後の報告も含む。最終日の提出分は翌営業日の扱いで入らない。英字入りのコード〈186A 等〉は判定元が未対応で拾えない）。9/14 の計測で先行きにプラスだった唯一の大口情報（tasks/bigholder_free3.md）",
            "- 作成: scripts/trend_stock_screen.py", ""]
     sec = [("ledger", "A. 台帳でトレンドと確認できた会社"),
            ("override", "B. 台帳の pin が狭い・台帳にないが、決算の事業別利益で当たると確かめた会社"),
@@ -218,6 +255,7 @@ def main() -> None:
     ap.add_argument("--high-window", type=int, default=d["high_window_days"])
     ap.add_argument("--max-missing", type=int, default=d["max_missing_days"])
     ap.add_argument("--no-ma50", dest="ma50", action="store_false", default=d["require_above_ma50"])
+    ap.add_argument("--activist-days", type=int, default=120, help="アクティビスト報告を見る営業日数（計測の期間=120）")
     ap.add_argument("--out", help="出力先（既定 output/trend_list_<日付>.md）")
     args = ap.parse_args()
     date, base, df = screen(args, tmap)
