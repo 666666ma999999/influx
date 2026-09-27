@@ -77,6 +77,7 @@ flowchart LR
 | エンゲージメント計測 | 自投稿の実数を取る | `scripts/fetch_engagement.py`（make_article ラッパー起動） | 投稿後24h/72h | 🐳 |
 | 計測の唯一口 | X 投稿の数値（likes/replies/views/bookmarks/RT/quotes）を測る**唯一のオンデマンド計測モジュール**。取得経路（syndication / fxtwitter）を `sources` に残し、取れない値は 0 でなく `null` にする | `scripts/x_metrics_lib.py`（2026-08-19 新設・それまで経路ごとの独自実装で同じ投稿の数字が食い違っていた〔17/17件不一致・「万」パース全損で3万いいね→0保存〕） | 呼ばれた時 | 🐳 |
 | 契約の見張り | 「0は書かない」契約の違反を検知する report-only の見張り。`output/bookmarks.jsonl` の**凍結行が増減していないか**と、新規行の指標が null かを検査（増えても減っても違反＝差し替え・null 化も拾う） | `scripts/check_metric_contract.py`（⚠️ docstring は「毎日実行」だが **launchd・runner への配線は 0 件**＝実行は手動・2026-08-29 実測。直近実行は `OK: 全267行・数値入り行 243（凍結値 243 と一致）・破損行 0`） | 手動（未配線） | 🖐 |
+| ジャンル別 imp パイロット | 「儲かりそう・得だ」ジャンル別に X の投稿がどれだけ見られるかを測る（P-INF-21・2026-09-27 裁定）。検索で拾えた投稿（いいね下限なし）を母集団に、投稿ページの閲覧数÷プロフィールのフォロワー数をジャンル別に中央値・上位10%で出す。既存の値上がり検出 55 クエリとは別系統 | `scripts/imp_pilot.py`（collect→enrich→report）・`configs/imp_pilot.json`（ジャンル×クエリ・件数は jq で引く）・`data/imp_pilot/{posts,metrics,collect_log}.jsonl`・`output/imp_pilot_report.md`・追跡 `tasks/imp_pilot.md`。閲覧数は autopost 取得器の日本語 UI 欠陥を避けて自前で読む（`views_from_label`） | 手動（xstock-vnc・1 日 1 回まで） | 🖐 |
 
 > ⚠️ フォロワー計測（`fetch_followers.py`）は**定期実行に配線されていない**。呼び出しは `x_watchlist_tracer.py` の中だけ（2026-08-14 実測 grep）。
 
@@ -135,6 +136,10 @@ flowchart LR
 | **詳細リファレンス**（分類カテゴリ・テンプレ対応表・データスキーマ） | `.claude/docs/architecture.md`（⚠️ **2026-08-29 退役進行中**: §モジュール構成・§データフローは 5/2 停止／§環境変数は本書 §5.2 へ移送済み／§インフルエンサーグループ定義（文書6群 vs 実体8群）・§collect_tweets オプション（`--scrolls` 文書10 vs 実装20）・「Few-shot 46例」（実 51）は**実装と不一致＝読まない**。カテゴリ定義の正本は `collector/config.py`） | リンク先 |
 
 ## 7. 未反映キュー（機械が積む・人が消す）
+- [ ] 2026-09-21 `inventory_discover_iip.py` を更新（この文書への反映を確認）
+- [ ] 2026-09-22 `flea_panel_run.sh`、`flea_panel_track.py`、`flea_panel.json` を更新（この文書への反映を確認）
+- [ ] 2026-09-24 `trend_stock_screen.py` を更新（この文書への反映を確認）
+- [x] 2026-09-27 `imp_pilot.py`、`imp_pilot.json` を更新 → §4「ジャンル別 imp パイロット」に反映（同日）
 （空。2026-09-14 の点検で2件を消化＝**どちらも本書の対象外**: `fxnia_forward_eval.py`・`fxnia_forward_launchd.sh`（2026-09-02 のゼロ除算修正と不要な `ANTHROPIC_API_KEY` チェック撤去）は**株アルゴ側のインフルエンサー前向きレーン**（→ `influx-stock-algo-architecture.md` §4-3）／`_tmp_dram_chain_returns.py` は `_tmp_*` の使い捨て（§1 Skip 対象）。
 2026-08-29 には 5件を1件ずつ判定して消化＝内訳: **株アルゴ側の対象で本書には載らない** 8本
 〔`gen_center_pin_types` `x_mention_dict` `x_mention_extract` `xprice_watch_run` `build_trial_fingerprints`
