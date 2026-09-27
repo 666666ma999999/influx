@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "_note": "P-INF-21（2026-09-27 裁定 W1=a/W2=a/W3=a）: 3ジャンル×30投稿のパイロット。いいね下限なし・拾えた全投稿が母集団。既存 x_price_watch の 55 クエリとは別系統で、あちらは触らない。",
+  "genres": [
+    {"id": "kabu", "label": "株", "intent": "儲かりそう", "q": "株 (爆益 OR ストップ高 OR 上がる OR 買い時)"},
+    {"id": "pokeca", "label": "ポケカ", "intent": "儲かりそう", "q": "ポケカ (高騰 OR 暴落 OR 相場 OR プレ値)"},
+    {"id": "takarakuji", "label": "宝くじ", "intent": "得だ", "q": "宝くじ (当選 OR 高額当選 OR 買い方 OR 1等)"}
+  ],
+  "collect": {
+    "per_genre": 30,
+    "max_scrolls": 12,
+    "window_days_ago_from": 5,
+    "window_days_ago_to": 2,
+    "goto_wait_sec": [3.0, 5.0],
+    "_window_note": "投稿後 48 時間以上経った閲覧数を取るため、直近 2 日は窓に入れない"
+  },
+  "enrich": {
+    "per_url_wait_sec": [2.0, 4.0],
+    "profile_wait_sec": [2.0, 4.0]
+  }
+}

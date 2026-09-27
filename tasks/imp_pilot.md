@@ -1,0 +1,51 @@
+# Task: ジャンル別 imp パイロット（P-INF-21）
+
+Phase: 単発（plan.md の目的「株で勝つ情報を収集」の外縁＝メディア化の前段計測。株アルゴの Phase には紐付けない）
+起点: [[influx-imp-measurement-review-2026-09-27]]（4モデル敵対レビュー・オーナー裁定 W1=a/W2=a/W3=a）
+
+## 答える問い
+- 「XもしくはWEBでimpがそれが出るかを計測する方法」→ 裁定後の実行形: 株・ポケカ・宝くじの 3 ジャンルで、X の投稿はジャンルごとにどれだけ見られているか（閲覧数÷フォロワー数）
+
+## 対象と数え方
+- 範囲: X 側のパイロットのみ（3 ジャンル×30 投稿）。Google 側（キーワードプランナー CSV）は別便＝CSV の取得はオーナー手番。自分では投稿しない。既存 `configs/x_price_watch.json` の 55 クエリと `data/x_price_watch/` は触らない
+- **母集団の定義**: `configs/imp_pilot.json` の 3 クエリを X 検索（f=live・lang:ja・RT とリプライ除外・いいね下限なし・投稿日= 実行日の 5 日前〜2 日前）で開き、スクロールで拾えた投稿のうち各ジャンル先頭 30 件。除外= 同一投稿の重複・本文が取れなかったカード
+- 終了時に照合する実測項目: 〈拾った投稿数／閲覧数が取れた数／フォロワー数が取れた数〉をジャンルごとに（例: 30／28／27 件）
+- 数え方: `data/imp_pilot/posts.jsonl`（収集）→ `data/imp_pilot/metrics.jsonl`（閲覧数・フォロワー数）→ `python3 scripts/imp_pilot.py report` が中央値・上位 10% を出す
+
+## Metadata
+
+| 項目 | 値 |
+|------|-----|
+| Status | done（結果= vault [[influx-imp-measurement-review-2026-09-27]] §パイロット結果） |
+| 開始日時 | 2026-09-27 15:00 |
+| 最終更新 | 2026-09-27 17:20 |
+| 担当 | Claude（masa-2・xstock-vnc コンテナ・x_profiles/maaaki） |
+
+## Goal
+
+3 ジャンル×30 投稿で「閲覧数÷フォロワー数」の分布を出し、本数と残り 18 ジャンルを決める材料にする。
+
+## 成功基準
+
+- [x] `docker exec -e DISPLAY=:99 xstock-vnc python3 /app/scripts/imp_pilot.py collect` が 3 ジャンルとも status=ok で終わり、`data/imp_pilot/posts.jsonl` に 90 行（各 30 行）（2026-09-27 実測: ok 30/30/30・found 33/30/32）
+- [x] `... imp_pilot.py enrich` が login_wall なしで完走し、閲覧数が取れた行が各ジャンル 20 件以上（2026-09-27 実測: 30/28/29・欠測 3 件は本文 15s timeout）
+- [x] `python3 scripts/imp_pilot.py report` が `output/imp_pilot_report.md` にジャンル別〈n／閲覧数あり／フォロワーあり／中央値／上位 10%〉の表を出す（2026-09-27 生成）
+- [x] `python3 -m unittest tests.test_imp_pilot` PASS（7 件）
+
+## Current Agreed Scope
+
+### Must
+- [x] collect（検索→30 件×3）
+- [x] enrich（投稿ページの閲覧数＋プロフィールのフォロワー数）
+- [x] report（表）
+
+### Descoped
+- Google 側の集計（KP CSV はオーナー手番・別便）
+- HTML の散布図（分散を見てから）
+- 残り 18 ジャンル
+
+## Handoff / Stuck
+- 2026-09-27: 着手。凍結リスクは fetch-engagement の目安（週 1〜2 回）を守り、本日 1 回だけ回す
+- 2026-09-27 17:20: 完走。照合〈拾った／閲覧数あり／フォロワーあり〉= 株 30/30/29・ポケカ 30/28/28・宝くじ 30/29/30。比の中央値 0.51／0.57／0.15・上位10% 3.43／7.77／3.53。
+  - Stuck→解消: ①autopost 取得器が日本語 UI で返信数を閲覧数として返す（imp_pilot 側 `views_from_label` で回避・autopost 側は influx_INBOX 🔵 に投函）②6 件目以降 ERR_CONNECTION_REFUSED（45s×n の再試行で完走）
+  - 次: 日を変えてもう 1〜2 回（同スクリプト・run_id 別）→ 残り 18 ジャンルへ。Google 側 KP CSV はオーナー手番
