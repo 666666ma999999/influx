@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "_note": "P-INF-21 続き（2026-09-27）: 21 ジャンル叩き台から パイロット済み 3（株・ポケカ・宝くじ）を除いた 18 ジャンル。1 ジャンル 60 件（30 件×2 回では中央値の順位が入れ替わったため倍にした）。意図は各ジャンル 1 つ・クエリは叩き台の「儲かりそう／得だ」列の語から作った初版",
+  "genres": [
+    {"id": "nisa", "label": "投信・NISA", "intent": "儲かりそう", "q": "(新NISA OR 投資信託 OR オルカン) (含み益 OR 積立 OR 爆益 OR 利回り)"},
+    {"id": "crypto", "label": "仮想通貨", "intent": "儲かりそう", "q": "(ビットコイン OR 仮想通貨) (爆益 OR 最高値 OR 爆上げ OR 買い時)"},
+    {"id": "metal", "label": "金・銀・プラチナ", "intent": "儲かりそう", "q": "(金価格 OR 銀価格 OR 純金 OR プラチナ) (最高値 OR 高騰 OR 買い時 OR 積立)"},
+    {"id": "fx", "label": "為替・外貨", "intent": "儲かりそう", "q": "(円安 OR ドル円 OR 外貨預金) (爆益 OR 買い時 OR 金利 OR 両替)"},
+    {"id": "realestate", "label": "不動産", "intent": "儲かりそう", "q": "(不動産 OR マンション OR REIT) (値上がり OR 利回り OR 高騰 OR 買い時)"},
+    {"id": "sneaker", "label": "スニーカー・限定品", "intent": "儲かりそう", "q": "(スニーカー OR 限定品) (抽選 OR プレ値 OR 当選 OR 転売)"},
+    {"id": "luxury", "label": "高級時計・バッグ", "intent": "得だ", "q": "(ロレックス OR 高級時計 OR エルメス OR 高級バッグ) (値上げ OR 定価 OR 相場 OR 高騰)"},
+    {"id": "gadget", "label": "ゲーム機・ガジェット", "intent": "得だ", "q": "(Switch2 OR PS5 OR iPhone OR ゲーム機) (値上げ OR 転売 OR 値下げ OR 買い時)"},
+    {"id": "whisky_art", "label": "ウイスキー・アート", "intent": "儲かりそう", "q": "(ウイスキー OR 山崎 OR 響 OR アート) (高騰 OR 抽選 OR 定価 OR 落札)"},
+    {"id": "keiba", "label": "競馬・競艇・競輪", "intent": "儲かりそう", "q": "(競馬 OR 競艇 OR 競輪 OR ボートレース) (万馬券 OR 的中 OR 回収率 OR 払戻)"},
+    {"id": "pachi", "label": "パチンコ・スロット", "intent": "儲かりそう", "q": "(パチンコ OR スロット OR パチスロ) (新台 OR 万発 OR 設定6 OR 勝ち)"},
+    {"id": "casino", "label": "IR・カジノ", "intent": "得だ", "q": "(カジノ OR 大阪IR OR 統合型リゾート) (開業 OR 還元率 OR 勝った OR 稼ぐ)"},
+    {"id": "neage", "label": "値上げ・値下げ", "intent": "得だ", "q": "(値上げ OR 値下げ) (買いだめ OR 今買う OR お得 OR セール)"},
+    {"id": "poikatsu", "label": "ポイ活・クレカ・キャンペーン", "intent": "得だ", "q": "(ポイ活 OR クレカ OR ポイント還元) (還元 OR 改悪 OR キャンペーン OR お得)"},
+    {"id": "tax", "label": "税金・控除・給付金", "intent": "得だ", "q": "(ふるさと納税 OR 給付金 OR 控除 OR 還付) (申請 OR お得 OR 損 OR 戻る)"},
+    {"id": "rate", "label": "金利・住宅ローン・預金", "intent": "得だ", "q": "(住宅ローン OR 定期預金 OR 金利) (借り換え OR 高金利 OR 金利上昇 OR お得)"},
+    {"id": "pension", "label": "年金・保険", "intent": "得だ", "q": "(年金 OR 保険) (繰り下げ OR 受給額 OR 解約 OR 損)"},
+    {"id": "fukugyo", "label": "副業・せどり", "intent": "儲かりそう", "q": "(副業 OR せどり) (月収 OR 利益 OR 稼げ OR 仕入れ)"}
+  ],
+  "collect": {
+    "per_genre": 60,
+    "max_scrolls": 20,
+    "window_days_ago_from": 5,
+    "window_days_ago_to": 2,
+    "goto_wait_sec": [3.0, 5.0],
+    "_window_note": "投稿後 48 時間以上経った閲覧数を取るため、直近 2 日は窓に入れない（imp_pilot.json と同じ）"
+  },
+  "enrich": {
+    "per_url_wait_sec": [2.0, 4.0],
+    "profile_wait_sec": [2.0, 4.0]
+  }
+}
