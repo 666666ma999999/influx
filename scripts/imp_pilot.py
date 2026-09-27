@@ -245,7 +245,12 @@ def stage_collect(args) -> int:
     cfg = _load_config(args.config)
     ccfg = cfg["collect"]
     now = datetime.now(timezone.utc)
-    since, until = search_window(now, ccfg["window_days_ago_from"], ccfg["window_days_ago_to"])
+    days_from = args.window_from if args.window_from is not None else ccfg["window_days_ago_from"]
+    days_to = args.window_to if args.window_to is not None else ccfg["window_days_ago_to"]
+    if days_to < 2 or days_from <= days_to:
+        print(f"[error] 窓は「{days_to}日前まで」が2以上・from>to が必要（48時間以上前の投稿だけを測るため）")
+        return 2
+    since, until = search_window(now, days_from, days_to)
     run_id = now.strftime("%Y%m%dT%H%M%SZ")
     run_at = now.isoformat(timespec="seconds")
     per = ccfg["per_genre"]
@@ -513,6 +518,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--profile", type=Path, default=DEFAULT_PROFILE)
     parser.add_argument("--run-id", help="対象 run_id（省略時= 最新）")
     parser.add_argument("--report", type=Path, default=DEFAULT_REPORT)
+    parser.add_argument("--window-from", type=int, help="collect: 何日前から（省略時= 設定値）")
+    parser.add_argument("--window-to", type=int, help="collect: 何日前まで（省略時= 設定値・2 以上）")
     args = parser.parse_args(argv)
     return {"collect": stage_collect, "enrich": stage_enrich, "report": stage_report}[args.stage](args)
 
