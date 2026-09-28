@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "_note": "P-INF-21 意図別（2026-09-28・オーナー「b」）: X で伸びると再現した 3 ジャンル（高級時計・バッグ／スニーカー／ポケカ）を〈ジャンル×意図〉10 単位に分けて測る。意図は 21 ジャンル叩き台の「儲かりそう／得だ」列から",
+  "genres": [
+    {"id": "lux_priceup", "label": "高級時計・バッグ×値上げ・定価改定", "intent": "得だ", "q": "(ロレックス OR 高級時計 OR エルメス OR ルイヴィトン OR シャネルバッグ OR 高級バッグ) (値上げ OR 価格改定 OR 定価改定)"},
+    {"id": "lux_resale", "label": "高級時計・バッグ×中古・買取相場", "intent": "儲かりそう", "q": "(ロレックス OR 高級時計 OR エルメス OR 高級バッグ) (買取 OR 中古相場 OR 相場 OR 資産価値)"},
+    {"id": "lux_boutique", "label": "高級時計・バッグ×正規店で買えた", "intent": "得だ", "q": "(ロレックス OR エルメス) (正規店で買えた OR 正規店で購入 OR 案内された OR マラソン成功)"},
+    {"id": "snk_lottery", "label": "スニーカー×抽選・当選", "intent": "得だ", "q": "(スニーカー OR ジョーダン OR ダンク OR ニューバランス) (抽選 OR 当選 OR 当たった)"},
+    {"id": "snk_premium", "label": "スニーカー×プレ値・転売", "intent": "儲かりそう", "q": "(スニーカー OR ジョーダン OR ダンク OR ニューバランス) (プレ値 OR 転売 OR 高騰 OR 相場)"},
+    {"id": "snk_sale", "label": "スニーカー×セール・値下げ", "intent": "得だ", "q": "(スニーカー OR ジョーダン OR ダンク OR ニューバランス) (セール OR 値下げ OR 半額 OR アウトレット)"},
+    {"id": "pk_up", "label": "ポケカ×高騰", "intent": "儲かりそう", "q": "ポケカ (高騰 OR 爆上げ OR 値上がり)"},
+    {"id": "pk_down", "label": "ポケカ×暴落", "intent": "得だ", "q": "ポケカ (暴落 OR 値下がり OR 下落)"},
+    {"id": "pk_open", "label": "ポケカ×開封・当たり", "intent": "儲かりそう", "q": "ポケカ (開封 OR 当たり OR 神引き OR 引いた)"},
+    {"id": "pk_lottery", "label": "ポケカ×抽選・再販", "intent": "得だ", "q": "ポケカ (抽選 OR 再販 OR 定価)"}
+  ],
+  "collect": {
+    "per_genre": 60,
+    "max_scrolls": 20,
+    "window_days_ago_from": 5,
+    "window_days_ago_to": 2,
+    "goto_wait_sec": [3.0, 5.0],
+    "_window_note": "2026-09-28 実行で 9/23〜9/25（until 排他）。投稿後 48 時間以上"
+  },
+  "enrich": {
+    "per_url_wait_sec": [2.0, 4.0],
+    "profile_wait_sec": [2.0, 4.0]
+  }
+}
