@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "_note": "P-INF-21 再計測（2026-09-28・オーナー「a を今やって」）: 21ジャンル比較の上位（比の中央値の上位5＋上位10%が大きいポケカ）を同じクエリで別の投稿日に測り直し、雑音の多い3ジャンル（ウイスキー・アート／IR・カジノ／パチンコ・スロット）はクエリを直して測る。直した語= Codex 点検の5点（山崎・響・アート・稼ぐ・開業・新台）",
+  "genres": [
+    {"id": "luxury", "label": "高級時計・バッグ", "intent": "得だ", "q": "(ロレックス OR 高級時計 OR エルメス OR 高級バッグ) (値上げ OR 定価 OR 相場 OR 高騰)"},
+    {"id": "whisky_art", "label": "ウイスキー・アート", "intent": "儲かりそう", "q": "(ウイスキー OR 山崎12年 OR 山崎18年 OR 響21年 OR 白州 OR 現代アート OR 絵画) (高騰 OR 抽選販売 OR 定価 OR 落札 OR 買取) -遊戯王 -ポケカ -グッズ"},
+    {"id": "fx", "label": "為替・外貨", "intent": "儲かりそう", "q": "(円安 OR ドル円 OR 外貨預金) (爆益 OR 買い時 OR 金利 OR 両替)"},
+    {"id": "rate", "label": "金利・住宅ローン・預金", "intent": "得だ", "q": "(住宅ローン OR 定期預金 OR 金利) (借り換え OR 高金利 OR 金利上昇 OR お得)"},
+    {"id": "sneaker", "label": "スニーカー・限定品", "intent": "儲かりそう", "q": "(スニーカー OR 限定品) (抽選 OR プレ値 OR 当選 OR 転売)"},
+    {"id": "pokeca", "label": "ポケカ", "intent": "儲かりそう", "q": "ポケカ (高騰 OR 暴落 OR 相場 OR プレ値)"},
+    {"id": "casino", "label": "IR・カジノ", "intent": "得だ", "q": "(カジノ OR 大阪IR OR 統合型リゾート OR ラスベガス OR マカオ) (還元率 OR 勝った OR 大勝ち OR 儲かる) -ゲーム -イベント"},
+    {"id": "pachi", "label": "パチンコ・スロット", "intent": "儲かりそう", "q": "(パチンコ OR スロット OR パチスロ) (万発 OR 万枚 OR 設定6 OR 勝ち OR 収支)"}
+  ],
+  "collect": {
+    "per_genre": 60,
+    "max_scrolls": 20,
+    "window_days_ago_from": 12,
+    "window_days_ago_to": 9,
+    "goto_wait_sec": [3.0, 5.0],
+    "_window_note": "2026-09-28 実行で 9/16〜9/18（until 排他）。これまでの窓 9/19〜9/24 と重ならない"
+  },
+  "enrich": {
+    "per_url_wait_sec": [2.0, 4.0],
+    "profile_wait_sec": [2.0, 4.0]
+  }
+}
