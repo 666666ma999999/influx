@@ -61,3 +61,5 @@ Phase: 単発（plan.md の目的「株で勝つ情報を収集」の外縁＝�
 - 2026-09-29 19:xx: 意図別上位3単位の再現確認（run 20260929T094637Z・投稿日 9/20〜9/22）。収集 渡した 180／151、取得 渡した 151／ok 151。3単位とも2窓で比中央値1超＝再現（ポケカ×抽選・再販 2.32→4.14・フォロワー100以上 1.21→2.34）。表= vault 同ノート §意図別 上位3単位の再現確認
   - コンテナ消失の有力原因= launchd fxnia-forward（月10:30）・okasira-forward（月11:15）・research-weekly（土9:00）の終了時 `docker compose -f docker-compose.vnc.yml down`（scripts/fxnia_forward_launchd.sh:67）。長時間の計測は月曜午前・土曜朝を避ける（未対策・触っていない）
 - 2026-09-29 20:xx: オーナー「X側の軸の一覧と決まった理由をレポートHTMLで出力」→ 叩き台 `output/imp_x_axis_report.html`（gitignore 対象）・公開 https://claude.ai/artifact/BYLUGmavYmEWo8pmtTxQ98 。21ジャンルの95%幅は scratchpad ci21.py で再計算（2000回・seed 0）。検収待ち
+  - Codex 照合で修正: 為替・金利の100以上の数字（回別に再計算 2.17／2.10）／「投稿後48時間以上」は日付指定のため未達（235/1045件・280/463件が48h未満・最短34.6h）→ レポートに経過時間の列と注記を追加・「得だ＞儲かりそう」を経過時間をそろえた比較に限定。vault 同ノート §48時間条件の実測
+  - 未解決: imp_pilot.py の収集窓を「投稿時刻で48時間以上」に直すか（今は日付で区切る）
