@@ -60,3 +60,4 @@ Phase: 単発（plan.md の目的「株で勝つ情報を収集」の外縁＝�
   - 未解決: xstock-vnc が作り直される原因（9/28 消失・9/29 10:30 作り直し）
 - 2026-09-29 19:xx: 意図別上位3単位の再現確認（run 20260929T094637Z・投稿日 9/20〜9/22）。収集 渡した 180／151、取得 渡した 151／ok 151。3単位とも2窓で比中央値1超＝再現（ポケカ×抽選・再販 2.32→4.14・フォロワー100以上 1.21→2.34）。表= vault 同ノート §意図別 上位3単位の再現確認
   - コンテナ消失の有力原因= launchd fxnia-forward（月10:30）・okasira-forward（月11:15）・research-weekly（土9:00）の終了時 `docker compose -f docker-compose.vnc.yml down`（scripts/fxnia_forward_launchd.sh:67）。長時間の計測は月曜午前・土曜朝を避ける（未対策・触っていない）
+- 2026-09-29 20:xx: オーナー「X側の軸の一覧と決まった理由をレポートHTMLで出力」→ 叩き台 `output/imp_x_axis_report.html`（gitignore 対象）・公開 https://claude.ai/artifact/BYLUGmavYmEWo8pmtTxQ98 。21ジャンルの95%幅は scratchpad ci21.py で再計算（2000回・seed 0）。検収待ち
