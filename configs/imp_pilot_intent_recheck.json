@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "_note": "P-INF-21 意図別の再現確認（2026-09-29・オーナー「a 進めて」）: 意図別上位3単位を imp_pilot_intent.json と同じクエリで別の投稿日（--window-from 9 --window-to 6＝9/20〜9/22）に測る",
+  "genres": [
+    {
+      "id": "lux_boutique",
+      "label": "高級時計・バッグ×正規店で買えた",
+      "intent": "得だ",
+      "q": "(ロレックス OR エルメス) (正規店で買えた OR 正規店で購入 OR 案内された OR マラソン成功)"
+    },
+    {
+      "id": "pk_down",
+      "label": "ポケカ×暴落",
+      "intent": "得だ",
+      "q": "ポケカ (暴落 OR 値下がり OR 下落)"
+    },
+    {
+      "id": "pk_lottery",
+      "label": "ポケカ×抽選・再販",
+      "intent": "得だ",
+      "q": "ポケカ (抽選 OR 再販 OR 定価)"
+    }
+  ],
+  "collect": {
+    "per_genre": 60,
+    "max_scrolls": 20,
+    "window_days_ago_from": 9,
+    "window_days_ago_to": 6,
+    "goto_wait_sec": [
+      3.0,
+      5.0
+    ],
+    "_window_note": "2026-09-29 実行で 9/20〜9/22（until 排他）。意図別本計測 9/24〜9/26 と重ならない"
+  },
+  "enrich": {
+    "per_url_wait_sec": [
+      2.0,
+      4.0
+    ],
+    "profile_wait_sec": [
+      2.0,
+      4.0
+    ]
+  }
+}
