@@ -116,7 +116,7 @@ scripts/run_research.sh --phase report
 ## 完了前に回す検証（入口はこの1つ）
 
 ```bash
-python3 -m unittest discover -s tests    # 324件・数秒。pytest は入っていない（設定ファイルも無い）
+docker compose run --rm -v "$PWD/tests:/app/tests" xstock python -m unittest discover -s tests   # 392件・数秒（2026-10-03 実測）。ホスト直実行は numpy/playwright 等が無く 11 本が import エラーになる＝Docker で回す。pytest は入っていない
 ```
 
 これが**唯一の一括ゲート**。個別スクリプトの `--selftest`（`coverage_census` `foreign_forward`

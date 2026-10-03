@@ -138,6 +138,41 @@ class TestForwardEpisodeSkip(unittest.TestCase):
         last = [r for r in self.rows() if r["type"] == "firing"][-1]
         self.assertEqual(last["skipped_dup_reason"], {"90750": "same_day"})
 
+    def test_daily_rerun_within_7_days_not_recorded(self):
+        """日次便（2026-10-03）: 同じ (series, code) を7日未満に記録済み → 銘柄が残らないので行を書かない。"""
+        s = self.series(sid="methanol", cadence="weekly")
+        fwd.record_firings([(s, {}, ["4週累積 +21.3%"])], "2026-09-14")
+        fwd.record_firings([(s, {}, ["weekly +15.0%"])], "2026-09-15")
+        fwd.record_firings([(s, {}, ["weekly +15.0%"])], "2026-09-19")  # 5日後
+        firings = [r for r in self.rows() if r["type"] == "firing"]
+        self.assertEqual(len(firings), 1)
+        self.assertEqual(firings[0]["fire_date"], "2026-09-14")
+        # ちょうど7日後は週次便と同じ間隔＝従来どおり記録される
+        fwd.record_firings([(s, {}, ["weekly +15.0%"])], "2026-09-21")
+        firings = [r for r in self.rows() if r["type"] == "firing"]
+        self.assertEqual([f["fire_date"] for f in firings], ["2026-09-14", "2026-09-21"])
+
+    def test_daily_rerun_stockless_series_not_recorded(self):
+        """受益カード無しの系列（スプレッド等）が連日鳴っても、7日未満の再発火は行を書かない。"""
+        s = {"id": "sm-naphtha-spread", "jp": "SM-ナフサ", "cadence": "weekly", "beneficiaries": []}
+        fwd.record_firings([(s, {}, ["4週 +67USD/T"])], "2026-10-01")
+        fwd.record_firings([(s, {}, ["4週 +67USD/T"])], "2026-10-02")
+        firings = [r for r in self.rows() if r["type"] == "firing"]
+        self.assertEqual(len(firings), 1)
+
+    def test_partial_repeat_7d_keeps_row_with_new_code(self):
+        """片方の銘柄だけ7日未満に記録済みなら、新しい銘柄だけ残して行を書く（reason=repeat_7d）。"""
+        s1 = {"id": "wti", "jp": "WTI", "cadence": "weekly",
+              "beneficiaries": [{"code": "1605", "sign": "+", "tier": "confirmed"}]}
+        s2 = {"id": "wti", "jp": "WTI", "cadence": "weekly",
+              "beneficiaries": [{"code": "1605", "sign": "+", "tier": "confirmed"},
+                                {"code": "1662", "sign": "+", "tier": "provisional"}]}
+        fwd.record_firings([(s1, {}, ["weekly +5%"])], "2026-10-01")
+        fwd.record_firings([(s2, {}, ["weekly +6%"])], "2026-10-02")
+        last = [r for r in self.rows() if r["type"] == "firing"][-1]
+        self.assertEqual([x["code"] for x in last["stocks"]], ["16620"])
+        self.assertEqual(last["skipped_dup_reason"], {"16050": "repeat_7d"})
+
     def test_prereg_v3_appended_once(self):
         """(c) v3 事前登録は1回だけ（冪等）。旧 v2 行はそのまま残る。"""
         self.log.write_text(json.dumps({"type": "preregistration", "spec_version": 2}) + "\n")

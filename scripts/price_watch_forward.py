@@ -29,7 +29,7 @@ import bisect
 import json
 import re
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 APP = Path("/app") if Path("/app/scripts").exists() else Path(__file__).resolve().parent.parent
@@ -175,6 +175,16 @@ def record_firings(alerts: list, fire_date: str) -> int:
     recent_pairs = {(e.get("series_id"), s["code"]) for e in log_firings
                     if episode_cutoff <= (e.get("fire_date") or "") < fire_date
                     for s in e.get("stocks", [])}
+    # 7日未満の再記録排除（2026-10-03・price-universe を週次→平日日次にした副作用への手当て）:
+    # 同じ (series_id, code) を直近7日未満（fire_date-6 〜 fire_date-1）に記録済みなら
+    # skipped_dup（reason=repeat_7d）。週次便は実行間隔がちょうど7日なので挙動は不変
+    # （2026-08-30 裁定「週次レーンは変えない」と両立）。月次レーンの6ヶ月エピソード排除とは独立。
+    # 銘柄が1つも残らない再発火（受益カード無し系列・全銘柄 repeat_7d）は行自体を書かない＝
+    # 4週条件が続く間、毎日同じ空行が積まれて前向き台帳が読めなくなるのを防ぐ。
+    cutoff7 = (datetime.strptime(fire_date, "%Y-%m-%d") - timedelta(days=6)).strftime("%Y-%m-%d")
+    recent7 = [e for e in log_firings if cutoff7 <= (e.get("fire_date") or "") < fire_date]
+    recent7_pairs = {(e.get("series_id"), s["code"]) for e in recent7 for s in e.get("stocks", [])}
+    recent7_series = {e.get("series_id") for e in recent7}
 
     n = 0
     for series, row, triggers in alerts:
@@ -203,6 +213,10 @@ def record_firings(alerts: list, fire_date: str) -> int:
                 skipped_dup.append(c5)
                 skipped_reason[c5] = "same_day"
                 continue
+            if (series["id"], c5) in recent7_pairs:
+                skipped_dup.append(c5)
+                skipped_reason[c5] = "repeat_7d"
+                continue
             if monthly and (series["id"], c5) in recent_pairs:
                 skipped_dup.append(c5)
                 skipped_reason[c5] = "episode"
@@ -211,6 +225,9 @@ def record_firings(alerts: list, fire_date: str) -> int:
             if px is not None:
                 stocks.append({"code": c5, "entry_close": px, "tier": tier})
                 seen_codes.add(c5)
+        if not stocks and series["id"] in recent7_series:
+            print(f"[forward] 7日未満の再発火で銘柄なし → 記録しない: {series['jp']}（{'/'.join(triggers)}）")
+            continue
         append({
             "type": "firing", "spec_version": SPEC_VERSION,
             "fire_date": fire_date, "series_id": series["id"], "series_jp": series["jp"],
