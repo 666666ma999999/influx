@@ -146,6 +146,19 @@ def ensure_preregistration() -> None:
     print(f"[forward] 事前宣言 v{SPEC_VERSION} を記録")
 
 
+def _pre20_excess(code5: str, px_now: float, bdays: list[str], base_idx: int,
+                  topix: dict[str, float]) -> float | None:
+    """基準日の20営業日前からの対TOPIX超過（pt）。bars/TOPIX が無ければ None（記録は落とさない）。"""
+    if base_idx < 20:
+        return None
+    day0 = bdays[base_idx - 20]
+    px0 = close_of(code5, day0)
+    t0, t1 = topix.get(day0), topix.get(bdays[base_idx])
+    if not px0 or not t0 or not t1:
+        return None
+    return round((px_now / px0 - 1) * 100 - (t1 / t0 - 1) * 100, 2)
+
+
 def record_firings(alerts: list, fire_date: str, lane: str = "rise") -> int:
     """price_universe_check の発火を前向き記録する。alerts=[(series_cfg, row, triggers)]
 
@@ -229,7 +242,11 @@ def record_firings(alerts: list, fire_date: str, lane: str = "rise") -> int:
                 continue
             px = close_of(c5, base_day)
             if px is not None:
-                stocks.append({"code": c5, "entry_close": px, "tier": tier})
+                # 直前20営業日の対TOPIX超過（2026-10-03 オーナー提案「予兆が出た時にその株が前に上がって
+                # いたかをチェック」）。遡り採点（§16o-3 追記8）では「上がり済み」の方が後20の勝率が高く、
+                # 除外フィルタには使わない＝**記録と表示のみ**。将来の採点のため全レーンで残す
+                stocks.append({"code": c5, "entry_close": px, "tier": tier,
+                               "pre20_excess_pt": _pre20_excess(c5, px, bdays, base_idx, topix)})
                 seen_codes.add(c5)
         if not stocks and series["id"] in recent7_series:
             print(f"[forward] 7日未満の再発火で銘柄なし → 記録しない: {series['jp']}（{'/'.join(triggers)}）")
@@ -249,8 +266,11 @@ def record_firings(alerts: list, fire_date: str, lane: str = "rise") -> int:
         })
         n += 1
         dup_txt = f" 二重排除{len(skipped_dup)}件" if skipped_dup else ""
+        pre_txt = " 直前20営業日: " + " ".join(
+            f"{x['code'][:4]}{x['pre20_excess_pt']:+.1f}pt" for x in stocks
+            if x.get("pre20_excess_pt") is not None) if stocks else ""
         print(f"[forward] 記録: {series['jp']}（{'/'.join(triggers)}）銘柄{len(stocks)}件{dup_txt} "
-              f"基準={base_day} 評価予定={eval_days['w8']}/{eval_days['w15']}")
+              f"基準={base_day} 評価予定={eval_days['w8']}/{eval_days['w15']}{pre_txt}")
     return n
 
 
