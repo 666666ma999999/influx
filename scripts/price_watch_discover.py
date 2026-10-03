@@ -1,7 +1,7 @@
 """price_watch_discover: 値上がり商品の「発見器」（新商品名の自動抽出→候補キュー）.
 
 2AI敵対レビュー一致設計（2026-07-28）: 検索本数を増やさず、低閾値の汎用検索
-（値上げ/値上がり/品薄＋2026-10-03 追加の品不足/入手困難/供給不足/逼迫/調達難・min_faves:20・前日1日窓）で集めた投稿本文から、
+（値上げ/値上がり/品薄＋2026-10-03 追加の品不足/入手困難/供給不足/逼迫/調達難・min_faves:20・1日窓を `--days N` で過去 N 日ぶん 1 日ずつ回す〔runner は 7〕）で集めた投稿本文から、
 ユニバース台帳に無い商品名候補をルールベース抽出し、採点して候補キューへ積む。
 
 - 候補は**通知しない**（週次レビュー用のキュー。売買判断には5チェック必須）
@@ -233,13 +233,41 @@ def llm_refine(candidates: list[dict]) -> list[dict] | None:
         return None
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--date", help="対象UTC日 YYYY-MM-DD（省略時=前UTC日）")
-    args = parser.parse_args()
-    day = args.date or (datetime.now(timezone.utc) - timedelta(days=1)).strftime("%Y-%m-%d")
+def recorded_days(queue_path: Path) -> set[str]:
+    """候補キューに「取れた」記録が既にある日（status ok/partial/empty）。error/login_wall の日は再試行対象。"""
+    done: set[str] = set()
+    if not queue_path.exists():
+        return done
+    for line in queue_path.read_text(encoding="utf-8").splitlines():
+        try:
+            ev = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if ev.get("type") == "candidate_batch" and ev.get("status") in ("ok", "partial", "empty"):
+            done.add(ev.get("date", ""))
+    return done
 
+
+def window_days(end_day: str, days: int) -> list[str]:
+    """end_day を最新として過去 days 日分の UTC 日を古い順に返す（days=1 なら [end_day]）。"""
+    end = datetime.strptime(end_day, "%Y-%m-%d")
+    return [(end - timedelta(days=i)).strftime("%Y-%m-%d") for i in range(days - 1, -1, -1)]
+
+
+def run_day(day: str, seen_ids: set[str] | None = None) -> int:
+    """1 日分を収集→候補抽出→台帳 1 行。戻り値 0=成功／1=失敗（login_wall・errors）。
+
+    seen_ids: 同じ実行の前の日で既に見た投稿 id。X の since/until は実測で約 2 日ぶん（JST 基準で
+    since 日の 0 時〜until 日の終わり）を返すため、連日の窓は重なる＝同じ投稿を 2 日で二重に数えない
+    （2026-10-03 実測: date=10-01 の保存 1,089 行のうち posted_at が 10-02 のもの 640 行）。
+    """
     posts, stats = collect_posts(day)
+    if seen_ids is not None:
+        before = len(posts)
+        posts = [r for r in posts if r.get("id") not in seen_ids]
+        seen_ids.update(r.get("id") for r in posts if r.get("id"))
+        if before != len(posts):
+            print(f"[dedup] day={day} 前日までに見た投稿 {before - len(posts)} 件を除外")
     print(f"[collect] day={day} posts={len(posts)} per_query={stats['per_query']} "
           f"wall={stats['login_wall']}")
     if not posts:
@@ -270,6 +298,38 @@ def main() -> int:
         print(f"  {c['token']:<16} score={c['score']} authors={c['authors']} "
               f"price_hint={c['price_hint_posts']}  例: {c['sample'][:60]}")
     return 0
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--date", help="対象UTC日 YYYY-MM-DD（省略時=前UTC日）。--days>1 ならこの日を最新とする")
+    parser.add_argument("--days", type=int, default=1,
+                        help="過去 N UTC 日を 1 日ずつ回す（既定 1＝前日のみ）。週1回の実行で 7 日分を見るための窓"
+                             "（P-INF-22 裁定 2026-10-03 Q2=a: 週1回・1日分では 7 日中 6 日が未観測だった）")
+    parser.add_argument("--force", action="store_true", help="既に ok/partial/empty で記録済みの日も取り直す")
+    args = parser.parse_args()
+    end_day = args.date or (datetime.now(timezone.utc) - timedelta(days=1)).strftime("%Y-%m-%d")
+    days = window_days(end_day, max(1, args.days))
+    skip = set() if args.force else recorded_days(QUEUE_PATH)
+
+    rc = 0
+    ran = 0
+    seen_ids: set[str] = set()
+    for i, day in enumerate(days):
+        if day in skip:
+            print(f"[skip] day={day} は記録済み（--force で取り直し）")
+            continue
+        if ran > 0:
+            time.sleep(random.uniform(30.0, 60.0))  # 日と日の間も検索間隔を空ける（連続アクセスを避ける）
+        ran += 1
+        try:
+            r = run_day(day, seen_ids)
+        except LoginWallError as exc:
+            print(f"✗ ログイン壁で以降の日を中断: {exc}", file=sys.stderr)
+            return 1
+        rc = max(rc, r)
+    print(f"[window] days={len(days)} ran={ran} skipped={len(days) - ran} rc={rc}")
+    return rc
 
 
 if __name__ == "__main__":

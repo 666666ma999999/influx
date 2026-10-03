@@ -1,5 +1,5 @@
 #!/bin/bash
-# 発見器（X→新商品名の候補キュー）の週次ランナー
+# 発見器（X→新商品名の候補キュー）の週次ランナー（1 回の実行で過去 7 日分を 1 日ずつ回す・2026-10-03〜）
 # （launchd com.influx.price-discover から毎週日曜 10:40 に呼ばれる。時刻の正本は config/launchd/com.influx.price-discover.plist）
 # 2026-08-30 新設（tasks/shortage_goods_expansion.md B-2・オーナー裁定で 2026-08-01 以来休眠の発見器を再稼働）。
 # 構成は xprice_watch_run.sh（日次X版・xstock-vnc 経由）と price_universe_run.sh（週次・通知）を意図的に揃えている。
@@ -13,7 +13,9 @@ MAX_WAIT_SEC=${MAX_WAIT_SEC:-300}
 INTERVAL_SEC=${INTERVAL_SEC:-30}
 INFLUX="$HOME/Desktop/biz/influx"
 QUEUE="$INFLUX/data/x_price_watch/discovery_queue.jsonl"
-DISCOVER_CMD=${DISCOVER_CMD:-"docker exec -e DISPLAY=:99 xstock-vnc python3 /app/scripts/price_watch_discover.py"}
+# --days 7: 週1回の実行で過去 7 UTC 日を 1 日ずつ回す（P-INF-22 裁定 2026-10-03 Q2=a。旧= 前日 1 日分のみ＝7 日中 6 日が未観測）。
+# 記録済み（ok/partial/empty）の日は発見器側が自動で飛ばす＝再試行で二重にならない
+DISCOVER_CMD=${DISCOVER_CMD:-"docker exec -e DISPLAY=:99 xstock-vnc python3 /app/scripts/price_watch_discover.py --days 7"}
 
 # 失敗通知（lib を source しない XSTOCK_SKIP_ENSURE 経路でも鳴るよう runner 側に持つ）
 discover_notify() {
@@ -58,13 +60,17 @@ if [ "$rc" -ne 0 ]; then
 fi
 
 if [ "$after" -gt "$before" ]; then
-  summary=$(tail -n 1 "$QUEUE" | /usr/bin/python3 -c 'import sys,json,re
-d=json.loads(sys.stdin.readline() or "{}")
-c=d.get("candidates") or []
+  new_lines=$((after - before))
+  # 今回増えた行（最大 7 日分）をまとめて数える（旧= 最終行 1 日分だけ）
+  summary=$(tail -n "$new_lines" "$QUEUE" | /usr/bin/python3 -c 'import sys,json,re
+rows=[json.loads(l) for l in sys.stdin if l.strip()]
+c=[x for d in rows for x in (d.get("candidates") or [])]
 head=", ".join(x.get("token","") for x in c[:3])
-s=f"{len(c)}件 posts={d.get(\"n_posts\",\"?\")} status={d.get(\"status\",\"?\")}" + (" / "+head if head else "")
+posts=sum(int(d.get("n_posts") or 0) for d in rows)
+st=",".join(sorted({str(d.get("status","?")) for d in rows}))
+s=f"{len(c)}件 days={len(rows)} posts={posts} status={st}" + (" / "+head if head else "")
 print(re.sub(r"[\"\\\\]", "", s))' 2>/dev/null || echo "詳細は discovery_queue.jsonl")
-  n_cand=$(tail -n 1 "$QUEUE" | /usr/bin/python3 -c 'import sys,json; d=json.loads(sys.stdin.readline() or "{}"); print(len(d.get("candidates") or []))' 2>/dev/null || echo 0)
+  n_cand=$(tail -n "$new_lines" "$QUEUE" | /usr/bin/python3 -c 'import sys,json; print(sum(len(json.loads(l).get("candidates") or []) for l in sys.stdin if l.strip()))' 2>/dev/null || echo 0)
   if [ "${n_cand:-0}" -gt 0 ]; then
     discover_notify "$summary" "🔎 発見器: 新商品名の候補 ${n_cand}件（週次レビュー用）"
   else
