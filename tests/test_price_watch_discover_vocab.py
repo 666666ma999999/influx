@@ -7,7 +7,7 @@
 守らせる 2 点:
 1. 固定クエリ 55 本の (id, q, min_faves) が 2026-10-03 時点の指紋と一致する（凍結の確認）。
    新 id を正しく「追加」した時はこのテストが落ちる＝指紋と件数を意図して更新する（無言の変更を防ぐ）。
-2. 入口語は初期 3 語＋2026-10-03 追加 5 語を含み、3 文字以上の入口語はすべて STOPLIST に入っている
+2. 入口語は初期 3 語＋2026-10-03 追加 4 語（調達難は便 3 で除外）を含み・消費財ノイズ語は STOPLIST にあり、3 文字以上の入口語はすべて STOPLIST に入っている
    （検索語自体が候補トークンとして候補キューに混ざらない）。
 
 発見器本体は playwright 系を import するため、ここでは本文を ast で読む（ホスト直実行でも動く）。
@@ -28,7 +28,9 @@ DISCOVER = ROOT / "scripts/price_watch_discover.py"
 FROZEN_COUNT = 55
 FROZEN_FINGERPRINT = "8ae26b974f2c9acb5e9be42075d0b4e1f123905b82090c900e43e7a61b7b1001"
 ORIGINAL_ENTRY_WORDS = {"値上げ", "値上がり", "品薄"}
-ADDED_2026_10_03 = {"品不足", "入手困難", "供給不足", "逼迫", "調達難"}
+ADDED_2026_10_03 = {"品不足", "入手困難", "供給不足", "逼迫"}  # 調達難は便 3（オーナー A）で除外
+REMOVED_2026_10_03 = {"調達難"}
+NOISE_STOP_2026_10_03 = {"グッズ", "限定", "チケット", "カラー", "サイズ"}
 
 
 def _fingerprint(queries: list[dict]) -> str:
@@ -68,6 +70,12 @@ class EntryWordsInDiscoverer(unittest.TestCase):
         words = set(self.consts["DISCOVER_QUERIES"])
         self.assertTrue(ORIGINAL_ENTRY_WORDS <= words, "初期 3 語が欠けた")
         self.assertTrue(ADDED_2026_10_03 <= words, f"2026-10-03 追加語が欠けた: {ADDED_2026_10_03 - words}")
+
+    def test_removed_words_absent_and_noise_words_stoplisted(self):
+        words = set(self.consts["DISCOVER_QUERIES"])
+        self.assertEqual(REMOVED_2026_10_03 & words, set(), "便 3 で外した語が入口語に戻っている")
+        stop = set(self.consts["STOPLIST"])
+        self.assertTrue(NOISE_STOP_2026_10_03 <= stop, f"消費財ノイズ語が STOPLIST に無い: {NOISE_STOP_2026_10_03 - stop}")
 
     def test_entry_words_are_stoplisted(self):
         stop = set(self.consts["STOPLIST"])
