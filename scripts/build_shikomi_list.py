@@ -27,6 +27,7 @@ REPO = Path(__file__).resolve().parents[1]
 FORWARD_LOG = REPO / "data/price_watch/forward_log.jsonl"
 CONFIG = REPO / "configs/price_universe_sources.json"
 BARS_DIR = REPO / "data/jquants/bars"
+FETCH_LOG = REPO / "data/jquants/fetch_log.jsonl"
 TOPIX = REPO / "data/jquants/topix.json.gz"
 MASTER_DIR = REPO / "data/jquants/master"
 
@@ -51,8 +52,13 @@ def load_prices(codes: set[str], since: str) -> dict[str, dict[str, float]]:
 
     起点と終点で調整済み/未調整が混在すると分割銘柄の騰落が壊れるため（Codex R1-2）。
     AdjC が無い日はその銘柄のその日を持たない＝両端が揃わなければ超過は None になる。
+
+    キャッシュの AdjC は「そのファイルを取得した日」までの分割しか反映しないため、取得日
+    （fetch_log.jsonl）より後の分割の AdjFactor を掛けて揃える（2026-10-03 実害: 9/29 分割の
+    東京エレクトロン・キオクシア・三井金属が -61〜-91% に見えていた）。
     """
     series: dict[str, dict[str, float]] = {c: {} for c in codes}
+    splits: dict[str, list[tuple[str, float]]] = {c: [] for c in codes}
     for f in sorted(glob.glob(str(BARS_DIR / "*.json.gz"))):
         day = Path(f).name[:8]
         if day < since:
@@ -65,7 +71,36 @@ def load_prices(codes: set[str], since: str) -> dict[str, dict[str, float]]:
                 v = r.get("AdjC")
                 if v is not None:
                     series[c][day] = float(v)
+                fac = r.get("AdjFactor")
+                if fac not in (None, 1, 1.0):
+                    splits[c].append((day, float(fac)))
+    fetched = load_fetch_dates()
+    for c, evs in splits.items():
+        for day in series[c]:
+            got = fetched.get(day)
+            if got is None:
+                continue  # 取得記録なし＝反映済みか判別できないので触らない（二重補正を避ける）
+            for split_day, fac in evs:
+                # 分割当日の朝に取得した前日分も未反映（9/28 分=9/29 07:30 取得で実測）。
+                # 分割日以降の足は分割後の値なので対象外（Codex 指摘）
+                if day < split_day and split_day >= got:
+                    series[c][day] *= fac
     return series
+
+
+def load_fetch_dates() -> dict[str, str]:
+    """{bars ファイルの日付: 最後に保存した日(YYYYMMDD)}。記録が無い日は呼び出し側でファイル日付を使う。"""
+    out: dict[str, str] = {}
+    if not FETCH_LOG.exists():
+        return out
+    for line in FETCH_LOG.open():
+        try:
+            r = json.loads(line)
+        except ValueError:
+            continue
+        if r.get("kind") == "bars" and r.get("status") == "saved" and r.get("date"):
+            out[r["date"]] = (r.get("ts") or "")[:10].replace("-", "") or r["date"]
+    return out
 
 
 def code_names() -> dict[str, str]:
