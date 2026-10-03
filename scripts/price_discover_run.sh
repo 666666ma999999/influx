@@ -40,13 +40,14 @@ before=0
 [ -f "$QUEUE" ] && before=$(wc -l < "$QUEUE" | tr -d ' ')
 
 # --- 実行（一時的なネットワーク障害を想定し、失敗時は5分後に1回だけ再試行。ログイン壁も rc=1 なので同じ扱い） ---
-$DISCOVER_CMD
-rc=$?
+# 出力は画面に流しつつ変数にも持つ（最後の "[window] ... ran=N" 行で「全日スキップ」を見分けるため）
+out=$($DISCOVER_CMD 2>&1); rc=$?
+printf '%s\n' "$out"
 if [ "$rc" -ne 0 ]; then
   echo "発見器失敗(rc=$rc)。5分待って1回だけ再試行..."
   sleep 300
-  $DISCOVER_CMD
-  rc=$?
+  out=$($DISCOVER_CMD 2>&1); rc=$?
+  printf '%s\n' "$out"
 fi
 
 after=0
@@ -76,6 +77,9 @@ print(re.sub(r"[\"\\\\]", "", s))' 2>/dev/null || echo "詳細は discovery_queu
   else
     echo "[runner] 実行は成功したが候補 0 件（$summary）"
   fi
+elif printf '%s\n' "$out" | grep -q '^\[window\] .*ran=0'; then
+  # 対象の日が全部 ok/partial/empty で記録済み（同日の再実行など）＝正常。行が増えないのは仕様（Codex レビュー 2026-10-03 P2）
+  echo "[runner] 対象の日はすべて記録済み（スキップ）・候補の追加なし・正常終了"
 else
   # 発見器は成功でも失敗でも必ず1行残す設計＝増えていないのは異常
   discover_notify "実行は完了したが台帳に行が増えていない（出力形式の変化を疑う）" "⚠️ 発見器 要確認"
