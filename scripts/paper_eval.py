@@ -76,25 +76,8 @@ def load_bars_day_if_cached(date_str: str) -> Optional[dict]:
 # --- 株式分割の尺度合わせ（2026-10-03） -----------------------------------------------
 # bars キャッシュの Adj* は「そのファイルを取得した時点」までの分割しか反映しない。保有中に分割が
 # あると entry_price（分割前の尺度）と分割後の足を比べて偽の -45〜-80% になる（実害: 6834・278A
-# の8件）。足の価格を entry_date 時点の尺度へ揃えてから比べる。取得日は fetch_log.jsonl。
+# の8件）。足の価格を entry_date 時点の尺度へ揃えてから比べる（計算の正本= jq_fetch.split_scale）。
 _PRICE_KEYS = ("AdjO", "AdjH", "AdjL", "AdjC")
-
-
-@functools.lru_cache(maxsize=1)
-def _bars_fetch_dates() -> dict[str, str]:
-    """{bars ファイルの日付: 最後に保存した日(YYYYMMDD)}。"""
-    out: dict[str, str] = {}
-    path = jq_fetch.DATA_ROOT / "fetch_log.jsonl"
-    if not path.exists():
-        return out
-    for line in path.open(encoding="utf-8"):
-        try:
-            r = json.loads(line)
-        except ValueError:
-            continue
-        if r.get("kind") == "bars" and r.get("status") == "saved" and r.get("date") and r.get("ts"):
-            out[r["date"]] = r["ts"][:10].replace("-", "")
-    return out
 
 
 def _split_events(code: str, start_idx: int, end_idx: int, all_bdays: list[str]) -> list[tuple[str, float]]:
@@ -111,36 +94,11 @@ def _split_events(code: str, start_idx: int, end_idx: int, all_bdays: list[str])
     return events
 
 
-def _entry_scale(day: str, entry_date: str, splits: list[tuple[str, float]]) -> float:
-    """day の足の価格に掛けると entry_date 時点の尺度になる倍率。
-
-    足が分割を反映済み＝分割日<=day か 分割日<取得日（分割当日の朝の取得は未反映・9/28分=9/29 07:30
-    取得で実測）。entry_price は分割日<=entry_date の分割だけを含む尺度とみなし、足とその尺度の差だけ
-    掛け戻す（後日取り直した足も同じ式で揃う・Codex 指摘）。分割日>day で取得記録が無い足は反映の
-    有無が判別できないのでその分割は触らない（二重補正を避ける）。
-    """
-    got = _bars_fetch_dates().get(day)
-    m = 1.0
-    for s, fac in splits:
-        if s <= day:
-            bar_has = True
-        elif got is None:
-            continue
-        else:
-            bar_has = s < got
-        entry_has = s <= entry_date
-        if bar_has and not entry_has:
-            m /= fac
-        elif entry_has and not bar_has:
-            m *= fac
-    return m
-
-
 def _scaled_bar(bar: Optional[dict], day: str, entry_date: str, splits: list[tuple[str, float]]) -> Optional[dict]:
     """Adj* を entry_date 時点の尺度に揃えた bar の写し（分割が無ければ元の bar をそのまま返す）。"""
     if bar is None or not splits:
         return bar
-    m = _entry_scale(day, entry_date, splits)
+    m = jq_fetch.split_scale(day, entry_date, splits)
     if m == 1.0:
         return bar
     return {**bar, **{k: bar[k] * m for k in _PRICE_KEYS if bar.get(k) is not None}}

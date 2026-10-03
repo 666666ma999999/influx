@@ -51,6 +51,7 @@ from __future__ import annotations
 
 import argparse
 import datetime
+import functools
 import gzip
 import json
 import os
@@ -291,6 +292,53 @@ def append_log(record: dict) -> None:
             f.write(json.dumps(record, ensure_ascii=False) + "\n")
     except OSError as e:
         print(f"WARN: fetch_log 書き込み失敗: {e}", file=sys.stderr)
+
+
+# --- 株式分割の尺度合わせ（2026-10-03・正本はここ1か所。paper_eval / build_shikomi_list が呼ぶ） ---
+# bars キャッシュの Adj* は「そのファイルを取得した時点」までの分割しか反映しない（後日の分割は
+# 取り直さない限り未反映）。2日付を比べる前に、足の価格を基準日の尺度へ揃える。
+SPLIT_BASE_LATEST = "99999999"  # 基準日にこれを渡すと「既知の分割をすべて反映した尺度」に揃える
+
+
+@functools.lru_cache(maxsize=1)
+def bars_fetch_dates() -> dict[str, str]:
+    """{bars ファイルの日付: 最後に保存した日(YYYYMMDD)}（fetch_log.jsonl の kind=bars・status=saved）。"""
+    out: dict[str, str] = {}
+    if not LOG_PATH.exists():
+        return out
+    for line in LOG_PATH.open(encoding="utf-8"):
+        try:
+            r = json.loads(line)
+        except ValueError:
+            continue
+        if r.get("kind") == "bars" and r.get("status") == "saved" and r.get("date") and r.get("ts"):
+            out[r["date"]] = r["ts"][:10].replace("-", "")
+    return out
+
+
+def split_scale(day: str, base_date: str, splits: list[tuple[str, float]]) -> float:
+    """day の足の Adj* に掛けると base_date 時点の尺度になる倍率。splits=[(分割日, AdjFactor)]。
+
+    足が分割を反映済み＝分割日<=day か 分割日<取得日（分割当日の朝の取得は未反映・9/28分=9/29 07:30
+    取得で実測）。基準側は分割日<=base_date の分割だけを含む尺度とみなし、差だけ掛け戻す（後日
+    取り直した足も同じ式で揃う）。分割日>day で取得記録が無い足は反映の有無が判別できないので
+    その分割は触らない（二重補正を避ける）。
+    """
+    got = bars_fetch_dates().get(day)
+    m = 1.0
+    for s, fac in splits:
+        if s <= day:
+            bar_has = True
+        elif got is None:
+            continue
+        else:
+            bar_has = s < got
+        base_has = s <= base_date
+        if bar_has and not base_has:
+            m /= fac
+        elif base_has and not bar_has:
+            m *= fac
+    return m
 
 
 def fatal_auth_error(e: AuthError) -> None:
