@@ -112,6 +112,7 @@ flowchart LR
 | ペーパートレード（本体） | `scripts/paper_eval.py` / `daily_screen.py` | `data/paper_trades/ledger.jsonl`＋`state.json` |
 | ペア（対銘柄） | `scripts/pair_forward_scan.py` | `data/paper_trades/pair_forward_ledger.jsonl` |
 | TOB（公開買付） | `scripts/tob_forward_runner.py` | `data/paper_trades/tob_ledger.jsonl`＋`tob_state.json` |
+| 反発系の空売り版（2026-10-03 登録・P-INF-23・台帳外α非消費） | `scripts/short_forward_runner.py`（`daily_screen.py` 末尾と早期 return からサブプロセス）・凍結式 `scripts/short_forward_v1_spec.py` | `data/paper_trades/short_forward_ledger.jsonl` |
 | 商品価格の発火 | `scripts/price_watch_forward.py` | `data/x_price_watch/ledger.jsonl` |
 | 海外受益カード | `scripts/foreign_forward.py` | 同上（`skipped_foreign` に除外理由）※**対TOPIX前向き台帳には入れない** |
 | インフルエンサー（fxnia） | `scripts/fxnia_forward_eval.py` | `data/influencer_candidates/forward/` |
@@ -119,7 +120,7 @@ flowchart LR
 
 ⚠️ **台帳は append-only**（過去行を書き換えない・取り消しも新しい行）。レーンを増やす時はこの表に1行足す。
 
-### 4-2. 走行中の前向きレーン（4本・お金は張っていない）
+### 4-2. 走行中の前向きレーン（5本・お金は張っていない）
 
 | レーン | 台帳 | 執行の正本（事前登録） |
 |---|---|---|
@@ -127,6 +128,7 @@ flowchart LR
 | S2 ペーパー（枠S/F） | `data/paper_trades/ledger.jsonl` | `config/paper_watchlist.json` |
 | S3 KPI×KPI ペア | `data/paper_trades/pair_forward_ledger.jsonl` | `tasks/pair_forward_preregister.md` |
 | S4 インフルエンサー前向き | `output/influencer_candidates/` 配下 | `tasks/influencer_discovery_preregister.md` |
+| S5 反発系の空売り版（記録開始 2026-10-05） | `data/paper_trades/short_forward_ledger.jsonl` | `tasks/short_forward_sellreg_preregister.md` |
 
 ## 5. 道具の一覧（何を・どう使っているか）
 
