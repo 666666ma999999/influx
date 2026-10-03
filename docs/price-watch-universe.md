@@ -507,7 +507,7 @@ E1/E2 取得は1銘柄15〜30分の人間作業（新規は月1〜2件想定）�
 ## 発見器運用（2026-07-28 稼働開始）
 
 - 実行（週1・launchd `com.influx.price-discover` 日曜10:40・2026-08-30 再稼働。手動は `bash scripts/price_discover_run.sh`。素の実行: `docker exec -e DISPLAY=:99 xstock-vnc python3 /app/scripts/price_watch_discover.py`）
-- 低閾値3クエリ（値上げ/値上がり/品薄・min_faves:20・前日窓）→ ルール抽出（既知語彙差分・複数投稿者必須・
+- 低閾値8クエリ（値上げ/値上がり/品薄＋2026-10-03 追加の品不足/入手困難/供給不足/逼迫/調達難〈P-INF-22 Q1=a: 汎用語は固定クエリでなく入口語に足す〉・min_faves:20・前日窓）→ ルール抽出（既知語彙差分・複数投稿者必須・
   数字断片除外）→ 候補キュー `data/x_price_watch/discovery_queue.jsonl`（上限20/回・通知なし）
 - LLM精製段は ANTHROPIC_API_KEY 実キー設定時のみ（現状プレースホルダ=スキップ）
 - 初回実測（7/27分・64投稿）: 「ナプキン」（8/1値上げ）「プライム」（Amazonプライム値上げ）を正しく検出
