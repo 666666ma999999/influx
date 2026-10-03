@@ -518,7 +518,10 @@
           "evidence": "pin='既存店売上・免税売上'＝利益は仕入価格ではなく既存店売上と客数で決まる。メモリ品薄は仕入難と販売数量減として効く"
         }
       ],
-      "group": "A-semiconductor"
+      "group": "A-semiconductor",
+      "discover_tokens": [
+        "マイクロン"
+      ]
     },
     {
       "id": "nand-ssd",
