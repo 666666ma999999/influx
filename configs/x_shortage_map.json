@@ -520,7 +520,8 @@
       ],
       "group": "A-semiconductor",
       "discover_tokens": [
-        "マイクロン"
+        "マイクロン",
+        "メモリー"
       ]
     },
     {
