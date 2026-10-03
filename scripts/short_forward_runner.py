@@ -314,15 +314,44 @@ class _Run:
             return False
         df, _diag = kpi_round23_signals.generate_sell_reg_trigger_signals(day, day, env.bdays, env.bidx)
         raw = [] if df is None or df.empty else [str(c) for c in df["code"]]
+        # 分割の権利落ち日 D は、前日ファイルの AdjC が D の分割を反映していないことがある（取得時点までの
+        # 調整のみ）。共有の生成器は AdjL(D) と AdjC(D-1) を尺度合わせせず比べるので、分割による見かけの
+        # 急落を拾う（2026-10-03 4モデル監査: 9/29 は反発系 24 件中 21 件が偽合図）。一方、分割後に取得した
+        # 前日足は調整済みのこともある（Codex: 34940・2024-01-30）。取得時点に依らない未調整値で判定し直す:
+        #   L(D) <= C(D-1) × AdjFactor(D) × 0.90   （AdjFactor(D) = D の分割比。分割の無い日は 1）
+        split_dropped, split_added = self._raw_recheck(day, prev, raw)
+        raw = sorted((set(raw) - set(split_dropped)) | set(split_added))
         top = sorted({c for c in raw if c in codes_u})
         detected_at = self.clock()                 # #3: この日の合図が決まった瞬間の壁時計
         gate = S.day_gate(len(top))
         return self._finish_day({
             "event": "day", "D": day, "n_raw": len(raw), "n_top500": len(top), "gate": gate,
+            "split_dropped": split_dropped, "split_added": split_added,
             "codes": top, "universe_month": day[:6], "universe_t_date": t_date,
             "bars_fetched_at": env.bars_fetch_ts.get(day), "bars_n_codes": n_codes,
             "code_tree_sha": self.sha, "detected_at": detected_at, "spec_version": S.SPEC_VERSION,
         })
+
+    @staticmethod
+    def _raw_recheck(day: str, prev: str, gen_codes: list[str]) -> tuple[list[str], list[str]]:
+        """未調整の L(D)・C(D-1) と D の AdjFactor で −10% 条件を判定し直す。生成器の結果との差だけ返す
+        （dropped=生成器は出したが未調整判定では急落でない／added=その逆）。未調整値が欠ける銘柄は生成器に従う。"""
+        bars_d = measure_base_rate.load_bars_day(day)
+        bars_p = measure_base_rate.load_bars_day(prev)
+        gen = set(gen_codes)
+        dropped, added = [], []
+        for code, rec in bars_d.items():
+            prec = bars_p.get(code)
+            low, cprev, fac = rec.get("L"), (prec or {}).get("C"), rec.get("AdjFactor")
+            if low is None or cprev is None or cprev <= 0:
+                continue
+            fac = fac if (fac is not None and fac > 0) else 1.0
+            hit = low <= cprev * fac * kpi_round23_signals.T2_DROP_TRIGGER
+            if code in gen and not hit:
+                dropped.append(code)
+            elif hit and code not in gen:
+                added.append(code)
+        return sorted(dropped), sorted(added)
 
     def _finish_day(self, day_row: dict) -> bool:
         """day 行から skipped/signal/late 行と day_done を書く（新規確定と、書き込み途中で落ちた日の

@@ -9,6 +9,7 @@ Phase: 株アルゴ研究（influx-stock-algo）／前向き記録だけの試�
 
 ## 対象と数え方
 - 母集団: 各営業日 D に `kpi_round23_signals.generate_sell_reg_trigger_signals` が出した発火のうち、本番と同じ上位500社（`daily_screen.UniverseCache`＝前月末の売買代金21日合計 上位500）に入る銘柄。
+- 分割補正（2026-10-03・記録開始前に追加）: 生成器は AdjL(D) と AdjC(D-1) を尺度合わせせず比べるため、分割の権利落ち日に見かけの急落を拾う（9/29 は上位500社内 24 件中 21 件が偽合図）。ランナーで未調整値 `L(D) <= C(D-1) × AdjFactor(D) × 0.90` に判定し直し、差分を day 行の `split_dropped`／`split_added` に残す。日の関門（1〜9件）はこの補正後の件数で数える。
 - 日の関門: その日 D の上位500社内の発火数が **1〜9件の日だけ**記録する（10件以上の日は `skipped_day_count` として件数だけ残す）。閾値は 2016-11〜2022-11 の遡り検証だけで決めて固定（10件以上の日 −0.03%／2,028件・95日）。
 - 入口: D+2 営業日の寄り（AdjO）で空売り（D と D+1 は空売り価格規制の期間＝証券会社の解説で確認・二次）。D+2 に寄り値が無ければ `unfilled`（先送りしない）。
 - 出口: 入口から20営業日後（D+22）の引け（AdjC）で買い戻す。上場廃止等で欠けたら `censored`（最後の価格とその価格日を保存・主集計外＝下の「記録の状態」）。
@@ -78,3 +79,4 @@ Phase: 株アルゴ研究（influx-stock-algo）／前向き記録だけの試�
 - 2026-10-03（実装 SubAgent・Codex 3回目反映）: (a) 日コホートは全終端事象（matured・unfilled・censored）の recorded_at が判定日 23:59:59 JST 以内の時だけ判定へ（unfilled にも recorded_at）。(b) 銘柄の行が無いだけでは unfilled(no_bar)/censored を確定しない＝初回は pending_data(absence_unconfirmed・first_absent_fetched_at) を残し、同じ日付ファイルを厳密に後の fetched_at で取り直してもなお無い時に2回の走査で確定（no_open・行あり AdjC 欠けは即時）。(c) judgment_due は judge_as_of と同じ cohort_available 規則で60日を数える。Docker 一括ゲート Ran 442 / OK。未コミット。注意: bars を取り直さない運用だと no_bar・censored は pending のまま残る。
 - 2026-10-03（Codex 4回目）: 3回目の3件は解消。新規1件=行はあるが寄り値/引け値が空の時、取得時刻を見ず即 unfilled/censored に確定（runner:422,484・test:222）。3-Fix Limit 到達でオーナー確認待ち。テスト Ran 442 / OK。未コミット。
 - 2026-10-03（Codex 4回目反映）: 行はあるが価格が欠けている（入口 AdjO 欠け/<=0・出口 AdjC 欠け）時は、その日の bars 取得時刻（JST）がその日の翌営業日以降の時だけ unfilled(no_open)/censored に確定し null_confirm_fetched_at を残す。取得時刻が不明・それより早い時は pending_data(price_null_unconfirmed・stage ごとに重複排除) で待ち、後の回で価格が入れば filled/matured へ進む。未コミット。
+- 2026-10-03（4モデル監査 wf_334f8479-0f6 の指摘）: 分割の権利落ち日の偽合図を未調整値で判定し直す補正を記録開始前に追加（Codex 1回目で調整済み前日足の二重補正を指摘→未調整 L/C 方式に変更）。実データ: 9/29 生成器86件中53件を除外・2024-01-30 の本物の急落は維持。

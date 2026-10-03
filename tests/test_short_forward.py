@@ -682,6 +682,40 @@ class TestJudgmentDue(unittest.TestCase):
         self.assertIsNone(S.judgment_due("20271102", coh(60, rec=None), mends))     # 記録時刻なしは数えない
         self.assertEqual(S.judgment_due("20271230", {}, mends), "20271230")
 
+class TestSplitFalseTrigger(Base):
+    """分割の権利落ち日の見かけの急落は合図にしない（2026-10-03 4モデル監査・9/29 偽合図）。
+    判定は取得時点に依らない未調整値 L(D) <= C(D-1) × AdjFactor(D) × 0.90。"""
+    PREV, DAY = "20261001", "20261002"
+
+    def put(self, prev_c, prev_adjc, low, adjl, fac):
+        self.days[self.PREV][X] = dict(bar(X, 1000.0, None, prev_adjc), C=prev_c)
+        self.days[self.DAY][X] = dict(bar(X, 500.0, adjl, 490.0, fac=fac), L=low)
+        self.write()
+        self.run_scan()
+        return [r for r in self.events("day") if r["D"] == self.DAY][0]
+
+    def test_unadjusted_prev_apparent_drop_is_dropped(self):
+        # 1:2 分割・前日足は未調整（C=AdjC=1000）・当日安値480 → 調整後前日500比 −4% ＝偽合図
+        row = self.put(1000.0, 1000.0, 480.0, 480.0, 0.5)
+        self.assertEqual(row["split_dropped"], [X])
+        self.assertEqual(self.events("signal"), [])
+
+    def test_unadjusted_prev_real_drop_is_kept(self):
+        # 分割後でも −12%（1000×0.5×0.90=450 >= 安値440）→ 本物の急落
+        self.put(1000.0, 1000.0, 440.0, 440.0, 0.5)
+        self.assertEqual(len(self.events("signal")), 1)
+
+    def test_adjusted_prev_real_drop_is_not_double_corrected(self):
+        # Codex 反例型（34940・2024-01-30）: 前日足は分割後に取得され調整済み（C=2396・AdjC=479.2）
+        # 当日 AdjFactor 0.2・安値417 → 2396×0.2×0.90=431.3 >= 417 ＝本物の −13% を残す
+        row = self.put(2396.0, 479.2, 417.0, 417.0, 0.2)
+        self.assertEqual(row["split_dropped"], [])
+        self.assertEqual(len(self.events("signal")), 1)
+
+    def test_no_split_day_unchanged(self):
+        self.put(1000.0, 1000.0, 880.0, 880.0, 1.0)
+        self.assertEqual(len(self.events("signal")), 1)
+
 
 if __name__ == "__main__":
     unittest.main()
