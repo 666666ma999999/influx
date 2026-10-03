@@ -1794,6 +1794,23 @@ def write_today_report(
 # --- メイン処理 -----------------------------------------------------------------------------
 
 
+def run_short_forward_subprocess() -> None:
+    """short_forward_v1（2026-10-03 登録・tasks/short_forward_sellreg_preregister.md）の前向き記録を
+    独立サブプロセスで実行する。専用台帳(short_forward_ledger.jsonl)のみに書き、本線の判定・台帳・
+    exit code には一切影響しない（失敗は WARN のみ）。本線完了後と「新規営業日なし」早期 return の両方から呼ぶ。
+    """
+    try:
+        sf = subprocess.run(
+            [sys.executable, str(PROJECT_ROOT / "scripts" / "short_forward_runner.py")],
+            timeout=1800, check=False,
+        )
+        if sf.returncode != 0:
+            print(f"WARN: short_forward_runner が非ゼロ終了 rc={sf.returncode}（本線には無関係）",
+                  file=sys.stderr)
+    except Exception as exc:  # noqa: BLE001 (非致死: 本線の exit code を守る)
+        print(f"WARN: short_forward_runner 実行失敗（本線には無関係）: {exc}", file=sys.stderr)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="ペーパートレード観察リスト 日次スクリーニング")
     parser.add_argument(
@@ -1835,6 +1852,7 @@ def main() -> int:
         if start_bd is None:
             print("走査すべき新規営業日がありません（既に最新まで処理済み）")
             sync_vault_mirror()
+            run_short_forward_subprocess()  # 早期 return 経路でも空売り版の前向き記録を回す（R7）
             return 0
         refresh_recent_data(start_bd, end_bd, all_bdays)
         refresh_topix_if_stale(end_bd)
@@ -2066,6 +2084,7 @@ def main() -> int:
                   file=sys.stderr)
     except Exception as exc:
         print(f"WARN: pair_forward_scan 実行失敗（本線には無関係）: {exc}", file=sys.stderr)
+    run_short_forward_subprocess()
     return 0
 
 
