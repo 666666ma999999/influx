@@ -1747,6 +1747,15 @@ pvc: 大連塩ビ先物の長期日足は Investing.com（履歴 API はブロ�
 - 本文コーパスの語レベル初出（`texts/` 64 日・語彙 33,394・「15 日目以降に初出・≥10 投稿・≥3 日」）は 468 語あるが、上位はアニメ名・米国 ETF 名・一般語で、しかも 15 日目= 08-11 に初出が集中＝基準期間が 14 日しか無いことによる見かけの初出。受益銘柄との対応表も無い。
 - 発見器（`scripts/price_watch_discover.py`・日曜 10:40・1 日分）の候補語 85 語は便ごとの token/posts/likes だけで posted_at を持たず、9 便（7/27〜9/12）しか無い。
 → **真の初出は今のデータでは測れない。測るには〈発見器を毎日の窓にする（P-INF-22 Q2 の別便）＋候補語ごとに初出 posted_at を保存＋候補語→受益銘柄の対応を人が付ける〉の 3 点が先に要る**＝設計の叩き台は vault 報告 §9・起案 P-INF-25。
+**追記9c（同日・オーナー裁定 a〈P-INF-25〉→ 発見器に「初出レーン」を実装・採点は事前登録だけ先に書く）**:
+- **実装（tasks/x_first_seen_lane.md）**: ①収集器 `scripts/x_search_collect_twittora.py` の行に `posted_at_full`（`<time datetime>` 全文・既存 `posted_at` は日付のまま）②発見器 `scripts/price_watch_discover.py` の候補ごとに `first_posted_at`（その語を含む投稿の最も早い時刻・UTC）と `first_seen`（過去の便に同じ語が無い・取り直し時は自分より前の便だけを見る）③対応表 `configs/x_shortage_map.json` の subject に任意キー `discover_tokens`（人が週 1 回付ける候補語）・`x_shortage_map.subjects_for_token()` で引く。窓は週 1 回 `--days 7` のまま（初出時刻は取得の遅れに影響されない）。
+- **採点の事前登録（株価を見る前に固定・事象が溜まるまで実行しない）**:
+  - 事象= `discovery_queue.jsonl` の候補で `first_seen=true` かつ `first_posted_at` が空でなく、かつ `subjects_for_token` が買い候補（sign + ・confirmed/provisional）を返すもの。同じ語は最初の 1 回だけ。
+  - 投稿初出 T_x= `first_posted_at`（UTC→JST）。D_x= その JST 日付。
+  - 株の初動・分類・数え方・分割除外・ベースレート= **追記 9 と同一**（≥+3pt 日次対 TOPIX 超過・前後 5 営業日・寄り前 09:00 かつ始値ギャップ ≥+1pt・銘柄×事象の票と 1 事象 1 票・窓未完は別枠）。
+  - 実行条件= 事象 **30 件**に達した便の後に 1 回だけ（n=30 で先行率の 95% 区間 ±18pt＝方向を見るだけの精度。見込み= 1 便あたり候補 2〜9 語×銘柄が付く割合を 2 割と置くと週 1〜2 事象 → 到達は約 15〜30 週・未確認）。到達の確認= `jq '[.candidates[]|select(.first_seen and .first_posted_at!="")|.token]' data/x_price_watch/discovery_queue.jsonl | jq -s 'add|unique|length'` を `subjects_for_token` で絞った数。
+  - 道具= 追記 9 の `_tmp_x_leadlag_now.py` を事象の入口だけ差し替えて流用（新規スクリプトを増やさない）。
+  - 偏り（先に明記）= 候補語は入口語（値上げ・品薄 等・いいね 20 以上）を含む投稿からしか出ない／対応付けは人の判断（付けた日を subject に残す）／語の初出は発見器が走り始めた 2026-07-27 以降しか分からない（それ以前からある語は first_seen=true でも真の初出でない＝最初の数便の first_seen は参考扱い）。
 
 ## 16p. 納期逼迫レーンの入場試験 → **不採用**（2026-08-04・前提が実測で崩れた）
 

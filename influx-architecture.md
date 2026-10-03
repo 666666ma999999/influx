@@ -94,7 +94,7 @@ flowchart LR
 | Playwright（Python同期API） | headless Chromium で DOM からカード抽出 | 部品をスクリプト間で相互 import して再利用 | Playwright MCP／claude-in-chrome／Selenium | personal |
 | ヘッドレス+Xvfb/noVNC | headless なのに `DISPLAY=:99` 必須・6080でVNC覗ける | 「headless なのに DISPLAY 必須」が定型（この1行が教訓の全文＝番号簿が無いため 2026-08-29 に ID `L001` を外した） | 完全ヘッドレス化 | personal |
 | Docker（xstock-vnc 1コンテナ集約） | `docker exec -e DISPLAY=:99 xstock-vnc python3 …` の1行で叩く | Docker Desktop 自動起動+5分待ち／起動直後20秒スリープ。**この「待つ→無ければ起こす→暖機する」処理は runner 共通部品 `scripts/lib/xstock_vnc.sh`（`xstock_ensure_ready`）に集約**し、各 runner は source して呼ぶだけ（2026-08-29 に `price_universe_run.sh` / `sedori_trend_run.sh` / `xprice_watch_run.sh` を統合＝手書きが3箇所に散って tracer だけ復旧処理が無く止まった実害から。**新しく手書きしない**） | 収集単位でコンテナ分割 | personal |
-| launchd | X収集の定時**4本**（ブックマーク日次・トレーサー日3回・週次バズ・キーワード週次。定義は `~/.claude/launchd/`）＋語収集 `com.influx.sedori-trend` 1本＋発見器 `com.influx.price-discover`（週次日曜10:40・X検索→新商品名の候補キュー・2026-08-30 再稼働。定義は influx `config/launchd/`・機能の正本は `influx-stock-algo-architecture.md` 商品価格レーン直下）。**2026-08-13 に3本停止**（`x-update-proposals` / `xbuzz-weekly-pick` / `xbuzz-weekly-review` → `~/.claude/launchd/_disabled/`）。plist は薄く、リトライ・通知は runner 側 | ログは `~/.claude/state/<job>.{out,err}.log` に集約 | cron／GitHub Actions | personal |
+| launchd | X収集の定時**4本**（ブックマーク日次・トレーサー日3回・週次バズ・キーワード週次。定義は `~/.claude/launchd/`）＋語収集 `com.influx.sedori-trend` 1本＋発見器 `com.influx.price-discover`（週次日曜10:40・X検索→新商品名の候補キュー・2026-08-30 再稼働・2026-10-03 候補ごとに初出時刻 `first_posted_at`／`first_seen` を保存〔初出レーン P-INF-25・採点は事象 30 件で〕。定義は influx `config/launchd/`・機能の正本は `influx-stock-algo-architecture.md` 商品価格レーン直下）。**2026-08-13 に3本停止**（`x-update-proposals` / `xbuzz-weekly-pick` / `xbuzz-weekly-review` → `~/.claude/launchd/_disabled/`）。plist は薄く、リトライ・通知は runner 側 | ログは `~/.claude/state/<job>.{out,err}.log` に集約 | cron／GitHub Actions | personal |
 | macOS 通知（osascript） | 収集失敗・急上昇を通知 | **通知方針の正本はここ1枚**（2026-08-29 集約・株アルゴ側 §5 はここを指す）。原則3つ= ①**成功でなく失敗を通知**（8日間気づかれなかった実害から）②「沈黙＝順調」に見えないよう**成功語だけを watch せず全終端（成功・失敗・ハング）を拾う** ③実装は runner 共通部品 `scripts/lib/xstock_vnc.sh` の `xstock_notify`（AppleScript を壊す文字を落としてから渡す・各所の独自実装はここへ寄せる） | Slack/Discord webhook | personal |
 | JSONL 台帳 | append-only・URL重複スキップ | 過去行を書き換えず取り消しも新行 | DB化（不変性保証が条件） | personal |
 
@@ -139,6 +139,9 @@ flowchart LR
 - [ ] 2026-09-21 `inventory_discover_iip.py` を更新（この文書への反映を確認）
 - [ ] 2026-09-22 `flea_panel_run.sh`、`flea_panel_track.py`、`flea_panel.json` を更新（この文書への反映を確認）
 - [ ] 2026-09-24 `trend_stock_screen.py` を更新（この文書への反映を確認）
+- [ ] 2026-10-03 `build_shikomi_list.py` を更新（この文書への反映を確認）
+- [ ] 2026-10-03 `x_vocab_backfill_eval.py` を更新（この文書への反映を確認）
+- [ ] 2026-10-03 `_tmp_x_leadlag_now.py` を更新（この文書への反映を確認）
 - [x] 2026-09-27 `imp_pilot.py`、`imp_pilot.json` を更新 → §4「ジャンル別 imp パイロット」に反映（同日）
 （空。2026-09-14 の点検で2件を消化＝**どちらも本書の対象外**: `fxnia_forward_eval.py`・`fxnia_forward_launchd.sh`（2026-09-02 のゼロ除算修正と不要な `ANTHROPIC_API_KEY` チェック撤去）は**株アルゴ側のインフルエンサー前向きレーン**（→ `influx-stock-algo-architecture.md` §4-3）／`_tmp_dram_chain_returns.py` は `_tmp_*` の使い捨て（§1 Skip 対象）。
 2026-08-29 には 5件を1件ずつ判定して消化＝内訳: **株アルゴ側の対象で本書には載らない** 8本
