@@ -73,6 +73,79 @@ def load_bars_day_if_cached(date_str: str) -> Optional[dict]:
     return {rec["Code"]: rec for rec in obj["data"]}
 
 
+# --- 株式分割の尺度合わせ（2026-10-03） -----------------------------------------------
+# bars キャッシュの Adj* は「そのファイルを取得した時点」までの分割しか反映しない。保有中に分割が
+# あると entry_price（分割前の尺度）と分割後の足を比べて偽の -45〜-80% になる（実害: 6834・278A
+# の8件）。足の価格を entry_date 時点の尺度へ揃えてから比べる。取得日は fetch_log.jsonl。
+_PRICE_KEYS = ("AdjO", "AdjH", "AdjL", "AdjC")
+
+
+@functools.lru_cache(maxsize=1)
+def _bars_fetch_dates() -> dict[str, str]:
+    """{bars ファイルの日付: 最後に保存した日(YYYYMMDD)}。"""
+    out: dict[str, str] = {}
+    path = jq_fetch.DATA_ROOT / "fetch_log.jsonl"
+    if not path.exists():
+        return out
+    for line in path.open(encoding="utf-8"):
+        try:
+            r = json.loads(line)
+        except ValueError:
+            continue
+        if r.get("kind") == "bars" and r.get("status") == "saved" and r.get("date") and r.get("ts"):
+            out[r["date"]] = r["ts"][:10].replace("-", "")
+    return out
+
+
+def _split_events(code: str, start_idx: int, end_idx: int, all_bdays: list[str]) -> list[tuple[str, float]]:
+    """[start_idx, end_idx] の bars から code の分割日と AdjFactor を拾う（未到来日で打ち切り）。"""
+    events: list[tuple[str, float]] = []
+    for idx in range(start_idx, end_idx + 1):
+        bars = load_bars_day_if_cached(all_bdays[idx])
+        if bars is None:
+            break
+        bar = bars.get(code)
+        fac = bar.get("AdjFactor") if bar is not None else None
+        if fac not in (None, 1, 1.0):
+            events.append((all_bdays[idx], float(fac)))
+    return events
+
+
+def _entry_scale(day: str, entry_date: str, splits: list[tuple[str, float]]) -> float:
+    """day の足の価格に掛けると entry_date 時点の尺度になる倍率。
+
+    足が分割を反映済み＝分割日<=day か 分割日<取得日（分割当日の朝の取得は未反映・9/28分=9/29 07:30
+    取得で実測）。entry_price は分割日<=entry_date の分割だけを含む尺度とみなし、足とその尺度の差だけ
+    掛け戻す（後日取り直した足も同じ式で揃う・Codex 指摘）。分割日>day で取得記録が無い足は反映の
+    有無が判別できないのでその分割は触らない（二重補正を避ける）。
+    """
+    got = _bars_fetch_dates().get(day)
+    m = 1.0
+    for s, fac in splits:
+        if s <= day:
+            bar_has = True
+        elif got is None:
+            continue
+        else:
+            bar_has = s < got
+        entry_has = s <= entry_date
+        if bar_has and not entry_has:
+            m /= fac
+        elif entry_has and not bar_has:
+            m *= fac
+    return m
+
+
+def _scaled_bar(bar: Optional[dict], day: str, entry_date: str, splits: list[tuple[str, float]]) -> Optional[dict]:
+    """Adj* を entry_date 時点の尺度に揃えた bar の写し（分割が無ければ元の bar をそのまま返す）。"""
+    if bar is None or not splits:
+        return bar
+    m = _entry_scale(day, entry_date, splits)
+    if m == 1.0:
+        return bar
+    return {**bar, **{k: bar[k] * m for k in _PRICE_KEYS if bar.get(k) is not None}}
+
+
 # --- ledger I/O ------------------------------------------------------------------
 
 
@@ -187,6 +260,7 @@ def update_open_positions(records: list[dict], bday_index: dict[str, int], all_b
         entry_price = rec["entry_price"]
         threshold = _stop_threshold(entry_price)
         exit_target_idx = entry_idx + forward_window
+        splits = _split_events(code, entry_idx + 1, len(all_bdays) - 1, all_bdays)  # 窓の後の分割も取り直し足に効くため最新まで
 
         max_h = entry_price
         min_l = entry_price
@@ -203,7 +277,7 @@ def update_open_positions(records: list[dict], bday_index: dict[str, int], all_b
             bars = load_bars_day_if_cached(day)
             if bars is None:
                 break  # その営業日がまだ来ていない（未来）-> ここでいったん打ち切り、openのまま次回へ
-            bar = bars.get(code)
+            bar = _scaled_bar(bars.get(code), day, rec["entry_date"], splits)
             if bar is not None:
                 if bar.get("AdjH") is not None:
                     max_h = max(max_h, bar["AdjH"])
@@ -246,7 +320,7 @@ def update_open_positions(records: list[dict], bday_index: dict[str, int], all_b
 
         if reached_exit_target:
             exit_bars = load_bars_day_if_cached(exit_target_day)
-            exit_bar = (exit_bars or {}).get(code)
+            exit_bar = _scaled_bar((exit_bars or {}).get(code), exit_target_day, rec["entry_date"], splits)
             if exit_bar is not None and exit_bar.get("AdjC"):
                 exit_price = exit_bar["AdjC"]
                 exit_date = exit_target_day
@@ -287,7 +361,8 @@ def update_open_positions(records: list[dict], bday_index: dict[str, int], all_b
 
 
 def _build_live_close_sma200(
-    code: str, start_idx: int, end_idx: int, all_bdays: list[str]
+    code: str, start_idx: int, end_idx: int, all_bdays: list[str],
+    entry_date: Optional[str] = None, splits: Optional[list[tuple[str, float]]] = None,
 ) -> tuple[dict[str, float], dict[str, Optional[float]], bool]:
     """[start_idx, end_idx]の範囲でcodeの日次AdjCとSMA200(D自身を含む直近200回の有効AdjC平均。
     scripts/kpi_exit_study.py の MA200_WINDOW と同一規約)をライブ判定用に逐次構築する。
@@ -311,6 +386,8 @@ def _build_live_close_sma200(
         if bars is None:
             return close_by_day, sma_by_day, False
         rec_bar = bars.get(code)
+        if entry_date is not None and splits:
+            rec_bar = _scaled_bar(rec_bar, day, entry_date, splits)  # entry 時点の尺度に揃える
         if rec_bar is not None and rec_bar.get("AdjC") is not None:
             close_by_day[day] = rec_bar["AdjC"]
             hist.append(rec_bar["AdjC"])
@@ -340,8 +417,9 @@ def evaluate_parallel_exits(rec: dict, bday_index: dict[str, int], all_bdays: li
     cost = measure_base_rate.ROUND_TRIP_COST
 
     warmup_start_idx = max(0, entry_idx - 1 - kpi_exit_study.SCAN_BUFFER_BDAYS)
+    splits = _split_events(code, warmup_start_idx, len(all_bdays) - 1, all_bdays)
     close_by_day, sma_by_day, reached_end = _build_live_close_sma200(
-        code, warmup_start_idx, exit_target_idx, all_bdays
+        code, warmup_start_idx, exit_target_idx, all_bdays, rec["entry_date"], splits
     )
 
     result: dict[str, dict] = {}
@@ -393,7 +471,7 @@ def evaluate_parallel_exits(rec: dict, bday_index: dict[str, int], all_bdays: li
                 bars2 = load_bars_day_if_cached(day2)
                 if bars2 is None:
                     break  # 未来日 -> e1は保留のまま(for-elseへは進まない)
-                bar2 = bars2.get(code)
+                bar2 = _scaled_bar(bars2.get(code), day2, rec["entry_date"], splits)
                 if bar2 is not None and bar2.get("AdjO") is not None:
                     exit_price = bar2["AdjO"]
                     ret_gross = exit_price / entry_price - 1
