@@ -21,6 +21,7 @@ X の36クエリが品薄/値上がりを検知したとき「どの銘柄が受
 from __future__ import annotations
 
 import json
+import unicodedata
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -229,6 +230,17 @@ def subjects_for_query(m: dict, query_id: str) -> list[dict]:
     secondary-resale(対象=中古流通が受益)の両方に効く。
     """
     return [s for s in m["subjects"] if query_id in s.get("queries", [])]
+
+
+def subjects_for_token(m: dict, token: str) -> list[dict]:
+    """発見器の候補語（token）に紐づく subject（初出レーン・P-INF-25）。
+
+    subject の任意キー `discover_tokens`（人が週 1 回付ける語のリスト）を引く。
+    queries と同じく多重割当可。無ければ空＝その語は採点対象外。
+    """
+    t = unicodedata.normalize("NFKC", token)
+    return [s for s in m["subjects"]
+            if t in {unicodedata.normalize("NFKC", x) for x in s.get("discover_tokens", [])}]
 
 
 def ensure_validated(m: dict) -> None:

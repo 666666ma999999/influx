@@ -139,7 +139,7 @@ def collect_posts(day: str) -> tuple[list[dict], dict]:
 def extract_candidates(posts: list[dict], known: set[str]) -> list[dict]:
     """ルールベース抽出: 既知語彙・ストップリストを除いた候補トークンを採点する。"""
     stats: dict[str, dict] = defaultdict(lambda: {"authors": set(), "posts": 0, "price_hint": 0,
-                                                  "likes": 0, "sample": ""})
+                                                  "likes": 0, "sample": "", "first_posted_at": ""})
     n_market_skipped = 0
     for post in posts:
         text = unicodedata.normalize("NFKC", post.get("content") or "")
@@ -168,6 +168,11 @@ def extract_candidates(posts: list[dict], known: set[str]) -> list[dict]:
             s["likes"] += post.get("likes", 0)
             if not s["sample"]:
                 s["sample"] = " ".join(text.split())[:90]
+            # 初出レーン（P-INF-25）: その語を含む投稿のうち最も早い投稿時刻（ISO・UTC）。
+            # posted_at_full が無い行（旧収集器）は空のまま＝「未記録」と区別できる
+            pa = post.get("posted_at_full") or ""
+            if pa and (not s["first_posted_at"] or pa < s["first_posted_at"]):
+                s["first_posted_at"] = pa
 
     candidates = []
     for token, s in stats.items():
@@ -180,6 +185,7 @@ def extract_candidates(posts: list[dict], known: set[str]) -> list[dict]:
         candidates.append({
             "token": token, "score": score, "authors": n_authors, "posts": s["posts"],
             "price_hint_posts": s["price_hint"], "likes_sum": s["likes"], "sample": s["sample"],
+            "first_posted_at": s["first_posted_at"],
         })
     candidates.sort(key=lambda c: (-c["score"], -c["authors"], -c["likes_sum"]))
     if n_market_skipped:
@@ -250,6 +256,35 @@ def recorded_days(queue_path: Path) -> set[str]:
     return done
 
 
+def recorded_tokens(queue_path: Path, before_day: str | None = None) -> set[str]:
+    """候補キューに既に出た token の集合（初出レーン・P-INF-25）。
+
+    before_day を渡すと、その日より前の candidate_batch だけを数える（過去日の取り直しで
+    「自分より後の便に出た語」を既出と誤判定しないため）。
+    """
+    seen: set[str] = set()
+    if not queue_path.exists():
+        return seen
+    for line in queue_path.read_text(encoding="utf-8").splitlines():
+        try:
+            ev = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if ev.get("type") != "candidate_batch":
+            continue
+        if before_day and (ev.get("date") or "") >= before_day:
+            continue
+        for c in ev.get("candidates") or []:
+            if c.get("token"):
+                seen.add(c["token"])
+    return seen
+
+
+def mark_first_seen(candidates: list[dict], prior_tokens: set[str]) -> list[dict]:
+    """各候補に first_seen（過去の便に同じ token が無い）を付ける。"""
+    return [{**c, "first_seen": c.get("token") not in prior_tokens} for c in candidates]
+
+
 def window_days(end_day: str, days: int) -> list[str]:
     """end_day を最新として過去 days 日分の UTC 日を古い順に返す（days=1 なら [end_day]）。"""
     end = datetime.strptime(end_day, "%Y-%m-%d")
@@ -287,6 +322,8 @@ def run_day(day: str, seen_ids: set[str] | None = None) -> int:
     candidates = extract_candidates(posts, known)
     refined = llm_refine(candidates)
     final = refined if refined is not None else candidates
+    final = mark_first_seen(final, recorded_tokens(QUEUE_PATH, before_day=day))
+    n_first = sum(1 for c in final if c.get("first_seen"))
 
     event = {
         "type": "candidate_batch", "date": day, "n_posts": len(posts),
@@ -295,7 +332,7 @@ def run_day(day: str, seen_ids: set[str] | None = None) -> int:
         "llm_refined": refined is not None, "candidates": final,
     }
     append_event(QUEUE_PATH, event)
-    print(f"[done] 候補 {len(final)} 件 → {QUEUE_PATH}")
+    print(f"[done] 候補 {len(final)} 件（うち初出 {n_first} 件）→ {QUEUE_PATH}")
     for c in final[:10]:
         print(f"  {c['token']:<16} score={c['score']} authors={c['authors']} "
               f"price_hint={c['price_hint_posts']}  例: {c['sample'][:60]}")

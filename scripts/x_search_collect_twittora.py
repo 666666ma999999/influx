@@ -253,6 +253,9 @@ def scrape_cards_rich(page) -> list[dict]:
                 # U+2028/U+2029 は json.dumps 素通し + splitlines() を割る → 無害化 (2026-07-21)
                 "content": content.replace("\u2028", " ").replace("\u2029", " ").strip(),
                 "posted_at": dt_attr[:10] if dt_attr else "",
+                # 初出レーン（P-INF-25・2026-10-03）: 発見器が候補語の初出時刻を保存するため、<time datetime> の全文も残す。
+                # 既存の posted_at（日付 10 文字）は消費元との互換のため変えない
+                "posted_at_full": dt_attr,
                 **metrics,
             })
         except Exception:
