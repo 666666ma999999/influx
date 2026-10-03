@@ -731,6 +731,7 @@ def main(only: list[str] | None = None) -> int:
             return 1
         cfg = {**cfg, "series": wanted}
     alert_cfg = cfg["alert"]
+    early_cfg = cfg.get("early") or {}  # 予兆レーン（2026-10-03 裁定 a）。無ければ鳴らない
     history = load_history()
     # 日付は **JST基準**（run_at はUTCのまま＝実行時刻の絶対記録）。
     # UTC日付だと launchd の月曜08:30 JST 実行が UTC では日曜になり、同じ日の手動再実行
@@ -956,6 +957,25 @@ def main(only: list[str] | None = None) -> int:
                 # 4週累積は自前履歴に依存するため ok の時のみ
                 if row["status"] == "ok" and four_w is not None and four_w >= th["four_week_pct"]:
                     trigger.append(f"4週累積 {four_w:+.1f}%")
+                # 予兆レーン（2026-10-03 オーナー裁定 a・§16o-3 追記7）: 本発火が無い時だけ、低い閾値で
+                # 「予兆」を立てる。本発火とは別レーン（通知の見出し・前向き台帳の lane=early）。
+                # 系列側 alert の 999 ミュート（食品 §16j）は予兆にも効く＝ミュート系列で予兆だけ鳴らない。
+                if not trigger and early_cfg:
+                    eth = {**early_cfg, **s.get("early", {})}
+                    for k in ("weekly_pct", "four_week_pct"):
+                        if _is_muted(th.get(k)):
+                            eth[k] = th[k]
+                    early = []
+                    if wk is not None and wk >= eth.get("weekly_pct", 999.0) \
+                            and (not wk_self or row["status"] == "ok"):
+                        early.append(f"予兆 weekly {wk:+.1f}%" + ("(自前)" if wk_self else ""))
+                    if row["status"] == "ok" and four_w is not None \
+                            and four_w >= eth.get("four_week_pct", 999.0):
+                        early.append(f"予兆 4週累積 {four_w:+.1f}%")
+                    if early:
+                        row["early_fired"] = True
+                        row["early_triggers"] = early
+                        trigger = early
             row["four_week_pct"] = round(four_w, 2) if four_w is not None else None
             row["four_week_base_date"] = cands[-1].get("date") if cands else None
 
@@ -1005,7 +1025,7 @@ def main(only: list[str] | None = None) -> int:
 
             # §16v の部分解除で鳴った上昇は「浸透レーン」として別扱いにする。既存の値上がり受益の
             # 前向き検定（n>=100・事前登録）に混ぜると分母が汚れる（ピークアウトと同じ 2026-07-31 裁定）
-            if pt_unmuted and trigger and not row.get("peakout_fired"):
+            if pt_unmuted and trigger and not row.get("peakout_fired") and not row.get("early_fired"):
                 row["pass_through_fired"] = True
             rows.append(row)
             if trigger:
@@ -1029,7 +1049,9 @@ def main(only: list[str] | None = None) -> int:
     # ピークアウト発火は「値上がり受益」の前向き検定（n>=100・事前登録）に混ぜない。
     # レーンが違う発火を同じ台帳に入れると検定の分母が汚れる（言及レーンと同じ裁定 2026-07-31）
     rise_alerts = [(s, r, t) for s, r, t in alerts
-                   if not r.get("peakout_fired") and not r.get("pass_through_fired")]
+                   if not r.get("peakout_fired") and not r.get("pass_through_fired")
+                   and not r.get("early_fired")]
+    early_alerts = [(s, r, t) for s, r, t in alerts if r.get("early_fired")]
     peak_alerts = [(s, r, t) for s, r, t in alerts if r.get("peakout_fired")]
     pt_alerts = [(s, r, t) for s, r, t in alerts if r.get("pass_through_fired")]
     if pt_alerts:
@@ -1064,6 +1086,16 @@ def main(only: list[str] | None = None) -> int:
             print(f"[foreign] WARN: 海外前向き記録に失敗: {str(exc)[:100]}")
     else:
         print("閾値超えなし（4週累積は履歴4本蓄積後から判定）")
+    # 予兆レーン（2026-10-03 裁定 a）: 本発火より低い閾値。本発火の検定（n>=100）には混ぜず lane=early で別記録
+    if early_alerts:
+        print(f"\n🔔 予兆 {len(early_alerts)} 系列（本発火より低い閾値・別レーン・§16o-3 追記7）:")
+        for s, row, trigger in early_alerts:
+            print(f"  {s['jp']}（{'/'.join(trigger)}）→ 受益候補: {beneficiaries_display(s, today)}")
+        try:
+            import price_watch_forward as fwd
+            fwd.record_firings(early_alerts, today, lane="early")
+        except Exception as exc:  # noqa: BLE001
+            print(f"[forward] WARN: 予兆の前向き記録に失敗: {str(exc)[:100]}")
     return 0 if ok > 0 else 1
 
 

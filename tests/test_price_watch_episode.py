@@ -160,6 +160,20 @@ class TestForwardEpisodeSkip(unittest.TestCase):
         firings = [r for r in self.rows() if r["type"] == "firing"]
         self.assertEqual(len(firings), 1)
 
+    def test_early_lane_recorded_separately_from_rise(self):
+        """予兆レーン（2026-10-03 裁定 a）: lane=early は本発火と別分母＝同日に予兆→本発火でも両方記録される。"""
+        s = {"id": "bdi", "jp": "BDI", "cadence": "weekly",
+             "beneficiaries": [{"code": "9104", "sign": "+", "tier": "confirmed"}]}
+        fwd.record_firings([(s, {}, ["予兆 4週累積 +6.5%"])], "2026-10-01", lane="early")
+        fwd.record_firings([(s, {}, ["4週累積 +10.2%"])], "2026-10-01")
+        firings = [r for r in self.rows() if r["type"] == "firing"]
+        self.assertEqual([f.get("lane") for f in firings], ["early", "rise"])
+        self.assertEqual([len(f["stocks"]) for f in firings], [1, 1])
+        # 同レーン内では 7 日未満の再記録は従来どおり抑止される
+        fwd.record_firings([(s, {}, ["予兆 4週累積 +6.8%"])], "2026-10-02", lane="early")
+        firings = [r for r in self.rows() if r["type"] == "firing"]
+        self.assertEqual(len(firings), 2)
+
     def test_partial_repeat_7d_keeps_row_with_new_code(self):
         """片方の銘柄だけ7日未満に記録済みなら、新しい銘柄だけ残して行を書く（reason=repeat_7d）。"""
         s1 = {"id": "wti", "jp": "WTI", "cadence": "weekly",

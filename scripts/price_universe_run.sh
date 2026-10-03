@@ -92,4 +92,11 @@ if [ "$n_alert" -gt 0 ]; then
   osascript -e "display notification \"${head_txt}\" with title \"📈 商品価格の閾値超え ${n_alert}系列\"" 2>/dev/null || true
 fi
 
+# 予兆レーン（2026-10-03 裁定 a）: 本発火より低い閾値の早期通知。見出しを分けて本発火と混同させない
+n_early=$(grep -oE '予兆 [0-9]+ 系列' "$OUT" | grep -oE '[0-9]+' | head -1)
+if [ -n "$n_early" ] && [ "$n_early" -gt 0 ]; then
+  early_txt=$(grep -E '^  .*（予兆 .*）→ 受益候補' "$OUT" | head -1 | tr -d '"\\' | cut -c1-100)
+  osascript -e "display notification \"${early_txt}\" with title \"🔔 商品価格の予兆 ${n_early}系列\"" 2>/dev/null || true
+fi
+
 exit "$rc"

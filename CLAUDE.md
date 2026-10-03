@@ -43,7 +43,7 @@ python3 scripts/x_shortage_map.py  # 対応表の自己検証（関門B・符号
 
 # B2B価格チェッカー（launchd com.influx.price-universe 月〜金 11:00。月曜=全系列・火〜金=日次型40系列のみ〔2026-10-03 週次→平日日次〕。手動は runner 経由・PU_MODE=weekly|daily で強制）
 # 系列数は jq '.series|length' configs/price_universe_sources.json で引く
-bash scripts/price_universe_run.sh   # Docker待機→全系列取得→発火/取得低下をMac通知
+bash scripts/price_universe_run.sh   # Docker待機→全系列取得→発火(🚨 本発火／🔔 予兆=低い閾値の別レーン・2026-10-03)/取得低下をMac通知
 docker compose run --rm xstock python scripts/price_universe_check.py   # 素の実行（通知なし）
 docker exec -e DISPLAY=:99 xstock-vnc python3 /app/scripts/price_watch_discover.py  # 新商品名の候補キュー生成
 docker compose run --rm xstock python scripts/price_watch_forward.py --eval          # 発火の前向き記録を評価（8/15週後）

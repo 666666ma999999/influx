@@ -146,8 +146,13 @@ def ensure_preregistration() -> None:
     print(f"[forward] 事前宣言 v{SPEC_VERSION} を記録")
 
 
-def record_firings(alerts: list, fire_date: str) -> int:
-    """price_universe_check の発火を前向き記録する。alerts=[(series_cfg, row, triggers)]"""
+def record_firings(alerts: list, fire_date: str, lane: str = "rise") -> int:
+    """price_universe_check の発火を前向き記録する。alerts=[(series_cfg, row, triggers)]
+
+    lane: "rise"=本発火（既定・n>=100 の対TOPIX検定の分母）／"early"=予兆レーン（2026-10-03 裁定 a・
+    低い閾値の早期通知）。レーンごとに別の分母で数え、重複排除（同日・7日・6ヶ月）も同じレーン内でだけ効かせる
+    ＝予兆が立った日に本発火へ昇格しても本発火側は通常どおり記録される。
+    """
     if not alerts:
         return 0
     ensure_preregistration()
@@ -165,7 +170,8 @@ def record_firings(alerts: list, fire_date: str) -> int:
     # 例: wti と brent は別系列だが受益銘柄は同じ 1605/1662 で、同日に両方鳴ると
     # 1銘柄が2観測として数えられ、目標 n>=100 の分母と勝率が水増しされる。
     # 先に鳴った系列に帰属させ、後続系列では skipped_dup に落として理由を残す。
-    log_firings = [e for e in read_log() if e.get("type") == "firing"]
+    log_firings = [e for e in read_log() if e.get("type") == "firing"
+                   and (e.get("lane") or "rise") == lane]
     seen_codes = {s["code"] for e in log_firings if e.get("fire_date") == fire_date
                   for s in e.get("stocks", [])}
     # エピソード重複排除（v3・月次レーンのみ）: 同じ (series_id, code) を直近
@@ -229,7 +235,7 @@ def record_firings(alerts: list, fire_date: str) -> int:
             print(f"[forward] 7日未満の再発火で銘柄なし → 記録しない: {series['jp']}（{'/'.join(triggers)}）")
             continue
         append({
-            "type": "firing", "spec_version": SPEC_VERSION,
+            "type": "firing", "spec_version": SPEC_VERSION, "lane": lane,
             "fire_date": fire_date, "series_id": series["id"], "series_jp": series["jp"],
             "driver": series.get("driver", series["id"]),
             "triggers": triggers, "skipped_dup": skipped_dup,
@@ -252,8 +258,8 @@ def evaluate() -> int:
     """期日が到来した firing を評価して evaluation を append する（冪等）。"""
     log = read_log()
     firings = [e for e in log if e.get("type") == "firing"]
-    done = {(e.get("spec_version"), e["fire_date"], e["series_id"], e["window"]) for e in log
-            if e.get("type") == "evaluation"}
+    done = {(e.get("spec_version"), e.get("lane") or "rise", e["fire_date"], e["series_id"], e["window"])
+            for e in log if e.get("type") == "evaluation"}
     if not firings:
         print("[forward] 発火記録がまだありません（発火時に自動で記録されます）")
         return 0
@@ -264,7 +270,7 @@ def evaluate() -> int:
         for win, eval_day in (f.get("eval_days") or {}).items():
             if not eval_day or eval_day > today:
                 continue
-            if (f.get("spec_version"), f["fire_date"], f["series_id"], win) in done:
+            if (f.get("spec_version"), f.get("lane") or "rise", f["fire_date"], f["series_id"], win) in done:
                 continue
             tpx_now = topix.get(eval_day)
             tpx_ent = f.get("topix_entry")
@@ -286,6 +292,7 @@ def evaluate() -> int:
                 # 評価行は**発火行の spec_version を引き継ぐ**（done 判定のキーと一致させる。
                 # 現行値で書くと v2 発火の評価が毎回「未評価」扱いになり無限に追記される）
                 "type": "evaluation", "spec_version": f.get("spec_version", SPEC_VERSION),
+                "lane": f.get("lane") or "rise",
                 "fire_date": f["fire_date"], "series_id": f["series_id"], "window": win,
                 "eval_day": eval_day, "topix_ret_pct": round(tpx_ret, 2),
                 "results": results,
@@ -294,7 +301,8 @@ def evaluate() -> int:
             })
             n_new += 1
             hits = sum(1 for r in scored if r["hit"])
-            print(f"[eval] {f['series_jp']} {win}: {hits}/{len(scored)} hit "
+            lane_tag = "予兆 " if (f.get("lane") or "rise") == "early" else ""
+            print(f"[eval] {lane_tag}{f['series_jp']} {win}: {hits}/{len(scored)} hit "
                   f"(TOPIX {tpx_ret:+.1f}%)")
     print(f"[forward] 新規評価 {n_new} 件")
     return n_new
@@ -302,9 +310,17 @@ def evaluate() -> int:
 
 def status() -> None:
     log = read_log()
-    firings = [e for e in log if e.get("type") == "firing"]
-    evals = [e for e in log if e.get("type") == "evaluation"]
-    print(f"=== 前向き記録の蓄積状況（spec v{SPEC_VERSION}）===")
+    for lane in ("rise", "early"):
+        _status_lane(log, lane)
+
+
+def _status_lane(log: list, lane: str) -> None:
+    firings = [e for e in log if e.get("type") == "firing" and (e.get("lane") or "rise") == lane]
+    evals = [e for e in log if e.get("type") == "evaluation" and (e.get("lane") or "rise") == lane]
+    if lane == "early" and not firings:
+        return
+    label = "予兆レーン（early・別分母）" if lane == "early" else "本発火"
+    print(f"=== 前向き記録の蓄積状況（spec v{SPEC_VERSION}・{label}）===")
     print(f"発火記録: {len(firings)} 件 / 評価済み: {len(evals)} 件")
     if firings:
         print(f"期間: {min(f['fire_date'] for f in firings)} 〜 {max(f['fire_date'] for f in firings)}")
