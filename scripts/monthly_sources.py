@@ -927,20 +927,31 @@ def parse_iip_inventory_ratio(rows: list, code: str, name: str | None = None,
             "preliminary": prelim, "iip_name": item["name"]}
 
 
+def fetch_iip_workbook(file_title: str) -> bytes:
+    """e-Stat の鉱工業指数 2020 年基準・時系列一覧から表題 file_title のブック（xlsx bytes）を取る。
+
+    表題の例: 「業種別／月次／季節調整済指数」（在庫率系列）／「財別／月次／原指数」（在庫発見器・経産省
+    b2020_zom1j.xlsx と同一＝2026-10-04 実測で 67 項目・3 シート計 19,584 点が一致）。statInfId は更新の
+    たびに変わりうるので一覧の表題から引く。一覧の構造変化・該当 0／複数・xlsx でない応答は ValueError。
+    """
+    html = _get(_IIP_LIST).text
+    if _IIP_BASE_TITLE not in html:
+        raise ValueError("e-Stat 一覧が 2020 年基準の時系列ページでない（基準改定・構造変化）")
+    sids = re.findall(r'stat_infid=(\d+)"[^>]*>\s*' + re.escape(file_title) + r"\s*</a>", html)
+    if len(set(sids)) != 1:
+        raise ValueError(f"『{file_title}』の statInfId が 1 件でない: {sids}")
+    data = _get(_IIP_DL.format(sid=sids[0])).content
+    if data[:2] != b"PK":
+        raise ValueError("xlsx でない応答（配信側の抑制の可能性）")
+    return data
+
+
 def _iip_rows() -> list:
     """e-Stat 一覧から業種別・月次・季節調整済のブックを引き、在庫率シートの全行を返す（実行内キャッシュ）。"""
     if _IIP_SHEET in _IIP_CACHE:
         return _IIP_CACHE[_IIP_SHEET]
     import openpyxl
-    html = _get(_IIP_LIST).text
-    if _IIP_BASE_TITLE not in html:
-        raise ValueError("e-Stat 一覧が 2020 年基準の時系列ページでない（基準改定・構造変化）")
-    sids = re.findall(r'stat_infid=(\d+)"[^>]*>\s*' + re.escape(_IIP_FILE_TITLE) + r"\s*</a>", html)
-    if len(set(sids)) != 1:
-        raise ValueError(f"『{_IIP_FILE_TITLE}』の statInfId が 1 件でない: {sids}")
-    data = _get(_IIP_DL.format(sid=sids[0])).content
-    if data[:2] != b"PK":
-        raise ValueError("xlsx でない応答（配信側の抑制の可能性）")
+    data = fetch_iip_workbook(_IIP_FILE_TITLE)
     wb = openpyxl.load_workbook(io.BytesIO(data), read_only=True, data_only=True)
     try:
         if _IIP_SHEET not in wb.sheetnames:

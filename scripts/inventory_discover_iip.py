@@ -7,8 +7,11 @@ CGPI/SPPI）と同じ型で、〈値上がり＋在庫減＝品薄／値下が�
 「在庫の統計を入口に足す」）。
 
 やること:
-  1. 経産省の `b2020_zom1j.xlsx`（4シート: 生産／出荷／在庫／在庫率・業種・財別・原指数・月次）を取得し
-     `data/iip/` に保存する（`--offline PATH` で保存済みファイルから読む）。
+  1. 鉱工業指数の財別・原指数・月次ブック（4シート: 生産／出荷／在庫／在庫率）を e-Stat から取得し
+     `data/iip/b2020_zom1j.xlsx` に保存する（`--offline PATH` で保存済みファイルから読む）。
+     取得元は 2026-10-04 に経産省 `meti.go.jp/statistics/tyo/iip/xls/b2020_zom1j.xlsx` から e-Stat
+     「2020年基準時系列データ」→「財別／月次／原指数」へ切替（経産省側が AWS WAF の JS チャレンジで
+     機械取得不可。同日実測で両ブックの 67 項目・在庫率／在庫／出荷の重なる月 19,584 点が一致）。
   2. 項目ごとに 在庫率・在庫・出荷 の〈前月比／3ヶ月比／前年同月比〉を出す。
   3. 在庫率の前年同月比で並べ、上位（在庫率↑＝供給過剰候補）と下位（在庫率↓＝品薄候補）を top N ずつ列挙。
      各行に出荷の前年比を並べ、〈在庫率↑かつ出荷↓〉〈在庫率↓かつ出荷↑〉を「整合」と印す。
@@ -33,7 +36,6 @@ import io
 import os
 import re
 import sys
-import urllib.request
 import zipfile
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -41,12 +43,14 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "scripts"))
 
 from driver_discover_boj import load_center_pin, match_companies  # noqa: E402
-from monthly_sources import _ym_shift  # noqa: E402
+from monthly_sources import _ym_shift, fetch_iip_workbook  # noqa: E402
 
-IIP_URL = "https://www.meti.go.jp/statistics/tyo/iip/xls/b2020_zom1j.xlsx"
+# 取得元= e-Stat の表題（経産省 b2020_zom1j.xlsx と同一ブック・2026-10-04 切替）。保存名は従来どおり
+IIP_ESTAT_TITLE = "財別／月次／原指数"
+IIP_SOURCE_LABEL = f"e-Stat 鉱工業指数 2020年基準時系列「{IIP_ESTAT_TITLE}」（旧 経産省 b2020_zom1j.xlsx と同一）"
+CACHE_NAME = "b2020_zom1j.xlsx"
 CACHE_DIR = os.path.join(ROOT, "data", "iip")
 OUTPUT_PATH = os.path.join(ROOT, "output", "inventory_discover.md")
-UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_6) AppleWebKit/605.1.15 Safari/605.1.15"
 
 SHEETS = ("在庫率", "在庫", "出荷", "生産")
 REQUIRED_SHEETS = ("在庫率", "在庫", "出荷")
@@ -59,15 +63,16 @@ AGGREGATE_NAMES = {"鉱工業", "最終需要財", "投資財", "資本財", "�
 
 # ---------------------------------------------------------------- 取得・パース
 
-def fetch_workbook(url: str = IIP_URL, cache_dir: str = CACHE_DIR) -> bytes:
-    """xlsx を取得して cache_dir に保存し、bytes を返す（0 bytes は失敗として扱う）。"""
-    req = urllib.request.Request(url, headers={"User-Agent": UA})
-    with urllib.request.urlopen(req, timeout=60) as resp:
-        data = resp.read()
+def fetch_workbook(cache_dir: str = CACHE_DIR) -> bytes:
+    """e-Stat から財別・原指数・月次の xlsx を取得して cache_dir に保存し、bytes を返す。
+
+    取得は monthly_sources.fetch_iip_workbook（在庫率系列と共有・一覧の表題から statInfId を引く）。
+    小さすぎる・xlsx でない応答は失敗として扱う。"""
+    data = fetch_iip_workbook(IIP_ESTAT_TITLE)
     if len(data) < 10_000 or data[:2] != b"PK":
         raise RuntimeError(f"取得失敗: {len(data)} bytes（xlsx でない・配信側の抑制の可能性）")
     os.makedirs(cache_dir, exist_ok=True)
-    path = os.path.join(cache_dir, os.path.basename(url))
+    path = os.path.join(cache_dir, CACHE_NAME)
     with open(path, "wb") as f:
         f.write(data)
     return data
@@ -287,7 +292,7 @@ def run(top: int, offline: Optional[str], out_path: str = OUTPUT_PATH) -> int:
         source = offline
     else:
         data = fetch_workbook()
-        source = IIP_URL
+        source = IIP_SOURCE_LABEL
     sheets = load_all(data)
     n_sheet_rows = len(sheets["在庫率"][1])
     latest, rows = build_table(sheets)

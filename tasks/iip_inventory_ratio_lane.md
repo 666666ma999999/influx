@@ -33,5 +33,5 @@ Status: **done 2026-10-04**（未コミット＝commit は親セッション）
 ## Session Handoff
 - 済: 取得器 `fetch_iip_inventory_ratio`（e-Stat 経由・業種コード引数）・`fetch_jmtba(part)`・`monthly_triggers` の下落側キー・config 9 系列・テスト・docs 追記11・architecture の B2B 行
 - 保留: commit は親セッション判断
-- 既知の穴: ①過去検証は改定後の現行値 ②2021 年の跨ぎの一部はコロナ反動 ③工作機械内訳は初回に 1 回鳴る ④在庫発見器 `inventory_discover_iip.py` の取得 URL（経産省本体）は WAF で現在取れない（`--offline` は可・本 task の範囲外）⑤`price_universe_run.sh` の健全性下限 MIN_OK=42 は 72 系列時の値のまま（81 系列で約 52%）
+- 既知の穴: ①過去検証は改定後の現行値 ②2021 年の跨ぎの一部はコロナ反動 ③工作機械内訳は初回に 1 回鳴る ④在庫発見器 `inventory_discover_iip.py` の取得 URL（経産省本体）は WAF で取れなかった → 2026-10-04 に e-Stat「財別／月次／原指数」へ切替済み（`monthly_sources.fetch_iip_workbook` を共有）⑤`price_universe_run.sh` の健全性下限 MIN_OK=42 は 72 系列時の値のまま（81 系列で約 52%）
 - 次の自動便: 2026-10-05（月）11:00 の weekly 便で新 9 系列の初回記録
