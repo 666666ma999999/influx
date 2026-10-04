@@ -56,15 +56,24 @@ RESALE_RE = re.compile(r"転売")
 
 
 # ---------------------------------------------------------------- 判定（純関数・ホストで試験可）
+# 1 文字の label（銅・金）は 2 文字未満で捨てていたため判定語が空＝絶対に当たらなかった（2026-10-04 Codex 指摘・再現済み）。
+# 1 文字のまま部分一致にすると「金曜」「料金」「銅像」まで当たるので、相場・地金を指す言い方だけを足す（P-INF-31 段 0）。
+SINGLE_CHAR_ALIASES = {
+    "銅": ["銅価格", "銅相場", "銅地金", "電気銅", "銅鉱", "銅先物", "LME銅"],
+    "金": ["金価格", "金相場", "金地金", "金先物", "ゴールド", "金ETF", "純金"],
+}
+
+
 def load_subject_terms(path: Path = SHORTAGE_MAP) -> tuple[dict[str, list[str]], dict[str, list[str]]]:
-    """actionable=true の主題 → label 語リスト／社名リスト。"""
+    """actionable=true の主題 → label 語リスト／社名リスト。1 文字の label は SINGLE_CHAR_ALIASES で置き換える。"""
     d = json.loads(path.read_text(encoding="utf-8"))
     terms: dict[str, list[str]] = {}
     names: dict[str, list[str]] = {}
     for s in d["subjects"]:
         if not s.get("actionable"):
             continue
-        parts = [p.strip() for p in re.split(r"[/／・,、]", s.get("label", "")) if len(p.strip()) >= 2]
+        raw = [p.strip() for p in re.split(r"[/／・,、]", s.get("label", "")) if p.strip()]
+        parts = [p for p in raw if len(p) >= 2] + [a for p in raw if len(p) == 1 for a in SINGLE_CHAR_ALIASES.get(p, [])]
         terms[s["id"]] = [unicodedata.normalize("NFKC", p) for p in parts]
         names[s["id"]] = [unicodedata.normalize("NFKC", b["name"]) for b in s.get("beneficiaries", []) if b.get("name")]
     return terms, names
@@ -259,9 +268,52 @@ def selftest() -> int:
     return 0
 
 
+LABEL_SAMPLE = APP / "data/x_price_watch/vocab_label_sample.jsonl"
+
+
+def draw_label_sample(rows: list[dict], judged: list[bool], n: int = 40, seed: int = 20261004) -> list[dict]:
+    """人の ○× 用の標本（P-INF-31 段 0）。判定器の当たり／外れを半分ずつ・語ごとに順番に配る。
+
+    同じ投稿が複数の語で取れていても 1 回だけ（status_id で重複除去・先に出た語を残す）。
+    本文の先頭 16 字（記号・空白除去・NFKC）が同じ投稿も 1 件だけ（同じ記事の見出しの貼り直し）。
+    判定器の結果は judge_hit として標本ファイルに残すが、カードには出さない（盲検）。
+    """
+    rng = random.Random(seed)
+    seen: set[str] = set()
+    pools: dict[bool, dict[str, list[dict]]] = {True: defaultdict(list), False: defaultdict(list)}
+    for r, hit in zip(rows, judged):
+        sid = str(r.get("status_id"))
+        head = re.sub(r"[\W_]+", "", unicodedata.normalize("NFKC", r.get("text") or ""))[:16]
+        if sid in seen or not head or head in seen:   # 同じ記事の見出しを別人が貼った投稿は 1 件だけ（10-04 東芝 HDD が 4 枚並んだ）
+            continue
+        seen.update((sid, head))
+        pools[hit][r.get("word", "?")].append(r)
+    out: list[dict] = []
+    for hit, want in ((True, n // 2), (False, n - n // 2)):
+        by_word = pools[hit]
+        for w in by_word:
+            rng.shuffle(by_word[w])
+        words = sorted(by_word)
+        rng.shuffle(words)
+        got = 0
+        while got < want and any(by_word[w] for w in words):
+            for w in words:
+                if got >= want:
+                    break
+                if by_word[w]:
+                    r = by_word[w].pop()
+                    out.append({**r, "judge_hit": hit})
+                    got += 1
+    rng.shuffle(out)
+    for i, r in enumerate(out, 1):
+        r["label_id"] = f"L{i:02d}"
+    return out
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("mode", choices=["collect", "eval"])
+    ap.add_argument("mode", choices=["collect", "eval", "sample"])
+    ap.add_argument("--n", type=int, default=40, help="sample: 標本の件数（当たり・外れ半分ずつ）")
     ap.add_argument("--words", nargs="*", default=DEFAULT_WORDS)
     ap.add_argument("--days", type=int, default=14)
     ap.add_argument("--end", help="最新の JST 日 YYYY-MM-DD（省略時= 昨日 JST）")
@@ -276,6 +328,13 @@ def main() -> int:
     terms, names = load_subject_terms()
     known, token_re, stoplist, market_re = _judge_deps()
     rows, collected = load_rows()
+    if args.mode == "sample":
+        judged = [bool(judge(r.get("text", ""), terms, names, known, token_re, stoplist, market_re)["subjects"]) for r in rows]
+        sample = draw_label_sample(rows, judged, args.n)
+        LABEL_SAMPLE.write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in sample), encoding="utf-8")
+        hits = sum(r["judge_hit"] for r in sample)
+        print(f"[sample] 保存行 {len(rows)}・判定器の当たり {sum(judged)} → 標本 {len(sample)}（当たり {hits}／外れ {len(sample) - hits}）→ {LABEL_SAMPLE}")
+        return 0
     table, meta = evaluate(rows, terms, names, known, token_re, stoplist, market_re, collected)
     write_report(table, meta)
     print(f"[eval] rows={meta['rows']} unique={meta['unique']} → {REPORT}")
