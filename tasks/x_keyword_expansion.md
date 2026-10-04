@@ -17,8 +17,10 @@ Phase: X 品薄レーン（P-INF-22 の続き）／叩き台= vault `02_Ai/influ
 - [x] 銅・金の判定語（1 文字 label を相場・地金の言い方に置換）`scripts/x_vocab_backfill_eval.py` SINGLE_CHAR_ALIASES
 - [x] 40 投稿の抽出（`sample` モード・盲検＝判定器の結果はカードに出さない）→ `data/x_price_watch/vocab_label_sample.jsonl`
 - [x] カード `output/x_vocab_label_cards.html`（git 対象外）・着地先 `data/x_price_watch/vocab_label_judgments.jsonl`
-- [ ] オーナーの ○×（40 件）
-- [ ] 一致表（判定器の当たり／外れ × 人の ○×）
+- [x] AI 2 体（Codex gpt-6-astra／Claude fable 別文脈）で盲検の ○×（オーナー「Jev で判断できないですか？」2026-10-04）→ `data/x_price_watch/vocab_label_ai2.jsonl`。一致 32・割れ 8（割れは全部 GPT ○・Claude ×/？＝生活者目線の品薄を○にするかの定義差）
+- [x] 判定器の「ゴールド」がピンクゴールドに当たる誤りを除去（回帰つき）
+- [ ] 生活者目線の品薄を ○ に数えるかの定義（オーナー）
+- [x] 一致表（2 体一致 32 件で）: 判定器の当たり 17 → ○ 11／× 6、外れ 15 → ○ 1／× 14
 - [ ] 事象の束ね（元記事・元開示の単位）・eval に期間と語の絞り込み
 
 ## Session Handoff

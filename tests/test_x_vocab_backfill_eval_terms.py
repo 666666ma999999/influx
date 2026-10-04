@@ -27,7 +27,7 @@ class Terms(unittest.TestCase):
         self.assertIn("金相場", self.terms["gold"])
         self.assertNotIn("銅", self.terms["copper"])
         self.assertNotIn("金", self.terms["gold"])
-        hit = [sid for sid, ws in self.terms.items() if any(w in "金曜の料金が値上げ" for w in ws)]
+        hit = [sid for sid, ws in self.terms.items() if any(w in "金曜の料金が値上げ。ピンクゴールドの指輪" for w in ws)]
         self.assertNotIn("gold", hit)
 
 
