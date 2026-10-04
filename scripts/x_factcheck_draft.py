@@ -370,7 +370,7 @@ def cmd_list(_args) -> int:
         codes = ",".join(b["code"] for s in ev["subjects"] for b in s["beneficiaries"])[:40]
         if r:
             h = r["human"]
-            print(f"  {ev['token']:14s} {r['status']:6s} 初出 {r.get('first_posted_at_jst','')} 遅れ {r.get('delay_label','')} "
+            print(f"  {ev['token']:14s} {r['status']:6s} 初出 {r.get('first_posted_at_jst','')} 取り直し {r.get('refetch_status','')}({len(r.get('refetched', []))}件・初出まで{'届' if r.get('covers_first_post') else '未'}) 遅れ {r.get('delay_label','')} "
                   f"一次 {h.get('primary_source') or '-'} 出所 {h.get('source_label') or '-'} 範囲 {h.get('scope_judgement') or '-'} 受益 {codes}")
         else:
             print(f"  {ev['token']:14s} (未)    初出 {ev['first_posted_at']} 受益 {codes}")
