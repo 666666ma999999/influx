@@ -176,7 +176,11 @@ def build() -> tuple[str, dict]:
     tiers = {kpi: item["tier"] for kpi, item in meta["kpi_classification"].items()}
     watchlist = json.loads(WATCHLIST_PATH.read_text(encoding="utf-8"))["watchlist"]
     wl_by_name = {e["kpi_name"]: e for e in watchlist}
-    ledger = load_jsonl(LEDGER_PATH)
+    ledger_all = load_jsonl(LEDGER_PATH)
+    # 株式分割の権利落ち日の偽合図（paper_eval.flag_split_false_signals が印付け・2026-10-04）は候補から外す。
+    # 台帳には残るので件数だけ下に出す（ホスト実行のため paper_eval は import しない＝印のキーだけ見る）
+    split_excluded = [r for r in ledger_all if r.get("split_false_signal")]
+    ledger = [r for r in ledger_all if not r.get("split_false_signal")]
     names = code_names()
     today = dt.date.today()
     recent_floor = recent_bday_floor(today, RECENT_BDAYS)
@@ -366,6 +370,13 @@ def build() -> tuple[str, dict]:
             )
         lines.append("")
 
+    if split_excluded:
+        n_live = sum(1 for r in split_excluded if r["status"] in ("pending_entry", "open"))
+        lines.append(
+            f"> 株式分割の権利落ち日の見かけの急落で出た偽合図 **{len(split_excluded)}件**（うち保有中・エントリー前 {n_live}件）"
+            "はこのページの候補・件数から除外しています（台帳には `split_false_signal` 付きで残置）。"
+        )
+        lines.append("")
     lines.append("## 次に何が起きるか")
     lines.append("")
     lines.append(

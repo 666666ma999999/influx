@@ -136,6 +136,57 @@ def ledger_keys(records: list[dict]) -> set[tuple[str, str, str]]:
     return {(r["kpi_name"], r["code"], r["signal_date"]) for r in records}
 
 
+# --- 分割の権利落ち日の偽合図の印付け（2026-10-04 オーナー裁定・tasks/split_fix_live_lanes.md） -------
+# 反発系（sell_reg_trigger_rebound）の生成器は 2026-10-05 の合図日から未調整判定に切り替えたが、それより前に
+# 台帳へ入った行には分割で見かけの急落になっただけの偽合図が混ざる（実測 24 行: 7/30 1・8/28 2・9/29 21）。
+# 行は消さず価格も書き換えず、印だけ付けて成績表・本日レコメンドから外す（件数は表示する）。
+SPLIT_FALSE_KPIS = ("sell_reg_trigger_rebound",)
+SPLIT_FALSE_METHOD = "raw_recheck: L(D) <= C(D-1)*AdjFactor(D)*0.90 不成立（kpi_round23_signals.raw_drop_hit）"
+
+
+def flag_split_false_signals(records: list[dict], bday_index: dict[str, int], all_bdays: list[str]) -> dict:
+    """反発系の行を未調整値で判定し直し、急落でない行に split_false_signal=True を付ける（冪等・価格は不変）。
+
+    未調整の L・C は取得時点に依らないので、後日いつ判定し直しても同じ答えになる。未調整値が欠ける・
+    足のファイルが無い行は判定しない（印を付けない）。
+    """
+    import kpi_round23_signals  # 遅延 import（pandas 依存のため。判定式の正本は raw_drop_hit の1か所）
+
+    diag = {"checked": 0, "flagged": 0, "already": 0, "undecidable": 0}
+    today = jq_fetch.now_jst().strftime("%Y-%m-%d")
+    for rec in records:
+        if rec.get("kpi_name") not in SPLIT_FALSE_KPIS:
+            continue
+        if rec.get("split_false_signal"):
+            diag["already"] += 1
+            continue
+        d = rec.get("signal_date")
+        idx = bday_index.get(d)
+        if idx is None or idx == 0:
+            diag["undecidable"] += 1
+            continue
+        bars_d = load_bars_day_if_cached(d)
+        bars_p = load_bars_day_if_cached(all_bdays[idx - 1])
+        if bars_d is None or bars_p is None:
+            diag["undecidable"] += 1
+            continue
+        hit = kpi_round23_signals.raw_drop_hit(bars_d.get(rec["code"]), bars_p.get(rec["code"]))
+        if hit is None:
+            diag["undecidable"] += 1
+            continue
+        diag["checked"] += 1
+        if not hit:
+            rec["split_false_signal"] = True
+            rec["split_false_method"] = SPLIT_FALSE_METHOD
+            rec["split_false_flagged_at"] = today
+            diag["flagged"] += 1
+    return diag
+
+
+def is_split_false(rec: dict) -> bool:
+    return bool(rec.get("split_false_signal"))
+
+
 # --- pending_entry -> open ---------------------------------------------------------
 
 
@@ -501,6 +552,8 @@ def compute_scoreboard(records: list[dict]) -> dict[str, dict]:
         s = by_kpi.setdefault(
             kpi,
             {
+                # 分割の偽合図の印付き行（flag_split_false_signals）。成績・件数のどこにも数えず件数だけ出す
+                "n_split_excluded": 0,
                 "n_closed": 0,
                 "n_reach20": 0,
                 "sum_ret_net": 0.0,
@@ -516,6 +569,9 @@ def compute_scoreboard(records: list[dict]) -> dict[str, dict]:
                 "sum_ret_nostop": 0.0,
             },
         )
+        if is_split_false(rec):
+            s["n_split_excluded"] += 1
+            continue
         status = rec["status"]
         if status == "closed":
             s["n_closed"] += 1
@@ -577,8 +633,8 @@ def write_scoreboard_md(scoreboard: dict[str, dict], path: Path) -> None:
     lines += [
         "**判定対象＝primary exit(nostop・20営業日満期)**。stop8 は §7-J 凍結どおり参考の secondary。",
         "",
-        "| KPI | 稼働中(pending/open) | **確定n(nostop)** | **P(+20%)** | **EV(nostop)** | 参考:確定n(stop8) | 参考:EV(stop8) | 損切り | 時間切れ |",
-        "|---|---|---|---|---|---|---|---|---|",
+        "| KPI | 稼働中(pending/open) | **確定n(nostop)** | **P(+20%)** | **EV(nostop)** | 参考:確定n(stop8) | 参考:EV(stop8) | 損切り | 時間切れ | 分割の偽合図(除外) |",
+        "|---|---|---|---|---|---|---|---|---|---|",
     ]
     for kpi in sorted(scoreboard):
         s = scoreboard[kpi]
@@ -589,7 +645,7 @@ def write_scoreboard_md(scoreboard: dict[str, dict], path: Path) -> None:
         ev8 = f"{s['ev_net']:+.2%}{mark}" if s["ev_net"] is not None else "-"
         lines.append(
             f"| {kpi} | {active} | {s.get('n_nostop', 0)} | {p20n} | {evn} "
-            f"| {s['n_closed']} | {ev8} | {s['n_stop_loss']} | {s['n_time_exit']} |"
+            f"| {s['n_closed']} | {ev8} | {s['n_stop_loss']} | {s['n_time_exit']} | {s.get('n_split_excluded', 0)} |"
         )
     lines.append("")
     lines.append(
@@ -599,6 +655,8 @@ def write_scoreboard_md(scoreboard: dict[str, dict], path: Path) -> None:
         "サンプルサイズが極小である前向き記録の性質上、統計的な合否判定にはまだ使えない点に注意。"
         " **⚠️未成熟** が付いた行は時間切れ決済0件＝上記の早期決済バイアスが掛かっている（負けだけが"
         "先に確定する期間）。"
+        " **分割の偽合図(除外)** は株式分割の権利落ち日に見かけの急落で出た合図（未調整値で判定し直すと"
+        "急落でない行・`split_false_signal`）で、台帳には残すが上のどの件数・成績にも数えない（2026-10-04）。"
     )
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -613,6 +671,9 @@ def run_update(records: list[dict]) -> tuple[list[dict], dict, dict, dict]:
     calendar_days = measure_base_rate.load_calendar_days()
     all_bdays = measure_base_rate.all_business_days(calendar_days)
     bday_index = {d: i for i, d in enumerate(all_bdays)}
+    split_diag = flag_split_false_signals(records, bday_index, all_bdays)
+    if split_diag["flagged"]:
+        print(f"分割の偽合図に印: 新規 {split_diag['flagged']} 行（既存 {split_diag['already']} 行）")
     fill_diag = fill_pending_entries(records, bday_index, all_bdays)
     open_diag = update_open_positions(records, bday_index, all_bdays)
     parallel_diag = update_parallel_exit_tracking(records, bday_index, all_bdays)
