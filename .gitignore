@@ -101,3 +101,6 @@ data/paper_trades/recent_signals_cache.json
 data/tdnet/index/
 # flea_panel の生観測（1日≈400KB・daily.jsonl と state.json は追跡する）
 data/flea_panel/snapshots/
+
+# 実行時ロック（short_forward_runner 等の二重起動防止・中身なし）
+data/paper_trades/*.lock
