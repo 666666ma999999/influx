@@ -1,5 +1,5 @@
 {
-  "_comment": "Yahoo!フリマ 固定パネル（P-INF-19 オーナー裁定 a・2026-09-22）。指数の無い消費財の〈値上がり／売れ残り増／成約急増〉を出品ID単位で日次追跡する。板は Yahoo!フリマ 1 枚（出品中= 既定URL・売却済= ?sold=1・各先頭100件）。クエリは商品群表 docs/product-groups.md の消費財 group id に紐づける。銘柄は付けない（受益カードは別系統）。 2026-09-23 改訂: 売却済は endTime の新しい順で前日分を頁送り（max_pages）・出品中の総数 totalResultsAvailable を在庫として記録。must/exclude はタイトルの必須語/除外語（省略可）。 2026-09-23 P-INF-20: 観測台帳（docs/product-groups.md §5）の一致行でフリマ列ありを追加（group= 銘柄コード・resale=true は列挙のみで株に起因に数えない）。",
+  "_comment": "Yahoo!フリマ 固定パネル（P-INF-19 オーナー裁定 a・2026-09-22）。指数の無い消費財の〈値上がり／売れ残り増／成約急増〉を出品ID単位で日次追跡する。板は Yahoo!フリマ 1 枚（出品中= 既定URL・売却済= ?sold=1・各先頭100件）。クエリは商品群表 docs/product-groups.md の消費財 group id に紐づける。銘柄は付けない（受益カードは別系統）。 2026-09-23 改訂: 売却済は endTime の新しい順で前日分を頁送り（max_pages）・出品中の総数 totalResultsAvailable を在庫として記録。must/exclude はタイトルの必須語/除外語（省略可）。 2026-09-23 P-INF-20: 観測台帳（docs/product-groups.md §5）の一致行でフリマ列ありを追加（group= 銘柄コード・resale=true は列挙のみで株に起因に数えない）。 2026-10-04 P-INF-29 案5: subject= configs/x_shortage_map.json の受益 subject id（任意・daily 行に出す）。受益銘柄は subject 経由で引けるが判断・発火には使わない（記録だけ）。紐付けは secondary-resale（resale 品目 7 本）のみ。kaden-neage（定価改定）・aircon-reizouko（量販の新品販売）はフリマ中古が代理にならず、used-car は既存『中古車 車体』の観測がラジコン・膜厚計等で車体を測れていない＝紐付けなし（tasks/flea_panel_subject_link.md）。",
   "board": "yahoo_flea",
   "search_url": "https://paypayfleamarket.yahoo.co.jp/search/{query}",
   "sold_param": "sold=1",
@@ -22,7 +22,8 @@
         "ソフト"
       ],
       "resale": true,
-      "company": "任天堂"
+      "company": "任天堂",
+      "subject": "secondary-resale"
     },
     {
       "id": "ps5-honntai",
@@ -39,7 +40,8 @@
         "スタンド"
       ],
       "resale": true,
-      "company": "ソニーグループ"
+      "company": "ソニーグループ",
+      "subject": "secondary-resale"
     },
     {
       "id": "lizardon-psa10",
@@ -48,7 +50,8 @@
       "must": [
         "psa10"
       ],
-      "resale": true
+      "resale": true,
+      "subject": "secondary-resale"
     },
     {
       "id": "pokeca-151-box",
@@ -60,7 +63,8 @@
       "exclude": [
         "カード単品"
       ],
-      "resale": true
+      "resale": true,
+      "subject": "secondary-resale"
     },
     {
       "id": "rtx5090",
@@ -88,7 +92,8 @@
       "query": "ワンピース P.O.P フィギュア",
       "group": "7832",
       "resale": true,
-      "company": "バンダイナムコホールディングス"
+      "company": "バンダイナムコホールディングス",
+      "subject": "secondary-resale"
     },
     {
       "id": "285a-kioxia-ssd",
@@ -247,7 +252,8 @@
         "完成品",
         "ジャンク",
         "パーツ"
-      ]
+      ],
+      "subject": "secondary-resale"
     },
     {
       "id": "8050-グランドセイコー",
@@ -307,7 +313,8 @@
         "まとめ売り",
         "引退",
         "オリパ"
-      ]
+      ],
+      "subject": "secondary-resale"
     },
     {
       "id": "7951-ヤマハ-電子ピアノ",

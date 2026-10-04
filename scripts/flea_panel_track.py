@@ -337,7 +337,9 @@ def run(cfg: Dict[str, Any], today: str, data_dir: Path, fetch=fetch_html) -> in
 
     for q in cfg["queries"]:
         qid, query = q["id"], q["query"]
+        # subject= X 品薄対応表（configs/x_shortage_map.json）の受益 subject id。記録だけ＝判断・発火に使わない（P-INF-29 案5）
         row: Dict[str, Any] = {"date": today, "query_id": qid, "query": query, "group": q.get("group"),
+                               "subject": q.get("subject"),
                                "board": cfg["board"], "window": f"{win_start.date()}", "status": "ok"}
         try:
             open_html = fetch(build_url(cfg, query, sold=False), cfg["user_agent"])

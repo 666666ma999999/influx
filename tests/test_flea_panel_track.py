@@ -205,5 +205,51 @@ class RunTest(unittest.TestCase):
             self.assertEqual(rc, 2)
 
 
+class SubjectLinkTest(unittest.TestCase):
+    """P-INF-29 案5: クエリの subject（X 品薄対応表の受益 subject id）を daily 行に出す（記録だけ）。"""
+
+    def test_subject_written_to_daily_row(self):
+        cfg = dict(CFG, queries=[{"id": "q1", "query": "Switch 2 本体", "group": "7974", "subject": "secondary-resale"},
+                                 {"id": "q2", "query": "Switch 2 本体", "group": "7974"}])
+        d1 = "2026-08-31"
+        def f(url, ua):
+            if "page=" in url:
+                return page([], total=0)
+            return page([item(1, "SOLD" if "sold=1" in url else "OPEN", 100, day=d1)])
+        with tempfile.TemporaryDirectory() as d:
+            rc = fpt.run(cfg, "2026-09-01", Path(d), fetch=f)
+            self.assertEqual(rc, 0)
+            rows = {json.loads(l)["query_id"]: json.loads(l) for l in (Path(d) / "daily.jsonl").read_text().splitlines()}
+            self.assertEqual(rows["q1"]["subject"], "secondary-resale")
+            self.assertIsNone(rows["q2"]["subject"])   # 無いクエリは null（既存クエリの行の形は変えない）
+
+    def test_subject_written_on_error_row(self):
+        cfg = dict(CFG, queries=[{"id": "q1", "query": "x", "subject": "secondary-resale"}])
+        with tempfile.TemporaryDirectory() as d:
+            fpt.run(cfg, "2026-09-01", Path(d), fetch=lambda u, ua: "<html>Error Page</html>")
+            row = json.loads((Path(d) / "daily.jsonl").read_text().splitlines()[0])
+            self.assertEqual((row["status"], row["subject"]), ("error", "secondary-resale"))
+
+    def test_config_subjects_exist_and_actionable(self):
+        """実 config の subject は x_shortage_map に実在し actionable=true（判定値の取り違え・綴り違いを止める）。"""
+        root = Path(__file__).resolve().parent.parent
+        cfg = json.loads((root / "configs" / "flea_panel.json").read_text(encoding="utf-8"))
+        smap = json.loads((root / "configs" / "x_shortage_map.json").read_text(encoding="utf-8"))
+        subjects = {s["id"]: s for s in smap["subjects"]}
+        linked = [q for q in cfg["queries"] if q.get("subject")]
+        # レビュー済みの紐付け（2026-10-04 Codex 指摘で確定）。変える時は tasks/flea_panel_subject_link.md の判定表と同時に
+        expected = {q: "secondary-resale" for q in (
+            "switch2-honntai", "ps5-honntai", "lizardon-psa10", "pokeca-151-box",
+            "figure-onepiece-pop", "7832-ガンプラ-未組立", "9766-遊戯王-25th-クォーターセンチュリー")}
+        self.assertEqual({q["id"]: q["subject"] for q in linked}, expected)
+        # 測れないと判定した subject は紐付けない（定価改定／量販の新品販売／車体が取れていない）
+        self.assertFalse({"kaden-neage", "aircon-reizouko", "used-car"} & {q["subject"] for q in linked})
+        for q in linked:
+            self.assertIn(q["subject"], subjects, q["id"])
+            self.assertTrue(subjects[q["subject"]].get("actionable"), q["id"])
+        ids = [q["id"] for q in cfg["queries"]]
+        self.assertEqual(len(ids), len(set(ids)))   # query_id の重複は state のキーを混ぜる
+
+
 if __name__ == "__main__":
     unittest.main()
