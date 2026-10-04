@@ -103,6 +103,22 @@ class TestLaneScan(unittest.TestCase):
         self.assertEqual(T.classify("値上げのお知らせ"), ("price", False))
         self.assertEqual(T.classify(""), (None, False))
 
+    def test_v1_capex_group_does_not_change_v0(self):
+        # P-INF-30: v1 の「設備」は v0 の 3 グループに当たらない表題だけ・行の rule_version で別採点
+        for title in ("量産体制構築に向けた設備投資に関するお知らせ", "生産設備の増設について",
+                      "新たな生産拠点の設立に関するお知らせ", "第二工場の建設に関するお知らせ", "量産開始のお知らせ"):
+            self.assertEqual(T.classify(title), ("capex", False), title)
+            self.assertEqual(T.rule_version_of("capex"), "v1-title")
+        # v0 の語が同居したら v0 のグループのまま（v0 の事象は 1 件も変わらない）
+        self.assertEqual(T.classify("生産能力増強に向けた設備投資の追加に関するお知らせ"), ("capacity", False))
+        self.assertEqual(T.rule_version_of("capacity"), T.RULE_VERSION)
+        self.assertEqual(T.classify("（訂正）設備投資に関するお知らせ"), (None, False), "除外語は v1 にも効く")
+        self.assertEqual(T.classify("2026年9月度 受注速報 増設"), ("order", True), "定期の優先は v1 より上")
+        rows = {"10": {"id": "10", "pubdate": "2026-09-30 15:30:00", "company_code": "49710",
+                       "company_name": "メック", "title": "生産設備の増設について"}}
+        got = T.scan(rows, self.since, self.until, CENTER_PIN, "t")
+        self.assertEqual([(r["group"], r["rule_version"]) for r in got], [("capex", "v1-title")])
+
     def test_pubdate_range(self):
         rows = T.load_index(self.index, dt.date(2026, 1, 1))
         cands = T.scan(rows, dt.date(2026, 9, 29), dt.date(2026, 9, 29), CENTER_PIN, "t")
@@ -190,7 +206,7 @@ class TestRecoSection(unittest.TestCase):
         self.assertEqual(n, 2, "窓より古い id=8 は出ない")
         text = "\n".join(lines)
         self.assertIn("## 🏭 企業発（開示表題・供給側）: 2 件", text)
-        self.assertIn("| 日時 | 銘柄 | 社名 | 区分(増産/受注/価格) | 表題(60字) | TOP1000 |", text)
+        self.assertIn("| 日時 | 銘柄 | 社名 | 区分(増産/受注/価格/設備) | 表題(60字) | TOP1000 |", text)
         self.assertIn("| 受注（定期） |", text, "periodic 行には「定期」を付ける")
         self.assertIn("| 増産 |", text)
         row1 = next(l for l in lines if "| 4971 |" in l)

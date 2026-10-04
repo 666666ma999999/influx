@@ -47,7 +47,13 @@ GROUP_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("order", re.compile(r"大口受注|受注(獲得|決定|のお知らせ)|受注速報")),
     ("price", re.compile(r"価格改定|値上げ")),
 )
-GROUP_LABEL = {"capacity": "増産", "order": "受注", "price": "価格"}
+# v1 の追加グループ（P-INF-30 オーナー裁定 A 2026-10-04・docs §16o-3 追記12）。v0 の 3 グループに当たらなかった
+# 表題だけに当てる＝v0 の事象は 1 件も変わらない。行の rule_version を v1-title にして v0 と別に採点する。
+RULE_VERSION_V1 = "v1-title"
+V1_GROUP_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
+    ("capex", re.compile(r"設備投資|増設|生産拠点|工場の建設|量産")),
+)
+GROUP_LABEL = {"capacity": "増産", "order": "受注", "price": "価格", "capex": "設備"}
 # 除外（ETF・投信の基準価額、訂正・経過の事務開示）
 EXCLUDE_RE = re.compile(r"ETF|基準価額|投資信託|訂正|経過")
 # 月次の定期開示（order だが periodic=true・表には出す・採点母集団から外す）
@@ -68,10 +74,15 @@ def classify(title: str) -> tuple[str | None, bool]:
     # （「新工場の稼働状況および9月度受注速報」が capacity に化けて採点母集団に混入する・Codex CONFIRMED-1）
     if PERIODIC_RE.search(t):
         return "order", True
-    for group, pat in GROUP_PATTERNS:
+    for group, pat in GROUP_PATTERNS + V1_GROUP_PATTERNS:   # v0 を先に評価（v1 は v0 の取りこぼしだけ）
         if pat.search(t):
             return group, False
     return None, False
+
+
+def rule_version_of(group: str) -> str:
+    """グループ → 語の版（v1 で足したグループだけ v1-title・残りは凍結の v0-title）。"""
+    return RULE_VERSION_V1 if group in {g for g, _ in V1_GROUP_PATTERNS} else RULE_VERSION
 
 
 def load_index(index_dir: Path = INDEX_DIR, since: dt.date = dt.date.min) -> dict[str, dict]:
@@ -120,7 +131,7 @@ def scan(rows: dict[str, dict], since: dt.date, until: dt.date,
             "group": group,
             "periodic": periodic,
             "in_top1000": code4 in center_pin,
-            "rule_version": RULE_VERSION,
+            "rule_version": rule_version_of(group),
             "recorded_at": recorded_at,
         })
     out.sort(key=lambda r: (r["pubdate"] or "", r["id"]))

@@ -206,7 +206,7 @@ def tdnet_supply_section(recent_floor: dt.date) -> tuple[list[str], int, str | N
     )
     lines.append("")
     if rows:
-        lines.append("| 日時 | 銘柄 | 社名 | 区分(増産/受注/価格) | 表題(60字) | TOP1000 |")
+        lines.append("| 日時 | 銘柄 | 社名 | 区分(増産/受注/価格/設備) | 表題(60字) | TOP1000 |")
         lines.append("|---|---|---|---|---|---|")
         for r in sorted(rows, key=lambda r: (r.get("pubdate") or "", r.get("id") or ""), reverse=True):
             kind = tdnet_supply_lane.GROUP_LABEL.get(r.get("group"), r.get("group") or "")
@@ -219,10 +219,10 @@ def tdnet_supply_section(recent_floor: dt.date) -> tuple[list[str], int, str | N
             )
         lines.append("")
         lines.append(
-            "企業が自分で言う供給側（増産・新工場・大口受注・価格改定）の開示表題を機械で拾っただけ"
-            f"（語グループ {tdnet_supply_lane.RULE_VERSION}・本文は見ていない）。窓= 完了した直近 {TDNET_SUPPLY_BDAYS} 営業日"
+            "企業が自分で言う供給側（増産・新工場・大口受注・価格改定・設備投資）の開示表題を機械で拾っただけ"
+            f"（語グループ {tdnet_supply_lane.RULE_VERSION}＋「設備」は {tdnet_supply_lane.RULE_VERSION_V1}・本文は見ていない）。窓= 完了した直近 {TDNET_SUPPLY_BDAYS} 営業日"
             "＋当日分（毎朝 07:30 の生成時点では当日分は未着・手動で夕方に再生成すると当日分も出る）。「（定期）」= 月次の受注速報＝"
-            "採点母集団から外す。採点の事前登録は docs/price-watch-universe.md §16o-3 追記10（事象= 定期でなく TOP1000 内・30 件で 1 回）。"
+            "採点母集団から外す。採点の事前登録は docs/price-watch-universe.md §16o-3 追記10（v0）・追記12（v1＝設備・v0 と別に採点）（事象= 定期でなく TOP1000 内・30 件で 1 回）。"
         )
     else:
         lines.append("（直近の該当開示なし）")
