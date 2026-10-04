@@ -1757,6 +1757,13 @@ pvc: 大連塩ビ先物の長期日足は Investing.com（履歴 API はブロ�
   - 道具= 追記 9 の `_tmp_x_leadlag_now.py` を事象の入口だけ差し替えて流用（新規スクリプトを増やさない）。
   - 偏り（先に明記）= 候補語は入口語（値上げ・品薄 等・いいね 20 以上）を含む投稿からしか出ない／対応付けは人の判断（付けた日を subject に残す）／語の初出は発見器が走り始めた 2026-07-27 以降しか分からない（それ以前からある語は first_seen=true でも真の初出でない＝最初の数便の first_seen は参考扱い）。
 
+**追記9d（2026-10-04・オーナー裁定 a〈P-INF-26〉→ 初出レーンの事象に「①中身の裏取り」の列を足す・4 モデル議論 2026-10-03 の一致 K1〜K5・単独 S1〜S5 の実装）**:
+- **何を足したか**: `scripts/x_factcheck_draft.py`（draft／list／fill）と append-only 台帳 `data/x_price_watch/factcheck_ledger.jsonl`。事象の定義は追記9c と同一（事象= first_seen=true・first_posted_at あり・`subjects_for_token` が買い候補 sign+ confirmed/provisional を返す語・同じ語は最初の便だけ）＝②の採点定義は変えない（`_tmp_x_leadlag_now.py` 流用のまま）。
+- **機械が下書きする列**: `refetched`（K4・初出の JST 日を 1 日窓・min_faves 20・live タブで取り直し・最古順 30 件・status_id／author／likes／posted_at_full／text／urls）／`bundles`（K5・同一記事の束ね= 本文の URL〈t.co 以外・scheme/www 無視〉か見出し先頭 10 字）／`source_url`・`source_published_at`（S4・束の URL から article:published_time・JSON-LD datePublished・`<time datetime>` を UTC で 1 つ・取れなければ空）／`delay_label`（投稿初出 − 元報道公開: 速報 <6h／当日 ≤24h／週内 ≤7d／再流通 >7d／投稿が先／未確認）／`covers_first_post`（取り直しが初出投稿の時刻まで届いたか）。
+- **人が埋める列（`fill`・週 1 回）**: `human.primary_source` ○/△/×（一次ソースに到達したか）・`human.source_label` 一次/二次/未確認・`human.scope_judgement` 一致/範囲拡大/未確認（S3= 投稿の主張を〈存在／範囲／予測〉に割り、元報道が裏付ける範囲か）・`human.note`・`human.filled_at`。因果は書かない（Q1 a）。生活系（受益表に主題が無い語）は対象外（Q2 a）。
+- **初回実走（2026-10-04・事象 1 語= マイクロン・10-02 便）**: 取り直し 13 件・束 13（URL を含む投稿 0＝全部が相場実況の散文）・`source_url` 空→ 遅れ「未確認」・`covers_first_post=false`（初出 16:52 JST に対し取り直しの最古は 21:00 JST＝live タブは新しい順で 3 スクロールでは当日の早い側に届かない）。**既知の穴**= ①URL を含まない事象は元報道の時刻が機械では取れず人が埋める ②取り直しの深さ（`PER_QUERY=40`・`MAX_SCROLLS=3`）では投稿の多い語の初出投稿まで届かない＝`covers_first_post` を見て人が判断。回帰= `tests/test_x_factcheck_draft.py`（13 件）。
+- **数え方**: 母集団= `python3 scripts/x_factcheck_draft.py list` の「事象（母集団）N 語」。採点（②）はこの台帳を使わず追記9c のまま＝台帳は①の裏取りの記録だけ。
+
 ## 16p. 納期逼迫レーンの入場試験 → **不採用**（2026-08-04・前提が実測で崩れた）
 
 裁定4（2026-08-04）で「需給以外の第一手＝納期逼迫」を採ったが、**クエリを追加する前に実収集で
