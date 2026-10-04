@@ -192,6 +192,17 @@ class Ledger(unittest.TestCase):
         self.assertFalse(fc.needs_draft({"status": "filled", "refetch_status": "error"}, fetch=True))
         self.assertFalse(fc.needs_draft({"status": "draft", "refetch_status": "error"}, fetch=False))
 
+    def test_fill_with_source_time_relabels_delay_and_rejects_naive_time(self):
+        self.assertEqual(self._run(["draft", "--no-fetch"]), 0)
+        self.assertEqual(self._run(["fill", "--token", "マイクロン", "--primary", "△", "--label", "二次", "--scope", "一致",
+                                    "--source-time", "2026-09-24T10:00:00+09:00", "--source-url", "https://x.example/r"]), 0)
+        cur = fc.ledger_state(fc.read_jsonl(self.ledger))["マイクロン"]
+        self.assertEqual(cur["source_published_at"], "2026-09-24T01:00:00Z")
+        self.assertEqual(cur["delay_label"], "週内")        # 初出 09-25T10:00Z − 元報道 09-24T01:00Z = 33h
+        self.assertEqual(cur["source_url"], "https://x.example/r")
+        self.assertEqual(self._run(["fill", "--token", "マイクロン", "--primary", "△", "--label", "二次", "--scope", "一致",
+                                    "--source-time", "2026-09-24T10:00:00"]), 2)
+
     def test_dry_run_writes_nothing(self):
         self.assertEqual(self._run(["draft", "--no-fetch", "--dry-run"]), 0)
         self.assertFalse(self.ledger.exists())

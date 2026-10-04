@@ -317,11 +317,26 @@ def append_row(path: Path, row: dict) -> None:
         f.write(json.dumps(row, ensure_ascii=False) + "\n")
 
 
-def fill_row(prev: dict, primary: str, label: str, scope: str, note: str) -> dict:
-    """人の判定を載せた新しい行（元の下書きを複製して human と status を更新）。"""
+def fill_row(prev: dict, primary: str, label: str, scope: str, note: str,
+             source_published_at: str = "", source_url: str = "") -> dict:
+    """人の判定を載せた新しい行（元の下書きを複製して human と status を更新）。
+
+    source_published_at（人が確かめた元報道の公開時刻・時刻とタイムゾーン必須）を渡すと遅れラベルを付け直す
+    （URL 無しの事象は機械で時刻が取れない＝人が埋める経路・2026-10-04 マイクロン実例）。
+    """
     if primary not in PRIMARY_CHOICES or label not in LABEL_CHOICES or scope not in SCOPE_CHOICES:
         raise ValueError(f"選択肢外: primary={primary} label={label} scope={scope}")
+    if source_published_at:
+        dt = parse_iso(source_published_at)
+        if dt is None or dt.tzinfo is None:
+            raise ValueError(f"元報道の時刻は時刻とタイムゾーンを両方持つ ISO で: {source_published_at}")
+        source_published_at = dt.astimezone(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
     row = json.loads(json.dumps(prev, ensure_ascii=False))
+    if source_published_at:
+        row["source_published_at"] = source_published_at
+        row["delay_label"] = delay_label(row.get("first_posted_at", ""), source_published_at)
+    if source_url:
+        row["source_url"] = source_url
     row["status"] = "filled"
     row["human"] = {"primary_source": primary, "source_label": label, "scope_judgement": scope, "note": note,
                     "filled_at": datetime.now(timezone.utc).isoformat(timespec="seconds")}
@@ -383,8 +398,13 @@ def cmd_fill(args) -> int:
     if prev is None:
         print(f"✗ 台帳に無い語: {args.token}（先に draft）", file=sys.stderr)
         return 2
-    append_row(LEDGER, fill_row(prev, args.primary, args.label, args.scope, args.note or ""))
-    print(f"[filled] {args.token}: 一次 {args.primary} 出所 {args.label} 範囲 {args.scope}")
+    try:
+        row = fill_row(prev, args.primary, args.label, args.scope, args.note or "", args.source_time, args.source_url)
+    except ValueError as exc:
+        print(f"✗ {exc}", file=sys.stderr)
+        return 2
+    append_row(LEDGER, row)
+    print(f"[filled] {args.token}: 一次 {args.primary} 出所 {args.label} 範囲 {args.scope} 遅れ {row['delay_label']}")
     return 0
 
 
@@ -404,6 +424,8 @@ def main() -> int:
     f.add_argument("--label", required=True, choices=LABEL_CHOICES, help="出所ラベル")
     f.add_argument("--scope", required=True, choices=SCOPE_CHOICES, help="投稿の主張と元報道の範囲")
     f.add_argument("--note", default="")
+    f.add_argument("--source-time", default="", help="人が確かめた元報道の公開時刻（例 2026-09-30T16:30:00-04:00）→ 遅れラベルを付け直す")
+    f.add_argument("--source-url", default="", help="元報道の URL")
     f.set_defaults(fn=cmd_fill)
     args = ap.parse_args()
     return args.fn(args)
