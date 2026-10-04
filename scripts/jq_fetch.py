@@ -316,6 +316,84 @@ def bars_fetch_dates() -> dict[str, str]:
     return out
 
 
+@functools.lru_cache(maxsize=1)
+def bars_fetch_history() -> dict[str, list[str]]:
+    """{bars ファイルの日付: 保存した時刻(ISO)の一覧}（fetch_log.jsonl の kind=bars・status=saved・記録順）。"""
+    out: dict[str, list[str]] = {}
+    if not LOG_PATH.exists():
+        return out
+    with LOG_PATH.open(encoding="utf-8") as f:
+        for line in f:
+            try:
+                r = json.loads(line)
+            except ValueError:
+                continue
+            if r.get("kind") == "bars" and r.get("status") == "saved" and r.get("date") and r.get("ts"):
+                out.setdefault(r["date"], []).append(r["ts"])
+    return out
+
+
+def _parse_ts(ts: str) -> Optional[datetime.datetime]:
+    try:
+        t = datetime.datetime.fromisoformat(ts.replace("Z", "+00:00"))
+    except (TypeError, ValueError):
+        return None
+    return t if t.tzinfo else t.replace(tzinfo=JST)
+
+
+def bars_fetch_ts_asof(day: str, asof: Optional[str]) -> Optional[str]:
+    """day の bars ファイルが asof（ISO 時刻）の時点で最後に保存された時刻。asof=None なら最新の保存時刻。
+    記録が無ければ None。「ある時点で読んだ足が、どの分割まで反映していたか」を後から復元するのに使う
+    （後日の取り直しで最新の取得日だけを見ると、昔読んだ価格の尺度を取り違える・2026-10-04 Codex）。"""
+    hist = bars_fetch_history().get(day) or []
+    if asof is None:
+        return hist[-1] if hist else None
+    cut = _parse_ts(asof)
+    best, best_t = None, None
+    for ts in hist:
+        t = _parse_ts(ts)
+        if t is None or cut is None or t > cut:
+            continue
+        if best_t is None or t >= best_t:
+            best, best_t = ts, t
+    return best
+
+
+def split_scale_base(day: str, fetched_ts: Optional[str]) -> str:
+    """day の足（fetched_ts に取得）の Adj* が反映している分割の基準日＝ split_scale の base_date に渡す値。
+
+    取得日より前の分割は反映済み（split_scale の規約）なので、基準日 = max(day, 取得日の前日)。
+    取得時刻が不明なら day（従来の仮定）。short_forward_runner の入口価格の尺度と同じ規則（正本はここ）。
+    """
+    if not fetched_ts:
+        return day
+    got = datetime.date(int(fetched_ts[:4]), int(fetched_ts[5:7]), int(fetched_ts[8:10]))
+    prev_cal = (got - datetime.timedelta(days=1)).strftime("%Y%m%d")
+    return max(day, prev_cal)
+
+
+def offline_business_days() -> Optional[list[str]]:
+    """calendar.json.gz の全営業日（取得はしない・無ければ None）。標準ライブラリだけで動く（ホスト実行用）。"""
+    path = DATA_ROOT / "calendar.json.gz"
+    if not path.exists():
+        return None
+    days = [(rec["Date"].replace("-", ""), rec["HolDiv"]) for rec in read_json_gz(path)["data"]]
+    return sorted(d for d, h in days if h in BUSINESS_HOLDIV)
+
+
+def split_scan_upper(eval_day: str, eval_fetched_ts: Optional[str], scale_base: str) -> str:
+    """2つの足（評価日の足と、基準 scale_base の尺度で読んだ入口の足）の尺度合わせに効く分割日の上限。
+
+    評価日の足は「分割日<=評価日 か 分割日<取得日」の分割を、入口の足は「分割日<=scale_base」の分割を反映する
+    （split_scale の規約）。どちらかが反映しうる分割日はこの日まで＝分割走査はこの日まで欠けなく要る
+    （Codex 2026-10-04: 評価日の足を後日取り直すと、最新ファイルより後の分割まで効く）。
+    """
+    up = max(eval_day, scale_base)
+    if eval_fetched_ts:
+        up = max(up, split_scale_base(eval_day, eval_fetched_ts))
+    return up
+
+
 def split_scale(day: str, base_date: str, splits: list[tuple[str, float]]) -> float:
     """day の足の Adj* に掛けると base_date 時点の尺度になる倍率。splits=[(分割日, AdjFactor)]。
 
