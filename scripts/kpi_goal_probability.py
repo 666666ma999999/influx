@@ -46,6 +46,7 @@
    （admission脱落）なし等の別方向の単純化も混在しており、これらは逆方向にも作用しうるため
    厳密な意味での「上限」ではない点に注意（本モデルの限界の一つ・詳細はモデル仮定8参照）。
    経営計画上の目安として利用し、個別系統の合否判定には使わない。
+   ※ 2026-10-04 以降の「正式合格」は合格基準 v2（catalog §6付記V＝v1 ∩ 絶対EVと対TOPIX超過EVの頑健条件）。本モデルは v2 の追加条件（対TOPIX超過）を織り込まない＝その分さらに楽観側。
 
 Usage:
     docker compose run --rm xstock python scripts/kpi_goal_probability.py

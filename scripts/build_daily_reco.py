@@ -23,6 +23,7 @@ sys.path.insert(0, str(SCRIPTS))
 
 import jq_fetch  # noqa: E402  (stdlib-only・DATA_ROOT と read_json_gz を再利用)
 from kpi_clock_sla import KPI_SHORT_JA  # noqa: E402  (表示名の正本を再利用)
+import formal_excess_v2  # noqa: E402  (正式合格の数え方の正本＝合格基準 v2・catalog §6付記V)
 
 LEDGER_PATH = REPO / "data/paper_trades/ledger.jsonl"
 META_PATH = REPO / "config/recipe_shelf_meta.json"
@@ -296,10 +297,13 @@ def build() -> tuple[str, dict]:
     lines: list[str] = []
     lines.append("# 本日の株レコメンド（配信ループ・表示専用）")
     lines.append("")
-    lines.append("> 毎朝自動更新・手書き禁止。**正式合格0本の間、ここに載る候補はすべて「ペーパー提案」**（前向き検証中・実弾の推奨ではない）。")
+    formal_n = formal_excess_v2.count_formal_passes(formal_excess_v2.load_trials())
+    lines.append("> 毎朝自動更新・手書き禁止。**正式合格（合格基準 v2＝v1 ∩ 絶対EVと対TOPIX超過EVの頑健条件）0本の間、ここに載る候補はすべて「ペーパー提案」**（前向き検証中・実弾の推奨ではない）。")
     lines.append("> 金額・枚数・倍率・配分は提案しない（catalog §0付記II 一方向ルール）。本ファイルは判定・台帳・αに一切影響しない表示層。")
     lines.append("")
-    lines.append("## ✅ 実戦投入可（正式合格）: 0本")
+    lines.append(f"## ✅ 正式合格（合格基準 v2）: {formal_n}本（trials.jsonl の formal_pass・SUE ペアは最大1本で数える）")
+    lines.append("")
+    lines.append(f"## 🟢 実戦投入可（棚の usable・正式合格とは別欄）: {_shelf_usable_count()}（正本= output/recipe_shelf.md）")
     lines.append("")
     lines.append(f"## 🌟 有力候補（過去関門を全通過した系統の発火・直近{RECENT_BDAYS}営業日）: {len(ranked_codes)}銘柄")
     lines.append("")
@@ -445,7 +449,7 @@ def build() -> tuple[str, dict]:
         f"- 前向き成績の初回読み取り目安: **{first_read}**"
         f"（最古エントリー {min(open_entries) if open_entries else '—'} の nostop {NOSTOP_BDAYS}営業日満期・土日祝スキップの概算）"
     )
-    lines.append("- 正式合格の初回判定: 最短 2027-08（output/recipe_shelf.md 参照）")
+    lines.append("- 正式合格の初回判定: 最短 2027-08（output/recipe_shelf.md 参照）・判定は合格基準 v2（catalog §6付記V＝絶対EVに加えて対TOPIX超過EVも必須）")
     lines.append("")
     lines.append(f"生成時刻: {dt.datetime.now().astimezone().isoformat(timespec='seconds')}")
     lines.append(
@@ -470,6 +474,19 @@ def build() -> tuple[str, dict]:
         "tdnet_supply_error": ts_error,
     }
     return "\n".join(lines), summary
+
+
+def _shelf_usable_count() -> str:
+    """棚（output/recipe_shelf.md・build_recipe_shelf.py が生成）の見出しから「実戦投入可」の本数を写す。
+    数え方の正本は棚側＝ここでは再計算しない。棚が無い・形式が違う時は「未取得」と出す（0本と偽らない）。"""
+    import re
+
+    try:
+        text = (REPO / "output/recipe_shelf.md").read_text(encoding="utf-8")
+    except OSError:
+        return "未取得"
+    m = re.search(r"実戦投入可 \*\*(\d+)本\*\*", text)
+    return f"{m.group(1)}本" if m else "未取得"
 
 
 def main() -> None:

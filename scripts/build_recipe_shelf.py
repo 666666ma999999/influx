@@ -14,6 +14,11 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
+import sys as _sys
+
+_sys.path.insert(0, str(Path(__file__).resolve().parent))
+import formal_excess_v2  # noqa: E402  (正式合格の数え方の正本・stdlib のみで import 可)
+
 
 REPO = Path(__file__).resolve().parents[1]
 META_PATH = REPO / "config/recipe_shelf_meta.json"
@@ -241,10 +246,10 @@ def build() -> str:
 
     # A formal pass must identify itself as such; loose words such as "survived"
     # are deliberately not promoted to a pass by the honesty guard.
-    formal_pass = any(
-        re.fullmatch(r"(?:formal_|confirm_)?pass(?:ed)?", str(row.get("verdict", "")).lower())
-        for row in trials
-    )
+    # 正式合格の数え方の正本= formal_excess_v2.count_formal_passes（合格基準 v2・catalog §6付記V）。
+    # 旧 pass / confirm_pass / 版なし formal_pass はここでは数えない。
+    formal_pass_count = formal_excess_v2.count_formal_passes(trials)
+    formal_pass = formal_pass_count > 0
     warning = ""
     if usable_families and not formal_pass:
         warning = "\n\n> WARNING: usable family が存在しますが、trials.jsonl に正式合格 verdict がありません。"
@@ -308,7 +313,7 @@ def build() -> str:
 
 > 毎朝自動更新・手書き禁止・正本=この生成物
 
-# 実戦投入可 **{len(usable_families)}本**（正式合格）／ 初回判定 最短 {earliest} ／ 候補 {len(competing_families)} family が本番競走中{warning}
+# 正式合格（合格基準 v2）**{formal_pass_count}本** ／ 実戦投入可 **{len(usable_families)}本** ／ 初回判定 最短 {earliest} ／ 候補 {len(competing_families)} family が本番競走中{warning}
 
 ## 主表
 
