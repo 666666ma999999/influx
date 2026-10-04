@@ -118,6 +118,18 @@ class PublishedTime(unittest.TestCase):
         self.assertEqual(fc.parse_published_time('<time datetime="2026-10-01T12:00:00Z">'), "")
 
 
+class RefetchQuery(unittest.TestCase):
+    def test_query_and_window_match_discoverer(self):
+        self.assertEqual(fc.build_refetch_query("メモリー", ["値上げ", "品薄"]), "メモリー (値上げ OR 品薄)")
+        self.assertEqual(fc.refetch_window("2026-09-30", "2026-09-30T21:59:03.000Z"), ("2026-09-30", "2026-10-01"))
+        self.assertEqual(fc.refetch_window("", "2026-09-30T21:59:03.000Z"), ("2026-10-01", "2026-10-02"))  # 便日なし→初出の JST 日
+
+    def test_old_version_draft_is_refetched_but_filled_is_not(self):
+        self.assertTrue(fc.needs_draft({"status": "draft", "refetch_status": "ok"}, fetch=True))           # 版なし=1
+        self.assertFalse(fc.needs_draft({"status": "draft", "refetch_status": "ok", "refetch_version": fc.REFETCH_VERSION}, fetch=True))
+        self.assertFalse(fc.needs_draft({"status": "filled", "refetch_status": "ok"}, fetch=True))
+
+
 class CoversFirstPost(unittest.TestCase):
     def test_flag_true_only_when_refetch_reaches_first_post_time(self):
         ev = {"token": "t", "batch_date": "d", "first_posted_at": "2026-10-02T07:52:56.000Z", "subjects": []}

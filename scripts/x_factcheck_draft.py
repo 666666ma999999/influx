@@ -2,7 +2,7 @@
 
 何をするか（4 モデル議論 2026-10-03 の一致 K1〜K5・単独 S1〜S4 を実装に写した）:
   draft : 事象（= discovery_queue の候補で first_seen=true・first_posted_at あり・受益表が買い候補を返す語）ごとに
-          ①投稿の取り直し（K4・初出の JST 日を 1 日窓で再取得・最古順）②同一記事の束ね（K5・URL か見出し）
+          ①投稿の取り直し（K4・発見器と同じ検索= 入口語 OR ×候補語・同じ窓・最古順）②同一記事の束ね（K5・URL か見出し）
           ③元報道の公開時刻（S4・URL の og:/article:published_time・JSON-LD）④遅れラベル（速報 <6h／当日 ≤24h／週内 ≤7d／再流通 >7d）
           を台帳 data/x_price_watch/factcheck_ledger.jsonl へ status=draft で 1 行追記する。同じ語は二重に書かない。
   list  : 事象数（母集団）と台帳の状態別件数・各行の 1 行要約を印字する。
@@ -46,6 +46,7 @@ MIN_FAVES = 20          # 発見器と同じ下限（事象の元投稿はこの
 PER_QUERY = 40
 MAX_SCROLLS = 3
 REFETCH_KEEP = 30       # 台帳に残す投稿数の上限（最古順）
+REFETCH_VERSION = 2     # 取り直しの検索条件の版（2= 発見器と同じ入口語 OR・同じ窓・2026-10-04）。古い版の draft 行は再取得
 HEADLINE_KEY_LEN = 10   # URL 無し投稿の見出し束ねの鍵（NFKC・記号除去後の先頭文字数）
 BUY_TIERS = {"confirmed", "provisional"}
 PRIMARY_CHOICES = ("○", "△", "×")
@@ -227,17 +228,39 @@ def fetch_published_time(url: str, timeout: float = 15.0) -> str:
 
 
 # ---------------------------------------------------------------- 取り直し（ブラウザ・コンテナのみ）
-def refetch_posts(token: str, first_posted_at: str) -> tuple[list[dict], str]:
-    """初出の JST 日を 1 日窓で取り直し、最古順 REFETCH_KEEP 件を返す。(rows, status)。"""
+def build_refetch_query(token: str, entry_words: list[str]) -> str:
+    """発見器が候補を拾ったのと同じ母集団= 入口語（値上げ・品薄 等）のどれかと候補語を両方含む投稿。
+
+    語だけで検索すると汎用語（例「メモリー」）はアニメ・配信の投稿で埋まる（2026-10-04 実走で 15 件中ほぼ全部が無関係）。
+    """
+    return f"{token} ({' OR '.join(entry_words)})" if entry_words else token
+
+
+def refetch_window(batch_date: str, first_posted_at: str) -> tuple[str, str]:
+    """発見器と同じ窓（便の date〜翌日・`since:D until:D+1`）。便日が無ければ初出の JST 日〜翌日。"""
+    if batch_date:
+        d = datetime.strptime(batch_date, "%Y-%m-%d")
+    else:
+        dt = parse_iso(first_posted_at)
+        d = datetime.strptime(dt.astimezone(JST).strftime("%Y-%m-%d"), "%Y-%m-%d") if dt else None
+    if d is None:
+        return "", ""
+    return d.strftime("%Y-%m-%d"), (d + timedelta(days=1)).strftime("%Y-%m-%d")
+
+
+def refetch_posts(token: str, first_posted_at: str, batch_date: str = "") -> tuple[list[dict], str]:
+    """発見器と同じ検索（入口語 OR ×候補語・同じ窓・話題タブ）で取り直し、最古順 REFETCH_KEEP 件を返す。(rows, status)。"""
     import fetch_bookmarks  # noqa: E402
     import x_search_collect_twittora as xs  # noqa: E402
     from bookmarks_keyword_digest_collect_browser import LoginWallError, build_context_kwargs  # noqa: E402
     from playwright.sync_api import sync_playwright
 
-    dt = parse_iso(first_posted_at)
-    if dt is None:
+    from price_watch_discover import DISCOVER_QUERIES  # noqa: E402  入口語の正本（凍結テストつき）
+
+    since, until = refetch_window(batch_date, first_posted_at)
+    if not since:
         return [], "no_time"
-    day = dt.astimezone(JST).strftime("%Y-%m-%d")
+    query = build_refetch_query(token, list(DISCOVER_QUERIES))
     xs.MAX_SCROLLS = MAX_SCROLLS
     cookies = fetch_bookmarks.load_cookies(str(PROFILE))
     with sync_playwright() as pw:
@@ -246,7 +269,7 @@ def refetch_posts(token: str, first_posted_at: str) -> tuple[list[dict], str]:
         context.add_cookies(cookies)
         page = context.new_page()
         try:
-            rows = xs.collect_query(page, token, day, day, MIN_FAVES, PER_QUERY, lang="ja", tab="live")
+            rows = xs.collect_query(page, query, since, until, MIN_FAVES, PER_QUERY, lang="ja")  # 発見器と同じ既定タブ
         except LoginWallError as exc:
             print(f"✗ ログイン壁で中断: {exc}", file=sys.stderr)
             return [], "login_wall"
@@ -291,7 +314,7 @@ def draft_row(ev: dict, refetched: list[dict], refetch_status: str, source_publi
         "first_posted_at": ev["first_posted_at"],
         "first_posted_at_jst": t.astimezone(JST).strftime("%Y-%m-%d %H:%M") if t else "",
         "subjects": ev["subjects"], "sample": ev.get("sample", ""),
-        "refetch_status": refetch_status, "refetched": refetched, "bundles": bundle_posts(refetched),
+        "refetch_status": refetch_status, "refetch_version": REFETCH_VERSION, "refetched": refetched, "bundles": bundle_posts(refetched),
         # 取り直しが初出投稿の時刻まで届いたか（live タブは新しい順＝スクロール上限で当日の早い側が欠けることがある・2026-10-04 実走で実測）
         "covers_first_post": any(p.get("posted_at_full") and p["posted_at_full"] <= ev["first_posted_at"] for p in refetched),
         "source_url": source_url, "source_published_at": source_published_at,
@@ -308,7 +331,9 @@ def needs_draft(cur: dict | None, fetch: bool) -> bool:
     """
     if cur is None:
         return True
-    return fetch and cur.get("status") == "draft" and cur.get("refetch_status") != "ok"
+    if not (fetch and cur.get("status") == "draft"):
+        return False
+    return cur.get("refetch_status") != "ok" or cur.get("refetch_version", 1) < REFETCH_VERSION
 
 
 def append_row(path: Path, row: dict) -> None:
@@ -355,7 +380,7 @@ def cmd_draft(args) -> int:
         todo = todo[: args.limit]
     rc = 0
     for i, ev in enumerate(todo):
-        refetched, st = ([], "skipped") if args.no_fetch else refetch_posts(ev["token"], ev["first_posted_at"])
+        refetched, st = ([], "skipped") if args.no_fetch else refetch_posts(ev["token"], ev["first_posted_at"], ev["batch_date"])
         if st == "login_wall":
             return 1
         if st == "error":
