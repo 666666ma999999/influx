@@ -8,6 +8,11 @@
   無いため・凍結）。超過pt = 銘柄% − TOPIX%
 - 冪等キー=(link, code, window)。false_positive 行が付いた link は評価しない
 - 台帳は append-only（evaluation / evaluation_skipped 行を追記するのみ）
+- 株式分割（2026-10-04・tasks/split_fix_live_lanes.md）: 評価日の AdjC は評価日ファイルの取得時点までの
+  分割しか反映しないため、jq_fetch.split_scale で始値の尺度（始値を読んだ時点の entry_day ファイルの取得日の
+  前日と entry_day の遅い方＝jq_fetch.split_scale_base）に揃えてから比べる。補正なしで
+  書かれた既存の evaluation 行は上書きせず、変わる行だけ evaluation_correction 行を追記する（読む側は
+  同じ (link, code, window) の evaluation_correction を優先する）
 
 実行:
     python3 scripts/news_shock_eval.py            # 期日到来分を評価して追記
@@ -24,6 +29,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 APP = Path("/app") if Path("/app/scripts").exists() else Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import jq_fetch  # noqa: E402  標準ライブラリのみ（ホスト実行可）・分割の尺度合わせの正本 split_scale
 LEDGER = APP / "data/news_shock/news_log.jsonl"
 BARS_DIR = APP / "data/jquants/bars"
 TOPIX_PATH = APP / "data/jquants/topix.json.gz"
@@ -50,6 +57,64 @@ def _bar(day8: str, code5: str, bars_dir: Path) -> dict | None:
     except OSError:
         return None
     return None
+
+
+SPLIT_ADJUST = "jq_fetch.split_scale"
+_FAC_CACHE: dict[tuple[str, str], dict[str, float]] = {}
+
+
+def _split_factors(day8: str, bars_dir: Path) -> dict[str, float]:
+    """day8 のファイルで AdjFactor が 1 でない銘柄 {Code: AdjFactor}（1回の実行内でキャッシュ）。"""
+    key = (str(bars_dir), day8)
+    if key not in _FAC_CACHE:
+        out: dict[str, float] = {}
+        try:
+            with gzip.open(bars_dir / f"{day8}.json.gz", "rt") as fh:
+                for r in json.load(fh)["data"]:
+                    fac = r.get("AdjFactor")
+                    if fac not in (None, 1, 1.0):
+                        out[r["Code"]] = float(fac)
+        except OSError:
+            pass
+        _FAC_CACHE[key] = out
+    return _FAC_CACHE[key]
+
+
+def _scale_base(entry_day: str, asof: str | None) -> str:
+    """entry_open（entry_day の AdjO）が反映している分割の基準日。asof=その始値を読んだ時刻（None=今）。
+    後日の取り直しで最新の取得日だけを見ると昔読んだ始値の尺度を取り違える（Codex 2026-10-04）。"""
+    return jq_fetch.split_scale_base(entry_day, jq_fetch.bars_fetch_ts_asof(entry_day, asof))
+
+
+_CAL: list = []
+
+
+def _calendar() -> list[str] | None:
+    """取引所カレンダーの全営業日（1回の実行内でキャッシュ・無ければ None）。"""
+    if not _CAL:
+        days = jq_fetch.offline_business_days()
+        if days is None:
+            return None
+        _CAL.append(days)
+    return _CAL[0]
+
+
+def _split_scan(code5: str, entry_day: str, ev_day: str, scale_base: str,
+                bars_dir: Path) -> list[tuple[str, float]] | None:
+    """entry_day の翌営業日〜尺度合わせに効く上限日（jq_fetch.split_scan_upper）の bars から code5 の分割。
+
+    評価窓の営業日はプレレジ§3どおり bars の実在日で数えるが、分割の走査は取引所カレンダーで欠けを検査する
+    （欠けた日の分割は実在日だけ見ていると検出できない・Codex 2026-10-04 3回目）。上限までの営業日の bars が
+    1日でも欠けている・カレンダーが無い／入口日〜上限を収録していない時は None＝評価も訂正も書かずに保留する。
+    """
+    cal = _calendar()
+    upper = jq_fetch.split_scan_upper(ev_day, jq_fetch.bars_fetch_ts_asof(ev_day, None), scale_base)
+    if cal is None or cal[-1] < upper or cal[0] > entry_day or entry_day not in cal:
+        return None                                   # カレンダーが入口日〜上限を収録していない（Codex 4回目: 開始側）
+    days = [d for d in cal if entry_day < d <= upper]
+    if any(not (bars_dir / f"{d}.json.gz").exists() for d in days):
+        return None
+    return [(d, _split_factors(d, bars_dir)[code5]) for d in days if code5 in _split_factors(d, bars_dir)]
 
 
 def evaluate(ledger: Path = LEDGER, bars_dir: Path = BARS_DIR,
@@ -93,7 +158,10 @@ def evaluate(ledger: Path = LEDGER, bars_dir: Path = BARS_DIR,
 
     n_new = 0
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    _FAC_CACHE.clear()
+    _CAL.clear()
     with ledger.open("a", encoding="utf-8") as fh:
+        n_new += _correct_split_rows(rows, fh, bdays, bars_dir, now)
         for h in hits:
             base = base_trading_day(h["run_at"], bdays)
             if base is None:
@@ -133,23 +201,80 @@ def evaluate(ledger: Path = LEDGER, bars_dir: Path = BARS_DIR,
                     bar = _bar(ev_day, code + "0", bars_dir)
                     if not bar or not bar.get("AdjC") or entry_day not in tp or ev_day not in tp:
                         continue
-                    stock = (bar["AdjC"] / o - 1) * 100
+                    sbase = _scale_base(entry_day, None)
+                    splits = _split_scan(code + "0", entry_day, ev_day, sbase, bars_dir)
+                    if splits is None:
+                        print(f"[eval] 分割走査の範囲に bars の欠けがあるため保留: {code} {win}")
+                        continue                        # 保留（次回 run で再評価）
+                    m = jq_fetch.split_scale(ev_day, sbase, splits) if splits else 1.0
+                    stock = (bar["AdjC"] * m / o - 1) * 100
                     topix = (tp[ev_day] / tp[entry_day] - 1) * 100
-                    fh.write(json.dumps({"type": "evaluation", "link": h["link"],
-                                         "code": code, "tier": b.get("tier"),
-                                         "type_label": b.get("type_label"),
-                                         "window": win, "entry_day": entry_day,
-                                         "eval_day": ev_day, "entry_open": o,
-                                         "stock_pct": round(stock, 2),
-                                         "topix_pct": round(topix, 2),
-                                         "excess_pt": round(stock - topix, 2),
-                                         "run_at": now}, ensure_ascii=False) + "\n")
+                    row = {"type": "evaluation", "link": h["link"],
+                           "code": code, "tier": b.get("tier"),
+                           "type_label": b.get("type_label"),
+                           "window": win, "entry_day": entry_day,
+                           "eval_day": ev_day, "entry_open": o,
+                           "stock_pct": round(stock, 2),
+                           "topix_pct": round(topix, 2),
+                           "excess_pt": round(stock - topix, 2),
+                           "split_adjust": SPLIT_ADJUST, "scale_base_date": sbase,
+                           "run_at": now}
+                    if m != 1.0:
+                        row["split_scale"] = m
+                    fh.write(json.dumps(row, ensure_ascii=False) + "\n")
                     done.add(key)
                     n_new += 1
                     print(f"[eval] {code} {win}: 始値{o}→{stock:+.1f}% "
                           f"TOPIX{topix:+.1f}% 超過{stock - topix:+.1f}pt")
     print(f"[eval] 新規 {n_new} 行")
     return 0
+
+
+def _correct_split_rows(rows: list[dict], fh, bdays: list[str], bars_dir: Path, now: str) -> int:
+    """分割補正なしで書かれた既存の evaluation 行のうち、間に分割があって値が変わる行だけ
+    evaluation_correction を追記する（冪等: split_adjust 付きの行・補正済みのキーは触らない・元の行は消さない）。"""
+    corrected = {(r.get("link"), r.get("code"), r.get("window")) for r in rows
+                 if r.get("type") == "evaluation_correction"}
+    n = 0
+    for r in rows:
+        if r.get("type") != "evaluation" or r.get("split_adjust"):
+            continue
+        key = (r.get("link"), r.get("code"), r.get("window"))
+        if key in corrected or not r.get("entry_open"):
+            continue
+        entry_day, ev_day = r.get("entry_day"), r.get("eval_day")
+        sbase = _scale_base(entry_day, r.get("run_at"))       # 元の評価で始値を読んだ時点の尺度
+        splits = _split_scan(r["code"] + "0", entry_day, ev_day, sbase, bars_dir)
+        if splits is None:
+            continue           # 走査範囲に欠け＝訂正を書かず保留（corrected に入れない＝復旧後に正しく訂正できる）
+        if not splits:
+            continue                                           # 基準日後に分割の無い銘柄は触らない
+        m = jq_fetch.split_scale(ev_day, sbase, splits)
+        bar = _bar(ev_day, r["code"] + "0", bars_dir)
+        if not bar or not bar.get("AdjC"):
+            continue
+        stock = (bar["AdjC"] * m / r["entry_open"] - 1) * 100
+        # 今の倍率が 1 でも（評価日の足を後で取り直した等）尺度を揃えた今の価格で計算し直し、
+        # 記録値と 0.02pt を超えて違う時だけ訂正する（Codex 2026-10-04 2回目）
+        if r.get("stock_pct") is not None and abs(round(stock, 2) - r["stock_pct"]) <= 0.02:
+            continue
+        topix = r.get("topix_pct")
+        fh.write(json.dumps({
+            "type": "evaluation_correction", "link": r["link"], "code": r["code"],
+            "tier": r.get("tier"), "type_label": r.get("type_label"), "window": r["window"],
+            "entry_day": entry_day, "eval_day": ev_day, "entry_open": r["entry_open"],
+            "stock_pct": round(stock, 2), "topix_pct": topix,
+            "excess_pt": round(stock - topix, 2) if topix is not None else None,
+            "split_adjust": SPLIT_ADJUST, "split_scale": m, "scale_base_date": sbase,
+            "before": {k: r.get(k) for k in ("stock_pct", "excess_pt")},
+            "corrects": {"type": "evaluation", "run_at": r.get("run_at")},
+            "reason": "株式分割: 評価日の足が基準日の尺度と違った（tasks/split_fix_live_lanes.md・2026-10-04）",
+            "run_at": now}, ensure_ascii=False) + "\n")
+        corrected.add(key)
+        n += 1
+        print(f"[eval] 分割補正 {r['code']} {r['window']} {entry_day}→{ev_day}: "
+              f"{r.get('stock_pct')}% → {stock:+.2f}%")
+    return n
 
 
 def _selftest() -> int:
@@ -159,6 +284,12 @@ def _selftest() -> int:
         td = Path(td)
         bars = td / "bars"; bars.mkdir()
         days = [f"2026010{i}" for i in range(1, 10)]     # 1/1〜1/9 を営業日とする
+        # 分割走査が実データの取引所カレンダー・取得記録を読まないよう、模擬の置き場へ差し替える（2026-10-04）
+        saved_root, saved_log = jq_fetch.DATA_ROOT, jq_fetch.LOG_PATH
+        jq_fetch.DATA_ROOT, jq_fetch.LOG_PATH = td, td / "fetch_log.jsonl"
+        jq_fetch.bars_fetch_history.cache_clear()
+        with gzip.open(td / "calendar.json.gz", "wt") as fh:
+            json.dump({"data": [{"Date": f"{d[:4]}-{d[4:6]}-{d[6:]}", "HolDiv": "1"} for d in days]}, fh)
         for i, d in enumerate(days):
             with gzip.open(bars / f"{d}.json.gz", "wt") as fh:
                 json.dump({"data": [{"Code": "99990", "AdjO": 100 + i, "AdjC": 102 + i}]}, fh)
@@ -218,6 +349,8 @@ def _selftest() -> int:
         for ok, why in checks:
             print(f"  {'OK ' if ok else 'NG '} {why}")
             ng += not ok
+        jq_fetch.DATA_ROOT, jq_fetch.LOG_PATH = saved_root, saved_log
+        jq_fetch.bars_fetch_history.cache_clear()
     return ng
 
 

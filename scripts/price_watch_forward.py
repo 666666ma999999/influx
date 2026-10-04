@@ -261,6 +261,8 @@ def record_firings(alerts: list, fire_date: str, lane: str = "rise") -> int:
             "commodity": {"value": row.get("value"), "weekly_pct": row.get("weekly_pct"),
                           "four_week_pct": row.get("four_week_pct")},
             "base_day": base_day, "topix_entry": topix.get(base_day),
+            # entry_close（base_day の AdjC）が反映している分割の基準日（2026-10-04・評価時の分割補正に使う）
+            "scale_base_date": jq_fetch.split_scale_base(base_day, jq_fetch.bars_fetch_ts_asof(base_day, None)),
             "eval_days": eval_days, "stocks": stocks,
             "recorded_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         })
@@ -274,6 +276,149 @@ def record_firings(alerts: list, fire_date: str, lane: str = "rise") -> int:
     return n
 
 
+# --- 株式分割の尺度合わせ（2026-10-04 オーナー裁定・tasks/split_fix_live_lanes.md） -----------------
+# entry_close は発火時に読んだ base_day の AdjC＝そのファイルの取得時点までの分割だけを反映した尺度。
+# 評価日の AdjC も評価日ファイルの取得時点までの分割を反映するので、間に分割があると偽の −50〜−90% に
+# なる（実害: 80350・2026-08-02 発火の w8 が −77.38% と記録・正しくは +13.08%）。評価日の価格を entry_close の
+# 尺度へ揃えてから比べる。entry_close の尺度の基準日は「発火を記録した時点での base_day ファイルの取得日の
+# 前日」と base_day の遅い方（jq_fetch.split_scale_base・Codex 2026-10-04: 後日の取り直しで最新の取得日だけ
+# 見ると二重補正になる）。倍率の正本= jq_fetch.split_scale・分割日の拾い方= paper_eval._split_events。
+SPLIT_ADJUST = "jq_fetch.split_scale"
+PENDING_SPLITS = "pending_splits"
+
+
+def _entry_scale_base(f: dict) -> str | None:
+    """firing の entry_close が反映している分割の基準日（記録時に保存した値、無ければ記録時刻で復元）。"""
+    base_day = f.get("base_day")
+    if not base_day:
+        return None
+    if f.get("scale_base_date"):
+        return f["scale_base_date"]
+    return jq_fetch.split_scale_base(base_day, jq_fetch.bars_fetch_ts_asof(base_day, f.get("recorded_at")))
+
+
+def _split_scan(code5: str, f: dict, eval_day: str, bdays: list[str]) -> list | None:
+    """base_day の翌営業日〜尺度合わせに効く上限日（jq_fetch.split_scan_upper）の bars から code5 の分割
+    [(日, AdjFactor)] を拾う。
+
+    上限 = max(評価日, 評価日の足の取得日の前日, 入口の尺度の基準日)。評価日の足を後日取り直すと、それより前の
+    分割はすべて反映されるため、上限までの営業日（取引所カレンダー）の bars が1日でも欠けていれば None＝
+    分割を見落とさないよう評価を確定しない（Codex 2026-10-04 2・3回目: 評価日より後・最新ファイルより後の欠け）。
+    """
+    import paper_eval  # 遅延 import（発火記録の経路には不要）
+
+    base_day = f.get("base_day")
+    if not base_day or base_day not in bdays or eval_day not in bdays:
+        return None                                   # 入口日・評価日がカレンダー外＝走査の完全性を確かめられない（Codex 4回目）
+    upper = jq_fetch.split_scan_upper(eval_day, jq_fetch.bars_fetch_ts_asof(eval_day, None),
+                                      _entry_scale_base(f) or base_day)
+    i0 = bdays.index(base_day)
+    days = [d for d in bdays[i0 + 1:] if d <= upper]
+    if bdays[-1] < upper:
+        return None                                   # カレンダー自体が上限まで届いていない
+    if any(not (jq_fetch.DATA_ROOT / "bars" / f"{d}.json.gz").exists() for d in days):
+        return None
+    return paper_eval._split_events(code5, i0 + 1, i0 + len(days), bdays)
+
+
+def _score_stock(s: dict, f: dict, eval_day: str, bdays: list[str], tpx_ret: float) -> dict:
+    """1銘柄の評価結果（評価日の価格を entry_close の尺度に揃える）。分割走査が不完全なら status=pending_splits。"""
+    px = close_of(s["code"], eval_day)
+    if px is None:
+        return {"code": s["code"], "status": "no_data"}
+    splits = _split_scan(s["code"], f, eval_day, bdays)
+    if splits is None:
+        return {"code": s["code"], "status": PENDING_SPLITS}
+    m = jq_fetch.split_scale(eval_day, _entry_scale_base(f), splits) if splits else 1.0
+    ret = (px * m / s["entry_close"] - 1) * 100
+    out = {"code": s["code"], "ret_pct": round(ret, 2), "excess_pct": round(ret - tpx_ret, 2),
+           "hit": bool(ret - tpx_ret > 0), "status": "ok"}
+    if m != 1.0:
+        out["split_scale"] = m
+    return out
+
+
+def _eval_key(e: dict) -> tuple:
+    return (e.get("spec_version"), e.get("lane") or "rise", e.get("fire_date"), e.get("series_id"),
+            e.get("window"))
+
+
+def effective_evaluations(log: list) -> list:
+    """evaluation 行に、同じキーの evaluation_correction 行（最後のもの）を優先して当てた一覧。
+    元の行は台帳に残したまま（上書きしない）、集計だけ訂正後の値を使う。"""
+    corr = {}
+    for e in log:
+        if e.get("type") == "evaluation_correction":
+            corr[_eval_key(e)] = e
+    return [corr.get(_eval_key(e), e) for e in log if e.get("type") == "evaluation"]
+
+
+def correct_split_evaluations(log: list, bdays: list[str], topix: dict[str, float]) -> int:
+    """分割補正なしで書かれた既存の evaluation 行を判定し直し、変わる行だけ evaluation_correction を追記する。
+
+    冪等: 補正済みのキー・split_adjust 付きの行は触らない。元の行は消さない。補正が要る銘柄のうち1つでも
+    価格・分割走査が揃わなければその行は書かずに次回へ回す（一部だけ直した訂正行で固定しない）。
+    """
+    firings = {(f.get("spec_version"), f.get("lane") or "rise", f.get("fire_date"), f.get("series_id")): f
+               for f in log if f.get("type") == "firing"}
+    corrected = {_eval_key(e) for e in log if e.get("type") == "evaluation_correction"}
+    n = 0
+    for e in log:
+        if e.get("type") != "evaluation" or e.get("split_adjust") or _eval_key(e) in corrected:
+            continue
+        f = firings.get(_eval_key(e)[:4])
+        if not f or not f.get("base_day"):
+            continue
+        eval_day = e.get("eval_day")
+        entry = {s["code"]: s for s in f.get("stocks", [])}
+        tpx_now, tpx_ent = topix.get(eval_day), f.get("topix_entry")
+        if not tpx_now or not tpx_ent:
+            continue
+        tpx_ret = (tpx_now / tpx_ent - 1) * 100
+        sbase = _entry_scale_base(f)
+        new_results, changed, blocked = [], False, False
+        for r in e.get("results", []):
+            if r.get("status") != "ok" or r["code"] not in entry:
+                new_results.append(r)
+                continue
+            splits = _split_scan(r["code"], f, eval_day, bdays)
+            if splits is None:
+                blocked = True
+                break
+            if not splits:                       # 発火後に分割の無い銘柄は触らない
+                new_results.append(r)
+                continue
+            # 分割のある銘柄は、今の倍率が 1 でも（評価日の足を後で取り直した等）尺度を揃えた今の価格で
+            # 計算し直し、記録値と 0.02pt を超えて違う時だけ訂正する（Codex 2026-10-04 2回目）
+            r2 = _score_stock(entry[r["code"]], f, eval_day, bdays, tpx_ret)
+            if r2.get("status") != "ok":
+                blocked = True
+                break
+            if abs(r2["ret_pct"] - (r.get("ret_pct") or 0.0)) <= 0.02:
+                new_results.append(r)
+                continue
+            new_results.append({**r2, "before": {k: r.get(k) for k in ("ret_pct", "excess_pct", "hit")}})
+            changed = True
+        if blocked or not changed:
+            continue
+        scored = [r for r in new_results if r.get("status") == "ok"]
+        append({
+            "type": "evaluation_correction", "spec_version": e.get("spec_version"),
+            "lane": e.get("lane") or "rise", "fire_date": e["fire_date"], "series_id": e["series_id"],
+            "window": e["window"], "eval_day": eval_day, "topix_ret_pct": e.get("topix_ret_pct"),
+            "results": new_results,
+            "n_hit": sum(1 for r in scored if r["hit"]), "n_scored": len(scored),
+            "split_adjust": SPLIT_ADJUST, "scale_base_date": sbase,
+            "corrects": {"type": "evaluation", "evaluated_at": e.get("evaluated_at")},
+            "reason": "株式分割: 評価日の足が発火時の尺度と違った（tasks/split_fix_live_lanes.md・2026-10-04）",
+            "corrected_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        })
+        corrected.add(_eval_key(e))
+        n += 1
+        print(f"[eval] 分割補正: {e['fire_date']} {e['series_id']} {e['window']} → evaluation_correction 追記")
+    return n
+
+
 def evaluate() -> int:
     """期日が到来した firing を評価して evaluation を append する（冪等）。"""
     log = read_log()
@@ -284,6 +429,10 @@ def evaluate() -> int:
         print("[forward] 発火記録がまだありません（発火時に自動で記録されます）")
         return 0
     topix = load_topix()
+    bdays = business_days()
+    n_corr = correct_split_evaluations(log, bdays, topix)
+    if n_corr:
+        print(f"[forward] 既存評価の分割補正 {n_corr} 件")
     today = datetime.now().strftime("%Y%m%d")
     n_new = 0
     for f in firings:
@@ -297,16 +446,10 @@ def evaluate() -> int:
             if not tpx_now or not tpx_ent:
                 continue
             tpx_ret = (tpx_now / tpx_ent - 1) * 100
-            results = []
-            for s in f.get("stocks", []):
-                px = close_of(s["code"], eval_day)
-                if px is None:
-                    results.append({"code": s["code"], "status": "no_data"})
-                    continue
-                ret = (px / s["entry_close"] - 1) * 100
-                results.append({"code": s["code"], "ret_pct": round(ret, 2),
-                                "excess_pct": round(ret - tpx_ret, 2),
-                                "hit": bool(ret - tpx_ret > 0), "status": "ok"})
+            results = [_score_stock(s, f, eval_day, bdays, tpx_ret) for s in f.get("stocks", [])]
+            if any(r["status"] == PENDING_SPLITS for r in results):
+                print(f"[eval] 分割走査の範囲に bars の欠けがあるため保留: {f['series_jp']} {win}")
+                continue
             scored = [r for r in results if r["status"] == "ok"]
             append({
                 # 評価行は**発火行の spec_version を引き継ぐ**（done 判定のキーと一致させる。
@@ -317,6 +460,7 @@ def evaluate() -> int:
                 "eval_day": eval_day, "topix_ret_pct": round(tpx_ret, 2),
                 "results": results,
                 "n_hit": sum(1 for r in scored if r["hit"]), "n_scored": len(scored),
+                "split_adjust": SPLIT_ADJUST,
                 "evaluated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
             })
             n_new += 1
@@ -336,7 +480,7 @@ def status() -> None:
 
 def _status_lane(log: list, lane: str) -> None:
     firings = [e for e in log if e.get("type") == "firing" and (e.get("lane") or "rise") == lane]
-    evals = [e for e in log if e.get("type") == "evaluation" and (e.get("lane") or "rise") == lane]
+    evals = [e for e in effective_evaluations(log) if (e.get("lane") or "rise") == lane]
     if lane == "early" and not firings:
         return
     label = "予兆レーン（early・別分母）" if lane == "early" else "本発火"
