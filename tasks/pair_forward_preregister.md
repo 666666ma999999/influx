@@ -70,3 +70,9 @@
   稼働開始してよい」）。smoke: 過去2週scratch検出45・冪等0・相対パスガードFATAL・並行2起動で重複0。
 - 運用注意（R5）: 成績良好でも自動採用・実弾・遡及検定は不可。正式化は12ヶ月後の§7-X＋別Codex GO。
   code_tree_sha が変わる変更は再レビュー対象。
+
+## 6. 合格基準 v2 改版（`pass_rule_v2`・2026-10-04 オーナー裁定 確認3）
+- 正本= `tasks/topix_excess_criterion_v2.md`（凍結 SHA-256 `07e5d787fef7b18387bdb88878d8546c3a889f2826c0134cf05869132a31b988`）・catalog §6付記V ⑩・計算= `scripts/formal_excess_v2.py` の `pair_excess`。
+- 改版記録: `pass_rule_version: "pass_rule_v2_abs_and_topix_excess"`・`registered_after_interim_view: true`。
+- 本レーンは合格線を持たない観察枠のまま（§2 不変）。**n≥30／12か月の記述評価に対TOPIX超過（件数・平均）を必ず併記する**: 超過 = `ret − (TOPIX_C[exit]/TOPIX_O[entry] − 1 − 0.003)`・ret は primary_ret（= ret_nostop）・entry = outcome.entry_date の TOPIX O・exit は entry から TOPIX 暦で20営業日後の TOPIX C（outcome.exit_date は stop8 側の出口なので使わない）。
+- 12ヶ月後に §7-X として正式化する場合は、合格基準 v2（v1 ∩ 絶対EVと対TOPIX超過EVの頑健条件・α_eff は同じ T0b 手順で較正）を必須とする。`registered_after_interim_view: true`。

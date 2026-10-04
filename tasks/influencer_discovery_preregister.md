@@ -94,6 +94,12 @@ A2実装禁止 / A4 real-alpha≈0断定・メガキャップ除外 / A7単独KP
   launchd `config/launchd/com.influx.fxnia-forward.plist`（毎週月曜10:30）。監視開始境界=2026-07-24。
   ※launchd本登録（LaunchAgentsコピー+load）は権限拒否のためユーザー実行に委譲。
 
+### Batch3 合格基準 v2 改版（`pass_rule_v2`・2026-10-04 オーナー裁定 確認3＝別レーンにも同時適用）
+- 正本= `tasks/topix_excess_criterion_v2.md`（凍結 SHA-256 `07e5d787fef7b18387bdb88878d8546c3a889f2826c0134cf05869132a31b988`）§「別レーンの v2 改版」・catalog §6付記V ⑩・計算= `scripts/formal_excess_v2.py` の `influencer_excess`／`influencer_v2_condition`。`pass_rule_version: "pass_rule_v2_abs_and_topix_excess"`・`registered_after_interim_view: true`。
+- **v2 合格 = 上の合格基準 (1)〜(3)＋補強1〜4（v1・不変）∩ (4)**。(4) **独立コールの対TOPIX超過**: 超過 = `net_return − (TOPIX_C[exit_date] / TOPIX_O[entry_date] − 1 − 0.003)`（TOPIX 側も往復0.3%控除・補強3の執行仕様で再計算した値だけ）。(銘柄, ISO週) ごとに最初の適格コールを1つ採り、cluster bootstrap（1000反復・seed=20261004〔補強1に seed 記載が無いため本改版で固定〕・昇順 floor(0.05×1000)）の**片側95%下限 > 0** を **主クラスタ (銘柄, ISO週) と副クラスタ (signal 月×業種33) の両方**で満たす。業種33 は `data/jquants/master` の時点版（`influencer_rescore.load_master_index`／`master_asof`）。
+- **適格の判定**: 対象 = prospective が真 ∧ post_date ≥ 2026-07-24。クラスタ内を (post_date, CSV 順) で先頭から見て、excluded（約定不可・価格欠測）は飛ばして次へ・censored（未成熟）に当たったらクラスタごと保留（後続で置き換えない）・scored ならそれを採用。TOPIX 欠損は超過側だけ保留。
+- 停止則・中間判定点・最長期間は不変。評価器 `fxnia_forward_eval.py` の点推定 PASS を v1 合格として流用しない（補強1〜4どおりの計算が揃って初めて v1 合格）。本レーンの合格は株アルゴ本線の「正式合格◯本」に数えない。
+
 ## 観察枠（弱PASS・前向き監視の主対象にはしない・2026-07-24）
 中立検証で頑健性ゲート符号は通過したが**終値+20%が基準9.5%未満＝弱いエッジ**。fxnia級ではないため
 forward監視の主対象にせず、四半期に一度など不定期に再中立採点して昇格可否だけ見る。
@@ -113,6 +119,7 @@ forward監視の主対象にせず、四半期に一度など不定期に再中�
 - 2026-07-25 **穴埋め検証まで完了→発掘レーンは実質打ち止め**: 事前窓の発信者150人回収(新規144)→選別17人の大半が量産テンプレ(『一度しか言いません』『現在○円⇒短期目標○円超え』・ランダム名37/144=26%)。対照2人を中立採点=**kabudev_gc(n=630・EV−4.8%・終値7%<基準9.5%・中央値−4.6%)FAIL / bahbi_76(投稿5件しか残存せず・ex−2.5%)FAIL**。＝『Xに在る』は真だが新規に捕まる層はbase rate錯覚か中立で負ける型でfxnia級は出ない。以後は(1)fxnia前向き監視のみ受動継続 (2)発掘に新規工数を投じない (3)供給の本命は候補ファクトリーFDR/急騰前兆1モデルへ。中立検証累計: 14人→強PASS1/弱PASS2/FAIL9/採点不能2。
 
 - 2026-08-29 P-INF-07: @okasira_kanki 単発検証（オーナー名指し）。収集103件＋スレッド10本・画像15枚・敵対レビュー wf_286232ac-6dd（「勝率が高い」前提は反証・去重で勝率22〜47%・中央値マイナス）・vault `02_Ai/influx/notes/okasira-kanki-strategy-2026-08-29.md`・専用 capture `com.influx.okasira-forward`（fxnia runner 共用・監視開始 8/30・launchd 本登録はユーザー実行待ち）・H2 採点 9/12。
+  - **合格基準 v2 改版（`pass_rule_v2`・2026-10-04 オーナー裁定 確認3）— okasira H1**: 正本= `tasks/topix_excess_criterion_v2.md`（凍結 SHA-256 `07e5d787fef7b18387bdb88878d8546c3a889f2826c0134cf05869132a31b988`）§「別レーンの v2 改版」・catalog §6付記V ⑩・計算= `scripts/formal_excess_v2.py` の `influencer_excess`／`influencer_v2_condition`。`pass_rule_version: "pass_rule_v2_abs_and_topix_excess"`・`registered_after_interim_view: true`。 H1（vault `02_Ai/influx/notes/okasira-kanki-strategy-2026-08-29.md` §6「既存の凍結仕様で採点」＝fxnia Batch3 と同じ仕様）に、上の「Batch3 合格基準 v2 改版」の (4) をそのまま AND で足す（対象 = prospective が真 ∧ post_date ≥ **2026-08-30**・入力 `output/influencer_candidates/okasira_forward/mentions.csv`）。
 
 ## 第22R: @ShinjukuSokai 前向き観察枠（2026-07-28 ユーザー裁定）
 - 経緯: ユーザー動機「トレードがバツぐんにうまい」→敵対レビュー第22R（A15点+B15点・両者一致の柱=

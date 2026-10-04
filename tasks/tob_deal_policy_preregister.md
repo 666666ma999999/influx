@@ -123,3 +123,11 @@
 緩和（完全解決ではない） (f) R1の7ブロッカーへの対応: §2正規化/regex文字列/deal_id境界/golden test・
 §3 07:15締切とoperational_missed・§4状態表と検定母集団の一意化・§5 α前向き登録/早期失敗もα消費/
 延長廃止/bootstrap完全指定・上位5除外の正式AND化。
+
+## 9. 合格基準 v2 改版（`pass_rule_v2`・2026-10-04 オーナー裁定 確認3＝別レーンにも同時適用）
+- 正本= `tasks/topix_excess_criterion_v2.md`（凍結 SHA-256 `07e5d787fef7b18387bdb88878d8546c3a889f2826c0134cf05869132a31b988`）・catalog §6付記V ⑩・計算= `scripts/formal_excess_v2.py` の `tob_v2_condition`。
+- 改版記録: `pass_rule_version: "pass_rule_v2_abs_and_topix_excess"`・`registered_after_interim_view: true`。
+- **§5 の合格条件は v1 としてそのまま残し、AND で1条件を足す**: deal ごとの対TOPIX超過 `ret − (TOPIX_C[exit]/TOPIX_O[entry] − 1 − 0.003)`（TOPIX 側も往復0.3%控除・同じ entry/exit 日）を §5 と同じ `tob_drift_v1_stats.bootstrap_lower`（月次ブロック・deal 加重・n_boot=10,000・seed=20260727・昇順 floor(0.05×n_boot)）に通し、**下限>0 をベースラインと全包含感度の両方で**満たすこと。新しい α は置かない（§5 の器のまま）。
+- 入力: entry = order の entry_day の TOPIX O、exit = fill の exit_target の TOPIX C。censored の deal は**実際に清算した最終取引日**の TOPIX C（引けなければ保留）。月キー = entry_day の月。TOPIX 欠損の deal は超過側だけ保留。
+- v1 の `judge()`（(1)(2)）は従来どおり計算し、v1 と v2 の両方を記録する。
+- §7 変更管理に対する例外: 本改版は途中成績の一部閲覧後のオーナー裁定による（`registered_after_interim_view: true`）。条件の追加（厳格化）だけ・tob_drift_v1 を閉じて新規 α を配ることはしない（trials.jsonl に新しい登録行を足さない）・§5 の最終判定日・n=150 は不変。
