@@ -715,6 +715,25 @@ def monthly_triggers(parsed: dict, status: str, prev: list[dict], th: dict) -> l
         last = prev_month_metric(prev, sd, "yoy_pct")
         if last is None or last < th["yoy_pct"]:
             triggers.append(f"前年同月比 {yy:+.2f}%({sd}分)")
+    # 下落側（2026-10-04 P-INF-29 案 4・在庫率の低下＝品薄）。系列側 alert に *_down を明示した時だけ働く
+    # （キー存在で判定＝既存系列の挙動は不変）。値は負の閾値で「以下」で鳴る。エピソード規則は上昇側と対称:
+    # 直前の**暦月**が既に閾値以下なら鳴らない。比較相手は①台帳にある直前暦月の値（＝前回その値で判定した
+    # もの・改定で二重に鳴らさない）②無ければ取得器が同じファイルから計算した前月の値（prev_<key>）。
+    # 「台帳の最後の過去月」は使わない（取得漏れの月を飛ばして別期間と比べる・Codex 2026-10-04）。
+    # どちらも無い＝新規跨ぎか継続か判別できない → 鳴らさない（fail-closed・上昇側の初回観測扱いとは異なる）
+    if "yoy_pct_down" in th or "monthly_pct_down" in th:
+        y, m = int(sd[:4]), int(sd[5:7])
+        prev_ym = f"{y - (m == 1):04d}-{(m - 2) % 12 + 1:02d}"
+    for key, label in (("monthly_pct", "前月比"), ("yoy_pct", "前年同月比")):
+        dth = th.get(key + "_down")
+        v = parsed.get(key)
+        if dth is None or v is None or v > dth:
+            continue
+        same = [r for r in prev if r.get("src_date") == prev_ym and r.get(key) is not None]
+        last = float(max(same, key=lambda r: r.get("run_at", ""))[key]) if same \
+            else parsed.get("prev_" + key)
+        if last is not None and last > dth:
+            triggers.append(f"{label} {v:+.2f}%({sd}分・低下側 閾値{dth:+.1f}%以下)")
     return triggers
 
 
@@ -808,7 +827,15 @@ def main(only: list[str] | None = None) -> int:
                 # （type="boj"）には総平均しか無く、細目はこちらでしか取れない（2026-08-19 実証）
                 import monthly_sources
                 parsed = monthly_sources.fetch_boj_bulk(s["dataset"], s["data_code"], today[:7])
-            elif s["type"] in ("jmtba", "seaj", "jama", "miki", "tamago", "rice", "jnto", "estat_asp",
+            elif s["type"] == "iip_inventory_ratio":
+                # 鉱工業指数 業種別 在庫率（季節調整済・2026-10-04 P-INF-29 案 4）。取得器は1つで業種コードを引数に取る
+                import monthly_sources
+                parsed = monthly_sources.fetch_iip_inventory_ratio(s["iip_code"], s.get("iip_name"), today[:7])
+            elif s["type"] == "jmtba":
+                # 工作機械受注。part= total（既定）/ domestic / foreign（内訳・2026-10-04 追加）
+                import monthly_sources
+                parsed = monthly_sources.fetch_jmtba(s.get("part", "total"))
+            elif s["type"] in ("seaj", "jama", "miki", "tamago", "rice", "jnto", "estat_asp",
                                "iata", "jsea"):
                 # 波2の月次データ源（30カテゴリ拡張・2026-08-02）。取得実装と fixtures は
                 # monthly_sources.py に分離。type名 → fetch_<type>() の明示対応（allowlist方式）

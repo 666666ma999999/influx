@@ -14,6 +14,8 @@ price_universe_check.py の series type からディスパッチされる（type
 - JNTO xlsx は年別シート・「総数」行に値と前年同月比（伸率）が対で入る
 - IATA/JSEA（2026-09-13 追加・tasks/ihi_type_series_onboarding.md）: IATA は月次 release の本文
   から RPK 前年比を、JSEA は年度ブロックの最新月 PDF から当月 CGT を採る（各関数の docstring 参照）
+- 鉱工業指数 在庫率（2026-10-04 追加・tasks/iip_inventory_ratio_lane.md）: 経産省本体は WAF で機械取得不可＝
+  e-Stat の同一ブック（業種別・月次・季節調整済）を業種コード引数で 1 本ずつ採る。日工会は内需・外需の内訳も採れる
 
 パーサ（parse_*）は fetch から分離し、fixtureで selftest 可能にしている
 （実行: python scripts/monthly_sources.py --selftest）。
@@ -51,13 +53,20 @@ def _num(s: str) -> float:
 
 # ---------------------------------------------------------------- 日工会（工作機械受注）
 
-def parse_jmtba(txt: str) -> dict | None:
-    """受注速報PDFのテキストから受注総額（百万円）・前月比・前年同月比を採る。
+_JMTBA_PARTS = {"total": 0, "domestic": 1, "foreign": 2}  # 速報PDFの数値行の順（総額→うち内需→うち外需）
+
+
+def parse_jmtba(txt: str, part: str = "total") -> dict | None:
+    """受注速報PDFのテキストから受注額（百万円）・前月比・前年同月比を採る。
 
     表形式（2026-08-02 実測）: ヘッダ行「26/6月 前月比 前年同月比 2026年累計 前年同期比」の
     次行が受注総額の数値行「203,515 115.0 152.8 1,055,281 135.7」、続いて「うち内需」「うち外需」。
     自己検証: 内需+外需=総額（±0.5%）を要求（列取り違えの検知）。比は指数表記（115.0=+15%）。
+    part: "total"（既定・受注総額）／"domestic"（うち内需）／"foreign"（うち外需）。内訳は
+    2026-10-04 追加（P-INF-29 案 4・tasks/iip_inventory_ratio_lane.md）。同じ自己検証を通った行だけ返す。
     """
+    if part not in _JMTBA_PARTS:
+        return None
     if "受注総額" not in txt:
         return None
     d = re.search(r"(20\d{2})年(\d{1,2})月分", txt)
@@ -75,18 +84,35 @@ def parse_jmtba(txt: str) -> dict | None:
     total, naiju, gaiju = (_num(r[0]) for r in rows[:3])
     if abs((naiju + gaiju) / total - 1) > 0.005:
         return None  # 列構成の変化＝静かに誤値を採らない
-    return {"value": total, "day_pct": None, "weekly_pct": None,
-            "monthly_pct": round(_num(rows[0][1]) - 100, 2),
-            "yoy_pct": round(_num(rows[0][2]) - 100, 2),
+    r = rows[0]
+    if part != "total":
+        # 内訳は行の位置でなく**行頭ラベル**で選ぶ（抽出順が入れ替わっても内需/外需を取り違えない・Codex 2026-10-04）。
+        # ラベル行がちょうど1本で、合計検証に使った2行のどちらかと一致することを要求する
+        lbl = {"domestic": "うち内需", "foreign": "うち外需"}[part]
+        hits = re.findall(
+            r"^" + lbl + r"\s*([0-9][0-9,]{3,})\s+([0-9]+\.[0-9])\s+([0-9]+\.[0-9])\s+"
+            r"([0-9][0-9,]{3,})\s+([0-9]+\.[0-9])\s*$", scope, re.M)
+        if len(hits) != 1 or hits[0] not in rows[1:3]:
+            return None
+        r = hits[0]
+    return {"value": _num(r[0]), "day_pct": None, "weekly_pct": None,
+            "monthly_pct": round(_num(r[1]) - 100, 2),
+            "yoy_pct": round(_num(r[2]) - 100, 2),
             "src_date": f"{d.group(1)}-{int(d.group(2)):02d}", "layout": "jmtba_pdf_v1"}
 
 
-def fetch_jmtba() -> dict | None:
+_JMTBA_PDF_CACHE: dict[str, str] = {}  # 総額・内需・外需の3系列で同じ速報PDFを3回落とさない
+
+
+def fetch_jmtba(part: str = "total") -> dict | None:
     idx = _get("https://www.jmtba.or.jp/statistics/").text
     links = re.findall(r'href="([^"]*sokuhou\d{4}\.pdf)"', idx)
     if len(links) != 1:
         return None  # 「ちょうど1件」が崩れたらページ構造変化とみなす（実測2026-08-02）
-    return parse_jmtba(_pdf_text(_get(urljoin("https://www.jmtba.or.jp/statistics/", links[0])).content))
+    url = urljoin("https://www.jmtba.or.jp/statistics/", links[0])
+    if url not in _JMTBA_PDF_CACHE:
+        _JMTBA_PDF_CACHE[url] = _pdf_text(_get(url).content)
+    return parse_jmtba(_JMTBA_PDF_CACHE[url], part)
 
 
 # ---------------------------------------------------------------- SEAJ（半導体製造装置）
@@ -805,6 +831,135 @@ def fetch_jsea() -> dict | None:
     return None  # 年度ブロックが読めない＝ページ構造変化
 
 
+# ---------------------------------------------------------------- 経産省 鉱工業指数（業種別 在庫率・季節調整済）
+# 2026-10-04 追加（P-INF-29 案 4・tasks/iip_inventory_ratio_lane.md）。在庫率＝在庫÷出荷の指数で、
+# **下がる＝品薄側**。経産省本体（meti.go.jp/statistics/tyo/iip/）は 2026-10-04 実測で AWS WAF の
+# JS チャレンジ（202 空応答・403）＝機械取得できないため、e-Stat に置かれた同一ファイル
+# （b2020_gsm1j.xlsx・「2020年基準時系列データ（2018年１月～）」→「業種別／月次／季節調整済指数」）を使う。
+# statInfId は更新のたびに変わりうるので一覧ページで表題から引く（決め打ちしない）。
+# シートの読み方は在庫発見器 `inventory_discover_iip.parse_sheet` を再利用する（同じブックの同じ型・1 箇所化）。
+
+_IIP_LIST = ("https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00550300"
+             "&tstat=000001022877&cycle=0&tclass1=000001205860&tclass2val=0")
+_IIP_BASE_TITLE = "2020年基準時系列データ"
+_IIP_FILE_TITLE = "業種別／月次／季節調整済指数"
+_IIP_DL = "https://www.e-stat.go.jp/stat-search/file-download?statInfId={sid}&fileKind=0"
+_IIP_SHEET = "在庫率"
+_IIP_CACHE: dict[str, list] = {}   # 1 回の実行で全業種の系列が同じブックを共有する
+_IIP_MAX_STALE_MONTHS = 4          # 速報は翌月末公表。4 ヶ月超の最新月＝更新停止・一覧構造変化の疑い
+
+
+def parse_iip_inventory_ratio(rows: list, code: str, name: str | None = None,
+                              today: str | None = None,
+                              max_stale_months: int = _IIP_MAX_STALE_MONTHS) -> dict | None:
+    """在庫率シート（季節調整済・2020=100）の行列から 1 業種の最新月・前月比・前年同月比を採る。
+
+    レイアウト（2026-10-04 実測・b2020_gsm1j.xlsx）: 1 行目 = 表題「項目：総合季節調整済指数【月次】在庫率
+    （2020＝100.0）」、2 行目 = 時系列コード、3 行目 = ['品目番号','品目名称','在庫率ウエイト', 201801, …,
+    'p 202608']（速報は月の前に p）、4 行目以降 = [業種コード, 業種名, ウエイト, 値…]。秘匿は 'X'、
+    未作成は '***'。
+
+    fail-closed（欠測＞誤記録）:
+      - 表題に「在庫率」「季節調整済」が無い → None（原指数や別シートを読まない）
+      - 月ヘッダが 6 桁でない・昇順一意でない → None
+      - 業種コードが無い／name 指定時に業種名が違う → None（コードの付け替えを黙って読まない）
+      - 当該業種の最新値の月がブック全体の最新月と違う → None（当月が '***'/'X' の業種を
+        前月値で「最新」と見せない）
+      - 値が 20〜1000 の外 → None（桁違い）／最新月が max_stale_months より古い → None
+    前月比・前年同月比は月をキーで引き、欠ければ None。prev_yoy_pct（前月の前年同月比）は
+    下落側のエピソード判定で初回観測時の比較相手に使う（price_universe_check.monthly_triggers）。
+    """
+    if not rows or not rows[0]:
+        return None
+    title = str(rows[0][0] or "")
+    if _IIP_SHEET not in title or "季節調整済" not in title:
+        return None
+    from inventory_discover_iip import parse_sheet  # 循環 import 回避（向こうが本モジュールを import する）
+    try:
+        months, items = parse_sheet(rows)
+    except ValueError:
+        return None
+    if not months or not all(re.fullmatch(r"\d{6}", m) for m in months) \
+            or months != sorted(months) or len(set(months)) != len(months):
+        return None
+    # parse_sheet は空の月ヘッダを捨てるが値の列は詰めない＝途中に空ヘッダがあると値が1列ずれて採られる
+    # （Codex 2026-10-04）。月ヘッダは途中に空欄が無く・暦月が1ヶ月刻みで連続していることを要求する
+    header = next((r for r in rows[:6] if r and str(r[0] or "").strip() == "品目番号"), ())
+    raw = list(header[3:])
+    while raw and (raw[-1] is None or not str(raw[-1]).strip()):
+        raw.pop()
+    if len(raw) != len(months) or any(_ym_shift(a, 1) != b for a, b in zip(months, months[1:])):
+        return None
+    item = next((it for it in items if it["code"] == str(code)), None)
+    if item is None or (name and item["name"] != name):
+        return None
+    ser = item["series"]
+    if not ser:
+        return None
+    book_latest = max(m for it in items for m in it["series"])
+    ym = max(ser)
+    if ym != book_latest:
+        return None
+
+    def _sane(v: float | None) -> bool:
+        return v is not None and _BOJ_INDEX_MIN <= v <= _BOJ_INDEX_MAX
+
+    value = ser[ym]
+    if not _sane(value):
+        return None
+    if today:
+        age = (int(today[:4]) - int(ym[:4])) * 12 + (int(today[5:7]) - int(ym[4:]))
+        if age > max_stale_months:
+            return None
+
+    def _pct(cur: float | None, base: float | None) -> float | None:
+        return round((cur / base - 1) * 100, 2) if _sane(cur) and _sane(base) else None
+
+    prev_ym = _ym_shift(ym, -1)
+    prelim = any(str(h).strip().lower().startswith("p") and str(h).strip().lstrip("Pp").strip() == ym
+                 for h in header[3:] if h is not None)
+    return {"value": value, "day_pct": None, "weekly_pct": None,
+            "monthly_pct": _pct(value, ser.get(prev_ym)),
+            "yoy_pct": _pct(value, ser.get(_ym_shift(ym, -12))),
+            "prev_monthly_pct": _pct(ser.get(prev_ym), ser.get(_ym_shift(ym, -2))),
+            "prev_yoy_pct": _pct(ser.get(prev_ym), ser.get(_ym_shift(ym, -13))),
+            "src_date": f"{ym[:4]}-{ym[4:]}", "layout": "iip_gsm1j_zaikoritsu_v1",
+            "preliminary": prelim, "iip_name": item["name"]}
+
+
+def _iip_rows() -> list:
+    """e-Stat 一覧から業種別・月次・季節調整済のブックを引き、在庫率シートの全行を返す（実行内キャッシュ）。"""
+    if _IIP_SHEET in _IIP_CACHE:
+        return _IIP_CACHE[_IIP_SHEET]
+    import openpyxl
+    html = _get(_IIP_LIST).text
+    if _IIP_BASE_TITLE not in html:
+        raise ValueError("e-Stat 一覧が 2020 年基準の時系列ページでない（基準改定・構造変化）")
+    sids = re.findall(r'stat_infid=(\d+)"[^>]*>\s*' + re.escape(_IIP_FILE_TITLE) + r"\s*</a>", html)
+    if len(set(sids)) != 1:
+        raise ValueError(f"『{_IIP_FILE_TITLE}』の statInfId が 1 件でない: {sids}")
+    data = _get(_IIP_DL.format(sid=sids[0])).content
+    if data[:2] != b"PK":
+        raise ValueError("xlsx でない応答（配信側の抑制の可能性）")
+    wb = openpyxl.load_workbook(io.BytesIO(data), read_only=True, data_only=True)
+    try:
+        if _IIP_SHEET not in wb.sheetnames:
+            raise ValueError(f"シート {_IIP_SHEET} が無い: {wb.sheetnames}")
+        rows = list(wb[_IIP_SHEET].iter_rows(values_only=True))
+    finally:
+        wb.close()
+    _IIP_CACHE[_IIP_SHEET] = rows
+    return rows
+
+
+def fetch_iip_inventory_ratio(code: str, name: str | None = None, today: str | None = None) -> dict | None:
+    """業種コード（例 '1105000000'=電子部品・デバイス工業）の在庫率（季節調整済）を 1 本取る。"""
+    try:
+        return parse_iip_inventory_ratio(_iip_rows(), code, name, today)
+    except Exception:  # noqa: BLE001  取得・構造変化は欠測扱い（発火させない）
+        return None
+
+
 # ---------------------------------------------------------------- selftest
 
 def _selftest() -> int:  # noqa: C901
@@ -1007,6 +1162,7 @@ if __name__ == "__main__":
     # 手動疎通: python scripts/monthly_sources.py jmtba 等
     fn = globals().get(f"fetch_{sys.argv[1]}") if len(sys.argv) > 1 else None
     if fn:
-        print(fn())
+        print(fn(*sys.argv[2:]))  # 引数つき取得器: iip_inventory_ratio <業種コード> ／ jmtba domestic
     else:
-        print("usage: monthly_sources.py --selftest | <jmtba|seaj|jama|miki|tamago|rice|jnto|iata|jsea>")
+        print("usage: monthly_sources.py --selftest | <jmtba [part]|seaj|jama|miki|tamago|rice|jnto|iata|jsea|"
+              "iip_inventory_ratio <業種コード>>")
