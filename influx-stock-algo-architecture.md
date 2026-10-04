@@ -79,7 +79,7 @@ flowchart LR
 | in-sample 検定 | 統計量を計算し台帳に1行 append | `scripts/kpi_event_study.py` | GO後1回 | 🐳 |
 | 判定 (verdict) | 5基準で pass候補 / fail / pending を出す | 同 `judge()` | in-sample 検定と同時 | 🐳 |
 | 前向き配線 | 運用開始ライン充足の系統を watchlist へ | `config/paper_watchlist.json`（19件） | 裁定後 | 🖐＋自動 |
-| 毎朝スクリーン | 当日シグナルを出し台帳へ記録 | `scripts/daily_screen.py` | 平日07:30 | ⏰ |
+| 毎朝スクリーン | 当日シグナルを出し台帳へ記録（2026-10-04 テーマ初動 v0 `theme_cluster_v0` を観察枠に追加＝`scripts/kpi_theme_cluster_signals.py`・受益クラスタの初動日に受益銘柄全部を記録だけ・FROZEN_START 2026-10-05・`daily_reco.md` 観察のみ表に `x_shortage_map.x_backing` の X 裏取り列・tasks/theme_cluster_v0.md） | `scripts/daily_screen.py` | 平日07:30 | ⏰ |
 | 表示層ビルド | 棚と当日推奨を md に組む | `scripts/build_recipe_shelf.py` / `build_daily_reco.py` | 平日07:30 | ⏰ |
 | 試行整理 | pending を5値の語彙で終端へ（判決ではない） | `scripts/kpi_pending_resolutions.py` | 日次audit／裁定は四半期 | ⏰＋🖐 |
 | 多重比較の感度確認 | 分母＝台帳行数で調整後CIを見る | `scripts/kpi_bonferroni_check.py` | 周次 | 🐳 |

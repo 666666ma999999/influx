@@ -23,7 +23,7 @@ from __future__ import annotations
 import json
 import unicodedata
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 APP = Path("/app") if Path("/app/scripts").exists() else Path(__file__).resolve().parent.parent
@@ -241,6 +241,119 @@ def subjects_for_token(m: dict, token: str) -> list[dict]:
     t = unicodedata.normalize("NFKC", token)
     return [s for s in m["subjects"]
             if t in {unicodedata.normalize("NFKC", x) for x in s.get("discover_tokens", [])}]
+
+
+# --- X 裏取り（テーマ初動 v0 の表示用・tasks/theme_cluster_v0.md）-----------------------------------
+# 判定には使わない。株側で「テーマがまとまって動いた日」が出た時に、同じ subject のクエリが X で
+# 当日どれだけ増えていたかを数え直して添える（ledger の count は使わず texts の posted_at から再集計）。
+TEXTS_DIR = APP / "data/x_price_watch/texts"
+DISCOVERY_QUEUE_PATH = APP / "data/x_price_watch/discovery_queue.jsonl"
+BACKING_BASE_DAYS = 14        # 前 N 暦日をベースにする
+BACKING_MIN_BASE_DAYS = 7     # ベースに投稿のある日がこれ未満なら「ベース不足」
+BACKING_SAMPLE_CHARS = 40     # 代表投稿の字数
+BACKING_QUEUE_WINDOW_DAYS = 1 # discovery_queue の candidate_batch を当日±N 日で拾う
+_JST = timezone(timedelta(hours=9))
+
+
+def _jst_day(posted_at: str) -> str:
+    """UTC ISO（末尾 Z 可）を JST の YYYYMMDD に直す。"""
+    return datetime.fromisoformat(posted_at.replace("Z", "+00:00")).astimezone(_JST).strftime("%Y%m%d")
+
+
+def x_backing(m: dict, subject_id: str, day_jst: str,
+              texts_dir: Path = TEXTS_DIR, queue_path: Path = DISCOVERY_QUEUE_PATH) -> dict:
+    """subject の X 裏取り（当日件数／前 14 日平均・初出語・代表投稿 1 本）を 1 箇所で計算する。
+
+    Args:
+        m: `load()` の対応表。
+        subject_id: subject の id（例 "dram"）。無ければ KeyError。
+        day_jst: 数える JST 日（YYYYMMDD・株側の signal_date）。
+        texts_dir: `<label>.jsonl` 群。各行の posted_at（UTC ISO）を JST 日に直して数える
+            （ファイル名の日付や `date` 欄は使わない）。status_id は重複除去。
+        queue_path: discovery_queue.jsonl。candidate_batch 行のうち date が当日±1 日の候補で
+            `first_seen` が真かつ `subjects_for_token` がこの subject に当たる語を初出語にする。
+
+    Returns:
+        {"subject_id", "label", "day_jst",
+         "queries": [{"query_id", "today", "base_mean", "base_days", "base_ok"}, ...],
+         "first_seen_tokens": [...], "sample": str | None, "n_texts_files": int}
+        base_mean は前 14 暦日のうち投稿のあった日だけの平均（投稿ゼロの日は 0 として数えない＝
+        収集が無かった日と区別できないため）。base_days がその日数で、BACKING_MIN_BASE_DAYS 未満は
+        base_ok=False（表示は「ベース不足」）。sample は当日の投稿本文の先頭 1 本 40 字（無ければ None）。
+    """
+    subject = next((s for s in m["subjects"] if s.get("id") == subject_id), None)
+    if subject is None:
+        raise KeyError(f"subject が対応表にありません: {subject_id}")
+    queries = list(subject.get("queries", []))
+    qset = set(queries)
+    day0 = datetime.strptime(day_jst, "%Y%m%d")
+    base_days = {(day0 - timedelta(days=k)).strftime("%Y%m%d") for k in range(1, BACKING_BASE_DAYS + 1)}
+    needed = base_days | {day_jst}
+
+    ids: dict[str, dict[str, set]] = {q: {} for q in queries}   # query -> jst_day -> {status_id}
+    sample: str | None = None
+    sample_seen: set = set()
+    files = sorted(texts_dir.glob("*.jsonl")) if texts_dir.exists() else []
+    for f in files:
+        with f.open(encoding="utf-8") as fh:
+            for line in fh:
+                if not line.strip():
+                    continue
+                t = json.loads(line)
+                q, pa = t.get("query_id"), t.get("posted_at")
+                if q not in qset or not pa:
+                    continue
+                jd = _jst_day(pa)
+                if jd not in needed:
+                    continue
+                sid = t.get("status_id")
+                ids[q].setdefault(jd, set()).add(sid)
+                if jd == day_jst and sample is None and sid not in sample_seen and t.get("text"):
+                    sample_seen.add(sid)
+                    sample = " ".join(str(t["text"]).split())[:BACKING_SAMPLE_CHARS]
+
+    per_query = []
+    for q in queries:
+        base_counts = [len(ids[q][d]) for d in sorted(base_days) if d in ids[q]]
+        per_query.append({
+            "query_id": q,
+            "today": len(ids[q].get(day_jst, ())),
+            "base_mean": (sum(base_counts) / len(base_counts)) if base_counts else None,
+            "base_days": len(base_counts),
+            "base_ok": len(base_counts) >= BACKING_MIN_BASE_DAYS,
+        })
+
+    first_seen: list[str] = []
+    if queue_path.exists():
+        with queue_path.open(encoding="utf-8") as fh:
+            for line in fh:
+                if not line.strip():
+                    continue
+                r = json.loads(line)
+                if r.get("type") != "candidate_batch" or not r.get("date"):
+                    continue
+                try:
+                    delta = abs((datetime.strptime(r["date"], "%Y-%m-%d") - day0).days)
+                except ValueError:
+                    continue
+                if delta > BACKING_QUEUE_WINDOW_DAYS:
+                    continue
+                for c in r.get("candidates", []):
+                    tok = c.get("token")
+                    if not tok or not c.get("first_seen") or tok in first_seen:
+                        continue
+                    if any(s.get("id") == subject_id for s in subjects_for_token(m, tok)):
+                        first_seen.append(tok)
+
+    return {
+        "subject_id": subject_id,
+        "label": subject.get("label", subject_id),
+        "day_jst": day_jst,
+        "queries": per_query,
+        "first_seen_tokens": first_seen,
+        "sample": sample,
+        "n_texts_files": len(files),
+    }
 
 
 def ensure_validated(m: dict) -> None:

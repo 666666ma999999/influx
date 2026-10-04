@@ -1061,6 +1061,40 @@
         }
       },
       "caution": "枠F運用開始ライン充足＝入場判定であり統計的確定ではない。92試行の累積Bonferroni下では有意性は消える（lift CI下限1.002は1近傍・枠S非充足）。正式判定は§7-AB凍結ルール（前向きn≥100 or 12完全暦月の遅い方・各系統1回・前向きEV片側p≤α=0.0015625 ∩ lift>1 ∩ 頻度は月約33.4件見込みのため枠F型月5件を適用）。中間判定(n≥30 or 3ヶ月の早い方)は早期棄却のみ"
+    },
+    {
+      "kpi_name": "theme_cluster_v0",
+      "status": "observation",
+      "registered_date": "2026-10-04",
+      "module": "scripts/kpi_theme_cluster_signals.py",
+      "generator_func": "generate_theme_cluster_signals",
+      "params": {
+        "excess_pt_min": 3.0,
+        "min_hits": 3,
+        "min_hit_ratio": 0.3,
+        "refire_suppress_bdays": 5,
+        "min_beneficiaries": 3,
+        "frozen_start": "20261005",
+        "note": "値は生成器モジュール定数（EXCESS_PT_MIN 等・正本）の写し。daily_screen は params を渡さず生成器定数で判定する（three_up_ignition と同型）"
+      },
+      "defer_entry": true,
+      "max_defer_bdays": 3,
+      "regime_filter": null,
+      "role": "テーマ初動 v0（2026-10-04 登録・tasks/theme_cluster_v0.md・P-INF-28 案A・記録だけ＝判断に使わない・α非消費）。configs/x_shortage_map.json の subject（受益 3 社以上）ごとに、受益銘柄の同日対TOPIX超過+3.0pt が 3 社以上かつ 3 割以上の日を初動日とし、翌営業日に受益銘柄全部を記録する。分割日（AdjFactor≠1）は分子から除外・同一 subject の再発火は 5 営業日抑止・bars/TOPIX 欠落日は判定しない。FROZEN_START=2026-10-05（これより前の signal_date は台帳に入れない）。採点は成熟 60 日かつ事象（subject×初動日）30 件で 1 回・主採点は台帳から +20 営業日の対TOPIX超過（終値）を別途計算。既知の穴= 受益台帳は 2026-07-28 以降に人が選んだ＝疑似前向きには後知恵が混入（前向きで解消）。表示は output/daily_reco.md の観察のみ表に X 裏取り列（x_shortage_map.x_backing）を添える。primary exit=nostop（stop8/e1_ma200breakは同格secondary記録・優劣ラベルなし）",
+      "exit_variants": [
+        "nostop",
+        "stop8",
+        "e1_ma200break"
+      ],
+      "in_sample": {
+        "period": "2026-01〜2026-10-01（疑似前向き・scripts/_tmp_ab_backtest2.py・in-sample 扱いしない）",
+        "n": 83,
+        "lift": null,
+        "ci95": null,
+        "ev_none": null,
+        "avg_monthly_signals": null,
+        "note": "事象 83 件（subject×初動日）で +20 営業日 対TOPIX超過 平均 +2.82pt・勝率 48/83。受益台帳が 2026-07-28 以降に人が選んだものなので後知恵混入＝lift/EV は算出せず null。前向き 30 件で初回採点"
+      }
     }
   ],
   "changelog": [
@@ -1107,6 +1141,10 @@
     {
       "date": "2026-07-29",
       "change": "修理: 開示反応系分岐（PEAD/SUE/margin_expand/sales_beat/guidance/cfo）の最終走査日取りこぼしを修正（daily_screen.py recover_start導入・回帰テスト7本・Codex条件付きGO消化）。根本原因=pead_effective_endの縮みと単日走査カーソル前進の相互作用で、SUE系は稼働2週間シグナル0件（同窓の生成器直叩きは25件）。**欠測期間の正式記録: 2026-07-13〜07-28 の該当分岐シグナルは運用欠測（operational gap）として不算入。バックフィルは実施しない**（Codex裁定: 通常行追記は前向き成績を汚染するためNO-GO・分離台帳方式のみ可だが価値対効果で見送り）。前向き完全性は2026-07-29の翌営業日走査分から回復。"
+    },
+    {
+      "date": "2026-10-04",
+      "change": "追加登録（テーマ初動 v0・tasks/theme_cluster_v0.md・P-INF-28 オーナー裁定A・記録だけ）: theme_cluster_v0（observation・1系統・α非消費＝判断に使わない）。configs/x_shortage_map.json の subject（受益 tier≠rejected 3社以上=10 subject）ごとに「同日対TOPIX超過+3.0pt が 3社以上かつ受益社数の3割以上」の日を初動日とし受益銘柄全部を翌営業日に記録する。生成器 scripts/kpi_theme_cluster_signals.py（新規・_tmp_ab_backtest2.py の定義を移植: 分割日 AdjFactor≠1 は分子から除外・同一 subject の再発火は 5 営業日抑止で start_bd の 5 営業日前から内部走査・bars/TOPIX 欠落日は判定せず diag に件数）。scripts/daily_screen.py の generate_kpi_signals に分岐を新設（Canonical import・(signal_date,code) で畳む・FROZEN_START=20261005 より前の signal_date は台帳に入れない）。既存 19 系統の判定・CHAMPION_KPI_NAME は不変。疑似前向き 2026-01〜10-01: 事象 83 件・+20 営業日 対TOPIX超過 平均 +2.82pt・勝率 48/83（受益台帳は 2026-07-28 以降に人が選んだ＝後知恵混入のため in-sample 扱いせず lift/EV は null）。採点は成熟 60 日かつ事象 30 件で 1 回（short_forward と同じ出口）。表示: output/daily_reco.md の観察のみ表に本系統の行だけ「X 裏取り」列（x_shortage_map.x_backing: 対応クエリの当日件数／前14日平均・初出語・代表投稿1本）を添える。config/recipe_shelf_meta.json（α管理の棚・observing は maturity.csv 行が必須）には載せず、build_daily_reco.py の WATCH_ONLY_KPIS で観察のみ表にだけ名指しで出す（載せると build_recipe_shelf.py が maturity 欠落で落ちることを 2026-10-04 実走で確認）。primary exit=nostop・stop8/e1_ma200breakは同格secondary（優劣ラベルなし）。台帳への書き込みは FROZEN_START 以降の launchd 実行に委譲"
     }
   ]
 }

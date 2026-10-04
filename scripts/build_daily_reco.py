@@ -99,6 +99,78 @@ def label(kpi: str) -> str:
     return KPI_SHORT_JA.get(kpi, kpi)
 
 
+THEME_CLUSTER_KPI = "theme_cluster_v0"  # tasks/theme_cluster_v0.md（X 裏取り列を付ける唯一の系統）
+WATCH_ONLY_KPIS = {THEME_CLUSTER_KPI}   # 棚(recipe_shelf_meta)の tier を持たないが観察のみ表には出す系統
+
+
+def md_cell(text: str) -> str:
+    """Markdown 表のセルに入れる文字列から列区切り `|` と改行を無害化する（X 投稿本文は何でも含む）。"""
+    return " ".join(str(text).split()).replace("|", "｜")
+
+
+def format_x_backing(info: dict) -> str:
+    """x_shortage_map.x_backing() の結果を表セル 1 本の文字列にする（表示専用）。"""
+    parts = []
+    for q in info["queries"]:
+        if q["base_ok"]:
+            parts.append(f"{q['query_id']}={q['today']}/{q['base_mean']:.1f}")
+        else:
+            parts.append(f"{q['query_id']}={q['today']}/ベース不足({q['base_days']}日)")
+    first_seen = "・".join(info["first_seen_tokens"]) if info["first_seen_tokens"] else "なし"
+    sample = f"「{info['sample']}」" if info["sample"] else "X 記録なし"
+    return f"{info['label']}: {' '.join(parts) or 'クエリなし'}／初出={first_seen}／{sample}"
+
+
+def theme_backing_cells(watch_pending: list[dict]) -> dict[tuple[str, str, str], str]:
+    """観察のみ表の theme_cluster_v0 行に添える X 裏取りセルを (kpi, code, signal_date) で返す。
+
+    銘柄がどの subject の初動で出たかは台帳に無いので、生成器 kpi_theme_cluster_signals を同じ
+    signal_date で呼び直して subject を引く（再実装なし・同一銘柄が複数 subject に属す日は全部並べる）。
+    裏取りの計算は x_shortage_map.x_backing に 1 箇所化。例外は握りつぶさず「⚠️ 裏取り失敗: 理由」を
+    該当セルに出す（空欄にしない＝障害を「裏取りなし」と誤読させない）。
+    """
+    rows = [r for r in watch_pending if r["kpi_name"] == THEME_CLUSTER_KPI]
+    if not rows:
+        return {}
+    cells: dict[tuple[str, str, str], str] = {}
+    try:
+        import kpi_theme_cluster_signals  # noqa: WPS433  (遅延 import: pandas 依存を本系統の行がある時だけ読む)
+        import measure_base_rate  # noqa: WPS433
+        import x_shortage_map  # noqa: WPS433
+
+        m = x_shortage_map.load()
+        all_bdays = measure_base_rate.all_business_days(measure_base_rate.load_calendar_days())
+        bday_index = {d: i for i, d in enumerate(all_bdays)}
+        subjects_by_day: dict[str, dict[str, list[str]]] = {}
+        for sd in sorted({r["signal_date"] for r in rows}):
+            df, _diag = kpi_theme_cluster_signals.generate_theme_cluster_signals(sd, sd, all_bdays, bday_index)
+            by_code: dict[str, list[str]] = defaultdict(list)
+            for row in df.itertuples(index=False):
+                if row.subject not in by_code[row.code]:
+                    by_code[row.code].append(row.subject)
+            subjects_by_day[sd] = by_code
+        backing_cache: dict[tuple[str, str], str] = {}
+        for r in rows:
+            key = (r["kpi_name"], r["code"], r["signal_date"])
+            subjects = subjects_by_day[r["signal_date"]].get(r["code"], [])
+            if not subjects:
+                cells[key] = "⚠️ 裏取り失敗: signal_date の再計算で subject が引けない（bars/対応表が変わった可能性）"
+                continue
+            texts = []
+            for sid in subjects:
+                ck = (sid, r["signal_date"])
+                if ck not in backing_cache:
+                    backing_cache[ck] = format_x_backing(x_shortage_map.x_backing(m, sid, r["signal_date"]))
+                texts.append(backing_cache[ck])
+            cells[key] = " ／ ".join(texts)
+    except Exception as exc:  # noqa: BLE001  表示専用・本体は落とさないが**黙らせない**
+        reason = f"{type(exc).__name__}: {str(exc)[:120]}"
+        print(f"WARN: X 裏取りの計算に失敗（表には ⚠️ を出して続行）: {reason}", file=sys.stderr)
+        for r in rows:
+            cells[(r["kpi_name"], r["code"], r["signal_date"])] = f"⚠️ 裏取り失敗: {reason}"
+    return cells
+
+
 def build() -> tuple[str, dict]:
     meta = json.loads(META_PATH.read_text(encoding="utf-8"))
     tiers = {kpi: item["tier"] for kpi, item in meta["kpi_classification"].items()}
@@ -146,7 +218,12 @@ def build() -> tuple[str, dict]:
 
     # --- 本日の新規（pending_entry 全量）を証拠段で区分 ---
     pending = [r for r in ledger if r["status"] == "pending_entry"]
-    watch_pending = [r for r in pending if tiers.get(r["kpi_name"]) == TIER_WATCH]
+    # theme_cluster_v0 は「記録だけ・α非消費」なので recipe_shelf_meta の tier（α管理の棚・maturity 必須）
+    # には載せず、観察のみ表にだけ名指しで入れる（tasks/theme_cluster_v0.md）。
+    watch_pending = [
+        r for r in pending
+        if tiers.get(r["kpi_name"]) == TIER_WATCH or r["kpi_name"] in WATCH_ONLY_KPIS
+    ]
     banned_pending = [r for r in pending if banned_reason(r["kpi_name"])]
 
     # --- 次に何が起きるか ---
@@ -206,10 +283,22 @@ def build() -> tuple[str, dict]:
     lines.append(f"## 🟡 観察のみ・明朝エントリー分（判断に使わない・成績計測中）: {len(watch_pending)}件")
     lines.append("")
     if watch_pending:
-        lines.append("| 銘柄 | 社名 | 系統 | signal_date |")
-        lines.append("|---|---|---|---|")
+        # テーマ初動 v0 の行だけ「X 裏取り」列に中身を入れる（他系統は空欄・判断には使わない）。
+        backing_cells = theme_backing_cells(watch_pending)
+        lines.append("| 銘柄 | 社名 | 系統 | signal_date | X 裏取り |")
+        lines.append("|---|---|---|---|---|")
         for r in sorted(watch_pending, key=lambda r: (r["code"], r["kpi_name"])):
-            lines.append(f"| {r['code']} | {names.get(r['code'], '')} | {label(r['kpi_name'])} | {r['signal_date']} |")
+            cell = md_cell(backing_cells.get((r["kpi_name"], r["code"], r["signal_date"]), ""))
+            lines.append(
+                f"| {r['code']} | {names.get(r['code'], '')} | {label(r['kpi_name'])} | {r['signal_date']} | {cell} |"
+            )
+        if backing_cells:
+            lines.append("")
+            lines.append(
+                "X 裏取り（テーマ初動 v0 の行のみ・表示専用）: subject名: クエリ=当日件数/前14日平均（texts の posted_at を"
+                "JST日で数え直し・status_id 重複除去・前14日に投稿のある日が7日未満は「ベース不足」）／初出= discovery_queue の"
+                "当日±1日の first_seen 語で subject に当たる物／「…」= 当日の投稿先頭1本40字（無ければ X 記録なし）。"
+            )
     else:
         lines.append("（なし）")
     lines.append("")

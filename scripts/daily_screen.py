@@ -72,6 +72,7 @@ import kpi_run_evidence  # noqa: E402  (Canonical Module: append_run_log/KPI依�
 import kpi_sh_dip_reentry_signals  # noqa: E402  (Canonical Module: S高初押し再上昇の検出を再利用・§2-E/§7-Q)
 import kpi_shortcover_signals  # noqa: E402  (Canonical Module: generate_shortcover_signals を再利用)
 import kpi_sue_champion_signals  # noqa: E402  (Canonical Module: compute_dev200 を再利用・§7-H/§7-J)
+import kpi_theme_cluster_signals  # noqa: E402  (Canonical Module: theme_cluster_v0 生成と FROZEN_START を再利用・tasks/theme_cluster_v0.md)
 import kpi_uprev_signals  # noqa: E402  (Canonical Module: FINS_HISTORY_START_BD を再利用・§7-O margin as-of 履歴起点)
 import kpi_volshock_signals  # noqa: E402  (Canonical Module: generate_volshock_signals を再利用)
 import kpi_volshock_v2_amplifiers  # noqa: E402  (Canonical Module: compute_quiet_ratio を再利用・第13周A)
@@ -213,6 +214,17 @@ CFO_MARGIN_IMPROVE_KPI_NAME = "cfo_margin_improve"  # §7-X T2（kpi_round35・f
 # signal_date限定を完結させる。よって走査ガードのpead_effective_end前倒しは呼び出し側で不要
 # （候補発火が触れるbarsは反応日D=signal_date≤end_bdとD-1のみでend_bd超は参照しない・生成器docstring参照）。
 EARNINGS_SPILLOVER_KPI_NAME = "earnings_spillover"  # §7-AA T2（kpi_round38・sales_beat他銘柄イベント化・defer_entry=True）
+
+# テーマ初動 v0（2026-10-04 登録・tasks/theme_cluster_v0.md・P-INF-28 案A）: configs/x_shortage_map.json の
+# subject ごとに受益銘柄の「同日対TOPIX超過+3pt が 3社以上かつ3割以上」の日を初動日とし、受益銘柄全部を
+# 記録だけする（判断に使わない・α非消費）。生成器 kpi_theme_cluster_signals が bars+TOPIX+対応表で完結し、
+# 再発火抑止 5 営業日の参照用に start_bd の 5 営業日前から内部走査する。FROZEN_START（同モジュール定数）
+# より前の signal_date は本分岐で落とす＝台帳には実装翌営業日以降しか入らない。
+THEME_CLUSTER_KPI_NAME = kpi_theme_cluster_signals.KPI_NAME  # "theme_cluster_v0"（defer_entry=True）
+# 受益銘柄は TOP1000 台帳（center_pin）由来なので TOP500 ユニバースの外も含む。「受益銘柄全部を記録する」
+# 事前登録（tasks/theme_cluster_v0.md §目的）を守るため、この系統だけ main のユニバース絞り込みを免除する
+# （次点候補への振り分けも行わない）。他 19 系統の判定・ユニバース規約は不変。
+UNIVERSE_EXEMPT_KPI_NAMES = frozenset({THEME_CLUSTER_KPI_NAME})
 
 # margin_expand_yoy の fins as-of 履歴は毎回 FINS_HISTORY_START_BD(2016)〜end_bd を全走査する重い
 # 構築のため、(scan_start, scan_end) キーでプロセス内メモ化する（SUE系と同型の性能最適化。
@@ -1126,6 +1138,27 @@ def generate_kpi_signals(
         filtered = df[(df["signal_date"] >= start_bd) & (df["signal_date"] <= end_bd)]
         return filtered[["signal_date", "code"]].reset_index(drop=True)
 
+    if kpi_name == THEME_CLUSTER_KPI_NAME:
+        # テーマ初動 v0: subject×初動日の受益銘柄全部（生成器は subject ごとに行を出すため、同一銘柄が
+        # 複数 subject に属す日は (signal_date, code) で 1 行に畳む＝台帳キーと同じ粒度）。
+        # FROZEN_START 前の signal_date は台帳に入れない（v0 凍結・生成器自体は過去日の再現用に落とさない）。
+        df, diag = kpi_theme_cluster_signals.generate_theme_cluster_signals(
+            start_bd, end_bd, all_bdays, bday_index,
+        )
+        # bars/TOPIX 欠落で「判定しなかった日」は通常の候補0件と区別して必ずログに出す（黙って0にしない）。
+        skipped = diag.get("days_skipped_bars_missing", 0) + diag.get("days_skipped_topix_missing", 0)
+        if skipped:
+            print(
+                f"WARN: [{THEME_CLUSTER_KPI_NAME}] bars/TOPIX 欠落で判定しなかった日 {skipped} 日"
+                f"（bars {diag.get('days_skipped_bars_missing', 0)} / TOPIX {diag.get('days_skipped_topix_missing', 0)}・"
+                f"判定できた日 {diag.get('business_days_scanned', 0)}）",
+                file=sys.stderr,
+            )
+        if "signal_date" not in df.columns:
+            return df
+        frozen = df[df["signal_date"] >= kpi_theme_cluster_signals.FROZEN_START]
+        return _signal_cols(frozen.drop_duplicates(["signal_date", "code"]).reset_index(drop=True))
+
     raise SystemExit(f"FATAL: 未知のkpi_name={kpi_name}（config/paper_watchlist.json確認）")
 
 
@@ -1902,10 +1935,15 @@ def main() -> int:
     for entry in watchlist:
         signals_df = generate_kpi_signals(entry, start_bd, end_bd, regime_by_day, bday_index, all_bdays)
         n_raw = len(signals_df)
-        if not signals_df.empty:
+        if not signals_df.empty and entry["kpi_name"] in UNIVERSE_EXEMPT_KPI_NAMES:
+            # 受益銘柄全部を記録する系統は TOP500 ユニバースで絞らない（絞ると受益の一部が黙って
+            # 次点候補へ落ち「受益銘柄全部」の事前登録と食い違う・Codex 2026-10-04 指摘）。
+            in_univ_mask = pd.Series(True, index=signals_df.index)
+        elif not signals_df.empty:
             in_univ_mask = signals_df.apply(
                 lambda r: universe_cache.in_universe(r["code"], r["signal_date"]), axis=1
             )
+        if not signals_df.empty:
             out_of_universe_rows = signals_df[~in_univ_mask]
             out_count = len(out_of_universe_rows)
             if out_count:
