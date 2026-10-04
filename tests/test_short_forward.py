@@ -717,5 +717,11 @@ class TestSplitFalseTrigger(Base):
         self.assertEqual(len(self.events("signal")), 1)
 
 
+class TestSplitFalseTriggerAfterCutover(TestSplitFalseTrigger):
+    """生成器に切替日（20261005）の分岐を入れた後も、ランナーの記録（split_dropped と合図）は同じ
+    （ランナーは生成器を split_safe=False で呼び、差分を自前で day 行に残す・2026-10-04）。"""
+    PREV, DAY = "20261005", "20261006"
+
+
 if __name__ == "__main__":
     unittest.main()

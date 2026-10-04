@@ -30,7 +30,6 @@ paper_watchlist・scoreboard・daily_reco には一切書かない。試行一�
 from __future__ import annotations
 
 import argparse
-import datetime as dt
 import fcntl
 import gzip
 import hashlib
@@ -312,7 +311,10 @@ class _Run:
                           "reason": reason, "detected_at": self.clock(), "code_tree_sha": self.sha,
                           "spec_version": S.SPEC_VERSION}])
             return False
-        df, _diag = kpi_round23_signals.generate_sell_reg_trigger_signals(day, day, env.bdays, env.bidx)
+        # 生成器は従来判定（split_safe=False）で呼び、未調整判定との差は下の raw_recheck で day 行に残す
+        # （2026-10-04 生成器に切替日分岐を入れた後も、本ランナーの記録の形と結果を変えない）
+        df, _diag = kpi_round23_signals.generate_sell_reg_trigger_signals(
+            day, day, env.bdays, env.bidx, split_safe=False)
         raw = [] if df is None or df.empty else [str(c) for c in df["code"]]
         # 分割の権利落ち日 D は、前日ファイルの AdjC が D の分割を反映していないことがある（取得時点までの
         # 調整のみ）。共有の生成器は AdjL(D) と AdjC(D-1) を尺度合わせせず比べるので、分割による見かけの
@@ -335,23 +337,9 @@ class _Run:
     @staticmethod
     def _raw_recheck(day: str, prev: str, gen_codes: list[str]) -> tuple[list[str], list[str]]:
         """未調整の L(D)・C(D-1) と D の AdjFactor で −10% 条件を判定し直す。生成器の結果との差だけ返す
-        （dropped=生成器は出したが未調整判定では急落でない／added=その逆）。未調整値が欠ける銘柄は生成器に従う。"""
-        bars_d = measure_base_rate.load_bars_day(day)
-        bars_p = measure_base_rate.load_bars_day(prev)
-        gen = set(gen_codes)
-        dropped, added = [], []
-        for code, rec in bars_d.items():
-            prec = bars_p.get(code)
-            low, cprev, fac = rec.get("L"), (prec or {}).get("C"), rec.get("AdjFactor")
-            if low is None or cprev is None or cprev <= 0:
-                continue
-            fac = fac if (fac is not None and fac > 0) else 1.0
-            hit = low <= cprev * fac * kpi_round23_signals.T2_DROP_TRIGGER
-            if code in gen and not hit:
-                dropped.append(code)
-            elif hit and code not in gen:
-                added.append(code)
-        return sorted(dropped), sorted(added)
+        （dropped=生成器は出したが未調整判定では急落でない／added=その逆）。未調整値が欠ける銘柄は生成器に従う。
+        正本= kpi_round23_signals.raw_recheck（2026-10-04 共有化・ルール20）。"""
+        return kpi_round23_signals.raw_recheck(day, prev, gen_codes)
 
     def _finish_day(self, day_row: dict) -> bool:
         """day 行から skipped/signal/late 行と day_done を書く（新規確定と、書き込み途中で落ちた日の
@@ -478,11 +466,9 @@ class _Run:
                 sig["_unfilled"] = True
             else:
                 got_ts = env.bars_fetch_ts.get(entry)
-                got = got_ts[:10].replace("-", "") if got_ts else None
-                scale_base = entry
-                if got:   # 取得日より前の分割は足に反映済み（split_scale の規約）＝基準日=max(入口日, 取得日の前日)
-                    prev_cal = (S._date(got) - dt.timedelta(days=1)).strftime("%Y%m%d")
-                    scale_base = max(entry, prev_cal)
+                # 取得日より前の分割は足に反映済み（split_scale の規約）＝基準日=max(入口日, 取得日の前日)
+                # （正本= jq_fetch.split_scale_base・2026-10-04 共有化）
+                scale_base = jq_fetch.split_scale_base(entry, got_ts)
                 ev = {"event": "filled", "entry_day": entry, "exit_day": exit_, "entry_px": float(adjo),
                       "entry_bars_fetched_at": got_ts, "scale_base_date": scale_base,
                       "topix_open_entry": env.topix_o.get(entry), "processed_at": self.clock(), **base}

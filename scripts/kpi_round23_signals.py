@@ -62,6 +62,53 @@ T1_RANK_SURGE_TO = 100  # rank(D) <= 100
 T2_KPI_NAME = "sell_reg_trigger_rebound"
 T2_DROP_TRIGGER = 0.90  # AdjL(D) <= AdjC(D-1) × 0.90（=前日比-10%到達の機械近似）
 
+# 分割の権利落ち日の偽合図対策の切替日（2026-10-04 オーナー裁定「反発系と価格レーンを今直す」・
+# tasks/split_fix_live_lanes.md）。合図日 D >= この日は取得時点に依らない未調整値で判定する
+# （raw_drop_hit）。それより前の合図日は従来の AdjL(D) <= AdjC(D-1)×0.90 のまま＝バックテスト履歴を
+# 動かさない（2016〜2025 の足は 2026-07 に一括取得＝実測でほぼ無傷）。
+SPLIT_SAFE_CUTOVER = "20261005"
+
+
+def raw_drop_hit(rec_d: Optional[dict], rec_prev: Optional[dict]) -> Optional[bool]:
+    """未調整値で −10% 到達を判定する（正本はここ1か所・生成器と short_forward_runner と paper_eval が使う）。
+
+    L(D) <= C(D-1) × AdjFactor(D) × 0.90。bars ファイルの Adj* はそのファイルを取得した時点までの分割しか
+    反映しないため、AdjL(D) と AdjC(D-1) を別ファイルから比べると分割の権利落ち日に見かけの急落を拾う
+    （2026-10-03 4モデル監査: 9/29 は反発系の偽合図 21 件）。未調整の L・C は取得時点に依らず、D の分割比
+    AdjFactor(D) だけで尺度が揃う。前日足が既に調整済みでも C は未調整なので二重補正にならない
+    （Codex 反例 34940・2024-01-30。AdjC(D-1) に AdjFactor を掛けてはいけない）。
+
+    Returns:
+        True/False。未調整の L(D)・C(D-1) が欠ける時は None（呼び手が従来判定に従う）。
+    """
+    if not rec_d or not rec_prev:
+        return None
+    low, cprev, fac = rec_d.get("L"), rec_prev.get("C"), rec_d.get("AdjFactor")
+    if low is None or cprev is None or cprev <= 0:
+        return None
+    fac = fac if (fac is not None and fac > 0) else 1.0
+    return low <= cprev * fac * T2_DROP_TRIGGER
+
+
+def raw_recheck(day: str, prev: str, gen_codes: list[str]) -> tuple[list[str], list[str]]:
+    """day の全銘柄を raw_drop_hit で判定し直し、gen_codes（従来判定の結果）との差だけ返す。
+
+    dropped=従来判定は出したが未調整判定では急落でない／added=その逆。未調整値が欠ける銘柄は従来判定に従う。
+    """
+    bars_d = measure_base_rate.load_bars_day(day)
+    bars_p = measure_base_rate.load_bars_day(prev)
+    gen = set(gen_codes)
+    dropped, added = [], []
+    for code, rec in bars_d.items():
+        hit = raw_drop_hit(rec, bars_p.get(code))
+        if hit is None:
+            continue
+        if code in gen and not hit:
+            dropped.append(code)
+        elif hit and code not in gen:
+            added.append(code)
+    return sorted(dropped), sorted(added)
+
 MULTI_TRIAL_NOTE = (
     "本ラウンドはT1〜T2の2試行同時登録であり累積試行数割引の対象。"
     "この結果単独で運用変更しない。"
@@ -243,12 +290,17 @@ def generate_sell_reg_trigger_signals(
     end_bd: str,
     all_bdays: list[str],
     bday_index: dict[str, int],
+    split_safe: Optional[bool] = None,
 ) -> tuple[pd.DataFrame, dict]:
     """[start_bd, end_bd]内の全営業日・全銘柄から空売り価格規制トリガー反発シグナルを生成する
     （カタログ§7-L T2）。
 
     定義(凍結): AdjL(D) <= AdjC(D-1) × 0.90(前日比-10%到達の機械近似)。
     シグナル確定=T終値・エントリー=T+1寄付。
+
+    split_safe: None（既定）=合図日 D >= SPLIT_SAFE_CUTOVER の日だけ未調整判定 raw_drop_hit を使う
+    （未調整値が欠ける銘柄は従来判定）。False=全日従来判定（short_forward_runner が自前で raw_recheck の
+    差分を記録するため）。True=全日未調整判定。
     """
     earliest_bars = _earliest_bars_date()
     earliest_idx = bday_index[earliest_bars]
@@ -262,6 +314,8 @@ def generate_sell_reg_trigger_signals(
         "low_missing": 0,
         "signals_sell_reg_trigger": 0,
     }
+    # 切替日以降の日を走査した時だけ diag に足す（切替日前だけの走査では diag も従来と完全一致させる）
+    split_diag = {"split_safe_days": 0, "split_raw_dropped": 0, "split_raw_added": 0}
     rows: list[dict] = []
 
     for d in event_days:
@@ -274,18 +328,34 @@ def generate_sell_reg_trigger_signals(
         bars_d = measure_base_rate.load_bars_day(d)
         bars_prev = measure_base_rate.load_bars_day(prev)
 
+        use_raw = (d >= SPLIT_SAFE_CUTOVER) if split_safe is None else bool(split_safe)
+        if use_raw:
+            split_diag["split_safe_days"] += 1
+
         for code, rec in bars_d.items():
             diag["code_day_observations"] += 1
             adjl = rec.get("AdjL")
-            if adjl is None:
-                diag["low_missing"] += 1
-                continue
             prev_rec = bars_prev.get(code)
             adjc_prev = prev_rec.get("AdjC") if prev_rec else None
-            if adjc_prev is None or adjc_prev <= 0:
+            if adjl is None:
+                diag["low_missing"] += 1
+                legacy = None
+            elif adjc_prev is None or adjc_prev <= 0:
                 diag["prev_close_missing"] += 1
-                continue
-            if adjl <= adjc_prev * T2_DROP_TRIGGER:
+                legacy = None
+            else:
+                legacy = adjl <= adjc_prev * T2_DROP_TRIGGER
+            hit = bool(legacy)
+            if use_raw:
+                # short_forward_runner._raw_recheck と同じ規則: 未調整値が揃えば未調整判定、欠ければ従来判定
+                raw = raw_drop_hit(rec, prev_rec)
+                if raw is not None:
+                    if hit and not raw:
+                        split_diag["split_raw_dropped"] += 1
+                    elif raw and not hit:
+                        split_diag["split_raw_added"] += 1
+                    hit = raw
+            if hit:
                 diag["signals_sell_reg_trigger"] += 1
                 rows.append(
                     {
@@ -293,10 +363,12 @@ def generate_sell_reg_trigger_signals(
                         "code": code,
                         "adjl_d": adjl,
                         "adjc_prev": adjc_prev,
-                        "drop_pct": adjl / adjc_prev - 1,
+                        "drop_pct": (adjl / adjc_prev - 1) if legacy is not None else None,
                     }
                 )
 
+    if split_diag["split_safe_days"]:
+        diag.update(split_diag)
     return pd.DataFrame(rows), diag
 
 
