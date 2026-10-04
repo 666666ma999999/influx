@@ -12,7 +12,8 @@ OUT=$(mktemp -t price_universe_run)
 # 系列の健全性しきい値: 52系列中これを下回る ok 数ならソース側の異常として通知する
 # （2026-08-02 30カテゴリ拡張で 34→52系列。週次の stale 1〜2件＋単発失敗を許容しつつ
 #   TE一覧レイアウト変更のような広域破損は確実に鳴る水準）
-MIN_OK=${MIN_OK:-42}
+MIN_OK_OVERRIDE=${MIN_OK:-}   # 週次の下限は下の mode 分岐で系列数から決める（環境変数 MIN_OK があればそれを使う）
+MIN_OK=42
 
 cleanup() { rm -f "$OUT"; }
 trap cleanup EXIT
@@ -52,11 +53,16 @@ if [ "$PU_MODE" = daily ]; then
   DAILY_IDS=$(jq -r '[.series[] | select(.cadence!="monthly" and (.type|IN("te","spread","dramexchange","fmbi","tanaka","jepx"))) | .id] | join(",")' configs/price_universe_sources.json)
   n_daily=$(printf '%s' "$DAILY_IDS" | tr ',' '\n' | grep -c .)
   ONLY_ARGS=(--only "$DAILY_IDS")
-  # 健全性下限は系列数に比例（週次の 42/72 と同じ約8割）。環境変数 PU_MIN_OK_DAILY で上書き可
+  # 健全性下限は系列数に比例（週次と同じ 8 割）。環境変数 PU_MIN_OK_DAILY で上書き可
   MIN_OK=${PU_MIN_OK_DAILY:-$(( n_daily * 8 / 10 ))}
   echo "[mode] daily: ${n_daily} series (MIN_OK=${MIN_OK})"
 else
-  echo "[mode] weekly: all series (MIN_OK=${MIN_OK})"
+  # 週次も系列数に比例（全系列の 8 割）。旧値 42 は 52 系列時（約 8 割）の固定値で、72→81 系列に増えた後は
+  # 約 5 割まで緩んでいた（2026-10-04 P-INF-29 案 4 で 81 系列）。直近 7 回の週次便は最悪でも 50/54（93%）。
+  # 環境変数 MIN_OK で上書き可（従来どおり）
+  n_series=$(jq '.series|length' configs/price_universe_sources.json)
+  MIN_OK=${MIN_OK_OVERRIDE:-$(( n_series * 8 / 10 ))}
+  echo "[mode] weekly: ${n_series} series (MIN_OK=${MIN_OK})"
 fi
 # bash 3.2（macOS 既定）は set -u 下で空配列の "${a[@]}" が落ちるため ${a[@]+...} で保護
 docker compose run --rm xstock python scripts/price_universe_check.py ${ONLY_ARGS[@]+"${ONLY_ARGS[@]}"} 2>&1 | tee "$OUT"
