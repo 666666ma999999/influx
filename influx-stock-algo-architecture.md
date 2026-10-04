@@ -78,9 +78,10 @@ flowchart LR
 | 敵対レビュー | 凍結前に GO/NO-GO を取る（NO-GO は素直に受ける） | `/adversarial-review` + Codex MCP | 事前登録の直後・必須 | 🖐 |
 | in-sample 検定 | 統計量を計算し台帳に1行 append | `scripts/kpi_event_study.py` | GO後1回 | 🐳 |
 | 判定 (verdict) | 5基準で pass候補 / fail / pending を出す | 同 `judge()` | in-sample 検定と同時 | 🐳 |
+| 前向き正式合格の判定（合格基準 v2・2026-10-04） | 正式合格 = v1（§7 各節の凍結条件）∩ 絶対EVの頑健条件 ∩ **対TOPIX超過EV**の頑健条件（2か月クラスタ頑健 t・系統別 α_eff）。ラベル formal_pass / formal_fail_excess / formal_fail / formal_pending_topix / window_expired。**本数の数え方の正本は `count_formal_passes`**（棚・朝便はこれだけを使う）。別レーン（tob・pair・fxnia/okasira）にも AND で同時適用・short_forward は対象外。`--dry-run` は件数のみ（成績を出さない）。**正式判定ランナー（成熟・完全性監査・trials 追記）は未実装＝別タスク** | `scripts/formal_excess_v2.py`／tests `tests/test_formal_excess_v2.py`／規則の正本= catalog §6付記V・`tasks/topix_excess_criterion_v2.md`（凍結） | 各系統の成熟後に1回（2027-08〜） | 🐳 |
 | 前向き配線 | 運用開始ライン充足の系統を watchlist へ | `config/paper_watchlist.json`（19件） | 裁定後 | 🖐＋自動 |
 | 毎朝スクリーン | 当日シグナルを出し台帳へ記録（2026-10-04 テーマ初動 v0 `theme_cluster_v0` を観察枠に追加＝`scripts/kpi_theme_cluster_signals.py`・受益クラスタの初動日に受益銘柄全部を記録だけ・FROZEN_START 2026-10-05・`daily_reco.md` 観察のみ表に `x_shortage_map.x_backing` の X 裏取り列・tasks/theme_cluster_v0.md。**開示表題の供給側レーン `tdnet_supply_lane.py`**〔2026-10-04 P-INF-29・表示ビルドの前段で `--days 3`・台帳 `data/tdnet/supply_lane.jsonl`・`daily_reco.md` 🏭 節・記録だけ・採点の事前登録= docs §16o-3 追記10〕。index の読み方は `tdnet_index_lib.py` に 1 箇所化〔発見器② `driver_discover_boj.py` と共有〕） | `scripts/daily_screen.py` | 平日07:30 | ⏰ |
-| 表示層ビルド | 棚と当日推奨を md に組む | `scripts/build_recipe_shelf.py` / `build_daily_reco.py` | 平日07:30 | ⏰ |
+| 表示層ビルド | 棚と当日推奨を md に組む（正式合格の本数は `formal_excess_v2.count_formal_passes`・実戦投入可は別欄＝朝便は棚の見出しを写す） | `scripts/build_recipe_shelf.py` / `build_daily_reco.py` | 平日07:30 | ⏰ |
 | 試行整理 | pending を5値の語彙で終端へ（判決ではない） | `scripts/kpi_pending_resolutions.py` | 日次audit／裁定は四半期 | ⏰＋🖐 |
 | 多重比較の感度確認 | 分母＝台帳行数で調整後CIを見る | `scripts/kpi_bonferroni_check.py` | 周次 | 🐳 |
 | 一括スクリーニング | 宣言グリッドを FDR で流す | `scripts/kpi_screen_batch.py` | **現在禁止**（catalog §6拡張5項） | 🐳 |
@@ -207,6 +208,7 @@ flowchart LR
 |---|---|---|
 | 目的・成功基準・周回履歴 | `tasks/stock_algo_kpi_loop.md` | リンク先 |
 | 合格基準・α体系・ベースレート・pending 規約・入場ゲート・探索prior | `docs/stock-algo-kpi-catalog.md` | リンク先 |
+| 合格基準 v2（対TOPIX超過の追加・α_eff 較正とサイズ検証の記録） | `tasks/topix_excess_criterion_v2.md`（凍結 SHA-256 `07e5d787…`）／要約= catalog §6付記V | リンク先 |
 | 事前登録（§7-X 節・SHA-256 凍結本文） | 同 catalog §7 ＋ `tasks/*_preregister.md` | リンク先 |
 | 試行台帳（Bonferroni 分母の実体） | `data/kpi_trials/trials.jsonl` | リンク先 |
 | pending 解消の設計と実行結果 | `tasks/pending_verdict_flow.md` | リンク先 |
