@@ -2015,11 +2015,18 @@ def main() -> int:
     # 読み取り専用の結合レポート（output/*.md + vaultミラー生成のみ・台帳/state無干渉）。
     # 非致死: 生成失敗は本番スクリーンの実行・終了コードに影響させないが、失敗を握り潰さず
     # 稼働状況セクションと通知に必ず出す（2026-07-31 敵対レビュー指摘1/9: 沈黙クラッシュの再発防止）。
+    # 先頭の tdnet_supply_lane.py は表示ビルダーではなく「開示表題の供給側レーン」の台帳追記（P-INF-29・
+    # 2026-10-04・記録だけ・判断に使わない）。daily_reco の 🏭 節がこの台帳を読むので表示ビルドの前に置く。
+    # 失敗しても本処理は落とさず、同じ「表示ビルド状況」欄に ⚠️ を残す。
     display_build_status: dict[str, str] = {}
-    for builder in ("build_recipe_shelf.py", "build_daily_reco.py"):
+    for builder, builder_args in (
+        ("tdnet_supply_lane.py", ["--days", "3"]),
+        ("build_recipe_shelf.py", []),
+        ("build_daily_reco.py", []),
+    ):
         try:
             proc = subprocess.run(
-                [sys.executable, str(Path(__file__).parent / builder)],
+                [sys.executable, str(Path(__file__).parent / builder), *builder_args],
                 check=False, timeout=120,
             )
             display_build_status[builder] = "OK" if proc.returncode == 0 else f"⚠️ 失敗(exit={proc.returncode})"

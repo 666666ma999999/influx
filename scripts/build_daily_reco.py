@@ -171,6 +171,65 @@ def theme_backing_cells(watch_pending: list[dict]) -> dict[tuple[str, str, str],
     return cells
 
 
+TDNET_SUPPLY_BDAYS = 5   # 🏭 企業発（開示表題）節の掲示窓（営業日・表示専用）
+TDNET_TITLE_CHARS = 60   # 表題の表示字数
+
+
+def tdnet_supply_section(recent_floor: dt.date) -> tuple[list[str], int, str | None]:
+    """「🏭 企業発（開示表題・供給側）」節の行を返す（P-INF-29・記録だけ・判断に使わない）。
+
+    台帳 data/tdnet/supply_lane.jsonl（tdnet_supply_lane.py が毎朝 daily_screen の前段で追記）から
+    pubdate の日付が recent_floor 以降の行を新しい順に出す。台帳が無い・読めない時は「⚠️ 生成失敗: 理由」
+    を本文に出す（空欄や 0 件に見せない）。戻り値 = (行, 件数, エラー文字列|None)。
+    """
+    lines: list[str] = []
+    try:
+        import tdnet_supply_lane  # noqa: WPS433  (stdlib-only・台帳パスと区分ラベルを再利用)
+
+        ledger_path = tdnet_supply_lane.LEDGER_PATH
+        if not ledger_path.exists():
+            raise FileNotFoundError(f"台帳が無い {ledger_path.relative_to(REPO)}（tdnet_supply_lane.py 未実行?）")
+        rows = [
+            r for r in tdnet_supply_lane.load_ledger(ledger_path)
+            if (d := tdnet_supply_lane.pub_date(r.get("pubdate", ""))) is not None and d >= recent_floor
+        ]
+    except Exception as exc:  # noqa: BLE001  表示専用・本体は落とさないが**黙らせない**
+        err = f"{type(exc).__name__}: {str(exc)[:160]}"
+        lines.append(f"## 🏭 企業発（開示表題・供給側）: ⚠️ 生成失敗（直近 {TDNET_SUPPLY_BDAYS} 営業日・判断に使わない・記録だけ）")
+        lines.append("")
+        lines.append(f"⚠️ 生成失敗: {err}")
+        lines.append("")
+        return lines, 0, err
+    lines.append(
+        f"## 🏭 企業発（開示表題・供給側）: {len(rows)} 件"
+        f"（直近 {TDNET_SUPPLY_BDAYS} 営業日・判断に使わない・記録だけ）"
+    )
+    lines.append("")
+    if rows:
+        lines.append("| 日時 | 銘柄 | 社名 | 区分(増産/受注/価格) | 表題(60字) | TOP1000 |")
+        lines.append("|---|---|---|---|---|---|")
+        for r in sorted(rows, key=lambda r: (r.get("pubdate") or "", r.get("id") or ""), reverse=True):
+            kind = tdnet_supply_lane.GROUP_LABEL.get(r.get("group"), r.get("group") or "")
+            if r.get("periodic"):
+                kind += "（定期）"
+            title = md_cell(r.get("title") or "")[:TDNET_TITLE_CHARS]
+            lines.append(
+                f"| {md_cell(r.get('pubdate') or '')} | {md_cell(r.get('code4') or r.get('code') or '')} | "
+                f"{md_cell(r.get('name') or '')} | {kind} | {title} | {'○' if r.get('in_top1000') else '—'} |"
+            )
+        lines.append("")
+        lines.append(
+            "企業が自分で言う供給側（増産・新工場・大口受注・価格改定）の開示表題を機械で拾っただけ"
+            f"（語グループ {tdnet_supply_lane.RULE_VERSION}・本文は見ていない）。窓= 完了した直近 {TDNET_SUPPLY_BDAYS} 営業日"
+            "＋当日分（毎朝 07:30 の生成時点では当日分は未着・手動で夕方に再生成すると当日分も出る）。「（定期）」= 月次の受注速報＝"
+            "採点母集団から外す。採点の事前登録は docs/price-watch-universe.md §16o-3 追記10（事象= 定期でなく TOP1000 内・30 件で 1 回）。"
+        )
+    else:
+        lines.append("（直近の該当開示なし）")
+    lines.append("")
+    return lines, len(rows), None
+
+
 def build() -> tuple[str, dict]:
     meta = json.loads(META_PATH.read_text(encoding="utf-8"))
     tiers = {kpi: item["tier"] for kpi, item in meta["kpi_classification"].items()}
@@ -306,6 +365,9 @@ def build() -> tuple[str, dict]:
     else:
         lines.append("（なし）")
     lines.append("")
+    # --- 🏭 企業発（開示表題・供給側）: P-INF-29・記録だけ・判断に使わない ---
+    ts_lines, ts_count, ts_error = tdnet_supply_section(recent_bday_floor(today, TDNET_SUPPLY_BDAYS))
+    lines.extend(ts_lines)
     lines.append(f"## 🚫 使用禁止・参照系統の発火（対照/棄却済み）: {len(banned_pending)}件")
     lines.append("")
     if banned_pending:
@@ -389,6 +451,7 @@ def build() -> tuple[str, dict]:
     lines.append(
         "データ源: data/paper_trades/ledger.jsonl / config/recipe_shelf_meta.json / config/paper_watchlist.json"
         " ／ 仕込み型= data/price_watch/forward_log.jsonl + configs/price_universe_sources.json + data/jquants"
+        " ／ 企業発= data/tdnet/supply_lane.jsonl（tdnet_supply_lane.py）"
     )
     lines.append("")
 
@@ -403,6 +466,8 @@ def build() -> tuple[str, dict]:
         "first_read_date": first_read,
         "shikomi_count": len(sk_rows),
         "shikomi_error": sk_error,
+        "tdnet_supply_count": ts_count,
+        "tdnet_supply_error": ts_error,
     }
     return "\n".join(lines), summary
 

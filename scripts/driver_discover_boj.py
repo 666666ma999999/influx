@@ -26,8 +26,6 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
-import glob
-import gzip
 import json
 import os
 import re
@@ -38,10 +36,10 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "scripts"))
 
 from monthly_sources import _boj_bulk_rows, _ym_shift, parse_boj_bulk  # noqa: E402
+from tdnet_index_lib import TDNET_INDEX_DIR, _index_files_since, iter_tdnet_records, normalize_code  # noqa: E402,F401  (index の読み方は 1 箇所化・2026-10-04 P-INF-29)
 
 SOURCES_PATH = os.path.join(ROOT, "configs", "price_universe_sources.json")
 CENTER_PIN_PATH = os.path.join(ROOT, "data", "center_pin", "center_pin.jsonl")
-TDNET_INDEX_DIR = os.path.join(ROOT, "data", "tdnet", "index")
 OUTPUT_PATH = os.path.join(ROOT, "output", "driver_discover.md")
 
 DATASETS = ("cgpi", "sppi")
@@ -199,14 +197,6 @@ def rank_items(items: List[Dict[str, Any]], top: int) -> Dict[str, List[Dict[str
 
 # ---------------------------------------------------------------- TDnet
 
-def normalize_code(code: str) -> str:
-    """TDnet の会社コード（5桁・末尾0）を center_pin の4桁に揃える。"""
-    code = (code or "").strip()
-    if len(code) == 5 and code.endswith("0"):
-        return code[:-1]
-    return code
-
-
 def load_center_pin(path: str = CENTER_PIN_PATH) -> List[Dict[str, Any]]:
     """center_pin.jsonl を読む（壊れた行は飛ばす）。"""
     rows: List[Dict[str, Any]] = []
@@ -222,19 +212,6 @@ def load_center_pin(path: str = CENTER_PIN_PATH) -> List[Dict[str, Any]]:
             except json.JSONDecodeError:
                 continue
     return rows
-
-
-def _index_files_since(index_dir: str, since: dt.date) -> List[str]:
-    """`<year>/<YYYYMMDD>_<YYYYMMDD>.json.gz` のうち終了日が since 以降のファイル。"""
-    out: List[str] = []
-    for path in glob.glob(os.path.join(index_dir, "*", "*.json.gz")):
-        m = re.search(r"(\d{8})_(\d{8})\.json\.gz$", path)
-        if not m:
-            continue
-        end = dt.datetime.strptime(m.group(2), "%Y%m%d").date()
-        if end >= since:
-            out.append(path)
-    return sorted(out)
 
 
 def scan_tdnet_items(items: List[Dict[str, Any]], since: dt.date,
@@ -287,15 +264,14 @@ def scan_tdnet(days: int, pin_by_code: Dict[str, Dict[str, Any]],
     since = today - dt.timedelta(days=days)
     hits: List[Dict[str, Any]] = []
     seen: set = set()
-    for path in _index_files_since(index_dir, since):
-        with gzip.open(path, "rt", encoding="utf-8") as fh:
-            data = json.load(fh)
-        for h in scan_tdnet_items(data.get("items", []), since, pin_by_code):
-            key = (h["date"], h["code"], h["title"])
-            if key in seen:
-                continue
-            seen.add(key)
-            hits.append(h)
+    # index の読み込みと Tdnet.id の重複除去は tdnet_index_lib に 1 箇所化（出力は従来と同じ鍵で畳む）
+    items = [{"Tdnet": rec} for rec in iter_tdnet_records(index_dir, since)]
+    for h in scan_tdnet_items(items, since, pin_by_code):
+        key = (h["date"], h["code"], h["title"])
+        if key in seen:
+            continue
+        seen.add(key)
+        hits.append(h)
     hits.sort(key=lambda x: (x["date"], x["code"]), reverse=True)
     return hits
 
