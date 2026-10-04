@@ -109,12 +109,13 @@ flowchart LR
 
 | レーン | 実装 | 台帳（書き込み先） |
 |---|---|---|
-| ペーパートレード（本体） | `scripts/paper_eval.py` / `daily_screen.py` | `data/paper_trades/ledger.jsonl`＋`state.json` |
+| ペーパートレード（本体） | `scripts/paper_eval.py` / `daily_screen.py`（反発系の分割の偽合図は `paper_eval.flag_split_false_signals` が `split_false_signal` の印を付け、成績表・本日レコメンドから除外して件数を表示・行は消さない＝2026-10-04 `tasks/split_fix_live_lanes.md`。反発系の急落判定は 2026-10-05 から未調整値＝`kpi_round23_signals.SPLIT_SAFE_CUTOVER`） | `data/paper_trades/ledger.jsonl`＋`state.json` |
 | ペア（対銘柄） | `scripts/pair_forward_scan.py` | `data/paper_trades/pair_forward_ledger.jsonl` |
 | TOB（公開買付） | `scripts/tob_forward_runner.py` | `data/paper_trades/tob_ledger.jsonl`＋`tob_state.json` |
 | 反発系の空売り版（2026-10-03 登録・P-INF-23・台帳外α非消費） | `scripts/short_forward_runner.py`（`daily_screen.py` 末尾と早期 return からサブプロセス）・凍結式 `scripts/short_forward_v1_spec.py` | `data/paper_trades/short_forward_ledger.jsonl` |
-| 商品価格の発火 | `scripts/price_watch_forward.py` | `data/x_price_watch/ledger.jsonl` |
-| 海外受益カード | `scripts/foreign_forward.py` | 同上（`skipped_foreign` に除外理由）※**対TOPIX前向き台帳には入れない** |
+| 商品価格の発火 | `scripts/price_watch_forward.py`（騰落率は `jq_fetch.split_scale` で発火時の尺度に揃える・分割走査が不完全なら評価を保留・既存の誤評価は `evaluation_correction` 行で訂正＝2026-10-04） | `data/price_watch/forward_log.jsonl`（2026-10-04 訂正: 旧記載 `data/x_price_watch/ledger.jsonl` は X 値上がり検出の台帳で別物） |
+| 海外受益カード | `scripts/foreign_forward.py` | `data/price_watch/foreign_forward_log.jsonl`（`skipped_foreign` に除外理由・2026-10-04 実装の `LEDGER_PATH` で訂正）※**対TOPIX前向き台帳には入れない** |
+| ニュース供給ショック | `scripts/news_shock_eval.py`（分割補正は価格レーンと同じ `jq_fetch.split_scale`・カレンダーで走査の欠けを検査して保留・既存行は `evaluation_correction`＝2026-10-04） | `data/news_shock/news_log.jsonl` |
 | インフルエンサー（fxnia） | `scripts/fxnia_forward_eval.py` | `data/influencer_candidates/forward/` |
 | インフルエンサー（okasira_kanki・2026-08-29 追加・P-INF-07） | 同上（`fxnia_forward_launchd.sh` を `FWD_ACCOUNT/FWD_START/FWD_LABEL` で共用） | `data/influencer_candidates/forward/okasira_kanki.json`・台帳 `output/influencer_candidates/okasira_forward_ledger.tsv`（監視開始 2026-08-30） |
 
