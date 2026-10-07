@@ -18,7 +18,7 @@
 | Status | active |
 | Issue | なし |
 | 開始日時 | 2026-10-07 23:30 |
-| 最終更新 | 2026-10-07 23:30 |
+| 最終更新 | 2026-10-08 01:35 |
 | 担当 | Claude（統括）＋敵対レビュー 3 体 |
 
 ## Goal
@@ -62,15 +62,16 @@
 |------|---------|---------|------|
 | 2026-10-07 | 初期要件（カード 5 件・既定 7 件） | オーナー起案 | — |
 | 2026-10-07 | v2: 起点= 短信開示日・期ごとのラベル・台帳外は足さない・成功基準③を実台帳 loader に差し替え・統括既定 D1〜D5 | 敵対レビュー 3 体「直して採る」 | 叩き台 §12 対応表 |
+| 2026-10-07 | v2.1 検収（カード）: a 承認＝味の素 1 社で実走／D1 そのまま／D3= 起点 2 本（短信主・有報副）＋**決算説明会資料を常に読む**（有報に無い時だけ→全社） | オーナー裁定 | 読む資料が増える（費用式に説明会資料の文字数を足す） |
 
 ## Current State
 
 | 項目 | 値 |
 |------|-----|
-| Summary | 叩き台 v2（レビュー反映済み）を検収待ち。実装は未着手 |
-| Focus | オーナー検収（D1〜D5 の既定を含む）→ 承認後に味の素 1 社の通し実装 |
-| Hypothesis | EDINET の CSV（XBRL 全要素）から節だけ抜けば PDF を読まずに済む（味の素 1 冊で実証・HTML 0 件・6 節 27,628 字） |
-| Confidence | medium |
+| Summary | 味の素 1 社で工程①〜④を通した（2026-10-08）。取得・節抜き・説明会資料・判定は動く。**実 API は未実行**（ANTHROPIC_API_KEY が masa-2 の環境に無い＝`~/.zshrc:145` で 2026-09-02 に削除・`.envrc` にも無し）→ Claude Code の Sonnet サブエージェント 3 体で代走し埋まり方だけ確認。Codex レビュー（gpt-6-astra）1 回目 REJECT＝Critical 10 件 → 修正（一括ゲート 685 件 OK・products 6→8）→ **2 回目 REJECT＝Critical 7 件**（消込 直った 5／部分 3／未 2・残り= 候補なし期の需要・区分判定の品目転用・IR 由来のみの完備算入・KPI 非数値・型検証・通信失敗の実測 $0・鍵伏せの順序）→ 2 回目の修正 → **3 回目 REJECT 2 件 → 4 回目 REJECT 1 件 → 5 回目 APPROVE**（KPI 非数値の順序・「期待」の根拠 3＋2 条件を統括が直接修正・一括ゲート 698 件 OK）。最終: products 8×3 期= 24 マス・需要（区分）3／不成立（区分）2／未判定 19（候補なし 15・KPI 非数値 4）・出所完備 3／IR 由来のみ 5・費用 未測定 |
+| Focus | ①commit 済み・実 API 1 回が鍵待ち ②オーナー裁定= 実 API の鍵の置き場（`.envrc` 推奨）／50 社試走の可否／設計 3 点（候補集合を会社単位で固定・IR 由来 KPI の出所契約・分母の種類） |
+| Hypothesis | EDINET の CSV（XBRL 全要素）から節だけ抜けば PDF を読まずに済む（味の素 3 期で実証・HTML 実体の未復元だけ直した・MD&A は XBRL 原本と完全一致） |
+| Confidence | medium（埋まり方は見えた・Codex APPROVE・費用係数は未実測） |
 
 ## Progress Snapshot
 
@@ -80,10 +81,19 @@
 - [x] 味の素 1 社の有報 CSV 取得と節サイズ実測（scratchpad・repo 未変更）
 - [x] 叩き台 v1 → 敵対レビュー 3 体（A validator／B Codex Astra／C Codex Sol・全員「直して採る」）→ v2
 
+- [x] 叩き台 v2 の検収（オーナー・カード 2026-10-07: a 承認・D1 そのまま・D3 起点 2 本＋説明会資料常時）→ v2.1
+- [x] 2026-10-08 味の素 1 社の通し実装（plan= `src/features/disclosure_kpi/plan.md`）: `scripts/yuho_fetch.py`（EDINET type5 → sections.json・3 期とも 6/7 節・3 セグメント・IFRS）／`scripts/ir_pdf_text.py`（説明会資料 PDF 3 本 → txt）／`scripts/yuho_read.py`（プロンプト 48,083〜49,158 字/期・dry-run 実測）／`scripts/yuho_judge.py`（需要 3 条件の機械判定）／テスト 3 本（一括ゲート 643 件 OK）
+- [x] MD&A 10,000 字の疑い= type1 XBRL と文単位で照合→切り詰めでなく HTML 実体の未復元（修正後 完全一致）
+- [x] 代走の初回実走（API 外・Sonnet サブエージェント 3 体）: 候補 6 品目 × 3 期・ラベル 需要 4／需要条件不成立 14／未判定 0（調味料・食品 2024/2025 期= 需要、2026 期は区分売上 +4.6% で不成立）。ただし期ごとに別の品目が選ばれ 18 マスのうち 10 マスに候補行なし＝「最大 3 行を期ごと独立に選ぶ」設計の穴（Codex 指摘）
+
 ### In Progress
-- [ ] 叩き台 v2 の検収（オーナー）
-- [ ] 承認後: 味の素 1 社で工程①〜④を通す実装（plan.md はその時に書く）
+- [ ] commit（scripts＋tests／plan＋task の 2 単位・同セッション）
+- [x] Codex Critical 10 件（1 回目）の修正（2026-10-08 00:27 完了・一括ゲート 685 件 OK・故障注入 4 種 exit 1・台帳不変）
+- [x] Codex Critical 7 件（2 回目）→ 3 回目 2 件 → 4 回目 1 件 → **5 回目 APPROVE**（2026-10-08 01:28・Warning 2 件も反映）
+- [ ] 実 API 1 回の実走（鍵の置き場はオーナー裁定待ち）→ 文字→トークン係数と 1 社の費用を実測
 
 ## Handoff
-- 叩き台: vault `02_Ai/influx/notes/influx-disclosure-kpi-ledger-2026-10-07.md`
-- 日報の器: P-INF-34（叩き台ができた時点で記帳）
+- 叩き台: vault `02_Ai/influx/notes/influx-disclosure-kpi-ledger-2026-10-07.md`（§8 費用= Sonnet 5 $2/$10・1 社 $0.34〜0.42 概算・**§13 試走の記録= 2026-10-08 記入済み**・Codex 2 回の判定文は scratchpad `review/codex_round2.out` と `$TMPDIR/codex-brief.RQrIiH.out`＝セッション限り）
+- 実装: `src/features/disclosure_kpi/plan.md`（T1〜T7）・出力= `output/yuho/2802/{summary.md,products.json}`・入力= `data/edinet/yuho/2802/`（gitignore）
+- 日報の器: P-INF-34 は裁定済み（2026-10-07）→ 次の裁定は P-INF-35（鍵の置き場・50 社試走・設計 3 点）
+- 未決の設計（Codex 指摘・オーナー裁定へ）: ①候補集合を会社単位で固定し各期を同じ品目で再抽出するか ②説明会資料だけにある KPI の出所契約（資料名＋ページで「出所あり」と数えるか） ③分母= 連結の同種利益（事業利益系なら連結事業利益）か連結営業利益固定か・連結利益欠測時の売上比を許すか ④「物なし」は人が付ける（機械は付けない）でよいか
