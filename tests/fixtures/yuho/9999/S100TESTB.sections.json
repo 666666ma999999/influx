@@ -1,0 +1,99 @@
+{
+  "code4": "9999",
+  "sec_code": "99990",
+  "doc_id": "S100TESTB",
+  "submit_date": "2025-06-18 09:00",
+  "period_start": "2024-04-01",
+  "period_end": "2025-03-31",
+  "accounting": "IFRS",
+  "sections": {
+    "business_policy": {
+      "element_id": "jpcrp_cor:BusinessPolicyBusinessEnvironmentIssuesToAddressEtcTextBlock",
+      "chars": 80,
+      "text": "当社グループは「調味料・食品」を中核事業と位置付け、海外調味料の販売数量の拡大を経営上の目標の指標としております。"
+    },
+    "mdna": {
+      "element_id": "jpcrp_cor:ManagementAnalysisOfFinancialPositionOperatingResultsAndCashFlowsTextBlock",
+      "chars": 90,
+      "text": "調味料・食品セグメントは、海外調味料の販売数量が前期比5%増となり、売上収益は900,000百万円（前期比5.9%増）、事業利益は130,000百万円となりました。"
+    },
+    "risks": {
+      "element_id": "jpcrp_cor:BusinessRisksTextBlock",
+      "chars": 50,
+      "text": "原材料価格の高騰は当社グループの粗利率を押し下げる可能性があります。"
+    },
+    "segment_notes": {
+      "element_id": "jpigp_cor:NotesSegmentInformationConsolidatedFinancialStatementsIFRSTextBlock",
+      "chars": 60,
+      "text": "当社グループの報告セグメントは「調味料・食品」「ヘルスケア等」の2区分であります。"
+    },
+    "business_results": null,
+    "business_description": {
+      "element_id": "jpcrp_cor:DescriptionOfBusinessTextBlock",
+      "chars": 40,
+      "text": "当社グループは調味料、加工食品、アミノ酸、電子材料の製造販売を行っております。"
+    },
+    "production_sales": null
+  },
+  "facts": {
+    "consolidated": {
+      "CurrentYearDuration": {
+        "net_sales": 1440000,
+        "gross_profit": 520000,
+        "operating_profit": 150000,
+        "business_profit": 165000
+      },
+      "Prior1YearDuration": {
+        "net_sales": 1350000,
+        "gross_profit": 500000,
+        "operating_profit": 140000,
+        "business_profit": 150000
+      }
+    },
+    "segments": {
+      "SeasoningsAndFoodsReportableSegmentsMember": {
+        "label": "調味料・食品",
+        "ctx": {
+          "CurrentYearDuration": {
+            "net_sales": 900000,
+            "segment_profit": 130000
+          },
+          "Prior1YearDuration": {
+            "net_sales": 850000,
+            "segment_profit": 120000
+          }
+        }
+      },
+      "HealthcareAndOthersReportableSegmentsMember": {
+        "label": "ヘルスケア等",
+        "ctx": {
+          "CurrentYearDuration": {
+            "net_sales": 310000,
+            "segment_profit": 70000
+          },
+          "Prior1YearDuration": {
+            "net_sales": 300000,
+            "segment_profit": 60000
+          }
+        }
+      }
+    },
+    "profit_measure": "jpigp_cor:BusinessProfitIFRS",
+    "reconciling": {
+      "CurrentYearDuration": {
+        "segment_profit": -35000
+      },
+      "Prior1YearDuration": {
+        "segment_profit": -30000
+      }
+    },
+    "total_segments": {
+      "CurrentYearDuration": {
+        "segment_profit": 200000
+      },
+      "Prior1YearDuration": {
+        "segment_profit": 180000
+      }
+    }
+  }
+}
