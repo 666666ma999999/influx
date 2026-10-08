@@ -71,3 +71,21 @@
 
 ### T7 一括ゲートと記録
 - `docker compose run --rm -v "$PWD/tests:/app/tests" xstock python -m unittest discover -s tests` 全件 PASS／`git diff --stat data/center_pin/` が空／`tasks/disclosure_kpi_ledger.md` の Progress を更新／意味単位で commit（scripts＋tests／tasks）
+
+### T8 50 社の試走（2026-10-08 オーナー裁定: 鍵は入れない・セッション内の Sonnet サブエージェントで読む）
+- 選定（既定）: center_pin 977 社 → J-Quants bars の時価総額 ≥ 50,000 百万円 → 物を売る業種（除外= 銀行・証券・保険・その他金融・不動産・サービス・情報通信・電気ガス・陸運・海運・空運・倉庫運輸・建設）→ 業種ごとに時価総額上位を 1 社ずつ回して 50 社。選定の記録= scratchpad `trial50/selection.json`（母集団・除外・50 社の一覧）
+- 取得: `scripts/yuho_fetch.py --code <4桁> --n 3` を 50 社ぶん順に（Docker・`-e EDINET_API_KEY`）。失敗した社は `failed` に残す
+- 説明会資料: 会社ごとに IR サイトから直近 3 期の通期決算説明会資料 PDF を探すサブエージェント（Web 読み取りのみ・見つからない社は `ir/NONE.txt` に理由を書いて「説明会資料なし」）→ `scripts/ir_pdf_text.py` で txt（名前= `FY<期首年>_presentation`）
+- 読み: `scripts/yuho_read.py --code <4桁> --dry-run` でプロンプトを作り、**1 docID 1 体の Sonnet サブエージェント**（Claude Code の Agent・API 鍵なし）が JSON 配列を返す → scratchpad `yuho_pilot/to_read_json.py` で read.json（model に「代走」を明記）
+- 判定: `scripts/yuho_judge.py --code <4桁>` を 50 社ぶん → 集計は yuho_judge に `--all`（`output/yuho/*/products.json` を束ねて `output/yuho/trial_summary.md`）を足す（新規ファイルは作らない）
+- 成功基準の測り方: 埋まり率= `products_status=済` かつ `complete_products ≥ 1` の社 ÷（50 − 物なし）。「物なし」は人が付ける（機械は付けない）＝この試走では分母 50 で仮置きし、物なし候補を別に列挙する
+- 検証: 件数の突合〈選んだ 50／取得できた N／読めた docID 数／判定できた社〉を summary に書く。読みの形は `normalize_rows` の warnings で数える
+
+
+#### T8 の結果（2026-10-08 実測・詳細= vault §13b）
+- 件数の突合: 選んだ 50／取得 150 docID（50 社 × 3 期・exit 0 = 50/50）／説明会資料の本文 146/150／読み= Sonnet サブエージェント 150 体・応答 150/150（JSON 不成立 0・行 409・必須列欠落で 38 行破棄）／判定 50/50／`--all` → `output/yuho/trial_summary.md`
+- 埋まり率= 48/50 = 0.96（分母は「物なし」を除く前・物なし候補 0）。未完の 2 社= HOYA・オリンパス（出所が説明会資料だけ）
+- 品目ラベル 1,080 マス= 需要（区分）38／不成立 126／期待 2／未判定〈当期候補なし 672・区分数値なし 133・KPI 非数値 109〉
+- 途中で直した取りこぼし: 報告セグメント member の複数形（19 社で segments=0）＋汎用 member の除外／連結売上の要素名 `Revenue2IFRS`（商社 3）・`SalesRevenuesIFRS`（トヨタ）。一括ゲート 705 件 OK（Codex 実装レビュー 2 回目 APPROVE）
+- 区分数値なしの構造原因（17 社）= 単一セグメント 6／区分利益の尺度が営業利益でない 5／連結粗利なし 7／US GAAP で XBRL に数値なし 2 → 設計の裁定へ（P-INF-36）
+- 運用の上限: サブエージェントの一斉投入は 5〜8 体（10 体で Lock 失敗）。150 体で約 1 時間（張り付き）＝962 社なら約 20 時間・無人化には API 鍵が要る
