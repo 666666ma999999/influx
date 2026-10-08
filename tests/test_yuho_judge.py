@@ -4,17 +4,20 @@
 (a) share_pct: 分母 None→None・0→None・143036/181163→79.0（味の素 第148期の実測値）
 (b) judge_period: 3 条件 True→需要／cond_c False→需要条件不成立／欠測→未判定／expectation→期待
 (c) share_basis: 利益比を優先し、区分利益が None の時だけ売上比。profit_measure を必ず残す
-(d) 単一セグメント（segments 空）は share=100・単一セグメント
+(d) 単一セグメント（フラグ or segments 空＝区分 0）は share=100・単一セグメント（連結を区分とみなす）
 (e) find_segment_member: 完全一致・部分一致・引けない
 (f) build_products: fixture 2 期＋偽の read 行で periods が 2 本・label が期ごとに違う・source.doc_id あり
 (g) Codex Critical の回帰: 1=丸め前の値で判定（29.96%→False・粗利率 1e-5 低下→False）／3=同一期・同一品目の複数 KPI を
     落とさない（キー= segment, item, kpi_name・衝突は先頭＋警告）／4=出所（element_id か ir_source）が揃って初めて 済／
-    5=単一セグメントは single_segment フラグがある時だけ／8=代走 doc は費用集計から除外し「未測定」／10=consolidated_measure
+    5=（T9b ④で上書き＝区分 0 も単一とみなす）／8=代走 doc は費用集計から除外し「未測定」／10=consolidated_measure
     を期に出す／share_granularity を期に出す
 (h) Codex 2 回目の回帰: 1=品目の label は 需要（区分）／需要条件不成立（区分）・segment_label に区分の判定を残す／
     2=候補行の無い期は 未判定（当期候補なし）／3=説明会資料だけの出所は未完（source_kind・IR 由来のみの件数）／
     4=KPI が数値でない期は 未判定（KPI 非数値）・expectation＋根拠節なら 期待／5=文字列列は strip 済み有効値で数える／
     6=usage_ok が True の doc だけ費用の実測／Warning=負の分母・分子は share=None・basis「赤字のため構成比を出せない」
+(i) T9b（2026-10-08 P-INF-37 ①a②a・P-INF-36 ②〜④a）: ①束ね鍵= target_id／属性 5 列・区分は期ごと ②未判定（開示なし）・
+    対象外（新設前） ③期待の根拠節に MD&A・説明会資料 ④区分 0 は連結を区分とみなす ⑤粗利なしは 判定不能・2 条件
+    ⑥segment_figures を区分の数字に使う ⑦periods に submit_date ⑧--all に 3 期揃い率と台帳の pin／旧 read.json の互換
 
 実行: docker compose run --rm -v "$PWD/tests:/app/tests" xstock python -m unittest tests.test_yuho_judge -v
 """
@@ -110,13 +113,25 @@ class JudgePeriodTest(unittest.TestCase):
         cur_profit_down = _slice(seg_sales=700, seg_profit=110)    # +16% but profit down
         self.assertFalse(yj.judge_period(prev, cur_profit_down, "SegA")["cond_b"])
 
-    def test_missing_gross_profit_is_undecided(self):
+    def test_missing_gross_profit_is_unjudgeable_two_conditions(self):
+        # T9b ⑤（P-INF-36 ③a）: 連結の粗利が無い会社は cond_c=判定不能・条件 1・2 で判定・根拠欄に「粗利なし・2 条件」
         prev = _slice(gross=None)
         cur = _slice(gross=None, seg_sales=700, seg_profit=130)
         j = yj.judge_period(prev, cur, "SegA")
-        self.assertIsNone(j["cond_c"])
+        self.assertEqual(j["cond_c"], "判定不能")
+        self.assertEqual(j["judge_note"], "粗利なし・2 条件")
         self.assertIsNone(j["gross_margin"])
-        self.assertEqual(yj.label_of((j["cond_a"], j["cond_b"], j["cond_c"]), False), "未判定")
+        self.assertEqual(yj.label_of((j["cond_a"], j["cond_b"], j["cond_c"]), False), "需要")
+        self.assertEqual(yj.label_of((True, False, "判定不能"), False), "需要条件不成立")
+        self.assertEqual(yj.label_of((None, True, "判定不能"), False), "未判定")
+        self.assertEqual(yj.label_of((True, False, "判定不能"), True), "期待")
+        # 粗利はあるが前期が無い → 従来どおり None（判定不能にしない）
+        self.assertIsNone(yj.judge_period(None, _slice(), "SegA")["cond_c"])
+        self.assertIsNone(yj.judge_period(prev, cur, "SegA")["gross_margin_prev"])
+        # 当期に粗利があり前期だけ無い → 欠測（None）
+        self.assertIsNone(yj.judge_period(_slice(gross=None), _slice(), "SegA")["cond_c"])
+        # 粗利があれば根拠欄（judge_note）は空
+        self.assertIsNone(yj.judge_period(_slice(), _slice(), "SegA")["judge_note"])
 
     def test_no_prev_makes_b_and_c_none(self):
         j = yj.judge_period(None, _slice(), "SegA")
@@ -173,22 +188,30 @@ class JudgePeriodTest(unittest.TestCase):
         cur = {"consolidated": {"net_sales": 1000, "gross_profit": 350, "operating_profit": 100, "business_profit": None},
                "segments": {}, "profit_measure": None, "single_segment": True}
         j = yj.judge_period(prev, cur, None)
-        self.assertEqual((j["share_pct"], j["share_basis"]), (100.0, "単一セグメント"))
+        self.assertEqual((j["share_pct"], j["share_basis"]), (100.0, "単一セグメント（連結を区分とみなす）"))
         self.assertEqual((j["cond_a"], j["cond_b"], j["cond_c"]), (True, True, True))
 
-    def test_empty_segments_without_flag_is_not_single(self):
-        # segments が空＝抽出失敗かもしれないので、フラグ無しでは share=None・未判定
+    def test_zero_segments_is_not_single_segment_without_evidence(self):
+        # Codex T9 Critical 3: 区分 0 だけでは単一とみなさない（P-INF-36 ②a は真に単一セグメントの会社への裁定）。
+        # 証拠（single_segment=True）が無ければ share=None・「セグメント抽出なし」＝需要にしない
         for flag in (None, False, "true"):
             cur = {"consolidated": {"net_sales": 1000, "gross_profit": 350, "operating_profit": 100, "business_profit": None},
                    "segments": {}, "profit_measure": None, "single_segment": flag}
             prev = dict(cur, consolidated={"net_sales": 900, "gross_profit": 300, "operating_profit": 90, "business_profit": None})
             j = yj.judge_period(prev, cur, None)
-            self.assertIsNone(j["share_pct"], flag)
-            self.assertEqual(j["share_basis"], "セグメント抽出なし")
-            self.assertIsNone(j["cond_a"])
-            self.assertIsNone(j["cond_b"])
-            self.assertIs(j["cond_c"], True)
+            self.assertEqual((j["share_pct"], j["share_basis"], j["cond_a"]), (None, "セグメント抽出なし", None), flag)
             self.assertEqual(yj.label_of((j["cond_a"], j["cond_b"], j["cond_c"]), False), "未判定")
+        # 証拠があれば連結を区分とみなす（構成比 100%）
+        cur = {"consolidated": {"net_sales": 1000, "gross_profit": 350, "operating_profit": 100, "business_profit": None},
+               "segments": {}, "profit_measure": None, "single_segment": True}
+        prev = dict(cur, consolidated={"net_sales": 900, "gross_profit": 300, "operating_profit": 90, "business_profit": None})
+        j = yj.judge_period(prev, cur, None)
+        self.assertEqual((j["share_pct"], j["share_basis"]), (100.0, "単一セグメント（連結を区分とみなす）"))
+        self.assertEqual((j["cond_a"], j["cond_b"], j["cond_c"]), (True, True, True))   # 売上 +11%・利益 90→100
+        # 連結の数字も無ければ share=None・「セグメント抽出なし」
+        empty = {"consolidated": {}, "segments": {}, "profit_measure": None}
+        j = yj.judge_period(None, empty, None)
+        self.assertEqual((j["share_pct"], j["share_basis"], j["cond_a"]), (None, "セグメント抽出なし", None))
         # facts_slice はフラグを通す（yuho_fetch の実出力は None）
         self.assertIsNone(yj.facts_slice({"consolidated": {}, "segments": {}}, "CurrentYear")["single_segment"])
         self.assertIs(yj.facts_slice({"consolidated": {}, "segments": {}, "single_segment": True}, "CurrentYear")["single_segment"], True)
@@ -254,13 +277,16 @@ class BuildProductsTest(unittest.TestCase):
         self.assertEqual(by["S100TESTA"]["segment_label"], "期待")
         # 前期は候補行なし → 品目の label は 未判定（当期候補なし）・segment_label には区分の判定（c=False）を参考値で残す
         self.assertEqual(by["S100TESTB"]["label"], "未判定（当期候補なし）")
-        self.assertEqual(by["S100TESTB"]["segment_label"], "需要条件不成立")
+        # 前期の区分は後の期の行から借りない（Codex T9 Critical 1）＝区分不明で segment_label は 未判定
+        self.assertIsNone(by["S100TESTB"]["segment"])
+        self.assertEqual(by["S100TESTB"]["segment_label"], "未判定")
         self.assertIs(by["S100TESTB"]["cond_c"], False)
         self.assertIsNone(by["S100TESTB"]["kpi_value"])
         self.assertIsNone(by["S100TESTB"]["source"]["source_kind"])
         md = yj.render_summary(r)
         self.assertIn("| segment_label | label |", md)
-        self.assertIn("| 需要条件不成立 | 未判定（当期候補なし） |", md)
+        self.assertIn("| 未判定 | 未判定（当期候補なし） |", md)
+        self.assertIn("| — | ABF | — | 2025-03-31 |", md)   # 区分不明の期に後の期の区分を表示しない（Codex T9 Critical 1）
 
     def test_kpi_non_numeric_is_undecided_unless_expectation(self):
         # ヘルスケア等（b=False → 区分は 需要条件不成立）で kpi_value が数値に読めない → 未判定（KPI 非数値）
@@ -330,10 +356,13 @@ class BuildProductsTest(unittest.TestCase):
         reads = {"S100TESTA": dict(self.reads["S100TESTA"], rows=[base]), "S100TESTB": None}
         per = {x["doc_id"]: x for x in yj.build_products(docs, reads)["products"][0]["periods"]}["S100TESTA"]
         self.assertEqual((per["label"], per["expect_basis"]), ("未判定（KPI 非数値）", "経営方針の節が当期の有報に無い"))
-        # 根拠節が説明会資料・引用なし → 未判定（KPI 非数値）
+        # 根拠節が説明会資料でも本文（ir_texts）が無ければ 未判定（KPI 非数値）
         a = label_for(dict(base, quote_section="ir_presentation", quote=None))
         self.assertEqual((a["label"], a["expectation"]), ("未判定（KPI 非数値）", False))
-        self.assertIn("経営方針でない", a["expect_basis"])
+        self.assertEqual(a["expect_basis"], "説明会資料の本文が無い")
+        # 根拠節が対象外（リスク）→ 期待にしない
+        a = label_for(dict(base, quote_section="risks"))
+        self.assertIn("経営方針・MD&A・説明会資料でない", a["expect_basis"])
         # 引用が本文に無い
         a = label_for(dict(base, quote="存在しない引用文"))
         self.assertEqual(a["label"], "未判定（KPI 非数値）")
@@ -422,7 +451,7 @@ class BuildProductsTest(unittest.TestCase):
         p2 = yj.build_products(self.docs, reads)["products"][0]
         by2 = {x["doc_id"]: x for x in p2["periods"]}
         self.assertEqual(by2["S100TESTA"]["share_granularity"], "区分比を品目に適用（確証に使わない）")
-        self.assertEqual(by2["S100TESTB"]["share_granularity"], "区分比を品目に適用（確証に使わない）")  # 行なしでも区分比は出る
+        self.assertIsNone(by2["S100TESTB"]["share_granularity"])   # 前期は行も区分も無い＝後の期の区分を借りない（Codex T9 Critical 1）
         reads = {"S100TESTA": dict(self.reads["S100TESTA"], rows=[dict(self.row, segment="存在しない区分")]), "S100TESTB": None}
         p3 = yj.build_products(self.docs, reads)["products"][0]
         self.assertIsNone(p3["periods"][0]["share_pct"])
@@ -635,6 +664,222 @@ class CostMeasurementTest(unittest.TestCase):
         self.assertFalse(yj._is_proxy_read({"model": "x 代走 y", "usage": {"input_tokens": 5}}))
 
 
+# ---------------------------------------------------------------- T9b（3 期の合成 fixture）
+def _doc(doc_id, period_end, submit_date, segs, cons_cur, cons_prev, mdna_text="当期は国内の販売数量が伸びた。"):
+    """sections.json 相当（yuho_fetch の形: 区分は ctx 1 段下・連結は ctx 名が直下）。segs = {label: (cur, prev)}。"""
+    return {
+        "code4": "9998", "doc_id": doc_id, "period_end": period_end, "submit_date": submit_date, "accounting": "IFRS",
+        "sections": {"mdna": {"element_id": "jpcrp_cor:MDA", "chars": len(mdna_text), "text": mdna_text},
+                     "business_policy": {"element_id": "jpcrp_cor:Policy", "chars": 10, "text": "方針"}},
+        "facts": {
+            "unit": "円",
+            "consolidated": {"CurrentYearDuration": cons_cur, "Prior1YearDuration": cons_prev},
+            "segments": {f"{label}Member": {"label": label, "ctx": {
+                "CurrentYearDuration": {"net_sales": c[0], "segment_profit": c[1]},
+                "Prior1YearDuration": {"net_sales": p[0], "segment_profit": p[1]}}}
+                for label, (c, p) in segs.items()},
+            "profit_measure": "jpigp_cor:OperatingProfitLossIFRS",
+        },
+    }
+
+
+def _cons(sales, gross, op):
+    return {"net_sales": sales, "gross_profit": gross, "operating_profit": op, "business_profit": None}
+
+
+def _read(doc_id, rows, **top):
+    return dict({"doc_id": doc_id, "model": "m", "prompt_chars": 10, "rows": rows,
+                 "usage": {"input_tokens": 0, "output_tokens": 0}, "usage_ok": True, "error": None}, **top)
+
+
+class T9bTest(unittest.TestCase):
+    """T9b ①〜⑧（2026-10-08 P-INF-37 ①a②a・P-INF-36 ②〜④a）と旧 read.json の互換。"""
+
+    def setUp(self):
+        # 区分の再編: 2024・2025 は「食品」・2026 は「調味料」に名前が変わる（member も別）
+        self.docs = [
+            _doc("D2024", "2024-03-31", "2024-06-20", {"食品": ((600, 60), (550, 50))},
+                 _cons(1000, 400, 100), _cons(950, 370, 90)),
+            _doc("D2025", "2025-03-31", "2025-06-19", {"食品": ((660, 70), (600, 60))},
+                 _cons(1100, 450, 110), _cons(1000, 400, 100)),
+            _doc("D2026", "2026-03-31", "2026-06-18", {"調味料": ((730, 80), (660, 70))},
+                 _cons(1200, 500, 120), _cons(1100, 450, 110),
+                 mdna_text="調味料の国内数量を成長の柱として拡大する。説明は以上。"),
+        ]
+        self.base = {"segment": "食品", "item": "調味料", "kpi_name": "国内数量", "geo": "国内", "value_type": "数量",
+                     "value_basis": "前年比", "kpi_value": 103, "kpi_unit": "%", "kpi_prev_value": None,
+                     "share_scope": "区分", "label_hint": "需要", "quote": "国内 数量 103%", "quote_section": "mdna",
+                     "expectation": False, "status": "new"}
+        self.targets = [{"target_id": "T1", "segment": "食品", "item": "調味料", "kpi_name": "国内数量", "geo": "国内",
+                         "value_type": "数量", "value_basis": "前年比"}]
+
+    def _nominated(self, **kw):
+        row = dict(self.base, target_id="T1", status="found")
+        row.update(kw)
+        return row
+
+    def test_1_target_id_groups_across_periods_and_segment_per_period(self):
+        # 基準期は target_id なし（targets.json で引く）・後の期は指名行で名前が揺れても 1 品目に束ねる
+        reads = {
+            "D2024": _read("D2024", [self.base], mode="base", submit_date="2024-06-20"),
+            "D2025": _read("D2025", [self._nominated(item="調味料（国内）", kpi_value=104)], mode="nominated"),
+            "D2026": _read("D2026", [self._nominated(segment="調味料", item="調味料類", kpi_value=105)], mode="nominated"),
+        }
+        r = yj.build_products(self.docs, reads, self.targets)
+        self.assertEqual(r["products_total"], 1)
+        p = r["products"][0]
+        self.assertEqual((p["target_id"], p["geo"], p["value_type"], p["value_basis"]), ("T1", "国内", "数量", "前年比"))
+        self.assertEqual([x["kpi_value"] for x in p["periods"]], [103, 104, 105])
+        # 区分は期ごと: 2026 は「調味料」の member を引く（再編後も区分の数字が出る）
+        self.assertEqual([x["segment"] for x in p["periods"]], ["食品", "食品", "調味料"])
+        self.assertEqual([x["source"]["segment_member"] for x in p["periods"]], ["食品Member", "食品Member", "調味料Member"])
+        self.assertTrue(all(x["share_pct"] is not None for x in p["periods"]))
+        self.assertEqual([x["read_mode"] for x in p["periods"]], ["base", "nominated", "nominated"])
+        self.assertTrue(p["three_period_complete"])
+        self.assertEqual((r["three_period_products"], r["three_period_eligible"]), (1, 1))
+        # targets.json が無いと基準期の行は別の品目（属性キー）になる
+        r2 = yj.build_products(self.docs, reads)
+        self.assertEqual(r2["products_total"], 2)
+        # target_id の無い旧形式: 属性 5 列で束ねる＝geo が違えば別品目・区分名の違いでは分けない
+        rows = [dict(self.base, geo="海外", kpi_value=99), dict(self.base, segment="別区分")]
+        r3 = yj.build_products(self.docs, {"D2024": None, "D2025": None, "D2026": _read("D2026", rows)})
+        self.assertEqual(r3["products_total"], 2)
+        self.assertEqual(sorted(p["geo"] for p in r3["products"]), ["国内", "海外"])
+        self.assertEqual(yj._product_key({"target_id": " T9 ", "item": "x"})[0], "T9")
+
+    def test_2_not_disclosed_and_out_of_scope_labels(self):
+        nd = self._nominated(status="not_disclosed", kpi_value=None, quote=None)
+        newbie = dict(self.base, item="新製品", kpi_name="出荷台数", status="new", kpi_value=12)
+        reads = {
+            "D2024": _read("D2024", [self.base], mode="base"),
+            "D2025": _read("D2025", [nd], mode="nominated"),
+            "D2026": _read("D2026", [self._nominated(segment="調味料"), newbie], mode="nominated"),
+        }
+        r = yj.build_products(self.docs, reads, self.targets)
+        by = {p["item"]: p for p in r["products"]}
+        self.assertEqual(by["調味料"]["periods"][1]["label"], "未判定（開示なし）")
+        self.assertEqual(by["調味料"]["periods"][1]["row_status"], "not_disclosed")
+        self.assertEqual([x["label"] for x in by["新製品"]["periods"][:2]], ["対象外（新設前）"] * 2)
+        self.assertNotEqual(by["新製品"]["periods"][2]["label"], "対象外（新設前）")
+        self.assertEqual(by["新製品"]["first_status"], "new")
+        # 新設の品目は 3 期揃い率の分母から除く・開示なしの品目は分母に残る（揃ってはいない）
+        self.assertEqual((r["three_period_products"], r["three_period_eligible"]), (0, 1))
+        # 基準期（最も古い期）に出た status=new は 対象外 を作らない・旧形式（status なし）は 当期候補なし のまま
+        r2 = yj.build_products(self.docs, {"D2024": None, "D2025": None,
+                                           "D2026": _read("D2026", [dict(newbie, status=None)])})
+        self.assertEqual([x["label"] for x in r2["products"][0]["periods"][:2]], ["未判定（当期候補なし）"] * 2)
+        self.assertEqual(yj.product_label(None, "需要", 1, False, out_of_scope=True), "対象外（新設前）")
+        self.assertEqual(yj.product_label({"status": "not_disclosed"}, "需要", None, False), "未判定（開示なし）")
+
+    def test_3_expectation_from_mdna_and_ir(self):
+        exp = dict(self.base, segment="調味料", quote_section="mdna", expectation=True,
+                   quote="調味料の国内数量を成長の柱として拡大する。")
+        reads = {"D2024": None, "D2025": None, "D2026": _read("D2026", [exp])}
+        per = yj.build_products(self.docs, reads)["products"][0]["periods"][-1]
+        self.assertEqual((per["expectation"], per["expect_basis"]), (True, "MD&Aの本文に品目名つきの引用あり"))
+        # 説明会資料: ir_texts の本文で照合する（本文が無ければ期待にしない）
+        ir_row = dict(exp, quote_section="ir_presentation", quote="調味料は重点領域")
+        reads = {"D2024": None, "D2025": None, "D2026": _read("D2026", [ir_row], ir_source="FY2025.txt")}
+        per = yj.build_products(self.docs, reads, ir_texts={"D2026": "スライド3 調味料は重点領域 です"})["products"][0]["periods"][-1]
+        self.assertEqual((per["expectation"], per["expect_basis"]), (True, "説明会資料の本文に品目名つきの引用あり"))
+        self.assertEqual(per["source"]["source_kind"], "説明会資料")
+        per = yj.build_products(self.docs, reads)["products"][0]["periods"][-1]
+        self.assertEqual((per["expectation"], per["expect_basis"]), (False, "説明会資料の本文が無い"))
+        self.assertEqual(yj.EXPECT_SECTIONS, ("business_policy", "mdna", "ir_presentation"))
+
+    def test_4_zero_segments_company_uses_consolidated(self):
+        # Codex T9 Critical 3: 区分 0 でも単一の証拠が無ければ 100% にしない（旧 read.json が黙って 100% にならない）
+        docs = [dict(d, facts=dict(d["facts"], segments={})) for d in self.docs]
+        reads = {"D2024": None, "D2025": None, "D2026": _read("D2026", [dict(self.base, segment=None)])}
+        per = yj.build_products(docs, reads)["products"][0]["periods"][-1]
+        self.assertEqual((per["share_pct"], per["share_basis"], per["label"]),
+                         (None, "セグメント抽出なし", "未判定（区分数値なし）"))
+        # 証拠 1: セグメント情報の本文に「単一セグメント」
+        docs = [dict(d, facts=dict(d["facts"], segments={}), sections=dict(d["sections"], segment_notes={
+            "element_id": "x:Seg", "text": "当社グループは調味料事業の単一セグメントであるため、記載を省略しております。"}))
+            for d in self.docs]
+        per = yj.build_products(docs, reads)["products"][0]["periods"][-1]
+        self.assertEqual((per["share_pct"], per["share_basis"]), (100.0, "単一セグメント（連結を区分とみなす）"))
+        self.assertEqual(per["single_segment_evidence"], "セグメント情報の本文に単一セグメントの記載")
+        self.assertEqual(per["segment_source"], "連結（区分とみなす）")
+        self.assertEqual((per["seg_sales"], per["seg_profit"]), (1200, 120))
+        self.assertEqual((per["cond_a"], per["cond_b"], per["cond_c"]), (True, True, True))   # +9.1%・110→120・粗利率 0.409→0.417
+        self.assertEqual(per["label"], "需要（区分）")
+
+    def test_5_no_gross_profit_and_profit_measure_kinds(self):
+        docs = [dict(d, facts=dict(d["facts"], consolidated={
+            k: dict(v, gross_profit=None) for k, v in d["facts"]["consolidated"].items()})) for d in self.docs]
+        reads = {"D2024": None, "D2025": None, "D2026": _read("D2026", [dict(self.base, segment="調味料")])}
+        per = yj.build_products(docs, reads)["products"][0]["periods"][-1]
+        self.assertEqual((per["cond_c"], per["judge_note"]), ("判定不能", "粗利なし・2 条件"))
+        self.assertEqual(per["segment_label"], "需要")   # a: 80/120=66.7%・b: 730/660=+10.6%・70→80
+        self.assertIn("判定不能（粗利なし・2 条件）", yj.render_summary(yj.build_products(docs, reads)))
+        # 区分利益の尺度: 事業利益（本文の語・XBRL 名）→ business_profit・当期利益／税引前 → 同種が無い＝None
+        cons = {"operating_profit": 100, "business_profit": 90}
+        self.assertEqual(yj._consolidated_profit(cons, "事業利益"), (90, "business_profit"))
+        self.assertEqual(yj._consolidated_profit(cons, "x:BusinessProfitLossIFRS"), (90, "business_profit"))
+        self.assertEqual(yj._consolidated_profit(cons, "営業利益"), (100, "operating_profit"))
+        self.assertEqual(yj._consolidated_profit(cons, "jpigp_cor:SegmentProfitLossIFRS"), (100, "operating_profit"))
+        self.assertEqual(yj._consolidated_profit(cons, "税引前当期利益"), (None, None))
+        self.assertEqual(yj._consolidated_profit(cons, "当期利益"), (None, None))
+
+    def test_6_segment_figures_replace_xbrl(self):
+        # XBRL に区分が無い会社（US GAAP 等）: 本文の表の読み（百万円）を円に直して区分の数字に使う
+        docs = [dict(d, facts=dict(d["facts"], segments={})) for d in self.docs]
+        figs = [{"segment": "イメージング", "sales_cur": "0.0006", "sales_prev": 0.00055, "profit_cur": 0.00009,
+                 "profit_prev": 0.00008, "profit_measure": "営業利益", "unit": "百万円", "quote": "表"}]
+        row = dict(self.base, segment="イメージング")
+        reads = {"D2024": None, "D2025": None, "D2026": _read("D2026", [row], segment_figures=figs)}
+        r = yj.build_products(docs, reads)
+        per = r["products"][0]["periods"][-1]
+        self.assertEqual(per["segment_source"], "本文の表（読み）")
+        self.assertAlmostEqual(per["seg_sales"], 600)
+        self.assertAlmostEqual(per["seg_profit"], 90)
+        self.assertEqual((per["share_pct"], per["share_basis"]), (75.0, "利益比"))   # 90 / 120
+        self.assertIs(per["cond_b"], True)                                            # 600/550=+9.1%・80→90
+        self.assertEqual(per["profit_measure"], "営業利益")
+        self.assertIn("利益比・本文の表（読み）", yj.render_summary(r))
+        self.assertEqual(r["docs"][-1]["segment_figures"], 1)
+        # segment_figures の無い期は区分 0・単一の証拠なし＝構成比を出さない（Codex T9 Critical 3）
+        self.assertEqual(r["products"][0]["periods"][0]["share_basis"], "セグメント抽出なし")
+        # 単位が読めない: 構成比は出さない・前期比（cond_b）は同じ単位どうしで出す
+        bad = [dict(figs[0], unit="不明", sales_cur=600, sales_prev=550, profit_cur=90, profit_prev=80)]
+        reads = {"D2024": None, "D2025": None, "D2026": _read("D2026", [row], segment_figures=bad)}
+        per = yj.build_products(docs, reads)["products"][0]["periods"][-1]
+        self.assertEqual((per["share_pct"], per["share_basis"], per["cond_b"]), (None, "単位不明で構成比を出せない", True))
+        # XBRL に区分があっても segment_figures があれば読みを優先
+        reads = {"D2024": None, "D2025": None, "D2026": _read("D2026", [row], segment_figures=figs)}
+        self.assertEqual(yj.build_products(self.docs, reads)["products"][0]["periods"][-1]["segment_source"], "本文の表（読み）")
+        self.assertEqual(yj._unit_scale("（単位：百万円）"), 1e6)
+        self.assertIsNone(yj._unit_scale(None))
+
+    def test_7_submit_date_in_periods(self):
+        reads = {"D2024": None, "D2025": None,
+                 "D2026": _read("D2026", [dict(self.base, segment="調味料")], submit_date="2026-06-30")}
+        r = yj.build_products(self.docs, reads)
+        # read.json の先頭が優先・無ければ sections.json の提出日
+        self.assertEqual([x["submit_date"] for x in r["products"][0]["periods"]], ["2024-06-20", "2025-06-19", "2026-06-30"])
+        self.assertEqual(r["docs"][-1]["submit_date"], "2026-06-30")
+
+    def test_old_schema_read_json_still_works(self):
+        # 旧 read.json（submit_date・mode・segment_figures・geo 等・status・target_id が無い）でも落ちない
+        old = {k: v for k, v in self.base.items() if k not in ("geo", "value_type", "value_basis", "status")}
+        reads = {"D2024": _read("D2024", [old]), "D2025": None,
+                 "D2026": _read("D2026", [dict(old, segment="調味料", kpi_value=105)])}
+        r = yj.build_products(self.docs, reads)
+        self.assertEqual((r["products_ver"], r["products_total"]), (2, 1))
+        p = r["products"][0]
+        self.assertEqual((p["target_id"], p["geo"], p["first_status"]), (None, None, None))
+        labels = [x["label"] for x in p["periods"]]
+        self.assertEqual(labels[1], "未判定（当期候補なし）")
+        self.assertNotIn("対象外（新設前）", labels)
+        self.assertEqual([x["read_mode"] for x in p["periods"]], [None, None, None])
+        self.assertEqual([x["row_status"] for x in p["periods"]], [None, None, None])
+        self.assertEqual(p["periods"][0]["segment_source"], "有報 XBRL")
+        self.assertFalse(p["three_period_complete"])
+        self.assertIn("3 期揃い", yj.render_summary(r))
+
+
 class AggregateAllTest(unittest.TestCase):
     """--all 全社集計（aggregate_all・trial_summary.json/.md・CLI の排他）。"""
 
@@ -666,7 +911,8 @@ class AggregateAllTest(unittest.TestCase):
         (self.out / "trial_summary_old" / "products.json").write_text("{}", encoding="utf-8")
         self.ledger = self.root / "center_pin.jsonl"
         self.ledger.write_text(
-            json.dumps({"code": "1111", "name": "甲社", "s33": "食料品"}, ensure_ascii=False) + "\n"
+            json.dumps({"code": "1111", "name": "甲社", "s33": "食料品", "pin": "原料|価格", "sign": "+"},
+                       ensure_ascii=False) + "\n"
             + json.dumps({"code": "3333", "name": "丙社", "s33": "化学"}, ensure_ascii=False) + "\n",
             encoding="utf-8")
 
@@ -700,6 +946,36 @@ class AggregateAllTest(unittest.TestCase):
         self.assertIn("generated_at", js)
         self.assertEqual(js["totals"]["companies_total"], 3)
 
+    def test_three_period_rate_and_pin(self):
+        # T9b ⑧: 3 期揃い率（品目・社）と台帳の pin／sign
+        def per(v, label="需要（区分）", end="2024"):
+            return {"kpi_value": v, "label": label, "segment_label": "需要", "period_end": f"{end}-03-31"}
+        prod = {"products_status": "済", "complete_products": 1, "docs": [], "usage": {}, "products": [
+            {"periods": [per(1, end="2024"), per(2, end="2025"), per(3, end="2026")]},                   # 3 期揃い
+            {"periods": [per(1, end="2024"), per(None, "未判定（開示なし）", end="2025"), per(3, end="2026")]},  # 揃わない
+            {"periods": [per(None, "対象外（新設前）", end="2024"), per(None, "対象外（新設前）", end="2025"),
+                         per(5, end="2026")]},                                                            # 新設＝分母から除く
+        ]}
+        (self.out / "1111" / "products.json").write_text(json.dumps(prod, ensure_ascii=False), encoding="utf-8")
+        agg = yj.aggregate_all(self.out, self.ledger)
+        t = agg["totals"]
+        self.assertEqual((t["three_period_products"], t["three_period_eligible"]), (1, 4))   # 1111 の 2 品目＋他社 2 品目
+        self.assertAlmostEqual(t["three_period_rate"], 1 / 4)
+        self.assertEqual((t["three_period_companies"], t["companies_total"]), (1, 3))
+        self.assertAlmostEqual(t["three_period_company_rate"], 1 / 3)
+        self.assertEqual(t["out_of_scope_periods"], 2)
+        self.assertEqual(t["undecided_periods"], 2)   # 開示なし 1＋2222 の当期候補なし 1（対象外は数えない）
+        rows = {r["code4"]: r for r in agg["companies"]}
+        self.assertEqual((rows["1111"]["pin"], rows["1111"]["sign"]), ("原料|価格", "+"))
+        self.assertEqual((rows["3333"]["pin"], rows["3333"]["sign"]), ("—", "—"))
+        self.assertEqual((rows["1111"]["three_period_products"], rows["1111"]["three_period_eligible"]), (1, 2))
+        md = (self.out / "trial_summary.md").read_text(encoding="utf-8")
+        self.assertIn("3 期揃い率（品目）", md)
+        self.assertIn("= 1 / 4 = 0.250", md)
+        self.assertIn("3 期揃い率（社）", md)
+        self.assertIn("| 原料｜価格 | + |", md)
+        self.assertIn("| 1/2 |", md)
+
     def test_no_products_raises(self):
         empty = self.root / "empty"
         empty.mkdir()
@@ -727,5 +1003,141 @@ class AggregateAllTest(unittest.TestCase):
         self.assertIn("companies=3 status_done=2 complete_ge1=2 fill_rate=0.67 wrote", buf.getvalue())
 
 
+class CodexT9FixesJudgeTest(unittest.TestCase):
+    """Codex T9 実装レビューの回帰（判定側）: Critical 1（未来の区分で過去を埋める）・2（targets の 1 対 1）・
+    3（区分 0 を単一と誤読）・Warning 5（3 期揃いを期末の異なる値で数える）。"""
+
+    def setUp(self):
+        self.docs = [
+            _doc("D2024", "2024-03-31", "2024-06-20", {"食品": ((600, 60), (550, 50)), "調味料": ((300, 30), (290, 29))},
+                 _cons(1000, 400, 100), _cons(950, 370, 90)),
+            _doc("D2025", "2025-03-31", "2025-06-19", {"食品": ((660, 70), (600, 60)), "調味料": ((310, 31), (300, 30))},
+                 _cons(1100, 450, 110), _cons(1000, 400, 100)),
+            _doc("D2026", "2026-03-31", "2026-06-18", {"食品": ((730, 80), (660, 70)), "調味料": ((320, 32), (310, 31))},
+                 _cons(1200, 500, 120), _cons(1100, 450, 110)),
+        ]
+        self.row = {"segment": "食品", "item": "だし", "kpi_name": "数量", "geo": "国内", "value_type": "数量",
+                    "value_basis": "前年比", "kpi_value": 103, "quote": "q", "quote_section": "mdna",
+                    "expectation": False, "status": "new"}
+
+    def test_c1_base_period_not_filled_from_later_segment(self):
+        # 基準期の行は区分なし。直近の期の区分が 食品 でも 調味料 でも、基準期の判定は変わらない（未来の情報を使わない）
+        labels = []
+        for latest_seg in ("食品", "調味料"):
+            reads = {"D2024": _read("D2024", [dict(self.row, segment=None)]),
+                     "D2025": None,
+                     "D2026": _read("D2026", [dict(self.row, segment=latest_seg)])}
+            p = yj.build_products(self.docs, reads)["products"][0]
+            base = p["periods"][0]
+            self.assertIsNone(base["segment"])
+            self.assertIsNone(base["share_pct"])
+            labels.append(base["label"])
+            self.assertEqual(p["periods"][2]["segment"], latest_seg)   # 直近の期は自分の区分で判定
+        self.assertEqual(labels, ["未判定（区分数値なし）"] * 2)
+        # 前の期で分かった区分は後の期へ持ち越してよい（行の無い期）
+        reads = {"D2024": _read("D2024", [dict(self.row)]), "D2025": None,
+                 "D2026": _read("D2026", [dict(self.row, segment="調味料")])}
+        p = yj.build_products(self.docs, reads)["products"][0]
+        self.assertEqual([x["segment"] for x in p["periods"]], ["食品", "食品", "調味料"])
+
+    def test_c2_targets_differing_only_by_segment_map_one_to_one(self):
+        t1 = {"target_id": "T1", "segment": "食品", "item": "だし", "kpi_name": "数量", "geo": "国内",
+              "value_type": "数量", "value_basis": "前年比"}
+        t2 = dict(t1, target_id="T2", segment="調味料")
+        base_rows = [dict(self.row, segment="食品", kpi_value=100), dict(self.row, segment="調味料", kpi_value=200)]
+        reads = {"D2024": _read("D2024", base_rows, mode="base"),
+                 "D2025": _read("D2025", [dict(self.row, segment="食品", target_id="T1", status="found", kpi_value=101),
+                                          dict(self.row, segment="調味料", target_id="T2", status="found", kpi_value=201)]),
+                 "D2026": _read("D2026", [dict(self.row, segment="食品", target_id="T1", status="found", kpi_value=102),
+                                          dict(self.row, segment="調味料", target_id="T2", status="found", kpi_value=202)])}
+        for targets in (
+                {"base_doc_id": "D2024", "targets": [dict(t1, base_rows=[0]), dict(t2, base_rows=[1])]},  # 行番号で引く
+                {"base_doc_id": "D2024", "targets": [t1, t2]},                                            # 旧形式（区分つき属性）
+        ):
+            r = yj.build_products(self.docs, reads, targets)
+            by = {p["target_id"]: [x["kpi_value"] for x in p["periods"]] for p in r["products"]}
+            self.assertEqual(by, {"T1": [100, 101, 102], "T2": [200, 201, 202]}, targets)
+            self.assertFalse(any("衝突" in w for w in r["warnings"]), r["warnings"])
+        # 行番号が区分と食い違っても行番号が正（区分の書き方の揺れで別 target に寄せない）
+        swapped = {"base_doc_id": "D2024", "targets": [dict(t1, base_rows=[1]), dict(t2, base_rows=[0])]}
+        by = {p["target_id"]: p["periods"][0]["kpi_value"] for p in yj.build_products(self.docs, reads, swapped)["products"]}
+        self.assertEqual(by, {"T1": 200, "T2": 100})
+        # 正規化で同じキーになる target が 2 件ある旧形式は、どちらにも寄せない（先頭に潰さない）
+        amb = yj._target_aliases([t1, dict(t1, target_id="T9")])
+        self.assertEqual(amb, {})
+
+    def test_c3_read_declaration_counts_only_with_quote_in_text(self):
+        quote = "当社グループは単一セグメントであります。"
+        docs = [dict(d, facts=dict(d["facts"], segments={}),
+                     sections=dict(d["sections"], business_description={"element_id": "x:Desc", "text": quote}))
+                for d in self.docs]
+        decl = [{"single_segment": True, "segment": None, "quote": quote}]
+        reads = {"D2024": None, "D2025": None,
+                 "D2026": _read("D2026", [dict(self.row, segment=None)], single_segment=True, segment_figures=decl)}
+        per = yj.build_products(docs, reads)["products"][0]["periods"][-1]
+        self.assertEqual((per["share_pct"], per["share_basis"]), (100.0, "単一セグメント（連結を区分とみなす）"))
+        self.assertEqual(per["single_segment_evidence"], "読みの宣言（本文に単一セグメントの引用あり）")
+        self.assertEqual(per["segment_source"], "連結（区分とみなす）")
+        # 宣言の引用が本文に無い（自己申告だけ）＝単一とみなさない
+        fake = [{"single_segment": True, "segment": None, "quote": "当社は単一セグメントです"}]
+        reads["D2026"] = _read("D2026", [dict(self.row, segment=None)], single_segment=True, segment_figures=fake)
+        per = yj.build_products(docs, reads)["products"][0]["periods"][-1]
+        self.assertEqual((per["share_pct"], per["share_basis"], per["single_segment_evidence"]),
+                         (None, "セグメント抽出なし", None))
+        # 宣言行は区分の数字として使わない
+        self.assertEqual(yj.apply_segment_figures({"segments": {}}, {"segments": {}}, decl)[2], False)
+
+    def test_w5_three_periods_by_distinct_period_end(self):
+        def per(end, v=1):
+            return {"period_end": end, "kpi_value": v, "label": "需要（区分）"}
+        # 同じ期末の訂正有報が 2 本: 配列は 3 本でも期末は 2 つ＝揃っていない
+        self.assertFalse(yj.is_three_period_complete([per("2024-03-31"), per("2025-03-31"), per("2025-03-31")]))
+        # 4 期ある: 直近 3 期末が数値なら揃い（最も古い期の欠けは問わない）
+        four = [per("2023-03-31", None), per("2024-03-31"), per("2025-03-31"), per("2026-03-31")]
+        self.assertTrue(yj.is_three_period_complete(four))
+        self.assertEqual(yj.target_period_ends(four), ["2024-03-31", "2025-03-31", "2026-03-31"])
+        # 直近 3 期のどれかが欠ければ揃っていない
+        self.assertFalse(yj.is_three_period_complete(four[:3] + [per("2026-03-31", None)]))
+        # 同じ期末の 2 本のうち 1 本に数値があればその期末は埋まる
+        dup = [per("2024-03-31"), per("2025-03-31", None), per("2025-03-31"), per("2026-03-31")]
+        self.assertTrue(yj.is_three_period_complete(dup))
+        # 直近 3 期の外にある 対象外（新設前）は分母から外さない
+        self.assertTrue(yj.is_three_period_eligible([dict(per("2023-03-31", None), label="対象外（新設前）")] + four[1:]))
+
+
 if __name__ == "__main__":
     unittest.main()
+
+
+class CodexT9R2SingleSegmentTest(unittest.TestCase):
+    """Codex T9 R2 Critical: 過年度の「単一セグメント」記載を当期の証拠にしない。"""
+
+    def _doc(self, text):
+        return {"facts": {"segments": {}}, "sections": {"segment_notes": {"text": text}}}
+
+    def test_past_year_single_segment_is_not_evidence(self):
+        text = ("前連結会計年度は単一セグメントであったため記載を省略しております。"
+                "当連結会計年度より食品事業と医薬事業の２つを報告セグメントとしております。")
+        self.assertIsNone(yj.single_segment_evidence(self._doc(text), None))
+
+    def test_negated_single_segment_is_not_evidence(self):
+        self.assertIsNone(yj.single_segment_evidence(self._doc("当社グループは単一セグメントではありません。"), None))
+
+    def test_current_single_segment_is_evidence(self):
+        text = "当社グループは半導体製造装置事業の単一セグメントであるため、記載を省略しております。"
+        self.assertIsNotNone(yj.single_segment_evidence(self._doc(text), None))
+
+    def test_product_category_change_keeps_single_segment(self):
+        """Codex T9 R3 Critical: 製品分類の変更（任天堂型）では単一セグメントの証拠を捨てない。"""
+        text = ("当社グループは、単一セグメントであるため、記載を省略しております。"
+                "当連結会計年度より、従来の「Nintendo Switchプラットフォーム」「その他」の区分を上記に変更しました。")
+        self.assertIsNotNone(yj.single_segment_evidence(self._doc(text), None))
+
+    def test_real_nintendo_sections_single_segment(self):
+        import glob, json, os
+        paths = sorted(glob.glob(os.path.join(os.path.dirname(__file__), "..", "data", "edinet", "yuho", "7974", "*.sections.json")))
+        if not paths:
+            self.skipTest("7974 の sections.json が無い環境")
+        for p in paths:
+            with open(p, encoding="utf-8") as f:
+                self.assertIsNotNone(yj.single_segment_evidence(json.load(f), None), p)
