@@ -18,7 +18,7 @@
 | Status | active |
 | Issue | なし |
 | 開始日時 | 2026-10-07 23:30 |
-| 最終更新 | 2026-10-08 11:45 |
+| 最終更新 | 2026-10-08 11:18 |
 | 担当 | Claude（統括）＋敵対レビュー 3 体 |
 
 ## Goal
@@ -96,7 +96,8 @@
 - [ ] ~~実 API 1 回の実走~~ → P-INF-35 ①裁定で保留（鍵は入れない・無人化の段階で再提起）。費用は未測定のまま
 
 ## Handoff
-- 2026-10-08 11:45 50 社試走の結果= vault §13b（[[influx-disclosure-kpi-ledger-2026-10-07]]）・集計= `output/yuho/trial_summary.md`（gitignore・`yuho_judge.py --all` で再生成）・選定と IR 探索の記録は scratchpad `trial50/`（セッション限り・selection.json は vault §13b に要点転記済み）。次の裁定= **P-INF-36**（設計 5 点: ①候補集合を会社単位で固定 ②単一セグメント 6 社= 連結を区分とみなす ③区分利益の尺度が営業利益でない 5 社＋連結粗利なし 7 社の扱い ④US GAAP 2 社= 本文の表を読むか保留 ⑤展開の形= 設計を直して 50 社を読み直す／962 社へ／鍵を入れて無人化）
+- 2026-10-08 11:05 50 社試走の結果= vault §13b（[[influx-disclosure-kpi-ledger-2026-10-07]]）・集計= `output/yuho/trial_summary.md`（gitignore・`yuho_judge.py --all` で再生成）・選定と IR 探索の記録は scratchpad `trial50/`（セッション限り・selection.json は vault §13b に要点転記済み）。次の裁定= **P-INF-36**（設計 5 点: ①候補集合を会社単位で固定 ②単一セグメント 6 社= 連結を区分とみなす ③区分利益の尺度が営業利益でない 5 社＋連結粗利なし 7 社の扱い ④US GAAP 2 社= 本文の表を読むか保留 ⑤展開の形= 設計を直して 50 社を読み直す／962 社へ／鍵を入れて無人化）
+- 2026-10-08 11:17 後追い不具合: 5333（ＮＧＫ＝日本ガイシ）の説明会資料 3 本は 5334 日本特殊陶業の物（IR 探索が略称「NGK」で別会社を引いた）。判定への影響なし（5333 の 9 行は全て有報本体の引用）・正しい説明会資料は 143/150・PDF は `data/edinet/yuho/5333/ir/_wrong_5334/` に退避・読み直し（P-INF-36 ⑤a）の前に日本ガイシから取り直す。詳細= vault §13b 末尾
 - 2026-10-08 01:50 オーナー裁定（P-INF-35）: 鍵は入れない・セッション内 Sonnet サブエージェントで読む → 50 社の試走に着手（選定= 台帳 962 社の物を売る業種から時価総額上位を業種ごとに回して 50 社・説明会資料は IR サイトから見つかった会社だけ・見つからない社は「説明会資料なし」と記録）
 - 叩き台: vault `02_Ai/influx/notes/influx-disclosure-kpi-ledger-2026-10-07.md`（§8 費用= Sonnet 5 $2/$10・1 社 $0.34〜0.42 概算・**§13 試走の記録= 2026-10-08 記入済み**・Codex 2 回の判定文は scratchpad `review/codex_round2.out` と `$TMPDIR/codex-brief.RQrIiH.out`＝セッション限り）
 - 実装: `src/features/disclosure_kpi/plan.md`（T1〜T7）・出力= `output/yuho/2802/{summary.md,products.json}`・入力= `data/edinet/yuho/2802/`（gitignore）
