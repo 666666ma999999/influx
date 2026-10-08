@@ -15,7 +15,11 @@
     warnings・usage_ok が入る
 (h) usage_ok（2 回目 Critical 6）: API 応答から usage を取れた時だけ True。HTTP エラー・本文が JSON でない時は False。
     JSON 配列が取れなくても usage があれば True（消費は実測）
-(g) main の終了コード（Codex Critical 7）: 1 件でも error ありなら 1（read.json は保存したまま）・全部成功なら 0・鍵なしは SystemExit
+(g) main の終了コード（Codex Critical 7）: 1 件でも error ありなら 1（read.json は保存したまま）・全部成功なら 0・鍵なしは SystemExit。
+    targets.json が無ければ後の期は読まずにスキップする
+(i) T9a（P-INF-37）: 基準期は最大 10 行・新しい列（geo／value_type／value_basis／status／target_id）／--make-targets／
+    指名読み（not_disclosed は quote・数字なしで通る・未知の target_id は捨てる）／segment_figures の分離／
+    read.json の submit_date・mode／--dump-prompts → --import-responses の往復
 
 実行: docker compose run --rm -v "$PWD/tests:/app/tests" xstock python -m unittest tests.test_yuho_read -v
 """
@@ -152,11 +156,15 @@ class NormalizeRowsTypeTest(unittest.TestCase):
             self.assertIn(key, yr.ALLOWED_SECTIONS)
         self.assertEqual(len(yr.ALLOWED_SECTIONS), 8)
 
-    def test_more_than_three_rows_truncated(self):
-        rows, warnings = yr.normalize_rows([{"item": f"i{n}", "kpi_name": "k"} for n in range(5)])
-        self.assertEqual([r["item"] for r in rows], ["i0", "i1", "i2"])
+    def test_base_more_than_ten_rows_truncated(self):
+        # T9a ①: 基準期の上限は 3 → 10 行（MAX_ROWS_BASE）
+        rows, warnings = yr.normalize_rows([{"item": f"i{n}", "kpi_name": "k"} for n in range(12)])
+        self.assertEqual([r["item"] for r in rows], [f"i{n}" for n in range(10)])
         self.assertEqual(len(warnings), 1)
-        self.assertIn("行数 5", warnings[0])
+        self.assertIn("行数 12", warnings[0])
+        self.assertIn("上限 10", warnings[0])
+        rows, warnings = yr.normalize_rows([{"item": f"i{n}", "kpi_name": "k"} for n in range(10)])
+        self.assertEqual((len(rows), warnings), (10, []))
 
     def test_rows_missing_item_or_kpi_name_are_dropped(self):
         rows, warnings = yr.normalize_rows([
@@ -225,6 +233,12 @@ class NormalizeRowsTypeTest(unittest.TestCase):
         self.assertEqual(len(r["warnings"]), 1)
         self.assertIn("quote_section='zzz'", r["warnings"][0])
         self.assertIsNone(r["error"])
+
+
+TARGET_T01 = {"target_id": "T01", "segment": "Seasonings And Foods", "item": "海外調味料", "kpi_name": "販売数量",
+              "geo": "海外", "value_type": "数量", "value_basis": "前年比"}
+TARGET_T02 = {"target_id": "T02", "segment": "Healthcare And Others", "item": "アミノ酸", "kpi_name": "稼働率",
+              "geo": "全体", "value_type": "稼働率", "value_basis": "水準"}
 
 
 def _sections(doc: str) -> dict:
@@ -343,9 +357,17 @@ class MainExitCodeTest(unittest.TestCase):
                 mock.patch("sys.stdout", io.StringIO()), mock.patch("sys.stderr", io.StringIO()):
             return yr.main(argv)
 
+    def _write_targets(self):
+        # 基準期= S100TESTB（period_end が古い）。後の期 S100TESTA を指名読みにするための targets.json
+        path = self.out / "9999" / "targets.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps({"code4": "9999", "base_doc_id": "S100TESTB", "base_period_end": "2025-03-31",
+                                    "targets": [dict(TARGET_T01)]}, ensure_ascii=False), encoding="utf-8")
+
     def test_one_error_returns_1_and_keeps_read_json(self):
+        self._write_targets()
         bad = dict(_ok_result(rows=[]), error="attempt1: http 500; attempt2: http 500")
-        rc = self._main([_ok_result(), bad])  # period_end 降順: S100TESTA が先・S100TESTB が error
+        rc = self._main([_ok_result(), bad])  # period_end 降順: S100TESTA（指名読み）が先・S100TESTB（基準期）が error
         self.assertEqual(rc, 1)
         rec_a = json.loads((self.out / "9999" / "S100TESTA.read.json").read_text(encoding="utf-8"))
         rec_b = json.loads((self.out / "9999" / "S100TESTB.read.json").read_text(encoding="utf-8"))
@@ -354,7 +376,31 @@ class MainExitCodeTest(unittest.TestCase):
         self.assertEqual(rec_b["rows"], [])
 
     def test_all_ok_returns_0(self):
+        self._write_targets()
         self.assertEqual(self._main([_ok_result(), _ok_result()]), 0)
+
+    def test_without_targets_only_base_is_read(self):
+        # targets.json が無い → 後の期（S100TESTA）は読まずにスキップ・基準期（S100TESTB）だけ呼ぶ
+        out = io.StringIO()
+        argv = ["--code", "9999", "--data-dir", str(FIX.parent), "--out-dir", str(self.out), "--model", "m-test"]
+        with mock.patch.dict(os.environ, {"ANTHROPIC_API_KEY": "sk-ant-test"}), \
+                mock.patch.object(yr, "call_claude", side_effect=[_ok_result()]) as m, \
+                mock.patch("sys.stdout", out):
+            rc = yr.main(argv)
+        self.assertEqual((rc, m.call_count), (0, 1))
+        self.assertEqual(m.call_args.kwargs["mode"], "base")
+        self.assertTrue((self.out / "9999" / "S100TESTB.read.json").exists())
+        self.assertFalse((self.out / "9999" / "S100TESTA.read.json").exists())
+        self.assertIn("skipped", out.getvalue())
+        self.assertIn("S100TESTA", out.getvalue())
+
+    def test_targets_from_other_base_is_refused(self):
+        path = self.out / "9999" / "targets.json"
+        path.parent.mkdir(parents=True)
+        path.write_text(json.dumps({"base_doc_id": "S100OTHER", "targets": [dict(TARGET_T01)]}), encoding="utf-8")
+        with self.assertRaises(SystemExit) as cm:
+            self._main([_ok_result(), _ok_result()])
+        self.assertIn("base_doc_id", str(cm.exception.code))
 
     def test_no_key_exits_1_without_writing(self):
         argv = ["--code", "9999", "--data-dir", str(FIX.parent), "--out-dir", str(self.out)]
@@ -465,6 +511,366 @@ class IrLookupTest(unittest.TestCase):
             self.assertIsNone(yr.find_ir_text("9999", sec, Path(td)))
             (ir / "FY2025_presentation.txt").write_text("new", encoding="utf-8")
             self.assertEqual(yr.find_ir_text("9999", sec, Path(td)).name, "FY2025_presentation.txt")
+
+
+class BaseModeTest(unittest.TestCase):
+    """T9a ①: 基準期の型（最大 10 行・区分ごとに 1 行以上・数量等を金額より優先・status は new）。"""
+
+    def test_base_prompt_rules_and_new_columns(self):
+        p = yr.build_prompt(_sections("S100TESTB"), None)
+        self.assertIn("最大 10 行", p)
+        self.assertIn("報告セグメントごとに", p)
+        self.assertIn("数量・単価・受注・稼働率 を 金額 より優先", p)
+        self.assertIn('status は全行 "new"', p)
+        for col in ("geo", "value_type", "value_basis", "status", "target_id"):
+            self.assertIn(f"- {col}:", p)
+        self.assertNotIn("追う品目（target）", p)
+
+    def test_base_status_forced_new(self):
+        rows, warnings = yr.normalize_rows([
+            {"item": "a", "kpi_name": "k", "status": "found", "target_id": "T01", "value_type": "数量",
+             "value_basis": "前年比", "geo": " 海外 "},
+            {"item": "b", "kpi_name": "k", "value_type": "売上", "value_basis": "累計"},
+        ])
+        self.assertEqual([r["status"] for r in rows], ["new", "new"])
+        self.assertIsNone(rows[0]["target_id"])
+        self.assertEqual((rows[0]["geo"], rows[0]["value_type"], rows[0]["value_basis"]), ("海外", "数量", "前年比"))
+        self.assertIsNone(rows[1]["value_type"])    # 7 種以外は None
+        self.assertIsNone(rows[1]["value_basis"])   # 水準／前年比 以外は None
+        self.assertEqual(len(warnings), 4)
+        self.assertTrue(any("status='found'" in w for w in warnings), warnings)
+        self.assertTrue(any("target_id='T01'" in w for w in warnings), warnings)
+
+
+class MakeTargetsTest(unittest.TestCase):
+    """T9a ②: --make-targets は基準期の read.json の（normalize_rows を通った）行から targets.json を作る。"""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.out = Path(self.tmp.name)
+        (self.out / "9999").mkdir()
+        self.base_read = self.out / "9999" / "S100TESTB.read.json"   # 基準期= period_end が古い S100TESTB
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def _write_base(self, rows, mode="base", error=None):
+        self.base_read.write_text(json.dumps({"doc_id": "S100TESTB", "mode": mode, "rows": rows, "error": error},
+                                             ensure_ascii=False), encoding="utf-8")
+
+    def _make(self, force=False):
+        with mock.patch("sys.stdout", io.StringIO()):
+            return yr.make_targets("9999", FIX.parent, self.out, force=force)
+
+    def test_targets_from_surviving_rows(self):
+        self._write_base([
+            dict(TARGET_T01, target_id=None, status="new", kpi_value="108%", quote="q1"),
+            {"segment": "S", "item": "x", "kpi_name": None},                         # 必須列欠落 → 捨てる
+            dict(TARGET_T01, target_id=None, status="new", kpi_value="109%"),       # 同じ品目 → 1 件にまとめる
+            dict(TARGET_T02, target_id=None, status="new", value_type="不明な種類"),  # value_type は None で残る
+        ])
+        doc = self._make()
+        on_disk = json.loads((self.out / "9999" / "targets.json").read_text(encoding="utf-8"))
+        self.assertEqual(doc, on_disk)
+        self.assertEqual((doc["code4"], doc["base_doc_id"], doc["base_period_end"]), ("9999", "S100TESTB", "2025-03-31"))
+        self.assertEqual([t["target_id"] for t in doc["targets"]], ["T01", "T02"])
+        self.assertEqual(doc["targets"][0], dict(TARGET_T01, base_rows=[0, 2]))   # 基準期 read.json の行番号
+        self.assertEqual(set(doc["targets"][1]), {"target_id", "base_rows", *yr.TARGET_KEYS})
+        self.assertEqual(doc["targets"][1]["base_rows"], [3])
+        self.assertIsNone(doc["targets"][1]["value_type"])
+
+    def test_refuse_when_base_read_missing(self):
+        with self.assertRaises(SystemExit) as cm:
+            self._make()
+        self.assertIn("基準期の read.json が無い", str(cm.exception.code))
+        self.assertFalse((self.out / "9999" / "targets.json").exists())
+
+    def test_refuse_old_mode_error_and_overwrite(self):
+        self._write_base([dict(TARGET_T01)], mode=None)            # T9 以前の読み
+        with self.assertRaises(SystemExit) as cm:
+            self._make()
+        self.assertIn("基準期の型で読まれていない", str(cm.exception.code))
+        self._write_base([], error="attempt1: http 500")
+        with self.assertRaises(SystemExit):
+            self._make()
+        self._write_base([dict(TARGET_T01)])
+        self._make()
+        with self.assertRaises(SystemExit) as cm:                   # 既にある → --force なしは拒否
+            self._make()
+        self.assertIn("既にある", str(cm.exception.code))
+        self.assertEqual(len(self._make(force=True)["targets"]), 1)
+
+    def test_main_make_targets_exit_1_when_missing(self):
+        argv = ["--code", "9999", "--data-dir", str(FIX.parent), "--out-dir", str(self.out), "--make-targets"]
+        with self.assertRaises(SystemExit) as cm:
+            yr.main(argv)
+        self.assertIn("基準期の read.json が無い", str(cm.exception.code))   # 文字列の SystemExit＝終了コード 1
+
+
+class NominatedModeTest(unittest.TestCase):
+    """T9a ③: 指名読み（指名 1 件に 1 行・not_disclosed は数字と quote なしで通る・未知の target_id は捨てる）。"""
+
+    targets = [dict(TARGET_T01), dict(TARGET_T02)]
+
+    def test_prompt_lists_targets(self):
+        p = yr.build_prompt(_sections("S100TESTA"), None, mode="nominated", targets=self.targets)
+        self.assertIn("ちょうど 1 行", p)
+        self.assertIn("最大 5 行", p)   # 指名 2 件＋new 3 行
+        self.assertIn("- T01: segment=Seasonings And Foods／item=海外調味料／kpi_name=販売数量", p)
+        self.assertIn("- T02:", p)
+        self.assertIn("当期の報告セグメント名", p)
+        self.assertIn('status="not_disclosed"', p)
+        self.assertNotIn("最大 10 行", p)
+
+    def test_not_disclosed_accepted_and_unknown_target_dropped(self):
+        rows, warnings = yr.normalize_rows([
+            {"target_id": "T01", "status": "found", "segment": "Seasonings & Foods（当期名）", "kpi_value": "108%",
+             "kpi_unit": "%", "quote": "海外調味料の販売数量が前期比8%増"},
+            {"target_id": "T02", "status": "not_disclosed", "kpi_value": 85, "quote": None},  # 数字・quote なし（数字は消す）
+            {"target_id": "T99", "status": "found", "item": "謎", "kpi_name": "k"},          # 未知 → 捨てる
+            {"target_id": "T01", "status": "found", "item": "海外調味料", "kpi_name": "販売数量"},  # 2 行目 → 捨てる
+            {"target_id": None, "status": "found", "item": "z", "kpi_name": "k"},            # ID なし → 捨てる
+            {"status": "maybe", "item": "z", "kpi_name": "k"},                               # status 不正 → 捨てる
+        ], mode="nominated", targets=self.targets)
+        self.assertEqual([(r["target_id"], r["status"]) for r in rows], [("T01", "found"), ("T02", "not_disclosed")])
+        found, nd = rows
+        self.assertEqual(found["segment"], "Seasonings & Foods（当期名）")   # 当期の区分名を残す
+        self.assertEqual((found["item"], found["kpi_name"], found["geo"]), ("海外調味料", "販売数量", "海外"))  # target で埋める
+        self.assertEqual((nd["item"], nd["kpi_name"], nd["segment"]), ("アミノ酸", "稼働率", "Healthcare And Others"))
+        self.assertIsNone(nd["kpi_value"])
+        self.assertIsNone(nd["quote"])
+        self.assertTrue(any("not_disclosed の kpi_value=85" in w for w in warnings), warnings)
+        self.assertTrue(any("target_id='T99' は指名に無い" in w for w in warnings), warnings)
+        self.assertTrue(any("target_id='T01' の 2 行目" in w for w in warnings), warnings)
+        self.assertTrue(any("target_id=None は指名に無い" in w for w in warnings), warnings)
+        self.assertTrue(any("status='maybe'" in w for w in warnings), warnings)
+
+    def test_new_rows_capped_and_missing_target_warned(self):
+        rows, warnings = yr.normalize_rows(
+            [{"target_id": "T01", "status": "found", "kpi_value": 1}]
+            + [{"status": "new", "item": f"n{i}", "kpi_name": "k", "target_id": "T02" if i == 0 else None}
+               for i in range(5)],
+            mode="nominated", targets=self.targets)
+        self.assertEqual([r["item"] for r in rows], ["海外調味料", "n0", "n1", "n2"])   # 上限= 指名 2＋new 3
+        self.assertIsNone(rows[1]["target_id"])                                        # new の target_id は None
+        self.assertTrue(any("new の行数 5" in w for w in warnings), warnings)
+        self.assertTrue(any("指名 T02 の行が無い" in w for w in warnings), warnings)
+        self.assertLessEqual(len(rows), yr.max_rows_for("nominated", self.targets))
+
+
+class SegmentFiguresTest(unittest.TestCase):
+    """T9a ④: facts.segments が空の会社だけ segment_figures を頼み、行は read.json の segment_figures に分ける。"""
+
+    def _no_segments(self) -> dict:
+        sec = _sections("S100TESTB")
+        sec["facts"] = dict(sec.get("facts") or {}, segments={})
+        sec["accounting"] = "US GAAP"
+        return sec
+
+    def test_prompt_asks_only_when_segments_empty(self):
+        self.assertNotIn('"kind": "segment_figures"', yr.build_prompt(_sections("S100TESTB"), None))
+        p = yr.build_prompt(self._no_segments(), None)
+        self.assertIn('"kind": "segment_figures"', p)
+        self.assertIn("計算・推定・合算はしない", p)
+
+    def test_split_and_validate(self):
+        raw = [
+            {"item": "a", "kpi_name": "k"},
+            {"kind": "segment_figures", "segment": "北米", "sales_cur": "1,234", "sales_prev": 1000,
+             "profit_cur": "△56", "profit_prev": "好調", "profit_measure": "営業利益", "unit": "百万円",
+             "quote": "北米 1,234 1,000 △56"},
+            {"kind": "segment_figures", "segment": "欧州"},                 # 数字なし → 捨てる
+            {"kind": "segment_figures", "sales_cur": 5},                    # segment なし → 捨てる
+        ]
+        rows, figures, warnings = yr.normalize_response(raw)
+        self.assertEqual([r["item"] for r in rows], ["a"])                  # KPI の行に混ざらない
+        self.assertEqual(figures, [{"segment": "北米", "sales_cur": 1234, "sales_prev": 1000, "profit_cur": -56,
+                                    "profit_prev": None, "profit_measure": "営業利益", "unit": "百万円",
+                                    "quote": "北米 1,234 1,000 △56"}])
+        self.assertEqual(len(warnings), 3)
+        self.assertTrue(any("profit_prev='好調'" in w for w in warnings), warnings)
+        # 受け皿なしの normalize_rows は捨てて警告（KPI の行には入れない）
+        rows2, w2 = yr.normalize_rows(raw[:2])
+        self.assertEqual(len(rows2), 1)
+        self.assertTrue(any("受け皿が無い" in w for w in w2), w2)
+
+    def test_call_claude_and_read_json_carry_figures(self):
+        text = json.dumps([{"item": "a", "kpi_name": "k"},
+                           {"kind": "segment_figures", "segment": "北米", "sales_cur": 10}], ensure_ascii=False)
+        with mock.patch.object(yr.urllib.request, "urlopen", return_value=_FakeHTTP(_resp(text))):
+            r = yr.call_claude("p", "model-x", "sk-ant-test", retry_wait=0)
+        self.assertEqual(len(r["rows"]), 1)
+        self.assertEqual(r["segment_figures"][0]["sales_cur"], 10)
+        with tempfile.TemporaryDirectory() as td, mock.patch.object(yr, "call_claude", return_value=r), \
+                mock.patch("sys.stdout", io.StringIO()):
+            yr.read_one(self._no_segments(), "m", "sk-ant-test", FIX.parent, Path(td), False, 1000, 100)
+            rec = json.loads((Path(td) / "9999" / "S100TESTB.read.json").read_text(encoding="utf-8"))
+        self.assertEqual(rec["segment_figures"][0]["segment"], "北米")
+        self.assertEqual(len(rec["rows"]), 1)
+
+
+class ReadJsonMetaTest(unittest.TestCase):
+    """T9a ⑤前半: read.json の先頭に submit_date（sections.json の提出日）と mode。"""
+
+    def test_submit_date_and_mode(self):
+        with tempfile.TemporaryDirectory() as td, mock.patch("sys.stdout", io.StringIO()):
+            out = Path(td)
+            with mock.patch.object(yr, "call_claude", return_value=_ok_result()):
+                yr.read_one(_sections("S100TESTB"), "m", "sk-ant-test", FIX.parent, out, False, 1000, 100)
+            with mock.patch.object(yr, "call_claude", return_value=_ok_result()) as m:
+                yr.read_one(_sections("S100TESTA"), "m", "sk-ant-test", FIX.parent, out, False, 1000, 100,
+                            mode="nominated", targets=[dict(TARGET_T01)])
+            self.assertEqual(m.call_args.kwargs["targets"], [TARGET_T01])
+            base = json.loads((out / "9999" / "S100TESTB.read.json").read_text(encoding="utf-8"))
+            nom = json.loads((out / "9999" / "S100TESTA.read.json").read_text(encoding="utf-8"))
+        self.assertEqual((base["submit_date"], base["mode"]), ("2025-06-18 09:00", "base"))
+        self.assertEqual((nom["submit_date"], nom["mode"]), ("2026-06-12 09:00", "nominated"))
+        self.assertEqual(base["segment_figures"], [])
+        self.assertEqual(list(base)[:5], ["doc_id", "code4", "period_end", "submit_date", "mode"])
+
+    def test_base_doc_is_oldest_period(self):
+        self.assertEqual(yr.base_doc_id(yr.load_sections("9999", FIX.parent)), "S100TESTB")
+        self.assertIsNone(yr.base_doc_id([]))
+
+
+class DumpImportRoundTripTest(unittest.TestCase):
+    """T9a ⑤: --dump-prompts → （代走が response.json を書く）→ --import-responses の往復。"""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.out = Path(self.tmp.name)
+        self.pdir = self.out / "9999" / "prompts"
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def _cli(self, *flags) -> int:
+        argv = ["--code", "9999", "--data-dir", str(FIX.parent), "--out-dir", str(self.out), *flags]
+        with mock.patch.object(yr, "call_claude", side_effect=AssertionError("API を呼んだ")), \
+                mock.patch("sys.stdout", io.StringIO()), mock.patch("sys.stderr", io.StringIO()):
+            return yr.main(argv)
+
+    def _read(self, doc_id: str) -> dict:
+        return json.loads((self.out / "9999" / f"{doc_id}.read.json").read_text(encoding="utf-8"))
+
+    def test_round_trip(self):
+        # 1) targets.json なし → 基準期だけ書き、後の期はスキップ
+        with mock.patch("sys.stdout", io.StringIO()) as so:
+            res = yr.dump_prompts("9999", FIX.parent, self.out)
+        self.assertEqual(res, {"written": ["S100TESTB"], "skipped": ["S100TESTA"]})
+        self.assertIn("S100TESTA", so.getvalue())
+        base_prompt = (self.pdir / "S100TESTB.prompt.txt").read_text(encoding="utf-8")
+        self.assertIn("最大 10 行", base_prompt)
+        self.assertEqual(base_prompt, yr.build_prompt(_sections("S100TESTB"), None))   # API 経路と同じプロンプト
+
+        # 2) 代走の応答（コードフェンスつき）を取り込む
+        (self.pdir / "S100TESTB.response.json").write_text("```json\n" + json.dumps(
+            [dict(TARGET_T01, target_id=None, status="new", kpi_value="108%", quote="q")], ensure_ascii=False)
+            + "\n```", encoding="utf-8")
+        self.assertEqual(self._cli("--import-responses"), 0)
+        rec = self._read("S100TESTB")
+        self.assertEqual(rec["model"], yr.PROXY_MODEL)
+        self.assertIn("代走", rec["model"])
+        self.assertEqual(rec["usage"], {"input_tokens": 0, "output_tokens": 0})
+        self.assertIs(rec["usage_ok"], False)
+        self.assertEqual((rec["mode"], rec["submit_date"], rec["stop_reason"]), ("base", "2025-06-18 09:00", "subagent"))
+        import hashlib
+        self.assertEqual(rec["prompt_sha256"], hashlib.sha256(base_prompt.encode("utf-8")).hexdigest())
+        self.assertEqual(rec["warnings"], [])
+        self.assertEqual(rec["rows"][0]["status"], "new")
+        self.assertFalse((self.out / "9999" / "S100TESTA.read.json").exists())   # 応答なし＝書かない
+
+        # 3) targets → 後の期の指名読みプロンプト → 応答を取り込む
+        self.assertEqual(self._cli("--make-targets"), 0)
+        self.assertEqual(self._cli("--dump-prompts"), 0)
+        nom_prompt = (self.pdir / "S100TESTA.prompt.txt").read_text(encoding="utf-8")
+        self.assertIn("- T01: segment=Seasonings And Foods", nom_prompt)
+        (self.pdir / "S100TESTA.response.json").write_text(json.dumps(
+            [{"target_id": "T01", "status": "not_disclosed", "segment": "Seasonings And Foods"},
+             {"target_id": "T42", "status": "found", "item": "x", "kpi_name": "k"}], ensure_ascii=False),
+            encoding="utf-8")
+        self.assertEqual(self._cli("--import-responses"), 0)
+        nom = self._read("S100TESTA")
+        self.assertEqual(nom["mode"], "nominated")
+        self.assertEqual([(r["target_id"], r["status"]) for r in nom["rows"]], [("T01", "not_disclosed")])
+        self.assertTrue(any("T42" in w for w in nom["warnings"]), nom["warnings"])
+
+        # 4) prompt.txt が今の入力と違う → warnings に残す・JSON の無い応答は error で終了コード 1
+        (self.pdir / "S100TESTA.prompt.txt").write_text("古いプロンプト", encoding="utf-8")
+        (self.pdir / "S100TESTA.response.json").write_text("読めませんでした", encoding="utf-8")
+        self.assertEqual(self._cli("--import-responses"), 1)
+        nom = self._read("S100TESTA")
+        self.assertEqual(nom["error"], "response に JSON 配列が無い")
+        self.assertTrue(any("今の入力から作るプロンプトと違う" in w for w in nom["warnings"]), nom["warnings"])
+
+    def test_import_without_targets_is_error(self):
+        self.pdir.mkdir(parents=True)
+        (self.pdir / "S100TESTA.response.json").write_text("[]", encoding="utf-8")   # 後の期の応答だけある
+        self.assertEqual(self._cli("--import-responses"), 1)
+        self.assertFalse((self.out / "9999" / "S100TESTA.read.json").exists())
+
+
+
+class CodexT9FixesReadTest(unittest.TestCase):
+    """Codex T9 実装レビューの回帰（読み側）: Critical 2（targets の行番号）・3（単一セグメントの宣言）・4（期待の根拠節）。"""
+
+    def test_c2_targets_differing_only_by_segment_keep_own_base_rows(self):
+        with tempfile.TemporaryDirectory() as td, mock.patch("sys.stdout", io.StringIO()):
+            out = Path(td)
+            (out / "9999").mkdir()
+            rows = [dict(TARGET_T01, target_id=None, status="new"),
+                    dict(TARGET_T01, target_id=None, status="new", segment="Healthcare And Others")]
+            (out / "9999" / "S100TESTB.read.json").write_text(
+                json.dumps({"doc_id": "S100TESTB", "mode": "base", "rows": rows, "error": None}, ensure_ascii=False),
+                encoding="utf-8")
+            doc = yr.make_targets("9999", FIX.parent, out)
+        self.assertEqual([(t["target_id"], t["segment"], t["base_rows"]) for t in doc["targets"]],
+                         [("T01", "Seasonings And Foods", [0]), ("T02", "Healthcare And Others", [1])])
+
+    def test_c3_single_segment_declaration_needs_quote(self):
+        sec = _sections("S100TESTB")
+        sec["facts"] = dict(sec.get("facts") or {}, segments={})
+        p = yr.build_prompt(sec, None)
+        self.assertIn('"single_segment": true', p)
+        self.assertIn("区分の表が無いことから単一と推定しない", p)
+        raw = [{"kind": "segment_figures", "single_segment": True, "quote": "当社グループは単一セグメントであります。"},
+               {"kind": "segment_figures", "single_segment": True}]        # quote なし → 捨てる
+        rows, figures, warnings = yr.normalize_response(raw)
+        self.assertEqual(rows, [])
+        self.assertEqual(figures, [{"single_segment": True, "segment": None,
+                                    "quote": "当社グループは単一セグメントであります。"}])
+        self.assertTrue(any("quote が無い" in w for w in warnings), warnings)
+        rec = yr._record(sec, "base", "m", {"rows": rows, "segment_figures": figures, "warnings": warnings,
+                                             "usage": {}, "error": None, "attempts": 1, "stop_reason": "x"},
+                         1, None, None)
+        self.assertIs(rec["single_segment"], True)
+        rec2 = yr._record(sec, "base", "m", {"rows": [], "segment_figures": [], "usage": {}, "error": None,
+                                              "attempts": 1, "stop_reason": "x"}, 1, None, None)
+        self.assertIs(rec2["single_segment"], False)
+
+    def test_c4_prompt_allows_mdna_expectation_and_judge_accepts_it(self):
+        # 実プロンプトの「期待」の規則に MD&A（と、資料を付けた時は説明会資料）が入っている
+        p = yr.build_prompt(_sections("S100TESTA"), None)
+        rule = next(line for line in p.splitlines() if line.startswith("- expectation:"))
+        self.assertIn("経営者による分析（mdna）", rule)
+        self.assertIn("経営方針（business_policy）", rule)
+        self.assertNotIn("有報の経営方針で", rule)          # 旧規則（経営方針だけ）が残っていない
+        self.assertNotIn("経営方針の節で成長事業", p)
+        self.assertIn("決算説明会資料（ir_presentation）",
+                      next(line for line in yr.build_prompt(_sections("S100TESTA"), "資料").splitlines()
+                           if line.startswith("- expectation:")))
+        # その規則で返った MD&A 由来の期待行を、読みの正規化 → yuho_judge の判定まで通す
+        import yuho_judge as yj
+        sec = _sections("S100TESTA")
+        sec["sections"]["mdna"] = dict(sec["sections"]["mdna"], text="海外調味料を成長事業として拡大する。")
+        raw = [{"segment": "調味料・食品", "item": "海外調味料", "kpi_name": "販売数量", "kpi_value": None,
+                "quote": "海外調味料を成長事業として拡大する。", "quote_section": "mdna", "expectation": True,
+                "status": "new"}]
+        rows, _, _ = yr.normalize_response(raw)
+        self.assertIs(rows[0]["expectation"], True)
+        per = yj.build_products([sec], {sec["doc_id"]: {"doc_id": sec["doc_id"], "rows": rows}})["products"][0]["periods"][0]
+        self.assertEqual((per["expectation"], per["expect_basis"], per["label"]),
+                         (True, "MD&Aの本文に品目名つきの引用あり", "期待"))
 
 
 if __name__ == "__main__":
