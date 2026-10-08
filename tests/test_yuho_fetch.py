@@ -189,6 +189,64 @@ class TestMoneyElementGuard(unittest.TestCase):
         # 完全一致は従来どおり最優先
         self.assertEqual(yf._pick_element(traps + ["GrossProfit"], ("GrossProfitIFRS", "GrossProfit")), "GrossProfit")
 
+    def test_plural_reportable_segments_member_is_a_segment(self):
+        """複数形 `...ReportableSegmentsMember`（セブン&アイ・富士フイルム等）も区分に数え、汎用 member は数えない（2026-10-08）。"""
+        rows = [
+            _money_row("jppfs_cor:NetSales", f"CurrentYearDuration_{ENTITY}DomesticCVSReportableSegmentsMember", "JPY", "900"),
+            _money_row("jppfs_cor:OperatingIncome", f"CurrentYearDuration_{ENTITY}DomesticCVSReportableSegmentsMember", "JPY", "90"),
+            _money_row("jppfs_cor:NetSales", "CurrentYearDuration_ReportableSegmentsMember", "JPY", "1000"),
+            _money_row("jppfs_cor:NetSales", "CurrentYearDuration_OtherReportableSegmentsMember", "JPY", "100"),
+            _money_row("jppfs_cor:NetSales", f"CurrentYearDuration_{ENTITY}LegacySingularReportableSegmentMember", "JPY", "50"),
+        ]
+        seg = yf._extract_segments(rows)
+        self.assertEqual(sorted(seg["segments"]),
+                         sorted([f"{ENTITY}DomesticCVSReportableSegmentsMember", f"{ENTITY}LegacySingularReportableSegmentMember"]))
+        cvs = seg["segments"][f"{ENTITY}DomesticCVSReportableSegmentsMember"]
+        self.assertEqual(cvs["label"], "Domestic CVS")
+        self.assertEqual(cvs["ctx"]["CurrentYearDuration"], {"net_sales": 900.0, "segment_profit": 90.0})
+        self.assertNotIn("ReportableSegmentsMember", seg["segments"])
+        self.assertNotIn("OtherReportableSegmentsMember", seg["segments"])
+
+    def test_consolidated_net_sales_accepts_revenue2_and_sales_revenues(self):
+        """商社の `Revenue2IFRS`・トヨタの `SalesRevenuesIFRS` は既存候補が無い時だけ連結売上に採る（2026-10-08 50 社試走で 4 社が null）。"""
+        rows = [
+            _money_row("jpigp_cor:Revenue2IFRS", "CurrentYearDuration", "JPY", "5000"),
+            _money_row("jpigp_cor:GrossProfitIFRS", "CurrentYearDuration", "JPY", "800"),
+        ]
+        consolidated, elements, _units = yf._extract_consolidated(rows)
+        self.assertEqual(consolidated["CurrentYearDuration"]["net_sales"], 5000)
+        self.assertEqual(elements["net_sales"], "jpigp_cor:Revenue2IFRS")
+        rows = [_money_row("jpigp_cor:SalesRevenuesIFRS", "CurrentYearDuration", "JPY", "7000")]
+        consolidated, elements, _units = yf._extract_consolidated(rows)
+        self.assertEqual(consolidated["CurrentYearDuration"]["net_sales"], 7000)
+        self.assertEqual(elements["net_sales"], "jpigp_cor:SalesRevenuesIFRS")
+        # 既存候補の完全一致が先
+        rows = [
+            _money_row("jpigp_cor:RevenueIFRS", "CurrentYearDuration", "JPY", "100"),
+            _money_row("jpigp_cor:Revenue2IFRS", "CurrentYearDuration", "JPY", "200"),
+        ]
+        _c, elements, _u = yf._extract_consolidated(rows)
+        self.assertEqual(elements["net_sales"], "jpigp_cor:RevenueIFRS")
+        # 既存候補の部分一致も予備候補の完全一致より先（Codex 2026-10-08: 既存会社の採用要素を変えない）
+        rows = [
+            _money_row("jpcrp030000-asr_E00000-000:CustomNetSales", "CurrentYearDuration", "JPY", "300"),
+            _money_row("jpigp_cor:Revenue2IFRS", "CurrentYearDuration", "JPY", "200"),
+        ]
+        _c, elements, _u = yf._extract_consolidated(rows)
+        self.assertEqual(elements["net_sales"], "jpcrp030000-asr_E00000-000:CustomNetSales")
+
+    def test_total_of_reportable_segments_member_is_not_a_segment(self):
+        """`TotalOfReportableSegmentsMember` は区分の正規表現にも一致するが合計として扱う（Codex 2026-10-08 Critical 1）。"""
+        rows = [
+            _money_row("jppfs_cor:NetSales", f"CurrentYearDuration_{ENTITY}FoodsReportableSegmentsMember", "JPY", "600"),
+            _money_row("jppfs_cor:NetSales", "CurrentYearDuration_TotalOfReportableSegmentsMember", "JPY", "600"),
+            _money_row("jppfs_cor:NetSales", "CurrentYearDuration_ReconcilingItemsMember", "JPY", "-10"),
+        ]
+        seg = yf._extract_segments(rows)
+        self.assertEqual(list(seg["segments"]), [f"{ENTITY}FoodsReportableSegmentsMember"])
+        self.assertEqual(seg["total_segments"]["CurrentYearDuration"]["net_sales"], 600.0)
+        self.assertEqual(seg["reconciling"]["CurrentYearDuration"]["net_sales"], -10.0)
+
     def test_non_jpy_unit_rows_are_not_money(self):
         rows = [
             _money_row("jpigp_cor:NetSalesIFRS", "CurrentYearDuration", "JPY", "1000"),

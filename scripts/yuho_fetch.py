@@ -68,8 +68,19 @@ CONSOLIDATED_ELEMENTS: dict[str, tuple[str, ...]] = {
     "operating_profit": ("OperatingProfitLossIFRS", "OperatingIncome"),
     "business_profit": ("BusinessProfit",),
 }
+# 上の候補が完全一致・部分一致とも無い時だけ見る予備の候補（既存会社の採用要素を変えないため 2 段にする・Codex 2026-10-08）。
+# Revenue2IFRS= 商社の「収益」（伊藤忠・三井物産・三菱商事）／SalesRevenuesIFRS= トヨタの「商品・製品売上」
+# （2026-10-08 50 社試走で連結売上が null になった 4 社・部分一致 `RevenueIFRS` は `Revenue2IFRS`・`SalesRevenuesIFRS` に当たらない）
+CONSOLIDATED_FALLBACK_ELEMENTS: dict[str, tuple[str, ...]] = {
+    "net_sales": ("Revenue2IFRS", "SalesRevenuesIFRS"),
+}
 PERIOD_CONTEXTS: tuple[str, ...] = ("CurrentYearDuration", "Prior1YearDuration")
 SEGMENT_SALES_RE = re.compile(r"NetSales|Revenue")
+# 報告セグメントの member 名は会社ごとに単数 `...ReportableSegmentMember` と複数 `...ReportableSegmentsMember` の 2 表記がある
+# （2026-10-08 50 社試走: セブン&アイ・富士フイルム・住友電工・信越化学など 19 社が複数形で segments=0 になっていた）。
+# 会社接頭辞の無い汎用 member（`ReportableSegmentsMember`=報告セグメント計・`OtherReportableSegmentsMember`=その他）は区分に数えない。
+SEGMENT_MEMBER_RE = re.compile(r"ReportableSegments?Member$")
+GENERIC_SEGMENT_MEMBER_RE = re.compile(r"^(Other)?ReportableSegments?Member$")
 SEGMENT_PROFIT_PRIORITY: tuple[str, ...] = (
     "OperatingIncome",
     "OperatingProfit",
@@ -250,7 +261,7 @@ def _split_context(ctx: str) -> Optional[tuple[str, str]]:
 def _member_label(member: str) -> str:
     """`jpcrp030000-asr_E00436-000SeasoningsAndFoodsReportableSegmentMember` → `Seasonings And Foods`。"""
     name = ENTITY_PREFIX_RE.sub("", member)
-    name = re.sub(r"ReportableSegmentMember$", "", name)
+    name = re.sub(r"ReportableSegments?Member$", "", name)
     name = re.sub(r"Member$", "", name)
     return re.sub(r"(?<=[a-z0-9])(?=[A-Z])", " ", name).strip() or member
 
@@ -321,7 +332,7 @@ def _extract_consolidated(rows: list[list[str]]) -> tuple[dict, dict, set[str]]:
     consolidated: dict[str, dict[str, Optional[float]]] = {ctx: {} for ctx in PERIOD_CONTEXTS}
     units: set[str] = set()
     for key, candidates in CONSOLIDATED_ELEMENTS.items():
-        picked = _pick_element(local_names, candidates)
+        picked = _pick_element(local_names, candidates) or _pick_element(local_names, CONSOLIDATED_FALLBACK_ELEMENTS.get(key, ()))
         elements[key] = full_ids.get(picked) if picked else None
         if picked:
             units.add(unit_of[picked])
@@ -347,12 +358,13 @@ def _extract_segments(rows: list[list[str]]) -> dict:
         if split is None or not _is_money_row(r):
             continue
         period, member = split
-        if "ReportableSegmentMember" in member:
-            kind = "segment"
-        elif "ReconcilingItems" in member:
+        # 合計・調整の member を先に判定する（`TotalOfReportableSegmentsMember` は区分の正規表現にも一致するため・Codex 2026-10-08）
+        if "ReconcilingItems" in member:
             kind = "reconciling"
         elif "TotalOfReportableSegments" in member:
             kind = "total"
+        elif SEGMENT_MEMBER_RE.search(member) and not GENERIC_SEGMENT_MEMBER_RE.match(member):
+            kind = "segment"
         else:
             continue
         num = _parse_number(r[8])
