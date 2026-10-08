@@ -20,6 +20,8 @@
 (i) T9a（P-INF-37）: 基準期は最大 10 行・新しい列（geo／value_type／value_basis／status／target_id）／--make-targets／
     指名読み（not_disclosed は quote・数字なしで通る・未知の target_id は捨てる）／segment_figures の分離／
     read.json の submit_date・mode／--dump-prompts → --import-responses の往復
+(j) T10（P-INF-38 c）: 指名プロンプトの当期の XBRL 区分名一覧／概数・範囲・下限・上限・兆億万の数値化（kpi_value_text・
+    value_approx）／expect_quote・expect_section／--make-targets --extend／--renominate-base（基準期の指名読み直し）
 
 実行: docker compose run --rm -v "$PWD/tests:/app/tests" xstock python -m unittest tests.test_yuho_read -v
 """
@@ -103,7 +105,7 @@ class ExtractJsonTest(unittest.TestCase):
         rows, warnings = yr.normalize_rows([{"segment": "A", "item": "x", "kpi_name": "k", "expectation": 1}, "junk",
                                             {"item": 5, "kpi_name": "k"}])
         self.assertEqual(len(rows), 1)
-        self.assertEqual(set(rows[0]), set(yr.ROW_KEYS))
+        self.assertEqual(set(rows[0]), set(yr.ROW_KEYS) | set(yr.DERIVED_KEYS))   # T10c: 原文と概数の種類の列
         self.assertIs(rows[0]["expectation"], True)
         # "junk" を捨てた記録・item=5 は文字列でない→None・その行は必須列欠落で捨てた
         self.assertEqual(len(warnings), 3)
@@ -871,6 +873,285 @@ class CodexT9FixesReadTest(unittest.TestCase):
         per = yj.build_products([sec], {sec["doc_id"]: {"doc_id": sec["doc_id"], "rows": rows}})["products"][0]["periods"][0]
         self.assertEqual((per["expectation"], per["expect_basis"], per["label"]),
                          (True, "MD&Aの本文に品目名つきの引用あり", "期待"))
+
+
+class T10ReadTest(unittest.TestCase):
+    """T10（2026-10-08 P-INF-38 c）読み側: a2 区分名の一覧／c 概数・範囲／d 期待の別欄／e --extend／基準期の指名読み直し。"""
+
+    targets = [dict(TARGET_T01), dict(TARGET_T02)]
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        # 3 期の data_dir: S100TESTB（2025-03 基準期）・S100TESTA（2026-03 真ん中）・S100TESTC（2027-03 最後）
+        self.data = self.root / "data"
+        (self.data / "9999").mkdir(parents=True)
+        for d in ("S100TESTA", "S100TESTB"):
+            (self.data / "9999" / f"{d}.sections.json").write_text(
+                (FIX / f"{d}.sections.json").read_text(encoding="utf-8"), encoding="utf-8")
+        c = _sections("S100TESTA")
+        c.update(doc_id="S100TESTC", period_start="2026-04-01", period_end="2027-03-31", submit_date="2027-06-15 09:00")
+        (self.data / "9999" / "S100TESTC.sections.json").write_text(json.dumps(c, ensure_ascii=False), encoding="utf-8")
+        self.out = self.root / "out"
+        (self.out / "9999").mkdir(parents=True)
+        self.pdir = self.out / "9999" / "prompts"
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def _cli(self, *flags) -> int:
+        argv = ["--code", "9999", "--data-dir", str(self.data), "--out-dir", str(self.out), *flags]
+        with mock.patch.object(yr, "call_claude", side_effect=AssertionError("API を呼んだ")), \
+                mock.patch("sys.stdout", io.StringIO()), mock.patch("sys.stderr", io.StringIO()):
+            return yr.main(argv)
+
+    def _write(self, doc_id, mode, rows):
+        (self.out / "9999" / f"{doc_id}.read.json").write_text(json.dumps(
+            {"doc_id": doc_id, "mode": mode, "rows": rows, "error": None}, ensure_ascii=False), encoding="utf-8")
+
+    def _targets(self) -> dict:
+        return json.loads((self.out / "9999" / "targets.json").read_text(encoding="utf-8"))
+
+    def _base_and_targets(self):
+        self._write("S100TESTB", "base", [dict(TARGET_T01, target_id=None, status="new")])
+        self.assertEqual(self._cli("--make-targets"), 0)
+
+    # ---- a2
+    def test_a2_nominated_prompt_lists_current_xbrl_segments(self):
+        p = yr.build_prompt(_sections("S100TESTA"), None, mode="nominated", targets=self.targets)
+        rule = next(line for line in p.splitlines() if line.startswith("- segment は当期の報告セグメント名"))
+        self.assertIn("「調味料・食品／ヘルスケア等」の 2 つ", rule)
+        self.assertIn("この中のどれか 1 つ", rule)
+        self.assertIn("どれにも当てはまらなければ null", rule)
+        self.assertIn("target の区分名をそのまま写さない", rule)
+        sec = _sections("S100TESTA")
+        sec["facts"] = dict(sec["facts"], segments={})
+        rule = next(line for line in yr.build_prompt(sec, None, mode="nominated", targets=self.targets).splitlines()
+                    if line.startswith("- segment は当期の報告セグメント名"))
+        self.assertIn("本文のセグメント情報の区分名", rule)
+        self.assertNotIn("XBRL の区分名は「", yr.build_prompt(_sections("S100TESTA"), None))   # 基準期の型には載せない
+
+    # ---- c
+    def test_c_parse_kpi_value_cases(self):
+        cases = {
+            ("3～5%", "%"): (4, "範囲"), ("3~5", "%"): (4, "範囲"), ("3-5", "%"): (4, "範囲"),
+            ("3～5兆円", "億円"): (40000, "範囲"),
+            ("約3,000", "トン"): (3000, "概数"), ("3,000程度", "トン"): (3000, "概数"),
+            ("100前後", "台"): (100, "概数"), ("およそ50", "%"): (50, "概数"),
+            ("100万トン超", "万トン"): (100, "下限"), ("30%以上", "%"): (30, "下限"),
+            ("3000億円を超える", "億円"): (3000, "下限"), ("50強", "%"): (50, "下限"),
+            ("20弱", "%"): (20, "上限"), ("10未満", "%"): (10, "上限"), ("5以下", "%"): (5, "上限"),
+            ("3兆210億円", "億円"): (30210, None), ("3兆210億円", "百万円"): (3021000, None),
+            ("3兆210億円", "円"): (3021000000000, None), ("約1.2兆円", "億円"): (12000, "概数"),
+            ("3兆210億円", "トン"): (None, None),          # 円の単位でなければ換算しない
+            ("1.5億台", "台"): (None, None),
+            ("70米ドル台中盤", "米ドル/バレル"): (None, None), ("好調", None): (None, None),
+            ("1,234", "百万円"): (1234, None), ("106%", "%"): (106, None), (105, None): (105, None),
+            ("120万トン", "万トン"): (120, None), (None, "%"): (None, None), (True, "%"): (None, None),
+            ("13米ドル弱", "米ドル/百万Btu"): (13, "上限"),          # 8058 の実例（単位の頭が一致）
+            # Codex T10 R1 Warning 4: 負数（-・全角－・▲・△）の範囲・複合金額
+            ("-5～-3", "%"): (-4, "範囲"), ("－5～－3", "%"): (-4, "範囲"), ("▲5～▲3", "%"): (-4, "範囲"),
+            ("-5~3", "%"): (-1, "範囲"), ("約-3兆円", "億円"): (-30000, "概数"), ("▲0.8", "%"): (-0.8, None),
+            ("△1,234", "百万円"): (-1234, None), ("▲3兆210億円", "億円"): (-30210, None),
+            # Codex T10 R2 Warning: 正の符号（+・全角＋・全角％）
+            ("+3～+5%", "%"): (4, "範囲"), ("＋3～＋5％", "%"): (4, "範囲"), ("約+3兆円", "億円"): (30000, "概数"),
+            ("+3.2", "%"): (3.2, None), ("＋3.2", "%"): (3.2, None), ("+3-5", "%"): (4, "範囲"),
+            ("3兆210億円", None): (None, None),                      # 6501 の実例: kpi_unit が null＝換算先が決まらない
+        }
+        for (v, u), want in cases.items():
+            self.assertEqual(yr.parse_kpi_value(v, u), want, (v, u))
+
+    def test_c_normalize_keeps_text_and_approx(self):
+        rows, warnings = yr.normalize_rows([
+            {"item": "a", "kpi_name": "k", "kpi_value": "約3,000", "kpi_unit": "トン", "kpi_prev_value": "2,800"},
+            {"item": "b", "kpi_name": "k", "kpi_value": "3兆210億円", "kpi_unit": "億円", "kpi_prev_value": "3～5兆円"},
+            {"item": "c", "kpi_name": "k", "kpi_value": "70米ドル台中盤", "kpi_unit": "米ドル", "kpi_prev_value": 65},
+            {"item": "d", "kpi_name": "k", "kpi_value": 105, "kpi_prev_value": " 106% "},
+        ])
+        a, b, c, d = rows
+        self.assertEqual((a["kpi_value"], a["value_approx"], a["kpi_value_text"]), (3000, "概数", "約3,000"))
+        self.assertEqual((a["kpi_prev_value"], a["prev_value_approx"], a["kpi_prev_value_text"]), ("2,800", None, "2,800"))
+        self.assertEqual((b["kpi_value"], b["value_approx"], b["kpi_value_text"]), (30210, None, "3兆210億円"))
+        self.assertEqual((b["kpi_prev_value"], b["prev_value_approx"]), (40000, "範囲"))
+        self.assertEqual((c["kpi_value"], c["value_approx"], c["kpi_value_text"]), (None, None, "70米ドル台中盤"))
+        self.assertEqual((c["kpi_prev_value"], c["kpi_prev_value_text"]), (65, None))
+        self.assertEqual((d["kpi_value"], d["value_approx"], d["kpi_value_text"]), (105, None, None))
+        self.assertEqual((d["kpi_prev_value"], d["kpi_prev_value_text"]), ("106%", "106%"))   # 素の数値は従来どおり
+        self.assertEqual(len(warnings), 1)
+        self.assertIn("70米ドル台中盤", warnings[0])
+        self.assertIn("kpi_value_text に残す", warnings[0])
+        # not_disclosed は原文も消す（数字を補わない）
+        rows, _ = yr.normalize_rows([{"target_id": "T01", "status": "not_disclosed", "kpi_value": "約5"}],
+                                    mode="nominated", targets=self.targets)
+        self.assertEqual((rows[0]["kpi_value"], rows[0]["kpi_value_text"], rows[0]["value_approx"]), (None, None, None))
+
+    # ---- d
+    def test_d_expect_quote_prompt_and_pass_through(self):
+        p = yr.build_prompt(_sections("S100TESTA"), None)
+        for col in ("expect_quote", "expect_section"):
+            self.assertIn(f"- {col}:", p)
+        self.assertIn("expectation=true の時は必須", p)
+        unit_rule = next(l for l in p.splitlines() if l.startswith("- kpi_unit:"))   # 単位語つきの値は kpi_unit 必須
+        self.assertIn("必ず書く", unit_rule)
+        self.assertIn('kpi_value "3兆210億円" → kpi_unit "億円"', unit_rule)
+        self.assertIn("数字（kpi_value）の根拠", next(l for l in p.splitlines() if l.startswith("- quote:")))
+        self.assertIn("expect_quote にその文を写し", next(l for l in p.splitlines() if l.startswith("- expectation:")))
+        rows, warnings = yr.normalize_rows([
+            {"item": "a", "kpi_name": "k", "expectation": True, "quote": "数量 105%", "quote_section": "mdna",
+             "expect_quote": " a を成長の柱とする ", "expect_section": "business_policy"},
+            {"item": "b", "kpi_name": "k", "expectation": True, "expect_quote": "x", "expect_section": "zzz"},
+            {"item": "c", "kpi_name": "k", "expectation": True, "quote": "旧形式"},   # expect_quote なしも捨てない
+        ])
+        self.assertEqual((rows[0]["expect_quote"], rows[0]["expect_section"]), ("a を成長の柱とする", "business_policy"))
+        self.assertIsNone(rows[1]["expect_section"])
+        self.assertEqual((rows[2]["expect_quote"], rows[2]["quote"]), (None, "旧形式"))
+        self.assertEqual(len(warnings), 1)
+        self.assertIn("expect_section='zzz'", warnings[0])
+        # 代走の取り込みでも通る（expect_* と kpi_value_text が read.json に残る）
+        self._write("S100TESTB", "base", [])
+        self.pdir.mkdir(parents=True)
+        self.assertEqual(self._cli("--dump-prompts"), 0)
+        (self.pdir / "S100TESTB.response.json").write_text(json.dumps([
+            {"item": "a", "kpi_name": "k", "kpi_value": "約10", "expectation": True, "quote": "q", "quote_section": "mdna",
+             "expect_quote": "a を拡大", "expect_section": "mdna"}], ensure_ascii=False), encoding="utf-8")
+        self.assertEqual(self._cli("--import-responses"), 0)
+        row = json.loads((self.out / "9999" / "S100TESTB.read.json").read_text(encoding="utf-8"))["rows"][0]
+        self.assertEqual((row["expect_quote"], row["expect_section"], row["kpi_value"], row["kpi_value_text"],
+                          row["value_approx"]), ("a を拡大", "mdna", 10, "約10", "概数"))
+
+    # ---- e
+    def test_e_extend_targets_from_middle_period(self):
+        self._base_and_targets()
+        self._write("S100TESTA", "nominated", [
+            dict(TARGET_T01, status="found", kpi_value=1),
+            {"segment": "Healthcare And Others", "item": "新製品", "kpi_name": "出荷台数", "geo": "国内",
+             "value_type": "数量", "value_basis": "水準", "status": "new", "target_id": None},
+            dict(TARGET_T01, target_id=None, status="new"),                         # 既存 T01 と同じ品目 → 足さない
+            {"item": None, "kpi_name": "k", "status": "new"},                        # item なし → 足さない
+        ])
+        self.assertEqual(self._cli("--make-targets", "--extend"), 0)
+        doc = self._targets()
+        self.assertEqual([t["target_id"] for t in doc["targets"]], ["T01", "T02"])
+        t2 = doc["targets"][1]
+        self.assertEqual((t2["item"], t2["added_from"], t2["added_period_end"], t2["added_rows"]),
+                         ("新製品", "S100TESTA", "2026-03-31", [1]))
+        self.assertEqual(doc["base_doc_id"], "S100TESTB")
+        # 2 回目は何も足さない（冪等）
+        self.assertEqual(self._cli("--make-targets", "--extend"), 0)
+        self.assertEqual(len(self._targets()["targets"]), 2)
+        # 最後の期は T02 も指名・真ん中の期と基準期は指名しない（真ん中の期のプロンプトは足す前と同じ）
+        self.assertEqual(self._cli("--dump-prompts"), 0)
+        last = (self.pdir / "S100TESTC.prompt.txt").read_text(encoding="utf-8")
+        mid = (self.pdir / "S100TESTA.prompt.txt").read_text(encoding="utf-8")
+        self.assertIn("- T02: segment=Healthcare And Others／item=新製品", last)
+        self.assertIn("最大 5 行", last)
+        self.assertNotIn("- T02:", mid)
+        self.assertEqual(mid, yr.build_prompt(_sections("S100TESTA"), None, mode="nominated",
+                                              targets=[t for t in doc["targets"] if not t.get("added_from")]))
+        # 最後の期の応答で T02 を found／not_disclosed で取り込める
+        (self.pdir / "S100TESTC.response.json").write_text(json.dumps(
+            [{"target_id": "T01", "status": "found", "kpi_value": 2},
+             {"target_id": "T02", "status": "not_disclosed"}], ensure_ascii=False), encoding="utf-8")
+        self.assertEqual(self._cli("--import-responses"), 0)
+        rec = json.loads((self.out / "9999" / "S100TESTC.read.json").read_text(encoding="utf-8"))
+        self.assertEqual([(r["target_id"], r["status"]) for r in rec["rows"]], [("T01", "found"), ("T02", "not_disclosed")])
+        self.assertEqual(rec["warnings"], [])
+
+    def test_e_extend_rerun_with_reordered_rows_rebuilds_mapping(self):
+        # Codex T10 R1 Critical 3: 真ん中の期を読み直して行順が変わっても、行番号は品目（6 列）で作り直す
+        self._base_and_targets()
+        a = {"segment": "Healthcare And Others", "item": "A品", "kpi_name": "数量", "geo": None, "value_type": "数量",
+             "value_basis": "水準", "status": "new"}
+        b = dict(a, item="B品")
+        found = dict(TARGET_T01, status="found", kpi_value=1)
+        self._write("S100TESTA", "nominated", [found, a, b])
+        self.assertEqual(self._cli("--make-targets", "--extend"), 0)
+        self.assertEqual([(t["target_id"], t["item"], t.get("added_rows")) for t in self._targets()["targets"]],
+                         [("T01", "海外調味料", None), ("T02", "A品", [1]), ("T03", "B品", [2])])
+        self._write("S100TESTA", "nominated", [b, found, a])          # 行順が入れ替わった
+        self.assertEqual(self._cli("--make-targets", "--extend"), 0)
+        tg = self._targets()["targets"]
+        self.assertEqual([(t["target_id"], t["item"], t.get("added_rows")) for t in tg],
+                         [("T01", "海外調味料", None), ("T02", "A品", [2]), ("T03", "B品", [0])])
+        import yuho_judge as yj
+        self.assertEqual(yj._added_row_maps({"targets": tg}), {"S100TESTA": {2: "T02", 0: "T03"}})
+        # 品目が読み直しで消えた → added_rows は空（古い番号を残さない）
+        self._write("S100TESTA", "nominated", [found, b])
+        self.assertEqual(self._cli("--make-targets", "--extend"), 0)
+        tg = {t["target_id"]: t for t in self._targets()["targets"]}
+        self.assertEqual((tg["T02"]["added_rows"], tg["T03"]["added_rows"]), ([], [1]))
+        # 同じ品目の new 行が 2 行＝1 対 1 に結べない → 終了コード 1 相当（SystemExit）で targets.json は変えない
+        before = (self.out / "9999" / "targets.json").read_text(encoding="utf-8")
+        self._write("S100TESTA", "nominated", [found, a, dict(a)])
+        with mock.patch("sys.stdout", io.StringIO()), self.assertRaises(SystemExit) as cm:
+            yr.extend_targets("9999", self.data, self.out)
+        self.assertIn("1 対 1 に結べない", str(cm.exception))
+        self.assertEqual((self.out / "9999" / "targets.json").read_text(encoding="utf-8"), before)
+
+    def test_e_extend_refusals(self):
+        with mock.patch("sys.stdout", io.StringIO()):
+            with self.assertRaises(SystemExit) as cm:
+                yr.extend_targets("9999", self.data, self.out)            # targets.json が無い
+            self.assertIn("targets.json が要る", str(cm.exception))
+            self._base_and_targets()
+            with self.assertRaises(SystemExit) as cm:
+                yr.extend_targets("9999", self.data, self.out)            # 真ん中の期の read.json が無い
+            self.assertIn("真ん中の期の read.json が無い", str(cm.exception))
+            self._write("S100TESTA", "base", [])
+            with self.assertRaises(SystemExit):
+                yr.extend_targets("9999", self.data, self.out)            # 指名読みでない
+            (self.data / "9999" / "S100TESTC.sections.json").unlink()
+            with self.assertRaises(SystemExit) as cm:
+                yr.extend_targets("9999", self.data, self.out)            # 3 期に満たない
+            self.assertIn("3 期", str(cm.exception))
+        with mock.patch("sys.stderr", io.StringIO()), self.assertRaises(SystemExit) as cm:
+            yr.main(["--code", "9999", "--extend"])                      # --make-targets なし
+        self.assertEqual(cm.exception.code, 2)
+
+    # ---- 基準期の指名読み直し（T10g）
+    def test_renominate_base_dump_and_import(self):
+        self._base_and_targets()
+        # 足した品目があっても基準期には指名しない
+        doc = self._targets()
+        doc["targets"].append({"target_id": "T02", "segment": "x", "item": "新製品", "kpi_name": "k", "geo": None,
+                               "value_type": None, "value_basis": None, "added_from": "S100TESTA",
+                               "added_period_end": "2026-03-31", "added_rows": [1]})
+        (self.out / "9999" / "targets.json").write_text(json.dumps(doc, ensure_ascii=False), encoding="utf-8")
+        self.assertEqual(self._cli("--dump-prompts"), 0)                  # フラグなし＝従来どおり基準期の型
+        old_base_prompt = (self.pdir / "S100TESTB.prompt.txt").read_text(encoding="utf-8")
+        self.assertIn("最大 10 行", old_base_prompt)
+        (self.pdir / "S100TESTA.prompt.txt").unlink()
+        self.assertEqual(self._cli("--dump-prompts", "--renominate-base"), 0)
+        p = (self.pdir / "S100TESTB.prompt.txt").read_text(encoding="utf-8")
+        self.assertIn("指名読み", p)
+        self.assertIn("- T01: segment=Seasonings And Foods", p)
+        self.assertNotIn("- T02:", p)
+        self.assertIn('status="new" の行は 0 行', p)
+        self.assertIn("最大 1 行", p)
+        self.assertFalse((self.pdir / "S100TESTA.prompt.txt").exists())   # 他の期は書かない
+        (self.pdir / "S100TESTB.response.json").write_text(json.dumps(
+            [{"target_id": "T01", "status": "found", "kpi_value": "約108", "segment": "Seasonings And Foods"},
+             {"status": "new", "item": "余計", "kpi_name": "k"}], ensure_ascii=False), encoding="utf-8")
+        self.assertEqual(self._cli("--import-responses", "--renominate-base"), 0)
+        rec = json.loads((self.out / "9999" / "S100TESTB.read.json").read_text(encoding="utf-8"))
+        self.assertEqual((rec["mode"], rec.get("renominated_base")), ("nominated", True))
+        self.assertEqual([(r["target_id"], r["status"], r["kpi_value"]) for r in rec["rows"]], [("T01", "found", 108)])
+        self.assertTrue(any("new の行数 1 が上限 0" in w for w in rec["warnings"]), rec["warnings"])
+        self.assertFalse(any("今の入力から作るプロンプトと違う" in w for w in rec["warnings"]), rec["warnings"])
+        # フラグなしの取り込みは基準期の型（従来どおり・プロンプト違いの警告が出る）
+        self.assertEqual(self._cli("--import-responses"), 0)
+        rec = json.loads((self.out / "9999" / "S100TESTB.read.json").read_text(encoding="utf-8"))
+        self.assertEqual(rec["mode"], "base")
+        self.assertNotIn("renominated_base", rec)
+        self.assertTrue(any("今の入力から作るプロンプトと違う" in w for w in rec["warnings"]), rec["warnings"])
+
+    def test_renominate_base_refusals(self):
+        with mock.patch("sys.stdout", io.StringIO()), self.assertRaises(SystemExit) as cm:
+            yr.dump_prompts("9999", self.data, self.out, renominate_base=True)   # targets.json が無い
+        self.assertIn("targets.json が要る", str(cm.exception))
+        with mock.patch("sys.stderr", io.StringIO()), self.assertRaises(SystemExit) as cm:
+            yr.main(["--code", "9999", "--make-targets", "--renominate-base"])
+        self.assertEqual(cm.exception.code, 2)
 
 
 if __name__ == "__main__":
