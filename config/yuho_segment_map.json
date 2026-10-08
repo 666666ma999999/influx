@@ -1,0 +1,316 @@
+{
+  "2502": [
+    {
+      "effective_period_end": "2025-12-31",
+      "old": "Japan",
+      "new": "Japan East Asia",
+      "split": false,
+      "evidence": {
+        "doc_id": "S100YSGA",
+        "quote": "従来「日本」、「欧州」、「オセアニア」、「東南アジア」としておりましたが、2025年度の中間連結会計期間より「日本・東アジア」、「欧州」、「アジアパシフィック」に変更"
+      }
+    },
+    {
+      "effective_period_end": "2025-12-31",
+      "old": "Oceania",
+      "new": "Asia Pacific",
+      "split": false,
+      "evidence": {
+        "doc_id": "S100YSGA",
+        "quote": "2025年４月１日付でオセアニアと東南アジアのRHQを統合し、4RHQ体制から3RHQ体制へ変更いたしました"
+      }
+    },
+    {
+      "effective_period_end": "2025-12-31",
+      "old": "Southeast Asia",
+      "new": "Asia Pacific",
+      "split": false,
+      "evidence": {
+        "doc_id": "S100YSGA",
+        "quote": "2025年４月１日付でオセアニアと東南アジアのRHQを統合し、4RHQ体制から3RHQ体制へ変更いたしました"
+      }
+    }
+  ],
+  "3401": [
+    {
+      "effective_period_end": "2025-03-31",
+      "old": "Material",
+      "new": "Materials",
+      "split": false,
+      "evidence": {
+        "doc_id": "S100W4FO",
+        "quote": "「マテリアル」、「繊維・製品」、「ヘルスケア」の3つを報告セグメントとしています"
+      }
+    },
+    {
+      "effective_period_end": "2025-03-31",
+      "old": "Healthcare",
+      "new": "Helthcare",
+      "split": false,
+      "evidence": {
+        "doc_id": "S100W4FO",
+        "quote": "「マテリアル」、「繊維・製品」、「ヘルスケア」の3つを報告セグメントとしています"
+      }
+    }
+  ],
+  "4004": [
+    {
+      "effective_period_end": "2025-12-31",
+      "old": "Chemicals",
+      "new": "Crasus Chemical",
+      "split": true,
+      "evidence": {
+        "doc_id": "S100XTT8",
+        "quote": "クラサスケミカル㈱に当社及び㈱レゾナックから石油化学事業の吸収分割を行うグループ組織再編を行ったことに伴い"
+      }
+    },
+    {
+      "effective_period_end": "2025-12-31",
+      "old": "Mobility",
+      "new": "Chemicals",
+      "split": true,
+      "evidence": {
+        "doc_id": "S100XTT8",
+        "quote": "カーボン負極材を主要製品とする蓄電摺動材料事業について、当連結会計年度より、報告セグメントを「モビリティ」から「ケミカル」に変更しております"
+      }
+    }
+  ],
+  "4901": [
+    {
+      "effective_period_end": "2025-03-31",
+      "old": "Materials",
+      "new": "Electronics",
+      "split": true,
+      "evidence": {
+        "doc_id": "S100W3XJ",
+        "quote": "マテリアルズ セグメントをエレクトロニクス セグメントに名称変更しております"
+      }
+    },
+    {
+      "effective_period_end": "2025-03-31",
+      "old": "Materials",
+      "new": "Business Innovation",
+      "split": true,
+      "evidence": {
+        "doc_id": "S100W3XJ",
+        "quote": "グラフィックコミュニケーションを当連結会計年度よりエレクトロニクス(旧マテリアルズ) セグメントからビジネスイノベーション セグメントへ変更しております"
+      }
+    }
+  ],
+  "5020": [
+    {
+      "effective_period_end": "2025-03-31",
+      "old": "Energy",
+      "new": "Petroleum Products",
+      "split": true,
+      "evidence": {
+        "doc_id": "S100W1E2",
+        "quote": "（変更前）エネルギー、石油・天然ガス開発、金属、その他（変更後）石油製品ほか、石油・天然ガス開発、機能材、電気、再生可能エネルギー、その他"
+      }
+    },
+    {
+      "effective_period_end": "2025-03-31",
+      "old": "Energy",
+      "new": "High Performance Materials",
+      "split": true,
+      "evidence": {
+        "doc_id": "S100W1E2",
+        "quote": "従来のエネルギーセグメントに属するENEOS株式会社の３事業（機能材、電気、再生可能エネルギー）を2024年４月１日に分社化しました"
+      }
+    },
+    {
+      "effective_period_end": "2025-03-31",
+      "old": "Energy",
+      "new": "Electricity",
+      "split": true,
+      "evidence": {
+        "doc_id": "S100W1E2",
+        "quote": "従来のエネルギーセグメントに属するENEOS株式会社の３事業（機能材、電気、再生可能エネルギー）を2024年４月１日に分社化しました"
+      }
+    },
+    {
+      "effective_period_end": "2025-03-31",
+      "old": "Energy",
+      "new": "Renewable Energy",
+      "split": true,
+      "evidence": {
+        "doc_id": "S100W1E2",
+        "quote": "従来のエネルギーセグメントに属するENEOS株式会社の３事業（機能材、電気、再生可能エネルギー）を2024年４月１日に分社化しました"
+      }
+    }
+  ],
+  "5108": [
+    {
+      "effective_period_end": "2024-12-31",
+      "old": "China Asia Pacific",
+      "new": "Asia Pacific India And China",
+      "split": false,
+      "evidence": {
+        "doc_id": "S100VGBM",
+        "quote": "「中国・アジア・大洋州」 ： 「アジア・大洋州・インド・中国」に変更"
+      }
+    },
+    {
+      "effective_period_end": "2024-12-31",
+      "old": "Europe Russia Middle East India And Africa",
+      "new": "Europe Middle East And Africa",
+      "split": true,
+      "evidence": {
+        "doc_id": "S100VGBM",
+        "quote": "「欧州・ロシア・中近東・インド・アフリカ」 ： 「欧州・中近東・アフリカ」に変更"
+      }
+    },
+    {
+      "effective_period_end": "2024-12-31",
+      "old": "Europe Russia Middle East India And Africa",
+      "new": "Asia Pacific India And China",
+      "split": true,
+      "evidence": {
+        "doc_id": "S100VGBM",
+        "quote": "インド事業のセグメント区分を変更しております"
+      }
+    }
+  ],
+  "5991": [
+    {
+      "effective_period_end": "2025-03-31",
+      "old": "Precision Springs And Components",
+      "new": "Disk Drive Suspension",
+      "split": true,
+      "evidence": {
+        "doc_id": "S100TSHQ",
+        "quote": "精密部品HDD用サスペンション、HDD用機構部品、線ばね、薄板ばね、モーターコア、液晶・半導体検査用プローブユニット"
+      }
+    }
+  ],
+  "6501": [
+    {
+      "effective_period_end": "2026-03-31",
+      "old": "Green Energy And Mobility",
+      "new": "Energy",
+      "split": true,
+      "evidence": {
+        "doc_id": "S100W56G",
+        "quote": "「グリーンエナジー＆モビリティ」を「エナジー」と「モビリティ」の２つのセクターに分け"
+      }
+    },
+    {
+      "effective_period_end": "2026-03-31",
+      "old": "Green Energy And Mobility",
+      "new": "Mobility",
+      "split": true,
+      "evidence": {
+        "doc_id": "S100W56G",
+        "quote": "「グリーンエナジー＆モビリティ」を「エナジー」と「モビリティ」の２つのセクターに分け"
+      }
+    }
+  ],
+  "6857": [
+    {
+      "effective_period_end": "2026-03-31",
+      "old": "Semiconductor And Component Test System Business",
+      "new": "Test System Business",
+      "split": false,
+      "evidence": {
+        "doc_id": "S100YKTA",
+        "quote": "従来、「半導体・部品テストシステム事業」、「メカトロニクス関連事業」、及び「サービス他」の3つを報告セグメントとしておりましたが"
+      }
+    },
+    {
+      "effective_period_end": "2026-03-31",
+      "old": "Mechatronics System Business",
+      "new": "Test System Business",
+      "split": true,
+      "evidence": {
+        "doc_id": "S100YKTA",
+        "quote": "テストシステム製品群とテストハンドラやデバイスインタフェース等のメカトロニクス関連製品群の製造・販売を主な事業内容とし"
+      }
+    },
+    {
+      "effective_period_end": "2026-03-31",
+      "old": "Mechatronics System Business",
+      "new": "Services Support And Others",
+      "split": true,
+      "evidence": {
+        "doc_id": "S100YKTA",
+        "quote": "サービス他部門の内容は、上記の事業に関連した総合的な顧客ソリューションの提供、ナノテクノロジー関連の製品群"
+      }
+    },
+    {
+      "effective_period_end": "2026-03-31",
+      "old": "Services Support And Others",
+      "new": "Test System Business",
+      "split": true,
+      "evidence": {
+        "doc_id": "S100YKTA",
+        "quote": "デバイスインタフェースなどの製品群及び半導体やモジュールのシステムレベルテストのソリューションを事業内容としております"
+      }
+    }
+  ],
+  "7733": [
+    {
+      "effective_period_end": "2026-03-31",
+      "old": "Endoscopic Solutions",
+      "new": "Gastrointestinal Solutions",
+      "split": true,
+      "evidence": {
+        "doc_id": "S100YDN3",
+        "quote": "消化器内視鏡ソリューション 消化器内視鏡、消化器科処置具、医療サービスサージカルインターベンション 泌尿器科製品、呼吸器科製品、外科内視鏡"
+      }
+    },
+    {
+      "effective_period_end": "2026-03-31",
+      "old": "Endoscopic Solutions",
+      "new": "Surgical And Interventional Solutions",
+      "split": true,
+      "evidence": {
+        "doc_id": "S100YDN3",
+        "quote": "消化器内視鏡ソリューション 消化器内視鏡、消化器科処置具、医療サービスサージカルインターベンション 泌尿器科製品、呼吸器科製品、外科内視鏡"
+      }
+    },
+    {
+      "effective_period_end": "2026-03-31",
+      "old": "Therapeutic Solutions",
+      "new": "Gastrointestinal Solutions",
+      "split": true,
+      "evidence": {
+        "doc_id": "S100YDN3",
+        "quote": "消化器内視鏡ソリューション 消化器内視鏡、消化器科処置具、医療サービスサージカルインターベンション 泌尿器科製品、呼吸器科製品、外科内視鏡"
+      }
+    },
+    {
+      "effective_period_end": "2026-03-31",
+      "old": "Therapeutic Solutions",
+      "new": "Surgical And Interventional Solutions",
+      "split": true,
+      "evidence": {
+        "doc_id": "S100YDN3",
+        "quote": "消化器内視鏡ソリューション 消化器内視鏡、消化器科処置具、医療サービスサージカルインターベンション 泌尿器科製品、呼吸器科製品、外科内視鏡"
+      }
+    }
+  ],
+  "7832": [
+    {
+      "effective_period_end": "2026-03-31",
+      "old": "IPProduction Business",
+      "new": "Visual And Music Business",
+      "split": false,
+      "evidence": {
+        "doc_id": "S100YBXE",
+        "quote": "［映像音楽事業（旧　ＩＰプロデュース事業）］"
+      }
+    }
+  ],
+  "8058": [
+    {
+      "effective_period_end": "2025-03-31",
+      "old": "Automotive And Mobility",
+      "new": "Mobility",
+      "split": false,
+      "evidence": {
+        "doc_id": "S100TL6G",
+        "quote": "既存4グループ（金属資源、モビリティ(自動車・モビリティから改称)、食品産業、電力ソリューション）"
+      }
+    }
+  ]
+}

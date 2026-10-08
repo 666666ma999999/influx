@@ -18,6 +18,9 @@
 (i) T9b（2026-10-08 P-INF-37 ①a②a・P-INF-36 ②〜④a）: ①束ね鍵= target_id／属性 5 列・区分は期ごと ②未判定（開示なし）・
     対象外（新設前） ③期待の根拠節に MD&A・説明会資料 ④区分 0 は連結を区分とみなす ⑤粗利なしは 判定不能・2 条件
     ⑥segment_figures を区分の数字に使う ⑦periods に submit_date ⑧--all に 3 期揃い率と台帳の pin／旧 read.json の互換
+(j) T10（P-INF-38 c）: a 区分名の対応表（旧→新・新→旧・分割は引かない・形の検証）／b source_complete_any と
+    fill_rate_yuho／fill_rate_any／c value_approx を periods と --all に／d expect_quote で期待を照合（無ければ quote）／
+    e --extend で足した品目の 対象外（新設前）・added_rows で束ねる
 
 実行: docker compose run --rm -v "$PWD/tests:/app/tests" xstock python -m unittest tests.test_yuho_judge -v
 """
@@ -1001,6 +1004,309 @@ class AggregateAllTest(unittest.TestCase):
                 contextlib.redirect_stdout(buf):
             yj.main()
         self.assertIn("companies=3 status_done=2 complete_ge1=2 fill_rate=0.67 wrote", buf.getvalue())
+
+
+class T10JudgeTest(unittest.TestCase):
+    """T10（2026-10-08 P-INF-38 c）判定側: a 区分名の対応表／b 出所 2 本／c 概数／d 期待の別欄／e 追加品目。"""
+
+    def setUp(self):
+        import tempfile
+        self._tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self._tmp.name)
+        base = T9bTest()
+        base.setUp()
+        self.docs, self.base, self.targets = base.docs, base.base, base.targets
+        self.map_entry = {"effective_period_end": "2026-03-31", "old": "食品", "new": "調味料", "split": False,
+                          "evidence": {"doc_id": "D2026", "quote": "当連結会計年度より「食品」を「調味料」に名称変更"}}
+
+    def tearDown(self):
+        self._tmp.cleanup()
+
+    def _reads(self, rows2026, rows2024=None):
+        return {"D2024": _read("D2024", rows2024 or [self.base], mode="base"), "D2025": None,
+                "D2026": _read("D2026", rows2026, mode="nominated")}
+
+    def test_a1_segment_map_old_to_new_and_new_to_old(self):
+        old_named = dict(self.base, target_id="T1", status="found", segment="食品", kpi_value=105)
+        # 対応表なし: 2026 に「食品」は無い＝区分の数字が引けない（従来どおり）
+        per = yj.build_products(self.docs, self._reads([old_named]), self.targets)["products"][0]["periods"][-1]
+        self.assertIsNone(per["source"]["segment_member"])
+        self.assertIsNone(per["share_pct"])
+        # 対応表あり: 旧「食品」→ 新「調味料」で引き直し、根拠欄に「区分名の対応表」
+        r = yj.build_products(self.docs, self._reads([old_named]), self.targets, segment_map=[self.map_entry])
+        per = r["products"][0]["periods"][-1]
+        self.assertEqual(per["source"]["segment_member"], "調味料Member")
+        self.assertIsNotNone(per["share_pct"])
+        self.assertIn("区分名の対応表", per["judge_note"])
+        self.assertEqual(per["segment_map"]["doc_id"], "D2026")
+        self.assertIn("区分名の対応表", yj.render_summary(r))
+        # 当期の区分で引ける期（2024 の「食品」）は対応表を使わない
+        self.assertIsNone(r["products"][0]["periods"][0]["segment_map"])
+        self.assertIsNone(r["products"][0]["periods"][0]["judge_note"])
+        # new→old: 改名前の期（2024）に新しい名前で書かれた行は旧名へ引く
+        early_new_name = dict(self.base, segment="調味料")
+        r2 = yj.build_products(self.docs, self._reads([], rows2024=[early_new_name]), segment_map=[self.map_entry])
+        per0 = r2["products"][0]["periods"][0]
+        self.assertEqual(per0["source"]["segment_member"], "食品Member")
+        self.assertIn("区分名の対応表（調味料→食品）", per0["judge_note"])
+        # split=true は引かない
+        split = dict(self.map_entry, split=True)
+        per = yj.build_products(self.docs, self._reads([old_named]), self.targets,
+                                segment_map=[split])["products"][0]["periods"][-1]
+        self.assertIsNone(per["source"]["segment_member"])
+        self.assertEqual(per["judge_note"], "区分の分割＝対応表で引かない")
+        self.assertTrue(per["segment_map"]["split"])
+        # 統合（旧 2 つ → 新 1 つ）: 旧→新は引ける・新→旧は行き先が 1 つに決まらない＝引かない
+        merge = [self.map_entry, dict(self.map_entry, old="飲料")]
+        per = yj.build_products(self.docs, self._reads([old_named]), self.targets,
+                                segment_map=merge)["products"][0]["periods"][-1]
+        self.assertEqual(per["source"]["segment_member"], "調味料Member")
+        per0 = yj.build_products(self.docs, self._reads([], rows2024=[early_new_name]),
+                                 segment_map=merge)["products"][0]["periods"][0]
+        self.assertIsNone(per0["source"]["segment_member"])
+        self.assertEqual(per0["judge_note"], "区分名の対応表で行き先が 1 つに決まらない＝引かない")
+
+    def test_a1_split_beats_partial_match_real_shapes(self):
+        # Codex T10 R1 Critical 1: 部分一致が対応表より先に分割の片方を拾わない（6501・8058 の実データの形）
+        def doc(doc_id, end, labels):
+            return _doc(doc_id, end, end, {l: ((100, 10), (90, 9)) for l in labels}, _cons(1000, 400, 100),
+                        _cons(950, 370, 90))
+        # 6501: 旧 "Green Energy And Mobility" が 2026 に "Energy" と "Mobility" へ分割（split=true）
+        docs = [doc("H24", "2024-03-31", ["Green Energy And Mobility", "Digital Systems"]),
+                doc("H25", "2025-03-31", ["Green Energy And Mobility", "Digital Systems"]),
+                doc("H26", "2026-03-31", ["Energy", "Mobility", "Digital Systems"])]
+        ev = {"doc_id": "S100W56G", "quote": "「グリーンエナジー＆モビリティ」を「エナジー」と「モビリティ」の２つのセクターに分け"}
+        split_map = [{"effective_period_end": "2026-03-31", "old": "Green Energy And Mobility", "new": n, "split": True,
+                      "evidence": ev} for n in ("Energy", "Mobility")]
+        row = dict(self.base, segment="Green Energy And Mobility")
+        reads = {"H24": _read("H24", [row]), "H25": None, "H26": _read("H26", [row])}
+        # 対応表なし: 従来どおり部分一致で引く（"Mobility" ⊂ "Green Energy And Mobility"）
+        per = yj.build_products(docs, reads)["products"][0]["periods"][-1]
+        self.assertIsNotNone(per["source"]["segment_member"])
+        # 対応表に名前がある: 分割＝引かない（部分一致に落とさない）・根拠欄に注記
+        r = yj.build_products(docs, reads, segment_map=split_map)
+        pers = r["products"][0]["periods"]
+        self.assertIsNone(pers[-1]["source"]["segment_member"])
+        self.assertEqual(pers[-1]["judge_note"], "区分の分割＝対応表で引かない")
+        self.assertIsNone(pers[-1]["share_pct"])
+        # 分割前の期は完全一致で引く（対応表は使わない）
+        self.assertEqual(pers[0]["source"]["segment_member"], "Green Energy And MobilityMember")
+        self.assertIsNone(pers[0]["judge_note"])
+        # 8058 の形: 旧 "Urban Development" ⊂ 新 "Urban Development And Infrastructure"（split=true）
+        docs = [doc("M24", "2024-03-31", ["Urban Development", "Power Solution"]),
+                doc("M25", "2025-03-31", ["Urban Development And Infrastructure", "Power Solution"]),
+                doc("M26", "2026-03-31", ["Urban Development And Infrastructure", "Power Solution"])]
+        m = [{"effective_period_end": "2025-03-31", "old": "Urban Development",
+              "new": "Urban Development And Infrastructure", "split": True,
+              "evidence": {"doc_id": "S100VYM1", "quote": "（テスト用の形）"}}]
+        row = dict(self.base, segment="Urban Development")
+        reads = {"M24": _read("M24", [row]), "M25": _read("M25", [row]), "M26": None}
+        self.assertIsNotNone(yj.build_products(docs, reads)["products"][0]["periods"][1]["source"]["segment_member"])
+        pers = yj.build_products(docs, reads, segment_map=m)["products"][0]["periods"]
+        self.assertEqual(pers[0]["source"]["segment_member"], "Urban DevelopmentMember")
+        self.assertEqual([(x["source"]["segment_member"], x["judge_note"]) for x in pers[1:]],
+                         [(None, "区分の分割＝対応表で引かない")] * 2)
+        # Codex T10 R2 Critical 1: 改名 → 分割の連鎖（Legacy → Green Energy And Mobility → Energy／Mobility）は途中の
+        # 段で分割に当たる＝引かない（途中の名前を部分一致で "Energy" に落とさない）
+        segs26 = {"E": {"label": "Energy"}, "M": {"label": "Mobility"}, "D": {"label": "Digital Systems"}}
+        chain = [{"effective_period_end": "2025-03-31", "old": "Legacy", "new": "Green Energy And Mobility",
+                  "split": False, "evidence": ev}] + split_map
+        self.assertEqual(yj.resolve_segment_by_map(segs26, "Legacy", "2026-03-31", chain)[:2],
+                         (None, "区分の分割＝対応表で引かない"))
+        # 2025（分割前）は改名だけ当たる＝完全一致で引く
+        segs25 = {"G": {"label": "Green Energy And Mobility"}, "D": {"label": "Digital Systems"}}
+        self.assertEqual(yj.resolve_segment_by_map(segs25, "Legacy", "2025-03-31", chain)[:2],
+                         ("G", "区分名の対応表（Legacy→Green Energy And Mobility）"))
+        # 連鎖の途中が当期の区分に届かない（対応表に出る名前だが当期の区分に無い・次の段も無い）＝引かない
+        stall = [{"effective_period_end": "2025-03-31", "old": "Legacy", "new": "Old Mobility Group",
+                  "split": False, "evidence": ev},
+                 {"effective_period_end": "2027-03-31", "old": "Old Mobility Group", "new": "Mobility",
+                  "split": False, "evidence": ev}]
+        self.assertEqual(yj.resolve_segment_by_map(segs26, "Legacy", "2026-03-31", stall)[:2],
+                         (None, "区分名の対応表で当期の区分に届かない＝引かない"))
+        # 行き先が対応表に出ない名前なら、その段だけ部分一致
+        loose = [{"effective_period_end": "2025-03-31", "old": "Legacy", "new": "Digital", "split": False, "evidence": ev}]
+        self.assertEqual(yj.resolve_segment_by_map(segs26, "Legacy", "2026-03-31", loose)[:2],
+                         ("D", "区分名の対応表（Legacy→Digital）"))
+        # 対応表に出ない名前は従来の部分一致のまま
+        self.assertEqual(yj.resolve_segment_by_map({"PS": {"label": "Power Solution"}}, "Power", "2026-03-31", m),
+                         ("PS", None, None))
+
+    def test_a1_load_segment_map_validation(self):
+        self.assertEqual(yj.load_segment_map(self.root / "absent.json"), {})
+        good = self.root / "good.json"
+        good.write_text(json.dumps({"9998": [self.map_entry]}, ensure_ascii=False), encoding="utf-8")
+        self.assertEqual(yj.load_segment_map(good)["9998"][0]["new"], "調味料")
+        bad_json = self.root / "bad.json"
+        bad_json.write_text("{not json", encoding="utf-8")
+        with self.assertRaises(SystemExit):
+            yj.load_segment_map(bad_json)
+        no_evidence = self.root / "noev.json"
+        no_evidence.write_text(json.dumps({"9998": [dict(self.map_entry, evidence={"doc_id": "D2026"})]},
+                                          ensure_ascii=False), encoding="utf-8")
+        with self.assertRaises(SystemExit) as cm:
+            yj.load_segment_map(no_evidence)
+        self.assertIn("evidence", str(cm.exception))
+        for bad in ({"98": [self.map_entry]}, {"9998": {"x": 1}}, {"9998": [dict(self.map_entry, effective_period_end="2026")]},
+                    {"9998": [dict(self.map_entry, split="no")]}, {"9998": [dict(self.map_entry, new="食品")]}, []):
+            path = self.root / "bad2.json"
+            path.write_text(json.dumps(bad, ensure_ascii=False), encoding="utf-8")
+            with self.assertRaises(SystemExit, msg=repr(bad)):
+                yj.load_segment_map(path)
+
+    def test_a1_cli_malformed_segment_map_stops_before_judging(self):
+        from unittest import mock
+        bad = self.root / "bad.json"
+        bad.write_text("[1, 2]", encoding="utf-8")
+        argv = ["yuho_judge.py", "--code", "9999", "--data-dir", str(FIX.parent), "--out-dir", str(self.root / "out"),
+                "--segment-map", str(bad)]
+        with mock.patch.object(sys, "argv", argv), self.assertRaises(SystemExit) as cm:
+            yj.main()
+        self.assertIn("区分名の対応表", str(cm.exception))
+        self.assertFalse((self.root / "out" / "9999" / "products.json").exists())
+
+    def test_b_source_complete_any_and_fill_rates(self):
+        ir_row = dict(self.base, segment="調味料", quote_section="ir_presentation", quote="調味料 国内数量 105%")
+        reads = {"D2024": None, "D2025": None, "D2026": _read("D2026", [ir_row], ir_source="FY2025.txt")}
+        r = yj.build_products(self.docs, reads)
+        p = r["products"][0]
+        self.assertEqual((p["source_complete"], p["source_complete_any"]), (False, True))
+        self.assertEqual((r["complete_products"], r["complete_any_products"]), (0, 1))
+        # 引用が無い説明会資料の行は数えない
+        r2 = yj.build_products(self.docs, {"D2024": None, "D2025": None,
+                                           "D2026": _read("D2026", [dict(ir_row, quote=None)], ir_source="FY2025.txt")})
+        self.assertFalse(r2["products"][0]["source_complete_any"])
+        # 有報の節で揃う品目は両方 True
+        r3 = yj.build_products(self.docs, {"D2024": None, "D2025": None,
+                                           "D2026": _read("D2026", [dict(self.base, segment="調味料")])})
+        self.assertEqual((r3["products"][0]["source_complete"], r3["products"][0]["source_complete_any"]), (True, True))
+        # --all: fill_rate（＝fill_rate_yuho）と fill_rate_any を並べる
+        out = self.root / "yuho"
+        for code, res in (("1111", r), ("2222", r3)):
+            (out / code).mkdir(parents=True)
+            (out / code / "products.json").write_text(json.dumps(res, ensure_ascii=False), encoding="utf-8")
+        agg = yj.aggregate_all(out, self.root / "none.jsonl")
+        t = agg["totals"]
+        self.assertEqual((t["complete_ge1"], t["complete_any_ge1"]), (1, 2))
+        self.assertAlmostEqual(t["fill_rate"], 0.5)
+        self.assertEqual(t["fill_rate_yuho"], t["fill_rate"])
+        self.assertAlmostEqual(t["fill_rate_any"], 1.0)
+        md = (out / "trial_summary.md").read_text(encoding="utf-8")
+        self.assertIn("fill_rate_any=1.000", md.splitlines()[0])
+        self.assertIn("（有報＋説明会資料＝fill_rate_any）= 2 / 2 = 1.000", md)
+        js = json.loads((out / "trial_summary.json").read_text(encoding="utf-8"))
+        self.assertEqual(js["totals"]["fill_rate_yuho"], 0.5)
+        # 旧 products.json（complete_any_products が無い）は source_complete で代える
+        old = {k: v for k, v in r3.items() if k != "complete_any_products"}
+        self.assertEqual(yj._company_row("3333", old, {})["complete_any_products"], 1)
+
+    def test_c_value_approx_in_periods_and_all_count(self):
+        row = dict(self.base, segment="調味料", kpi_value=4, kpi_value_text="3～5%", value_approx="範囲",
+                   kpi_prev_value=100, prev_value_approx="概数")
+        reads = {"D2024": None, "D2025": None, "D2026": _read("D2026", [row])}
+        r = yj.build_products(self.docs, reads)
+        per = r["products"][0]["periods"][-1]
+        self.assertEqual((per["kpi_value"], per["value_approx"], per["kpi_value_text"], per["prev_value_approx"]),
+                         (4, "範囲", "3～5%", "概数"))
+        self.assertIsNone(r["products"][0]["periods"][0]["value_approx"])
+        self.assertIn("（範囲: 3～5%）", yj.render_summary(r))
+        out = self.root / "yuho"
+        (out / "1111").mkdir(parents=True)
+        (out / "1111" / "products.json").write_text(json.dumps(r, ensure_ascii=False), encoding="utf-8")
+        agg = yj.aggregate_all(out, self.root / "none.jsonl")
+        self.assertEqual((agg["totals"]["approx_periods"], agg["totals"]["value_approx"]), (1, {"範囲": 1}))
+        self.assertIn("概数・範囲・下限・上限の期 = 1", (out / "trial_summary.md").read_text(encoding="utf-8"))
+
+    def test_d_expect_quote_separate_from_number_quote(self):
+        # 数字の根拠（quote）には成長の語が無い・期待の文は expect_quote（MD&A）
+        row = dict(self.base, segment="調味料", expectation=True, quote="国内 数量 103%", quote_section="mdna",
+                   expect_quote="調味料の国内数量を成長の柱として拡大する。", expect_section="mdna")
+        reads = {"D2024": None, "D2025": None, "D2026": _read("D2026", [row])}
+        per = yj.build_products(self.docs, reads)["products"][0]["periods"][-1]
+        self.assertEqual((per["expectation"], per["expect_basis"]), (True, "MD&Aの本文に品目名つきの引用あり"))
+        self.assertEqual((per["quote"], per["expect_quote"], per["expect_section"]),
+                         ("国内 数量 103%", "調味料の国内数量を成長の柱として拡大する。", "mdna"))
+        # 後方互換: expect_quote が無ければ quote で照合（数字の quote は MD&A の期待の文ではない＝期待にしない）
+        old = {k: v for k, v in row.items() if k not in ("expect_quote", "expect_section")}
+        per = yj.build_products(self.docs, {"D2024": None, "D2025": None, "D2026": _read("D2026", [old])})["products"][0]["periods"][-1]
+        self.assertEqual((per["expectation"], per["expect_basis"]), (False, "引用がMD&Aの本文に見つからない"))
+        old = dict(old, quote="調味料の国内数量を成長の柱として拡大する。")   # 旧形式: quote に期待の文
+        per = yj.build_products(self.docs, {"D2024": None, "D2025": None, "D2026": _read("D2026", [old])})["products"][0]["periods"][-1]
+        self.assertIs(per["expectation"], True)
+        # expect_section が説明会資料なら、数字の quote_section が mdna でも説明会資料の本文で照合する
+        ir = dict(row, expect_quote="調味料は重点領域", expect_section="ir_presentation")
+        reads = {"D2024": None, "D2025": None, "D2026": _read("D2026", [ir], ir_source="FY2025.txt")}
+        per = yj.build_products(self.docs, reads, ir_texts={"D2026": "調味料は重点領域 です"})["products"][0]["periods"][-1]
+        self.assertEqual((per["expectation"], per["expect_basis"]), (True, "説明会資料の本文に品目名つきの引用あり"))
+        self.assertEqual(per["source"]["source_kind"], "有報")   # 数字の出所は quote_section（mdna）のまま
+        # expect_section が無ければ quote_section で照合
+        self.assertEqual(yj._expect_fields({"expect_quote": "x", "quote_section": "mdna"}), ("x", "mdna"))
+
+    def test_e_added_two_period_metric_in_all(self):
+        # Codex T10 R1 Warning 5: T9 の 3 期揃い（追加品目は分母外）は変えず、追加品目の 2 期揃いを別に出す
+        def per(doc, end, v, label="需要（区分）"):
+            return {"doc_id": doc, "period_end": end, "kpi_value": v, "label": label, "segment_label": "需要"}
+        ends = (("D1", "2024-03-31"), ("D2", "2025-03-31"), ("D3", "2026-03-31"))
+        oos = "対象外（新設前）"
+        prod = {"products_status": "済", "complete_products": 1, "docs": [], "usage": {}, "products": [
+            {"periods": [per(d, e, 1) for d, e in ends]},                                       # 3 期揃い
+            {"added_from": "D2", "periods": [per("D1", ends[0][1], None, oos), per("D2", ends[1][1], 5),
+                                             per("D3", ends[2][1], 6)]},                     # 追加・2 期揃い
+            {"added_from": "D2", "periods": [per("D1", ends[0][1], None, oos), per("D2", ends[1][1], 5),
+                                             per("D3", ends[2][1], None, "未判定（開示なし）")]},  # 追加・揃わない
+        ]}
+        out = self.root / "yuho"
+        (out / "1111").mkdir(parents=True)
+        (out / "1111" / "products.json").write_text(json.dumps(prod, ensure_ascii=False), encoding="utf-8")
+        t = yj.aggregate_all(out, self.root / "none.jsonl")["totals"]
+        self.assertEqual((t["three_period_products"], t["three_period_eligible"]), (1, 1))   # T9 の物差しは不変
+        self.assertEqual((t["added_two_period"], t["added_targets_total"]), (1, 2))
+        self.assertIn("追加品目（--extend・3 期揃いの分母には入らない）の 2 期揃い", (out / "trial_summary.md").read_text(encoding="utf-8"))
+        self.assertIn("= 1 / 2", (out / "trial_summary.md").read_text(encoding="utf-8"))
+        js = json.loads((out / "trial_summary.json").read_text(encoding="utf-8"))
+        self.assertEqual((js["totals"]["added_two_period"], js["companies"][0]["added_targets_total"]), (1, 2))
+        self.assertFalse(yj.is_added_two_period({"periods": prod["products"][0]["periods"]}))   # 追加でない品目
+
+    def test_e_added_target_labels(self):
+        # 真ん中の期（D2025）で new として出た品目を --extend で T02 として足した
+        targets = {"base_doc_id": "D2024", "targets": [
+            dict(self.targets[0], base_rows=[0]),
+            {"target_id": "T02", "segment": "食品", "item": "新製品", "kpi_name": "出荷台数", "geo": "国内",
+             "value_type": "数量", "value_basis": "水準", "added_from": "D2025", "added_period_end": "2025-03-31",
+             "added_rows": [1]}]}
+        newbie = dict(self.base, item="新製品", kpi_name="出荷台数", value_basis="水準", status="new", kpi_value=12)
+        nom = lambda **kw: dict(self.base, target_id="T1", status="found", **kw)   # noqa: E731
+        reads = {"D2024": _read("D2024", [self.base], mode="base"),
+                 "D2025": _read("D2025", [nom(kpi_value=104), newbie], mode="nominated"),
+                 "D2026": _read("D2026", [nom(segment="調味料", kpi_value=105),
+                                          dict(newbie, target_id="T02", status="found", kpi_value=15)], mode="nominated")}
+        r = yj.build_products(self.docs, reads, targets)
+        by = {p["target_id"]: p for p in r["products"]}
+        self.assertEqual(sorted(by), ["T02", "T1"])        # 真ん中の期の new 行は added_rows で T02 に束ねる
+        t2 = by["T02"]
+        self.assertEqual(t2["added_from"], "D2025")
+        self.assertEqual(t2["periods"][0]["label"], "対象外（新設前）")
+        self.assertEqual((t2["periods"][1]["row_status"], t2["periods"][1]["kpi_value"]), ("new", 12))
+        self.assertNotEqual(t2["periods"][1]["label"], "対象外（新設前）")
+        self.assertEqual((t2["periods"][2]["row_status"], t2["periods"][2]["kpi_value"]), ("found", 15))
+        self.assertFalse(yj.is_three_period_eligible(t2["periods"]))
+        self.assertTrue(by["T1"]["three_period_complete"])
+        # 最後の期に数字が無い → 開示なし（当期候補なし にしない）
+        reads["D2026"] = _read("D2026", [nom(segment="調味料"), dict(newbie, target_id="T02", status="not_disclosed",
+                                                                      kpi_value=None)], mode="nominated")
+        t2 = {p["target_id"]: p for p in yj.build_products(self.docs, reads, targets)["products"]}["T02"]
+        self.assertEqual(t2["periods"][2]["label"], "未判定（開示なし）")
+        # 足した期の行が欠けても、その前の期は 対象外（新設前）
+        reads["D2025"] = _read("D2025", [nom(kpi_value=104)], mode="nominated")
+        t2 = {p["target_id"]: p for p in yj.build_products(self.docs, reads, targets)["products"]}["T02"]
+        self.assertEqual(t2["periods"][0]["label"], "対象外（新設前）")
+        self.assertEqual(t2["periods"][1]["label"], "未判定（当期候補なし）")
+        # 基準期を指名読みし直した read.json（mode=nominated・target_id つき）でも同じ 1 品目に束ねる
+        reads["D2024"] = _read("D2024", [dict(self.base, target_id="T1", status="found")], mode="nominated",
+                               renominated_base=True)
+        t1 = {p["target_id"]: p for p in yj.build_products(self.docs, reads, targets)["products"]}["T1"]
+        self.assertEqual([x["read_mode"] for x in t1["periods"]], ["nominated"] * 3)
+        self.assertEqual(t1["periods"][0]["kpi_value"], 103)
 
 
 class CodexT9FixesJudgeTest(unittest.TestCase):

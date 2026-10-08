@@ -23,8 +23,18 @@ T9（2026-10-08 P-INF-37 ①a②a・P-INF-36 ②〜④a）:
   区分は期ごとに持つ（区分の再編に対応・後の期の区分で前の期を埋めない）。単一セグメントの証拠がある会社だけ連結を区分とみなす（構成比 100%・区分 0 だけでは単一とみなさない）。read.json に segment_figures
   （本文のセグメント表の読み）があれば、その期は XBRL の区分の数字の代わりに使う（出所=「本文の表（読み）」）。
 
+T10（2026-10-08 P-INF-38 c）:
+  a 区分の旧→新: config/yuho_segment_map.json（任意）で、行の区分が当期の区分に無い時だけ引き直す（根拠欄に「区分名の対応表」）。
+    split=true（区分の分割）は引かない（根拠欄に「区分の分割＝対応表で引かない」）
+  b 出所 2 本: 品目ごとに source_complete（有報の節だけ）と source_complete_any（有報の節 か 説明会資料＋引用）・--all に
+    fill_rate_yuho（＝従来の fill_rate）と fill_rate_any
+  c 概数・範囲: read の value_approx／kpi_value_text を periods に載せ、--all に概数の件数
+  d 期待の文: expect_quote／expect_section があればそれで期待を照合・無ければ従来の quote／quote_section
+  e 追加品目: targets.json の added_from（--extend で足した品目）は足した期より前を 対象外（新設前）・足した期は added_rows の行
+
 使い方:
     python scripts/yuho_judge.py --code 2802 [--price-in 3.0 --price-out 15.0]   # 単価は USD / 100 万トークン
+    python scripts/yuho_judge.py --code 2802 --segment-map config/yuho_segment_map.json   # 既定パス（無ければ対応表なし）
     python scripts/yuho_judge.py --all   # out_dir/*/products.json を全社集計→ trial_summary.json / trial_summary.md
 """
 from __future__ import annotations
@@ -43,6 +53,11 @@ from yuho_read import IR_SECTION_KEY, parse_bool, parse_number  # noqa: E402  �
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_LEDGER = PROJECT_ROOT / "data" / "center_pin" / "center_pin.jsonl"
+DEFAULT_SEGMENT_MAP = PROJECT_ROOT / "config" / "yuho_segment_map.json"   # T10a（無ければ対応表なし＝従来どおり）
+NOTE_SEGMENT_MAP = "区分名の対応表"
+NOTE_SEGMENT_SPLIT = "区分の分割＝対応表で引かない"
+NOTE_SEGMENT_AMBIGUOUS = "区分名の対応表で行き先が 1 つに決まらない＝引かない"
+NOTE_SEGMENT_CHAIN_STALL = "区分名の対応表で当期の区分に届かない＝引かない"
 DEFAULT_DATA_DIR = Path("data/edinet/yuho")
 DEFAULT_OUT_DIR = Path("output/yuho")
 SHARE_THRESHOLD = 30.0
@@ -349,6 +364,17 @@ def _norm(text: Optional[str]) -> str:
     return re.sub(r"[\s・･,、/／()（）「」\-_]", "", s)
 
 
+def find_segment_exact(segments: dict, segment_name: Optional[str]) -> Optional[str]:
+    """区分名が当期の区分の表記と完全一致（正規化後）する member（部分一致はしない）。"""
+    target = _norm(segment_name)
+    if not target or not segments:
+        return None
+    for member, seg in segments.items():
+        if _norm((seg or {}).get("label")) == target:
+            return member
+    return None
+
+
 def find_segment_member(segments: dict, segment_name: Optional[str]) -> Optional[str]:
     """LLM 行の segment 名から facts.segments の member キーを引く（完全一致→部分一致→member 名）。
 
@@ -373,6 +399,144 @@ def find_segment_member(segments: dict, segment_name: Optional[str]) -> Optional
         if target in _norm(member):
             return member
     return None
+
+
+def load_segment_map(path: Optional[Path]) -> Dict[str, List[dict]]:
+    """config/yuho_segment_map.json（区分の旧→新の対応表・T10a）を読み、形を検証する。
+
+    形: {"<code4>": [{"effective_period_end": "YYYY-MM-DD", "old": "<旧区分名>", "new": "<新区分名>",
+                     "split": false, "evidence": {"doc_id": "...", "quote": "..."}}]}
+    根拠（evidence.doc_id・evidence.quote）の無い行は載せない約束＝検証で落とす（推測で埋めない）。
+
+    Returns:
+        code4 → 行の list。ファイルが無ければ {}（従来どおり）
+
+    Raises:
+        SystemExit: JSON として読めない・形が違う（どの行の何が違うかを並べる）
+    """
+    if path is None or not Path(path).exists():
+        return {}
+    try:
+        doc = json.loads(Path(path).read_text(encoding="utf-8"))
+    except json.JSONDecodeError as e:
+        raise SystemExit(f"区分名の対応表が JSON として読めない: {path}: {e}")
+    if not isinstance(doc, dict):
+        raise SystemExit(f"区分名の対応表の形が不正（先頭は {{code4: [...]}} の dict）: {path}")
+    errors: List[str] = []
+    out: Dict[str, List[dict]] = {}
+    for code, entries in doc.items():
+        if not re.fullmatch(r"\d{4}", str(code)):
+            errors.append(f"{code}: キーは 4 桁の証券コード")
+            continue
+        if not isinstance(entries, list):
+            errors.append(f"{code}: 値は行の list")
+            continue
+        for i, e in enumerate(entries):
+            where = f"{code}[{i}]"
+            if not isinstance(e, dict):
+                errors.append(f"{where}: 行は dict")
+                continue
+            eff = e.get("effective_period_end")
+            if not (isinstance(eff, str) and re.fullmatch(r"\d{4}-\d{2}-\d{2}", eff)):
+                errors.append(f"{where}: effective_period_end は YYYY-MM-DD（{eff!r}）")
+            for k in ("old", "new"):
+                if not _clean(e.get(k)):
+                    errors.append(f"{where}: {k} が空")
+            if _clean(e.get("old")) and _norm(e.get("old")) == _norm(e.get("new")):
+                errors.append(f"{where}: old と new が同じ")
+            if "split" in e and not isinstance(e["split"], bool):
+                errors.append(f"{where}: split は true/false（{e['split']!r}）")
+            ev = e.get("evidence")
+            if not (isinstance(ev, dict) and _clean(ev.get("doc_id")) and _clean(ev.get("quote"))):
+                errors.append(f"{where}: evidence.doc_id と evidence.quote（有報の引用）が要る")
+        out[str(code)] = entries
+    if errors:
+        raise SystemExit(f"区分名の対応表の形が不正: {path}\n  " + "\n  ".join(errors))
+    return out
+
+
+def resolve_segment_by_map(segments: dict, segment_name: Optional[str], period_end: Optional[str],
+                           entries: Optional[List[dict]]) -> Tuple[Optional[str], Optional[str], Optional[dict]]:
+    """行の区分名が当期の区分に無い時だけ、対応表（T10a）で当期の区分名に引き直す。
+
+    - 当期の期末 ≥ effective_period_end の行: old → new（改名・統合の後の期）
+    - 当期の期末 < effective_period_end の行: new → old（改名の前の期に、新しい名前で書かれた行）
+    - 改名が続く時は対応表を辿る（最大で行の数だけ）
+    - split=true の行（区分の分割）は引かない＝note に「区分の分割＝対応表で引かない」・member は None
+    - 行き先が 2 つ以上になる（統合の逆引き＝新 1 つ ← 旧 2 つ 等）時は引かない＝note に NOTE_SEGMENT_AMBIGUOUS
+
+    照合の順（Codex T10 R1 Critical 1）: ①当期の区分と完全一致 → それ ②行の区分名が対応表の旧名・新名に出る会社は
+    対応表の規則（分割・行き先が 1 つに決まらない→引かない）を部分一致より先に通す ③対応表に出ない名前（またはこの期に
+    当たる対応表の行が無い）だけ従来の部分一致。部分一致が分割の片方（"Green Energy And Mobility" ⊃ "Mobility"）を
+    黙って拾うのを防ぐ。
+
+    Returns:
+        (member or None, note or None, 使った対応表の行 or None)。引く必要が無い（当期の区分で引ける・区分名が無い・
+        対応表が無い）時は (find_segment_member の結果, None, None)
+    """
+    exact = find_segment_exact(segments, segment_name)
+    if exact is not None or not segment_name or not segments:
+        return exact, None, None
+    names = {_norm(e.get(k)) for e in (entries or []) if isinstance(e, dict) for k in ("old", "new")}
+    if _norm(segment_name) not in names:
+        return find_segment_member(segments, segment_name), None, None
+    member, note, entry = _resolve_by_map_rules(segments, segment_name, period_end, entries or [])
+    if member is None and note is None:
+        # 対応表に名前はあるが、この期に当たる行が無い（改名前の期に旧名 等）＝従来の部分一致
+        return find_segment_member(segments, segment_name), None, None
+    return member, note, entry
+
+
+def _resolve_by_map_rules(segments: dict, segment_name: str, period_end: Optional[str],
+                          entries: List[dict]) -> Tuple[Optional[str], Optional[str], Optional[dict]]:
+    """対応表の行を辿って当期の区分を引く（resolve_segment_by_map の本体）。最初の名前にこの期に当たる行が無ければ (None, None, None)。
+
+    各段で同じ順（Codex T10 R2 Critical 1）: 行き先の名前が ①当期の区分と完全一致 → 引く ②今使った行の他にも対応表に出る
+    名前 → 次の段で対応表の規則（分割・行き先が 1 つに決まらない → 止める）③それ以外（対応表には今の行の行き先としてしか
+    出ない名前）だけ部分一致。途中の段で分割・曖昧なら
+    引かない（注記つき）。途中の段で当期の区分に届かなければ引かない（NOTE_SEGMENT_CHAIN_STALL）。
+    """
+    end = period_end or ""
+    name = segment_name
+    seen = {_norm(name)}
+    first_entry: Optional[dict] = None
+    for _ in range(len(entries) + 1):
+        hits = []
+        for e in entries:
+            if not isinstance(e, dict):
+                continue
+            eff = str(e.get("effective_period_end") or "")
+            if end >= eff and _norm(e.get("old")) == _norm(name):
+                hits.append((e, _clean(e.get("new"))))
+            elif end < eff and _norm(e.get("new")) == _norm(name):
+                hits.append((e, _clean(e.get("old"))))
+        if not hits:
+            if first_entry is None:
+                return None, None, None
+            return None, NOTE_SEGMENT_CHAIN_STALL, first_entry
+        split_hit = next((e for e, _ in hits if e.get("split") is True), None)
+        if split_hit is not None:
+            return None, NOTE_SEGMENT_SPLIT, split_hit
+        if len({_norm(to) for _, to in hits}) > 1:
+            # 統合の逆引き（新 1 つ ← 旧 2 つ）など行き先が 1 つに決まらない＝引かない（推測で 1 つに寄せない）
+            return None, NOTE_SEGMENT_AMBIGUOUS, hits[0][0]
+        e, to = hits[0]
+        first_entry = first_entry or e
+        m = find_segment_exact(segments, to)
+        if m is not None:
+            return m, f"{NOTE_SEGMENT_MAP}（{segment_name}→{to}）", e
+        other_names = {_norm(x.get(k)) for x in entries if isinstance(x, dict) and x is not e for k in ("old", "new")}
+        if _norm(to) not in other_names:
+            # 行き先が今の行の他に対応表に出ない名前の時だけ部分一致（出る名前は次の段で規則を通す）
+            m = find_segment_member(segments, to)
+            if m is not None:
+                return m, f"{NOTE_SEGMENT_MAP}（{segment_name}→{to}）", e
+            return None, NOTE_SEGMENT_CHAIN_STALL, first_entry
+        if _norm(to) in seen:
+            return None, NOTE_SEGMENT_CHAIN_STALL, first_entry
+        seen.add(_norm(to))
+        name = to
+    return None, NOTE_SEGMENT_CHAIN_STALL, first_entry
 
 
 # ---------------------------------------------------------------- 期ごとの判定
@@ -514,8 +678,21 @@ def _letters(value: Any) -> str:
     return re.sub(r"[^\w]|_", "", _squash(value))
 
 
+def _expect_fields(row: Optional[dict]) -> Tuple[Optional[str], Optional[str]]:
+    """期待の照合に使う (引用, 節キー)（T10d）。expect_quote があればそれ（節は expect_section・無ければ quote_section）・
+    無ければ従来の quote／quote_section（旧 read.json の後方互換）。"""
+    if not row:
+        return None, None
+    eq = _clean(row.get("expect_quote"))
+    if eq:
+        return eq, _clean(row.get("expect_section")) or _clean(row.get("quote_section"))
+    return _clean(row.get("quote")), _clean(row.get("quote_section"))
+
+
 def _expect_basis(row: Optional[dict], doc: dict, ir_text: Optional[str] = None) -> Tuple[bool, Optional[str]]:
     """「期待」の根拠が揃っているか（Codex 3 回目 Critical 2）。
+
+    引用と節は _expect_fields（T10d: expect_quote／expect_section があればそれ・無ければ quote／quote_section）。
 
     揃う条件（全部）: expectation が true/false として読めて True／quote_section が EXPECT_SECTIONS（経営方針・MD&A・
     説明会資料＝P-INF-37 ①a）／有報の節なら当期の有報に実在する（element_id あり）・説明会資料なら本文（ir_text）がある／
@@ -538,7 +715,7 @@ def _expect_basis(row: Optional[dict], doc: dict, ir_text: Optional[str] = None)
         return False, f"expectation={row.get('expectation')!r} が true/false として読めない"
     if not val:
         return False, None
-    qs = _clean(row.get("quote_section"))
+    quote, qs = _expect_fields(row)
     if qs not in EXPECT_SECTIONS:
         return False, f"根拠節が経営方針・MD&A・説明会資料でない（{qs}）"
     name = EXPECT_SECTION_NAMES[qs]
@@ -551,7 +728,6 @@ def _expect_basis(row: Optional[dict], doc: dict, ir_text: Optional[str] = None)
         if not _clean(sec.get("element_id")):
             return False, f"{name}の節が当期の有報に無い"
         text = sec.get("text")
-    quote = _clean(row.get("quote"))
     if not quote:
         return False, "引用が空"
     if _squash(quote) not in _squash(text):
@@ -684,6 +860,21 @@ def _base_row_map(targets: Any) -> Tuple[Optional[str], Dict[int, str]]:
     return _clean(targets.get("base_doc_id")), out
 
 
+def _added_row_maps(targets: Any) -> Dict[str, Dict[int, str]]:
+    """--extend で足した target（T10e）の added_from（docID）→ {その期の read.json の行番号: target_id}。"""
+    if not isinstance(targets, dict):
+        return {}
+    out: Dict[str, Dict[int, str]] = {}
+    for t in targets.get("targets") or []:
+        if not (isinstance(t, dict) and _clean(t.get("target_id")) and _clean(t.get("added_from"))):
+            continue
+        m = out.setdefault(_clean(t["added_from"]), {})
+        for i in t.get("added_rows") or []:
+            if isinstance(i, int) and not isinstance(i, bool):
+                m[i] = _clean(t["target_id"])
+    return out
+
+
 def _target_by_id(targets: Any) -> Dict[str, dict]:
     if isinstance(targets, dict):
         targets = targets.get("targets")
@@ -706,6 +897,14 @@ def _source_complete(period: dict) -> bool:
     """
     src = period.get("source") or {}
     return bool(_clean(src.get("doc_id"))) and bool(_clean(src.get("element_id")))
+
+
+def _source_complete_any(period: dict) -> bool:
+    """T10b: 有報の節で揃う（_source_complete）か、説明会資料の〈資料名（ir_source）＋引用（quote）〉がある期。"""
+    if _source_complete(period):
+        return True
+    src = period.get("source") or {}
+    return bool(_clean(src.get("doc_id"))) and bool(_clean(src.get("ir_source"))) and bool(_clean(period.get("quote")))
 
 
 def _source_ir_only(period: dict) -> bool:
@@ -768,7 +967,8 @@ def is_three_period_eligible(periods: List[dict]) -> bool:
 
 
 def build_products(docs: List[dict], reads: Dict[str, Optional[dict]], targets: Any = None,
-                   ir_texts: Optional[Dict[str, Optional[str]]] = None) -> Dict[str, Any]:
+                   ir_texts: Optional[Dict[str, Optional[str]]] = None,
+                   segment_map: Optional[List[dict]] = None) -> Dict[str, Any]:
     """3 期分の sections.json と read.json から products.json の中身を作る。
 
     Args:
@@ -776,6 +976,7 @@ def build_products(docs: List[dict], reads: Dict[str, Optional[dict]], targets: 
         reads: doc_id → read.json の中身（無い docID は None）
         targets: output/yuho/<code>/targets.json の中身（任意・基準期の行を target_id に束ねるのに使う）
         ir_texts: doc_id → 説明会資料の本文（任意・説明会資料の引用を「期待」の根拠として照合するのに使う）
+        segment_map: この会社の区分名の対応表の行（config/yuho_segment_map.json の code4 の値・任意・T10a）
 
     Returns:
         {code4, products_ver, products_status, products_total, complete_products, three_period_products,
@@ -801,6 +1002,10 @@ def build_products(docs: List[dict], reads: Dict[str, Optional[dict]], targets: 
     warnings: List[str] = []
     aliases = _target_aliases(targets)
     base_doc, base_map = _base_row_map(targets)
+    # 行番号 → target_id の表: 基準期（base_rows）と、--extend で足した期（added_rows・T10e）
+    row_maps: Dict[str, Dict[int, str]] = _added_row_maps(targets)
+    if base_map and base_doc:
+        row_maps[base_doc] = dict(base_map, **row_maps.get(base_doc, {}))
     target_meta = _target_by_id(targets)
     ir_texts = ir_texts or {}
 
@@ -809,13 +1014,13 @@ def build_products(docs: List[dict], reads: Dict[str, Optional[dict]], targets: 
         read = reads.get(doc["doc_id"]) or {}
         # 基準期は targets.json の base_rows（行番号 → target_id）で引く＝1 対 1（Codex T9 Critical 2）。
         # base_rows の無い旧 targets.json だけ、区分つきの属性キー（aliases）で引く
-        use_map = bool(base_map) and doc["doc_id"] == base_doc
+        row_map = row_maps.get(doc["doc_id"]) or {}
         for ri, row in enumerate(read.get("rows") or []):
             if not isinstance(row, dict):
                 warnings.append(f"{doc['doc_id']}: dict でない行を捨てた ({type(row).__name__})")
                 continue
-            if use_map and not _clean(row.get("target_id")):
-                tid = base_map.get(ri)
+            if row_map and not _clean(row.get("target_id")):
+                tid = row_map.get(ri)
                 key = (tid,) + ("",) * len(ATTR_COLUMNS) if tid else _product_key(row)
             else:
                 key = _product_key(row, None if base_map else aliases)
@@ -864,6 +1069,12 @@ def build_products(docs: List[dict], reads: Dict[str, Optional[dict]], targets: 
         first_status = _row_status(first_row)
         # 新しく出た品目（初出の行が status=new・最も古い期より後）＝初出より前の期は 対象外（新設前）
         new_later = first_status == STATUS_NEW and first_idx is not None and first_idx > 0
+        # --extend で足した品目（T10e）: 足した期（added_from）より前は 対象外（新設前）（行の有無に依らない）
+        added_from = _clean((target_meta.get(g["target_id"] or "") or {}).get("added_from"))
+        added_idx = next((i for i, c in enumerate(doc_ctx) if c["doc"]["doc_id"] == added_from), None) \
+            if added_from else None
+        if added_idx is not None and added_idx > 0:
+            new_later, first_idx = True, added_idx
         periods: List[Dict[str, Any]] = []
         carried_seg: Optional[str] = None   # 前の期までに分かった区分（古い期→新しい期へだけ持ち越す）
         for i, c in enumerate(doc_ctx):
@@ -876,9 +1087,14 @@ def build_products(docs: List[dict], reads: Dict[str, Optional[dict]], targets: 
             seg_name = ((_clean(row.get("segment")) if row else None) or carried_seg
                         or _clean(tmeta.get("segment")))
             carried_seg = seg_name
-            member = find_segment_member(cur.get("segments") or {}, seg_name)
+            # T10a: 行の区分が当期の区分に無い時だけ、区分名の対応表で引き直す
+            member, map_note, map_entry = resolve_segment_by_map(cur.get("segments") or {}, seg_name,
+                                                                 doc.get("period_end"), segment_map)
             j = judge_period(prev, cur, member)
-            ir_text = ir_texts.get(doc["doc_id"]) if row and _clean(row.get("quote_section")) == IR_SECTION_KEY else None
+            if map_note:
+                j["judge_note"] = "・".join(x for x in (j["judge_note"], map_note) if x)
+            _, expect_sec = _expect_fields(row)
+            ir_text = ir_texts.get(doc["doc_id"]) if row and expect_sec == IR_SECTION_KEY else None
             expect_ok, expect_basis = _expect_basis(row, doc, ir_text)
             segment_label = label_of((j["cond_a"], j["cond_b"], j["cond_c"]), expect_ok)
             quote_section = _clean(row.get("quote_section")) if row else None
@@ -903,8 +1119,12 @@ def build_products(docs: List[dict], reads: Dict[str, Optional[dict]], targets: 
                 "share_granularity": _share_granularity(row, j["share_pct"]),
                 "kpi_value": kpi_value,
                 "kpi_value_raw": row.get("kpi_value") if row else None,
+                # T10c: 読みの原文と概数の種類（範囲／概数／下限／上限・素の数値は None）
+                "kpi_value_text": _clean(row.get("kpi_value_text")) if row else None,
+                "value_approx": _clean(row.get("value_approx")) if row else None,
                 "kpi_unit": _clean(row.get("kpi_unit")) if row else None,
                 "kpi_prev_value": _num(row.get("kpi_prev_value")) if row else None,
+                "prev_value_approx": _clean(row.get("prev_value_approx")) if row else None,
                 "seg_sales": j["seg_sales"],
                 "seg_profit": j["seg_profit"],
                 "profit_measure": j["profit_measure"],
@@ -926,6 +1146,11 @@ def build_products(docs: List[dict], reads: Dict[str, Optional[dict]], targets: 
                 "label_hint": _clean(row.get("label_hint")) if row else None,
                 "quote": _clean(row.get("quote")) if row else None,
                 "quote_section": quote_section,
+                "expect_quote": _clean(row.get("expect_quote")) if row else None,     # T10d
+                "expect_section": _clean(row.get("expect_section")) if row else None,
+                "segment_map": ({"to": map_note, "doc_id": _clean((map_entry.get("evidence") or {}).get("doc_id")),
+                                 "quote": _clean((map_entry.get("evidence") or {}).get("quote")),
+                                 "split": map_entry.get("split") is True} if map_entry else None),
                 "source": {
                     "doc_id": doc["doc_id"],
                     "element_id": element_id,
@@ -938,6 +1163,8 @@ def build_products(docs: List[dict], reads: Dict[str, Optional[dict]], targets: 
         with_row = [per for per in periods if per["doc_id"] in g["by_doc"]]
         has_names = bool(g.get("item")) and bool(g.get("kpi_name")) and bool(with_row)
         source_complete = has_names and all(_source_complete(per) for per in with_row)
+        # T10b: 説明会資料の〈資料名＋引用〉も出所と数える版（source_complete は従来のまま）
+        source_complete_any = has_names and all(_source_complete_any(per) for per in with_row)
         # 説明会資料だけが出所（旧ルールなら揃っていた）＝未完のまま件数を出す
         source_ir_only = has_names and not source_complete and all(
             _source_complete(per) or _source_ir_only(per) for per in with_row)
@@ -952,13 +1179,16 @@ def build_products(docs: List[dict], reads: Dict[str, Optional[dict]], targets: 
             "first_status": first_status,
             "share_scope": g["share_scope"],
             "source_complete": source_complete,
+            "source_complete_any": source_complete_any,
             "source_ir_only": source_ir_only,
+            "added_from": added_from,
             "three_period_complete": is_three_period_complete(periods),
             "periods": periods,
             "x_backcheck": None,
         })
 
     complete = [p for p in products if p["source_complete"]]
+    complete_any = [p for p in products if p["source_complete_any"]]
     ir_only = [p for p in products if p["source_ir_only"]]
     three = [p for p in products if p["three_period_complete"]]
     eligible = [p for p in products if is_three_period_eligible(p["periods"])]
@@ -1007,6 +1237,7 @@ def build_products(docs: List[dict], reads: Dict[str, Optional[dict]], targets: 
         "products_status": status,
         "products_total": len(products),
         "complete_products": len(complete),
+        "complete_any_products": len(complete_any),
         "ir_only_products": len(ir_only),
         "three_period_products": len(three),
         "three_period_eligible": len(eligible),
@@ -1043,6 +1274,7 @@ def render_summary(result: dict, price_in: Optional[float] = None, price_out: Op
         f"# yuho judge {result['code4']} — products_status={result['products_status']} "
         f"products={result.get('products_total', len(result['products']))} "
         f"complete_products={result.get('complete_products', 0)} "
+        f"complete_any_products={result.get('complete_any_products', 0)} "
         f"IR 由来のみで出所未完={result.get('ir_only_products', 0)} products",
         "",
         f"- 3 期揃い（3 期とも KPI が数値）= {result.get('three_period_products', 0)} / "
@@ -1071,6 +1303,8 @@ def render_summary(result: dict, price_in: Optional[float] = None, price_out: Op
             if src.get("source_kind"):
                 src_txt = f"{src['source_kind']}: {src_txt}"
             kpi_txt = _fmt(per["kpi_value"]) + ((" " + per["kpi_unit"]) if per.get("kpi_unit") else "")
+            if per.get("value_approx"):
+                kpi_txt += f"（{per['value_approx']}: {str(per.get('kpi_value_text') or '')[:20]}）"
             if per["kpi_value"] is None and per.get("kpi_value_raw") is not None:
                 kpi_txt = f"— (raw={str(per['kpi_value_raw'])[:20]!r})"
             lines.append(
@@ -1185,6 +1419,12 @@ def _company_row(code4: str, prod: dict, ledger: Dict[str, dict]) -> Dict[str, A
     # 3 期揃いは periods から数え直す（旧 products.json にも効く・T9b ⑧）
     three = sum(1 for p in plist if is_three_period_complete(p.get("periods") or []))
     eligible = sum(1 for p in plist if is_three_period_eligible(p.get("periods") or []))
+    # T10b: 説明会資料も出所と数える品目（旧 products.json は source_complete で代える）
+    if "complete_any_products" in prod:
+        complete_any = int(prod.get("complete_any_products") or 0)
+    else:
+        complete_any = sum(1 for p in plist if p.get("source_complete_any", p.get("source_complete")))
+    approx = [per.get("value_approx") for per in periods if per.get("value_approx")]
     usage = prod.get("usage") or {}
     docs_proxy = usage.get("docs_proxy")
     if docs_proxy is None:
@@ -1198,7 +1438,12 @@ def _company_row(code4: str, prod: dict, ledger: Dict[str, dict]) -> Dict[str, A
         "products_status": prod.get("products_status"),
         "products_total": int(prod.get("products_total") or len(prod.get("products") or [])),
         "complete_products": int(prod.get("complete_products") or 0),
+        "complete_any_products": complete_any,
         "ir_only_products": int(prod.get("ir_only_products") or 0),
+        "approx_periods": len(approx),       # T10c: KPI 値が概数・範囲・下限・上限の期
+        "added_targets_total": sum(1 for p in plist if _clean(p.get("added_from"))),   # T10e: --extend で足した品目
+        "added_two_period": sum(1 for p in plist if is_added_two_period(p)),          # 足した期＋最後の期とも数値
+        "value_approx": _count(approx),
         "three_period_products": three,
         "three_period_eligible": eligible,
         "docs": len(docs),
@@ -1208,6 +1453,22 @@ def _company_row(code4: str, prod: dict, ledger: Dict[str, dict]) -> Dict[str, A
         "segment_labels": _count([per.get("segment_label") for per in periods]),
         "warnings": len(prod.get("warnings") or []),
     }
+
+
+def is_added_two_period(product: dict) -> bool:
+    """--extend で足した品目（added_from あり・T10e）が、足した期と最後の期の両方で KPI が数値か（Codex T10 R1 Warning 5）。
+
+    T9 の 3 期揃い（追加品目は 対象外（新設前）の期を持つので分母に入らない）は変えず、追加品目だけ別の物差しで数える。"""
+    added_from = _clean(product.get("added_from"))
+    periods = product.get("periods") or []
+    if not added_from or not periods:
+        return False
+    latest_end = max((per.get("period_end") or "") for per in periods)
+    mid = [per for per in periods if per.get("doc_id") == added_from]
+    last = [per for per in periods if (per.get("period_end") or "") == latest_end]
+    return bool(mid) and bool(last) and latest_end > (mid[0].get("period_end") or "") \
+        and any(per.get("kpi_value") is not None for per in mid) \
+        and any(per.get("kpi_value") is not None for per in last)
 
 
 def _rate(v: Optional[float]) -> str:
@@ -1231,10 +1492,15 @@ def render_trial_summary(agg: dict) -> str:
     t = agg["totals"]
     lines = [
         f"# yuho trial summary — companies={t['companies_total']} status_done={t['status_done']} "
-        f"complete_ge1={t['complete_ge1']} fill_rate={t['fill_rate']:.3f}",
+        f"complete_ge1={t['complete_ge1']} fill_rate={t['fill_rate']:.3f} fill_rate_any={t['fill_rate_any']:.3f}",
         "",
         f"- 埋まり率 = complete_products ≥ 1 の社数 ÷ companies_total = {t['complete_ge1']} / {t['companies_total']} "
         f"= {t['fill_rate']:.3f}",
+        f"- 埋まり率（有報だけ＝fill_rate_yuho）= {t['complete_ge1']} / {t['companies_total']} = {t['fill_rate_yuho']:.3f}"
+        f"・（有報＋説明会資料＝fill_rate_any）= {t['complete_any_ge1']} / {t['companies_total']} = {t['fill_rate_any']:.3f}",
+        f"- KPI 値が概数・範囲・下限・上限の期 = {t['approx_periods']}（{t['value_approx'] or '—'}）",
+        f"- 追加品目（--extend・3 期揃いの分母には入らない）の 2 期揃い = 足した期と最後の期の両方で KPI が数値 = "
+        f"{t['added_two_period']} / {t['added_targets_total']}",
         "- 分母は「物なし」を除く前の仮置き（「物なし」は人が付けるので機械では除外しない）",
         f"- products_status=済 の社数: {t['status_done']}",
         f"- docs 合計={_fmt(t['docs_total'])} うち rows>0={_fmt(t['docs_with_rows_total'])} 代走={_fmt(t['docs_proxy_total'])}",
@@ -1249,9 +1515,9 @@ def render_trial_summary(agg: dict) -> str:
         "",
         "## 会社ごと",
         "",
-        "| code4 | name | s33 | pin | sign | products_status | products_total | complete_products | ir_only_products "
-        "| 3 期揃い | docs | docs rows>0 | docs_proxy | labels | segment_labels | warnings |",
-        "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|",
+        "| code4 | name | s33 | pin | sign | products_status | products_total | complete_products | complete_any_products "
+        "| ir_only_products | 3 期揃い | 概数の期 | docs | docs rows>0 | docs_proxy | labels | segment_labels | warnings |",
+        "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|",
     ]
     for r in agg["companies"]:
         lab = ", ".join(f"{k}={v}" for k, v in r["labels"].items()) or "—"
@@ -1259,8 +1525,9 @@ def render_trial_summary(agg: dict) -> str:
         lines.append(
             f"| {r['code4']} | {r['name']} | {r['s33']} | {_cell(r.get('pin'))} | {_cell(r.get('sign'))} "
             f"| {_fmt(r['products_status'])} | {_fmt(r['products_total'])} "
-            f"| {_fmt(r['complete_products'])} | {_fmt(r['ir_only_products'])} "
-            f"| {r.get('three_period_products', 0)}/{r.get('three_period_eligible', 0)} | {_fmt(r['docs'])} "
+            f"| {_fmt(r['complete_products'])} | {_fmt(r.get('complete_any_products', 0))} | {_fmt(r['ir_only_products'])} "
+            f"| {r.get('three_period_products', 0)}/{r.get('three_period_eligible', 0)} | {_fmt(r.get('approx_periods', 0))} "
+            f"| {_fmt(r['docs'])} "
             f"| {_fmt(r['docs_with_rows'])} | {_fmt(r['docs_proxy'])} | {lab} | {seg} | {_fmt(r['warnings'])} |"
         )
     lines.append("")
@@ -1301,6 +1568,11 @@ def aggregate_all(out_dir: Path, ledger_path: Path = DEFAULT_LEDGER) -> Dict[str
             seg_labels[k] = seg_labels.get(k, 0) + v
     n = len(companies)
     complete_ge1 = sum(1 for r in companies if r["complete_products"] >= 1)
+    complete_any_ge1 = sum(1 for r in companies if r["complete_any_products"] >= 1)
+    approx_kinds: Dict[str, int] = {}
+    for r in companies:
+        for k, v in r["value_approx"].items():
+            approx_kinds[k] = approx_kinds.get(k, 0) + v
     three_total = sum(r["three_period_products"] for r in companies)
     eligible_total = sum(r["three_period_eligible"] for r in companies)
     three_companies = sum(1 for r in companies if r["three_period_products"] >= 1)
@@ -1309,6 +1581,13 @@ def aggregate_all(out_dir: Path, ledger_path: Path = DEFAULT_LEDGER) -> Dict[str
         "status_done": sum(1 for r in companies if r["products_status"] == "済"),
         "complete_ge1": complete_ge1,
         "fill_rate": complete_ge1 / n,
+        "fill_rate_yuho": complete_ge1 / n,          # T10b: 有報の節だけ（＝fill_rate の別名）
+        "complete_any_ge1": complete_any_ge1,
+        "fill_rate_any": complete_any_ge1 / n,       # T10b: 有報の節 か 説明会資料〈資料名＋引用〉
+        "approx_periods": sum(r["approx_periods"] for r in companies),   # T10c
+        "added_targets_total": sum(r["added_targets_total"] for r in companies),   # T10e（3 期揃いとは別の物差し）
+        "added_two_period": sum(r["added_two_period"] for r in companies),
+        "value_approx": dict(sorted(approx_kinds.items())),
         "fill_rate_note": "分母は「物なし」を除く前の仮置き（「物なし」は人が付けるので機械では除外しない）",
         "three_period_products": three_total,
         "three_period_eligible": eligible_total,
@@ -1346,6 +1625,8 @@ def main() -> None:
     ap.add_argument("--out-dir", type=Path, default=DEFAULT_OUT_DIR)
     ap.add_argument("--price-in", type=float, default=None, help="入力の単価 USD / 100 万トークン")
     ap.add_argument("--price-out", type=float, default=None, help="出力の単価 USD / 100 万トークン")
+    ap.add_argument("--segment-map", type=Path, default=DEFAULT_SEGMENT_MAP,
+                    help="区分名の旧→新の対応表（T10a・既定 config/yuho_segment_map.json・無ければ対応表なし）")
     args = ap.parse_args()
 
     if args.all:
@@ -1353,6 +1634,9 @@ def main() -> None:
         t = agg["totals"]
         print(f"companies={t['companies_total']} status_done={t['status_done']} complete_ge1={t['complete_ge1']} "
               f"fill_rate={t['fill_rate']:.2f} wrote {' '.join(agg['paths'])}")
+        print(f"fill_rate_yuho={t['fill_rate_yuho']:.3f} fill_rate_any={t['fill_rate_any']:.3f} "
+              f"complete_any_ge1={t['complete_any_ge1']} approx_periods={t['approx_periods']} {t['value_approx']} "
+              f"added_two_period={t['added_two_period']}/{t['added_targets_total']}")
         print(f"three_period={t['three_period_products']}/{t['three_period_eligible']} "
               f"rate={_rate(t['three_period_rate'])} companies={t['three_period_companies']}/{t['companies_total']} "
               f"rate={_rate(t['three_period_company_rate'])} undecided_periods={t['undecided_periods']} "
@@ -1360,6 +1644,7 @@ def main() -> None:
         return
 
     code4 = args.code.zfill(4)
+    seg_map = load_segment_map(args.segment_map)   # 形が壊れていれば SystemExit（判定の前に止める）
     docs, reads = load_inputs(code4, args.data_dir, args.out_dir)
     if not docs:
         raise SystemExit(f"sections.json が無い: {args.data_dir / code4}/*.sections.json（先に scripts/yuho_fetch.py）")
@@ -1368,7 +1653,7 @@ def main() -> None:
         print(f"warn: read.json が無い docID={missing}（先に scripts/yuho_read.py・この期は kpi_value=null で判定だけ出す）")
 
     targets, ir_texts = load_extras(code4, args.data_dir, args.out_dir, reads)
-    result = build_products(docs, reads, targets, ir_texts)
+    result = build_products(docs, reads, targets, ir_texts, segment_map=seg_map.get(code4))
     out = args.out_dir / code4
     out.mkdir(parents=True, exist_ok=True)
     (out / "products.json").write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -1380,6 +1665,7 @@ def main() -> None:
         for w in result["warnings"]:
             print(f"warn: {w}")
     print(f"{code4} products={result['products_total']} complete_products={result['complete_products']} "
+          f"complete_any_products={result['complete_any_products']} "
           f"ir_only_products={result['ir_only_products']} periods={n_periods} "
           f"three_period={result['three_period_products']}/{result['three_period_eligible']} "
           f"status={result['products_status']} labels={dict((l, labels.count(l)) for l in sorted(set(labels)))} "
