@@ -635,5 +635,97 @@ class CostMeasurementTest(unittest.TestCase):
         self.assertFalse(yj._is_proxy_read({"model": "x 代走 y", "usage": {"input_tokens": 5}}))
 
 
+class AggregateAllTest(unittest.TestCase):
+    """--all 全社集計（aggregate_all・trial_summary.json/.md・CLI の排他）。"""
+
+    @staticmethod
+    def _prod(code4, status, complete, labels, seg_labels, docs):
+        periods = [{"label": l, "segment_label": s} for l, s in zip(labels, seg_labels)]
+        return {"code4": code4, "products_status": status, "products_total": 3, "complete_products": complete,
+                "ir_only_products": 1, "warnings": ["w"] if complete == 0 else [],
+                "products": [{"segment": "A", "item": "x", "kpi_name": "k", "periods": periods}],
+                "docs": docs, "usage": {"docs_proxy": sum(1 for d in docs if d.get("proxy"))}}
+
+    def setUp(self):
+        import tempfile
+        self._tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self._tmp.name)
+        self.out = self.root / "yuho"
+        specs = {
+            "1111": self._prod("1111", "済", 2, ["需要（区分）", "期待", "需要（区分）"], ["需要", "期待", "需要"],
+                               [{"rows": 2, "proxy": True}, {"rows": 0, "proxy": False}]),
+            "2222": self._prod("2222", "未", 0, ["未判定（当期候補なし）"], ["未判定"], [{"rows": 0, "proxy": False}]),
+            "3333": self._prod("3333", "済", 1, ["期待", "需要条件不成立（区分）"], ["期待", "需要条件不成立"],
+                               [{"rows": 1, "proxy": True}]),
+        }
+        for code, prod in specs.items():
+            (self.out / code).mkdir(parents=True)
+            (self.out / code / "products.json").write_text(json.dumps(prod, ensure_ascii=False), encoding="utf-8")
+        (self.out / "trial_summary_old").mkdir()   # 4 桁でないディレクトリは読まない
+        (self.out / "4444").mkdir()   # 4 桁だが products.json が無い＝判定し忘れとして missing_products に出る
+        (self.out / "trial_summary_old" / "products.json").write_text("{}", encoding="utf-8")
+        self.ledger = self.root / "center_pin.jsonl"
+        self.ledger.write_text(
+            json.dumps({"code": "1111", "name": "甲社", "s33": "食料品"}, ensure_ascii=False) + "\n"
+            + json.dumps({"code": "3333", "name": "丙社", "s33": "化学"}, ensure_ascii=False) + "\n",
+            encoding="utf-8")
+
+    def tearDown(self):
+        self._tmp.cleanup()
+
+    def test_totals_and_rows(self):
+        agg = yj.aggregate_all(self.out, self.ledger)
+        t = agg["totals"]
+        self.assertEqual(t["companies_total"], 3)
+        self.assertEqual(t["status_done"], 2)
+        self.assertEqual(t["complete_ge1"], 2)
+        self.assertAlmostEqual(t["fill_rate"], 2 / 3, places=3)
+        self.assertEqual(t["labels"], {"需要（区分）": 2, "期待": 2, "未判定（当期候補なし）": 1, "需要条件不成立（区分）": 1})
+        self.assertEqual(t["segment_labels"], {"需要": 2, "期待": 2, "未判定": 1, "需要条件不成立": 1})
+        self.assertEqual((t["docs_total"], t["docs_with_rows_total"], t["docs_proxy_total"]), (4, 2, 2))
+        self.assertEqual(t["missing_products"], ["4444"])
+        self.assertEqual(t["companies_total"], 3)  # 無い社は分母に入れない（別に見せるだけ）
+        rows = {r["code4"]: r for r in agg["companies"]}
+        self.assertEqual(sorted(rows), ["1111", "2222", "3333"])
+        self.assertEqual((rows["1111"]["name"], rows["1111"]["s33"]), ("甲社", "食料品"))
+        self.assertEqual((rows["2222"]["name"], rows["2222"]["s33"]), ("—", "—"))
+        self.assertEqual(rows["2222"]["warnings"], 1)
+        self.assertEqual(rows["1111"]["labels"], {"需要（区分）": 2, "期待": 1})
+        md = (self.out / "trial_summary.md").read_text(encoding="utf-8")
+        for code in ("1111", "2222", "3333"):
+            self.assertIn(f"| {code} |", md)
+        self.assertIn("物なし", md)
+        self.assertIn("4444", md)
+        js = json.loads((self.out / "trial_summary.json").read_text(encoding="utf-8"))
+        self.assertIn("generated_at", js)
+        self.assertEqual(js["totals"]["companies_total"], 3)
+
+    def test_no_products_raises(self):
+        empty = self.root / "empty"
+        empty.mkdir()
+        with self.assertRaises(SystemExit):
+            yj.aggregate_all(empty, self.ledger)
+
+    def test_cli_code_and_all_exclusive(self):
+        import contextlib
+        import io
+        from unittest import mock
+        for argv in (["yuho_judge.py"], ["yuho_judge.py", "--code", "2802", "--all"]):
+            with mock.patch.object(sys, "argv", argv), contextlib.redirect_stderr(io.StringIO()):
+                with self.assertRaises(SystemExit) as cm:
+                    yj.main()
+                self.assertEqual(cm.exception.code, 2)
+
+    def test_cli_all_prints_summary_line(self):
+        import contextlib
+        import io
+        from unittest import mock
+        buf = io.StringIO()
+        with mock.patch.object(sys, "argv", ["yuho_judge.py", "--all", "--out-dir", str(self.out)]), \
+                contextlib.redirect_stdout(buf):
+            yj.main()
+        self.assertIn("companies=3 status_done=2 complete_ge1=2 fill_rate=0.67 wrote", buf.getvalue())
+
+
 if __name__ == "__main__":
     unittest.main()

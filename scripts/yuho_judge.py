@@ -16,6 +16,7 @@
 
 使い方:
     python scripts/yuho_judge.py --code 2802 [--price-in 3.0 --price-out 15.0]   # 単価は USD / 100 万トークン
+    python scripts/yuho_judge.py --all   # out_dir/*/products.json を全社集計→ trial_summary.json / trial_summary.md
 """
 from __future__ import annotations
 
@@ -31,6 +32,8 @@ from typing import Any, Dict, List, Optional, Tuple
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from yuho_read import IR_SECTION_KEY, parse_bool, parse_number  # noqa: E402  節キー・真偽値・数値の読み方は工程③と 1 箇所
 
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_LEDGER = PROJECT_ROOT / "data" / "center_pin" / "center_pin.jsonl"
 DEFAULT_DATA_DIR = Path("data/edinet/yuho")
 DEFAULT_OUT_DIR = Path("output/yuho")
 SHARE_THRESHOLD = 30.0
@@ -744,14 +747,183 @@ def load_inputs(code4: str, data_dir: Path, out_dir: Path) -> Tuple[List[dict], 
     return docs, reads
 
 
+# ---------------------------------------------------------------- 全社集計（--all）
+def _load_ledger(ledger_path: Path) -> Dict[str, dict]:
+    """center_pin.jsonl（1 行 1 JSON）を code4 → 行の辞書にする。ファイルが無ければ空。
+
+    Args:
+        ledger_path: center_pin.jsonl のパス
+
+    Returns:
+        4 桁コード → {"name", "s33", ...} の辞書
+    """
+    ledger: Dict[str, dict] = {}
+    if not ledger_path.exists():
+        return ledger
+    for line in ledger_path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        code = str(row.get("code") or "").strip()
+        if code:
+            ledger[code.zfill(4)] = row
+    return ledger
+
+
+def _count(values: List[Any]) -> Dict[str, int]:
+    """値ごとの件数（None は「—」に寄せる・キーは昇順）。"""
+    keys = ["—" if v is None else str(v) for v in values]
+    return {k: keys.count(k) for k in sorted(set(keys))}
+
+
+def _company_row(code4: str, prod: dict, ledger: Dict[str, dict]) -> Dict[str, Any]:
+    """1 社の products.json から集計表の 1 行を作る。"""
+    meta = ledger.get(code4) or {}
+    docs = prod.get("docs") or []
+    periods = [per for p in (prod.get("products") or []) for per in (p.get("periods") or [])]
+    usage = prod.get("usage") or {}
+    docs_proxy = usage.get("docs_proxy")
+    if docs_proxy is None:
+        docs_proxy = sum(1 for d in docs if d.get("proxy"))
+    return {
+        "code4": code4,
+        "name": meta.get("name") or "—",
+        "s33": meta.get("s33") or "—",
+        "products_status": prod.get("products_status"),
+        "products_total": int(prod.get("products_total") or len(prod.get("products") or [])),
+        "complete_products": int(prod.get("complete_products") or 0),
+        "ir_only_products": int(prod.get("ir_only_products") or 0),
+        "docs": len(docs),
+        "docs_with_rows": sum(1 for d in docs if int(d.get("rows") or 0) > 0),
+        "docs_proxy": int(docs_proxy),
+        "labels": _count([per.get("label") for per in periods]),
+        "segment_labels": _count([per.get("segment_label") for per in periods]),
+        "warnings": len(prod.get("warnings") or []),
+    }
+
+
+def render_trial_summary(agg: dict) -> str:
+    """aggregate_all の返り値から trial_summary.md（全体集計＋1 社 1 行の表）を作る。
+
+    Args:
+        agg: aggregate_all の返り値
+
+    Returns:
+        Markdown の文字列
+    """
+    t = agg["totals"]
+    lines = [
+        f"# yuho trial summary — companies={t['companies_total']} status_done={t['status_done']} "
+        f"complete_ge1={t['complete_ge1']} fill_rate={t['fill_rate']:.3f}",
+        "",
+        f"- 埋まり率 = complete_products ≥ 1 の社数 ÷ companies_total = {t['complete_ge1']} / {t['companies_total']} "
+        f"= {t['fill_rate']:.3f}",
+        "- 分母は「物なし」を除く前の仮置き（「物なし」は人が付けるので機械では除外しない）",
+        f"- products_status=済 の社数: {t['status_done']}",
+        f"- docs 合計={_fmt(t['docs_total'])} うち rows>0={_fmt(t['docs_with_rows_total'])} 代走={_fmt(t['docs_proxy_total'])}",
+        f"- products.json の無い 4 桁ディレクトリ（分母に入っていない社）: {', '.join(t.get('missing_products') or []) or 'なし'}",
+        f"- label 件数（合計）: {t['labels'] or '—'}",
+        f"- segment_label 件数（合計）: {t['segment_labels'] or '—'}",
+        "",
+        "## 会社ごと",
+        "",
+        "| code4 | name | s33 | products_status | products_total | complete_products | ir_only_products | docs "
+        "| docs rows>0 | docs_proxy | labels | segment_labels | warnings |",
+        "|---|---|---|---|---|---|---|---|---|---|---|---|---|",
+    ]
+    for r in agg["companies"]:
+        lab = ", ".join(f"{k}={v}" for k, v in r["labels"].items()) or "—"
+        seg = ", ".join(f"{k}={v}" for k, v in r["segment_labels"].items()) or "—"
+        lines.append(
+            f"| {r['code4']} | {r['name']} | {r['s33']} | {_fmt(r['products_status'])} | {_fmt(r['products_total'])} "
+            f"| {_fmt(r['complete_products'])} | {_fmt(r['ir_only_products'])} | {_fmt(r['docs'])} "
+            f"| {_fmt(r['docs_with_rows'])} | {_fmt(r['docs_proxy'])} | {lab} | {seg} | {_fmt(r['warnings'])} |"
+        )
+    lines.append("")
+    return "\n".join(lines)
+
+
+def aggregate_all(out_dir: Path, ledger_path: Path = DEFAULT_LEDGER) -> Dict[str, Any]:
+    """out_dir/<4 桁コード>/products.json を全部読み、全社の集計を trial_summary.json / .md に書く。
+
+    埋まり率の分母は「物なし」を除く前の companies_total（「物なし」は人が付けるので機械では除外しない）。
+
+    Args:
+        out_dir: 各社の products.json がある親ディレクトリ（例: output/yuho）
+        ledger_path: 会社名・業種（s33）を引く center_pin.jsonl
+
+    Returns:
+        {"generated_at", "companies", "totals", "paths"} の辞書
+
+    Raises:
+        SystemExit: products.json が 1 件も無い時
+    """
+    paths = sorted(p for p in out_dir.glob("*/products.json")
+                   if re.fullmatch(r"\d{4}", p.parent.name))
+    if not paths:
+        raise SystemExit(f"products.json が無い: {out_dir}/<4 桁コード>/products.json（先に --code で判定）")
+    # 4 桁のディレクトリはあるのに products.json が無い社（判定し忘れ）は分母に入らないので別に数えて見せる（Codex 2026-10-08）
+    missing_products = sorted(d.name for d in out_dir.iterdir()
+                              if d.is_dir() and re.fullmatch(r"\d{4}", d.name) and not (d / "products.json").exists())
+    ledger = _load_ledger(ledger_path)
+    companies = [_company_row(p.parent.name, json.loads(p.read_text(encoding="utf-8")), ledger) for p in paths]
+
+    labels: Dict[str, int] = {}
+    seg_labels: Dict[str, int] = {}
+    for r in companies:
+        for k, v in r["labels"].items():
+            labels[k] = labels.get(k, 0) + v
+        for k, v in r["segment_labels"].items():
+            seg_labels[k] = seg_labels.get(k, 0) + v
+    n = len(companies)
+    complete_ge1 = sum(1 for r in companies if r["complete_products"] >= 1)
+    totals = {
+        "companies_total": n,
+        "status_done": sum(1 for r in companies if r["products_status"] == "済"),
+        "complete_ge1": complete_ge1,
+        "fill_rate": complete_ge1 / n,
+        "fill_rate_note": "分母は「物なし」を除く前の仮置き（「物なし」は人が付けるので機械では除外しない）",
+        "labels": dict(sorted(labels.items())),
+        "segment_labels": dict(sorted(seg_labels.items())),
+        "docs_total": sum(r["docs"] for r in companies),
+        "docs_with_rows_total": sum(r["docs_with_rows"] for r in companies),
+        "docs_proxy_total": sum(r["docs_proxy"] for r in companies),
+        "missing_products": missing_products,
+    }
+    json_path = out_dir / "trial_summary.json"
+    md_path = out_dir / "trial_summary.md"
+    agg: Dict[str, Any] = {
+        "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "companies": companies,
+        "totals": totals,
+    }
+    json_path.write_text(json.dumps(agg, ensure_ascii=False, indent=2), encoding="utf-8")
+    md_path.write_text(render_trial_summary(agg), encoding="utf-8")
+    agg["paths"] = [str(json_path), str(md_path)]
+    return agg
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("--code", required=True, help="証券コード 4 桁（例: 2802）")
+    mode = ap.add_mutually_exclusive_group(required=True)
+    mode.add_argument("--code", help="証券コード 4 桁（例: 2802）")
+    mode.add_argument("--all", action="store_true", help="out_dir/*/products.json を全社集計して trial_summary.json/.md を書く")
     ap.add_argument("--data-dir", type=Path, default=DEFAULT_DATA_DIR)
     ap.add_argument("--out-dir", type=Path, default=DEFAULT_OUT_DIR)
     ap.add_argument("--price-in", type=float, default=None, help="入力の単価 USD / 100 万トークン")
     ap.add_argument("--price-out", type=float, default=None, help="出力の単価 USD / 100 万トークン")
     args = ap.parse_args()
+
+    if args.all:
+        agg = aggregate_all(args.out_dir)
+        t = agg["totals"]
+        print(f"companies={t['companies_total']} status_done={t['status_done']} complete_ge1={t['complete_ge1']} "
+              f"fill_rate={t['fill_rate']:.2f} wrote {' '.join(agg['paths'])}")
+        return
 
     code4 = args.code.zfill(4)
     docs, reads = load_inputs(code4, args.data_dir, args.out_dir)
