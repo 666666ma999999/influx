@@ -68,6 +68,11 @@
 - 遡りで測れないもの: 空振り率・取得遅延（記事初出は実際の①より遅れる＝先行日数は過小評価の方向）。
 - 読み手は結果から事件・源・定義を足さない（追加は次回の事前登録）。
 
+## 次回の事前登録に足す規則（2026-10-09 測定後に今書いた・本測定の結果と合否には適用しない）
+- 窓開始= ① の開始日 − 12 か月（機械規則・事件ごとに手で置かない。根拠= E02 NAND で窓開始 2025-06-01 が Sandisk 値上げ 3/7・TrendForce 予測 2/19・5/26 を窓外にした＝lead_table.md §1 E02 行「窓前」）
+- Wikipedia の題名は登録前に API（action=query&redirects）で転送でないことを確認する（根拠= ベイブレードX が転送ページで coverage 23%＝machine_sources.json E10 S-C）
+- Wikipedia 週合計の発火に下限（直前 8 週中央値 ≥ 200 回/週）を置く（根拠= 令和の米騒動 週 113 回で発火＝machine_sources.json E07 S-C）
+
 ## Session Handoff
 - 2026-10-09 17:0x 事前登録を書いて commit（結果より先）。次= SubAgent 10 体（事件ごと）＋統括の機械源 4 本 → events.json 更新 → lead_table.md → vault §9 追記・日報 P-INF-42 完了行。
 - 2026-10-09 18:4x **測定完了**（規則・事件・源は事前登録のまま）: 渡した 100 セル／測れた 73／先行 ≥7 日 20。合格 4= S-A 公式告知（10/9/5・中央値 8 日）・S-B 業界予測（10/5/3・37 日）・S-C Wikipedia PV（9/7/5・27 日）・S-I 株価初動〈参考〉（8/8/4・40.5 日）。不合格 4= S-D 日銀物価（4/4/1）・S-E TDnet 表題（10/1/0）・S-G 販売ランキング（10/5/0）・S-H 買取相場（10/6/1）。判定不能 2= S-F 公的市況（2 事件）・S-J 自前 X（窓外）。結果= `data/shortage_presign/events.json` results（commit）・表 `output/shortage_presign/lead_table.md`（gitignore）・読み物= vault `02_Ai/influx/notes/influx-shortage-presign-4model-2026-10-09.md` §9。統括の差替 2 件（E01 S-A Sandisk→Samsung EOL／E05 onset 抽選→価格記事）と窓・題名の弱点は §9.4。道具= `_tmp_presign_backfill.py`・`_tmp_presign_merge.py`（gitignore・Docker）。

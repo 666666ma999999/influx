@@ -9,7 +9,16 @@
    "空振り率",
    "取得遅延（記事初出は実際より遅れる＝先行は過小評価の方向）"
   ],
-  "status": "measured（結果記入済み・規則は事前登録のまま）"
+  "status": "measured（結果記入済み・規則は事前登録のまま）",
+  "next_prereg_rules": {
+   "fixed_at": "2026-10-09",
+   "applies_to": "次回の事前登録から（本測定の結果・合否には適用しない）",
+   "rules": [
+    "窓開始= ① の開始日 − 12 か月（機械規則・事件ごとに手で置かない。根拠= E02 NAND で窓開始 2025-06-01 が Sandisk 値上げ 3/7・TrendForce 予測 2/19・5/26 を窓外にした＝lead_table.md §1 E02 行「窓前」）",
+    "Wikipedia の題名は登録前に API（action=query&redirects）で転送でないことを確認する（根拠= ベイブレードX が転送ページで coverage 23%＝machine_sources.json E10 S-C）",
+    "Wikipedia 週合計の発火に下限（直前 8 週中央値 ≥ 200 回/週）を置く（根拠= 令和の米騒動 週 113 回で発火＝machine_sources.json E07 S-C）"
+   ]
+  }
  },
  "sources": {
   "S-A": "メーカー・公式の告知",
