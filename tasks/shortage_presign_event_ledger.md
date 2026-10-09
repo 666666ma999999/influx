@@ -70,3 +70,6 @@
 
 ## Session Handoff
 - 2026-10-09 17:0x 事前登録を書いて commit（結果より先）。次= SubAgent 10 体（事件ごと）＋統括の機械源 4 本 → events.json 更新 → lead_table.md → vault §9 追記・日報 P-INF-42 完了行。
+- 2026-10-09 18:4x **測定完了**（規則・事件・源は事前登録のまま）: 渡した 100 セル／測れた 73／先行 ≥7 日 20。合格 4= S-A 公式告知（10/9/5・中央値 8 日）・S-B 業界予測（10/5/3・37 日）・S-C Wikipedia PV（9/7/5・27 日）・S-I 株価初動〈参考〉（8/8/4・40.5 日）。不合格 4= S-D 日銀物価（4/4/1）・S-E TDnet 表題（10/1/0）・S-G 販売ランキング（10/5/0）・S-H 買取相場（10/6/1）。判定不能 2= S-F 公的市況（2 事件）・S-J 自前 X（窓外）。結果= `data/shortage_presign/events.json` results（commit）・表 `output/shortage_presign/lead_table.md`（gitignore）・読み物= vault `02_Ai/influx/notes/influx-shortage-presign-4model-2026-10-09.md` §9。統括の差替 2 件（E01 S-A Sandisk→Samsung EOL／E05 onset 抽選→価格記事）と窓・題名の弱点は §9.4。道具= `_tmp_presign_backfill.py`・`_tmp_presign_merge.py`（gitignore・Docker）。
+- **Stuck**: なし。**次**= P-INF-43（合格源の前向き 60 日 空振り測定・推奨 a Wikipedia PV だけ先に）のオーナー裁定待ち。裁定後に本 task を `tasks/archive/` へ（NOW 未設置のため Done 行は無し）。
+

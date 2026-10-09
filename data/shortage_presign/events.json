@@ -9,7 +9,7 @@
    "空振り率",
    "取得遅延（記事初出は実際より遅れる＝先行は過小評価の方向）"
   ],
-  "status": "pre-registered（結果は未記入）"
+  "status": "measured（結果記入済み・規則は事前登録のまま）"
  },
  "sources": {
   "S-A": "メーカー・公式の告知",
@@ -288,5 +288,1447 @@
    }
   }
  ],
- "results": {}
+ "results": {
+  "measured_at": "2026-10-09T09:25",
+  "by_event": {
+   "E01": {
+    "onset": {
+     "date": "2025-06-27",
+     "label": "2025-06-27",
+     "url": "https://www.nikkei.com/article/DGKKZO89671790X20C25A6QM8000/",
+     "quote": "DDR4型の8ギガビット品は1カ月で2倍になった。中国のDRAM大手、長鑫存儲技術（CXMT）がDDR4型の生産を段階的に終了するとの見方が出て",
+     "event_date_in_article": "2025-06-27"
+    },
+    "sources": {
+     "S-A": {
+      "first_known": "2025-04-22",
+      "label": "2025-04-22",
+      "lead_days": 66,
+      "measurable": true,
+      "detail": {
+       "url": "https://www.trendforce.com/news/2025/04/22/news-samsung-rumored-to-end-ddr4-production-in-april-as-chinese-competition-grows-taiwanese-firms-set-to-gain/",
+       "quote": "Samsung rumored to end DDR4 production in April as Chinese competition grows",
+       "what": "Samsung の DDR4 EOL 通知（報道日 4/22）。統括判断: SubAgent が最早としていた Sandisk 2025-03-07 の値上げ書簡は NAND（E02 側）のため、DRAM 事件の S-A は DDR4 固有の Samsung EOL を採る（SubAgent 自身も unresolved で同旨を指摘）。",
+       "event_date_in_article": "2025-04-22"
+      }
+     },
+     "S-B": {
+      "first_known": "2025-05-21",
+      "label": "2025-05-21",
+      "lead_days": 37,
+      "measurable": true,
+      "detail": {
+       "url": "https://www.trendforce.com/research/download/RP250521WO",
+       "quote": "DDR4 contract prices have already increased by over 20% in Q2 and may rise another 10% in Q3.",
+       "what": "TrendForce「EOL Plans for DDR4 Products Have Led to Price Hikes, and Upward Trend Is Expected to Continue Until 2H25」",
+       "event_date_in_article": "2025-05-21"
+      }
+     },
+     "S-C": {
+      "first_known": "2025-12-15",
+      "label": "2025-12-15",
+      "lead_days": -171,
+      "measurable": true,
+      "detail": {
+       "title": "Dynamic_Random_Access_Memory",
+       "week": "2025-12-08..2025-12-14",
+       "sum": 1107,
+       "base_median8": 400.5,
+       "ratio": 2.76,
+       "known_date": "2025-12-15"
+      }
+     },
+     "S-D": {
+      "first_known": "2025-11-15",
+      "label": "2025-11-15",
+      "lead_days": -141,
+      "measurable": true,
+      "detail": {
+       "month": "202510",
+       "yoy_pct": 27.1,
+       "known_date": "2025-11-15"
+      }
+     },
+     "S-E": {
+      "first_known": "2025-08-08",
+      "label": "2025-08-08",
+      "lead_days": -42,
+      "measurable": true,
+      "detail": {
+       "date": "2025-08-08",
+       "code": "62270",
+       "company": "ＡＩメカテック",
+       "group": "order",
+       "title": "大手半導体関連メーカーより大口受注のお知らせ"
+      }
+     },
+     "S-F": {
+      "first_known": null,
+      "label": "該当なし",
+      "lead_days": null,
+      "measurable": false,
+      "detail": {
+       "url": "",
+       "quote": "",
+       "what": null,
+       "event_date_in_article": "該当なし"
+      }
+     },
+     "S-G": {
+      "first_known": "2026-02-06",
+      "label": "2026-02-06",
+      "lead_days": -224,
+      "measurable": true,
+      "detail": {
+       "url": "https://ri.bcnretail.com/post/2026020602",
+       "quote": "DDR4のGB単価に話を戻すと、7月第1週から徐々に上がりはじめ（5月第1週227.3円〜6月第4週241.2円はほぼフラット）",
+       "what": "BCN 実売週販データの遡及分析記事（公開 2026-02-06）。DDR4 GB単価は 2025年7月第1週から上昇開始。当時のリアルタイム週販記事は未発見。",
+       "event_date_in_article": "2025-07-01"
+      }
+     },
+     "S-H": {
+      "first_known": "2025-12-05",
+      "label": "2025-12-05",
+      "lead_days": -161,
+      "measurable": true,
+      "detail": {
+       "url": "https://x.com/janpara_akiba3/status/1996862131099279639",
+       "quote": "本日からDDR4メモリの8GB以上の買い取り価格が一部上昇",
+       "what": "じゃんぱら秋葉原3号店 公式X。日付は snowflake ID から算出。",
+       "event_date_in_article": "2025-12-05"
+      }
+     },
+     "S-I": {
+      "first_known": "2025-01-06",
+      "label": "2025-01-06",
+      "lead_days": 172,
+      "measurable": true,
+      "detail": {
+       "code": "7735",
+       "cross_date": "20250106",
+       "confirmed_date": "20250203",
+       "ret_20d_pct": 9.6,
+       "close": 4807.5,
+       "ma50": 4787.9
+      }
+     },
+     "S-J": {
+      "first_known": null,
+      "label": "測れず",
+      "lead_days": null,
+      "measurable": false,
+      "detail": {
+       "note": "レーン開始 2026-07-25 は窓 2025-12-31 より後＝測れず"
+      }
+     }
+    },
+    "web_meta": {
+     "searches_used": 15,
+     "pages_opened": 7,
+     "unresolved": [
+      "onset 2025-06-27 より早い国内記事",
+      "S-G 週販速報記事そのもの（2025年6〜7月）",
+      "S-H 2025年7〜9月の早期の買取価格上昇報道",
+      "S-A は SubAgent 原案 Sandisk(NAND) 3/7 → 統括が Samsung DDR4 EOL 4/22 に差替（second_earliest に Sandisk を残置）"
+     ]
+    }
+   },
+   "E02": {
+    "onset": {
+     "date": "2025-11-02",
+     "label": "2025-11-02",
+     "url": "https://www.gdm.or.jp/crew/2025/1102/610321",
+     "quote": "パソコンSHOPアークでは11月1日(土)からメモリ、SSD、HDDの購入制限を開始している。購入制限を設けていない大手パーツショップでは、10～20枚単位のまとめ買いが頻発／原因はDRAMおよびNANDの供給不足で、すでにMicron、SK hynix、SAMSUNGの3大チップメーカーは年内の受注を停止している",
+     "event_date_in_article": "2025-11-02"
+    },
+    "sources": {
+     "S-A": {
+      "first_known": "2025-11-13",
+      "label": "2025-11-13（次点）",
+      "lead_days": -11,
+      "measurable": true,
+      "detail": {
+       "url": "https://www.trendforce.com/news/2025/11/13/news-nand-giants-reportedly-cut-output-in-2h25-as-prices-surge-samsung-mulls-20-30-hike-in-2026/",
+       "quote": null,
+       "what": "窓内の次点（窓前 2025-03-07 は注記）",
+       "event_date_in_article": "2025-11-13",
+       "pre_window": {
+        "date": "2025-03-07",
+        "url": "https://www.trendforce.com/news/2025/03/07/news-sandisk-to-raise-nand-prices-over-10-from-april-1-signaling-market-rebound/"
+       }
+      }
+     },
+     "S-B": {
+      "first_known": null,
+      "label": "窓前 2025-02-19",
+      "lead_days": null,
+      "measurable": true,
+      "detail": {
+       "url": "https://news.mynavi.jp/techplus/article/20250219-3131948/",
+       "quote": "2025年後半には需給バランスが改善することが予想される（NANDサプライヤ各社による減産の進行、スマートフォン分野での在庫削減、AI分野における需要増加が要因）",
+       "what": "TrendForce 予測の国内報道。2025年後半からの NAND 価格回復を予測。※窓より前",
+       "event_date_in_article": "2025-02-19",
+       "pre_window": {
+        "date": "2025-02-19",
+        "url": "https://news.mynavi.jp/techplus/article/20250219-3131948/"
+       }
+      }
+     },
+     "S-C": {
+      "first_known": "2025-10-06",
+      "label": "2025-10-06",
+      "lead_days": 27,
+      "measurable": true,
+      "detail": {
+       "title": "キオクシア",
+       "week": "2025-09-29..2025-10-05",
+       "sum": 5115,
+       "base_median8": 2536.5,
+       "ratio": 2.02,
+       "known_date": "2025-10-06",
+       "note": "fallback title"
+      }
+     },
+     "S-D": {
+      "first_known": "2025-11-15",
+      "label": "2025-11-15",
+      "lead_days": -13,
+      "measurable": true,
+      "detail": {
+       "month": "202510",
+       "yoy_pct": 27.1,
+       "known_date": "2025-11-15"
+      }
+     },
+     "S-E": {
+      "first_known": null,
+      "label": "発火なし",
+      "lead_days": null,
+      "measurable": true,
+      "detail": {
+       "note": null
+      }
+     },
+     "S-F": {
+      "first_known": null,
+      "label": "該当なし",
+      "lead_days": null,
+      "measurable": false,
+      "detail": {
+       "url": "",
+       "quote": "",
+       "what": null,
+       "event_date_in_article": "該当なし"
+      }
+     },
+     "S-G": {
+      "first_known": "2025-11-05",
+      "label": "2025-11-05",
+      "lead_days": -3,
+      "measurable": true,
+      "detail": {
+       "url": "https://akiba-pc.watch.impress.co.jp/docs/price/monthly_repo/2060522.html",
+       "quote": "M.2-2230サイズのMicron『2400』が在庫ショップ数の減少で品薄となり、3,000円高の22,800円に上がった／Samsung『990 EVO Plus』も特価販売が終わり、ほとんどのショップで上昇…平均では最大60.9％にもなる",
+       "what": "AKIBA PC Hotline「11月前半のSSD価格」で品薄・急騰が初めて明確に報じられた号",
+       "event_date_in_article": "2025-11-05"
+      }
+     },
+     "S-H": {
+      "first_known": null,
+      "label": "未確認",
+      "lead_days": null,
+      "measurable": true,
+      "detail": {
+       "url": "",
+       "quote": "",
+       "what": "中古 SSD の買取価格上昇を報じた記事は見つからず。じゃんぱら秋葉原3号店の X ポストは DDR4 のみで SSD 言及なし",
+       "event_date_in_article": "未確認"
+      }
+     },
+     "S-I": {
+      "first_known": "2025-06-05",
+      "label": "2025-06-05",
+      "lead_days": 150,
+      "measurable": true,
+      "detail": {
+       "code": "285A",
+       "cross_date": "20250605",
+       "confirmed_date": "20250702",
+       "ret_20d_pct": 14.0,
+       "close": 705.3333333333333,
+       "ma50": 683.8
+      }
+     },
+     "S-J": {
+      "first_known": null,
+      "label": "測れず",
+      "lead_days": null,
+      "measurable": false,
+      "detail": {
+       "note": "レーン開始 2026-07-25 は窓 2026-03-31 より後＝測れず"
+      }
+     }
+    },
+    "web_meta": {
+     "searches_used": 18,
+     "pages_opened": 11,
+     "unresolved": [
+      "S-H 中古 SSD 買取価格上昇の初報は見つからず",
+      "10月後半の SSD 価格記事は該当号が見つからず（10月は値動き小との別記事で代替確認のみ）"
+     ]
+    }
+   },
+   "E03": {
+    "onset": {
+     "date": "2025-04-11",
+     "label": "2025-04-11",
+     "url": "https://automaton-media.com/articles/newsjp/nintendo-switch-2-20250411-334805/",
+     "quote": "送料抜きで約10万円などの、定価を大きく上回る出品も散見される",
+     "event_date_in_article": "2025-04-11"
+    },
+    "sources": {
+     "S-A": {
+      "first_known": "2025-04-03",
+      "label": "2025-04-03",
+      "lead_days": 8,
+      "measurable": true,
+      "detail": {
+       "url": "https://www.4gamer.net/games/897/G089763/20250403010/",
+       "quote": "応募には「2025年2月28日時点で，Nintendo Switchソフトのプレイ時間が50時間以上であること」などの条件達成が必要",
+       "what": "Nintendo Direct(4/2)でマイニンテンドーストア抽選販売(転売対策)を発表。第1回応募 4/4〜4/16、当落 4/24。",
+       "event_date_in_article": "2025-04-02"
+      }
+     },
+     "S-B": {
+      "first_known": "2025-05-08",
+      "label": "2025-05-08",
+      "lead_days": -27,
+      "measurable": true,
+      "detail": {
+       "url": "https://ga-m.com/n/nintendo-switch2-syonendo-syukkasuu-jyuyou-sukunai-hanbai-yosoku/",
+       "quote": "任天堂が初年度となる2026年3月末までに販売を予測しているニンテンドースイッチ2本体は1500万台",
+       "what": "業界メディアが初年度出荷予測1500万台では需要を満たせず品薄が続く可能性を指摘",
+       "event_date_in_article": "2025-05-08"
+      }
+     },
+     "S-C": {
+      "first_known": "2025-04-07",
+      "label": "2025-04-07",
+      "lead_days": 4,
+      "measurable": true,
+      "detail": {
+       "title": "Nintendo_Switch_2",
+       "week": "2025-03-31..2025-04-06",
+       "sum": 35431,
+       "base_median8": 8956.0,
+       "ratio": 3.96,
+       "known_date": "2025-04-07"
+      }
+     },
+     "S-D": {
+      "first_known": null,
+      "label": "測れず",
+      "lead_days": null,
+      "measurable": false,
+      "detail": {
+       "note": null
+      }
+     },
+     "S-E": {
+      "first_known": null,
+      "label": "発火なし",
+      "lead_days": null,
+      "measurable": true,
+      "detail": {
+       "note": null
+      }
+     },
+     "S-F": {
+      "first_known": null,
+      "label": "該当なし",
+      "lead_days": null,
+      "measurable": false,
+      "detail": {
+       "url": "",
+       "quote": "",
+       "what": null,
+       "event_date_in_article": "該当なし"
+      }
+     },
+     "S-G": {
+      "first_known": "2025-06-12",
+      "label": "2025-06-12",
+      "lead_days": -62,
+      "measurable": true,
+      "detail": {
+       "url": "https://www.famitsu.com/article/202506/44654",
+       "quote": "ファミ通発表の売上ランキング。今回は2025年6月2日〜6月8日のゲームソフト＆ハード週間推定販売数まとめをお届け",
+       "what": "発売初週(6/2-6/8)の本体週販が94万7931台、PS2(63万台)を上回ったと報道",
+       "event_date_in_article": "2025-06-12"
+      }
+     },
+     "S-H": {
+      "first_known": "2025-06-05",
+      "label": "2025-06-05",
+      "lead_days": -55,
+      "measurable": true,
+      "detail": {
+       "url": "https://news.livedoor.com/topics/detail/28899794/",
+       "quote": "メルカリに出品されるSwitch2、現在は早くも6万円台に値崩れ",
+       "what": "メルカリ二次流通相場が定価49,980円を上回る6万円台(発売当初8〜9万円)で推移。ゲオ/駿河屋の2025年中の買取価格上昇を明示した日付つき記事は未確認",
+       "event_date_in_article": "2025-06-05"
+      }
+     },
+     "S-I": {
+      "first_known": "2025-04-24",
+      "label": "2025-04-24",
+      "lead_days": -13,
+      "measurable": true,
+      "detail": {
+       "code": "7974",
+       "cross_date": "20250424",
+       "confirmed_date": "20250526",
+       "ret_20d_pct": 8.8,
+       "close": 11000.0,
+       "ma50": 10628.5
+      }
+     },
+     "S-J": {
+      "first_known": null,
+      "label": "測れず",
+      "lead_days": null,
+      "measurable": false,
+      "detail": {
+       "note": "レーン開始 2026-07-25 は窓 2025-12-31 より後＝測れず"
+      }
+     }
+    },
+    "web_meta": {
+     "searches_used": 16,
+     "pages_opened": 7,
+     "unresolved": [
+      "S-H ゲオ/ブックオフ/駿河屋の2025年中の買取価格上昇を明示した日付つき記事は未発見（2026年の値上げ後の相場比較記事のみ）＝メルカリ相場記事(6/5)で代用",
+      "S-G second_earliest 発売直後の品切れ速報の正確な日付は特定できず",
+      "SPOTVNEWS 記事(中古12.8万円)は TLS エラーで本文取得不可＝不使用"
+     ]
+    }
+   },
+   "E04": {
+    "onset": {
+     "date": "2020-09-18",
+     "label": "2020-09-18",
+     "url": "https://buzzap.jp/news/20200918-ps5-amazon-tenbai/",
+     "quote": "現在確認できる限りで定価の10倍近い29万円から最大でなんと50万円",
+     "event_date_in_article": "2020-09-18"
+    },
+    "sources": {
+     "S-A": {
+      "first_known": "2020-09-18",
+      "label": "2020-09-18",
+      "lead_days": 0,
+      "measurable": true,
+      "detail": {
+       "url": "https://www.phileweb.com/news/hobby/202009/18/3716.html",
+       "quote": "オンラインでの抽選販売は9月23日(水)からスタート。9月23日(水)午前11時から登録が開始",
+       "what": "ソニーストアによる抽選販売のみとする予約方式の告知",
+       "event_date_in_article": "2020-09-18"
+      }
+     },
+     "S-B": {
+      "first_known": "2020-09-16",
+      "label": "2020-09-16",
+      "lead_days": 2,
+      "measurable": true,
+      "detail": {
+       "url": "https://www.nikkei.com/article/DGXLASFL16HOC_W0A910C2000000/",
+       "quote": "PS5の今期(2021年3月期)の生産台数を400万台下方修正し、約1100万台と想定していることが明らかになった(Bloombergが9月15日報道、ソニーは否定)",
+       "what": "SOC歩留まり不安定による生産台数下方修正の業界報道(ソニー広報は否定)",
+       "event_date_in_article": "2020-09-16"
+      }
+     },
+     "S-C": {
+      "first_known": "2020-06-15",
+      "label": "2020-06-15",
+      "lead_days": 95,
+      "measurable": true,
+      "detail": {
+       "title": "PlayStation_5",
+       "week": "2020-06-08..2020-06-14",
+       "sum": 42335,
+       "base_median8": 11565.0,
+       "ratio": 3.66,
+       "known_date": "2020-06-15"
+      }
+     },
+     "S-D": {
+      "first_known": null,
+      "label": "測れず",
+      "lead_days": null,
+      "measurable": false,
+      "detail": {
+       "note": null
+      }
+     },
+     "S-E": {
+      "first_known": null,
+      "label": "発火なし",
+      "lead_days": null,
+      "measurable": true,
+      "detail": {
+       "note": null
+      }
+     },
+     "S-F": {
+      "first_known": null,
+      "label": "該当なし",
+      "lead_days": null,
+      "measurable": false,
+      "detail": {
+       "url": "",
+       "quote": "",
+       "what": null,
+       "event_date_in_article": "該当なし"
+      }
+     },
+     "S-G": {
+      "first_known": "2020-11-18",
+      "label": "2020-11-18",
+      "lead_days": -61,
+      "measurable": true,
+      "detail": {
+       "url": "https://www.famitsu.com/news/202011/18209693.html",
+       "quote": "両ハードとも予約開始とともに即完売となり、抽選販売も実施されるなど品薄が続き、入手が困難な状況となっている",
+       "what": "ファミ通による初週(発売4日間)販売速報11.8万台と品薄の指摘",
+       "event_date_in_article": "2020-11-18"
+      }
+     },
+     "S-H": {
+      "first_known": "2020-11-16",
+      "label": "2020-11-16",
+      "lead_days": -59,
+      "measurable": true,
+      "detail": {
+       "url": "https://www.bcnretail.com/market/detail/20201116_199950.html",
+       "quote": "11月16日11時現在、最大級のショッピング・オークション相場検索サイト「オークファン」でPS5本体の価格相場を入札が多い順で並べると、1ページ目(1〜51件)の平均価格は8万9987円。新品の税込価格より3万5009円高い状況だ",
+       "what": "オークファン集計による中古/オークション平均価格が新品より3.5万円高いと報じた記事",
+       "event_date_in_article": "2020-11-16"
+      }
+     },
+     "S-I": {
+      "first_known": "2020-10-28",
+      "label": "2020-10-28",
+      "lead_days": -40,
+      "measurable": true,
+      "detail": {
+       "code": "6758",
+       "cross_date": "20201028",
+       "confirmed_date": "20201126",
+       "ret_20d_pct": 18.3,
+       "close": 1649.6000000000001,
+       "ma50": 1627.7
+      }
+     },
+     "S-J": {
+      "first_known": null,
+      "label": "測れず",
+      "lead_days": null,
+      "measurable": false,
+      "detail": {
+       "note": "レーン開始 2026-07-25 は窓 2021-06-30 より後＝測れず"
+      }
+     }
+    },
+    "web_meta": {
+     "searches_used": 16,
+     "pages_opened": 10,
+     "unresolved": [
+      "S-Bの次に早い物は窓内で特定できず(未確認)",
+      "S-Hは店頭買取価格そのものの初出記事は見つからず、二次流通(オークファン集計)の記事で代用",
+      "firecrawl_searchは環境のIP制限でエラー(WebSearch/WebFetchで代替)"
+     ]
+    }
+   },
+   "E05": {
+    "onset": {
+     "date": "2023-06-17",
+     "label": "2023-06-17",
+     "url": "https://www.itmedia.co.jp/business/articles/2306/16/news189.html",
+     "quote": "定価5,800円に対し「メルカリ」では「1個につき1万〜1万5000円程度で出品されている」＝「単純計算で価格が2〜3倍に跳ね上がっている」",
+     "event_date_in_article": "2023-06-16"
+    },
+    "sources": {
+     "S-A": {
+      "first_known": "2023-04-27",
+      "label": "2023-04-27",
+      "lead_days": 51,
+      "measurable": true,
+      "detail": {
+       "url": "https://hobby.watch.impress.co.jp/docs/news/1497086.html",
+       "quote": "応募期間「4月27日13時〜5月8日23時59分」、当選発表「6月7日」、決済は「クレジットカード決済のみ」",
+       "what": "ポケモンセンターオンラインによる「ポケモンカード151」1BOXの抽選販売開始（公式初の購入制限）",
+       "event_date_in_article": "2023-04-27"
+      }
+     },
+     "S-B": {
+      "first_known": null,
+      "label": "未確認",
+      "lead_days": null,
+      "measurable": true,
+      "detail": {
+       "url": "",
+       "quote": "",
+       "what": "発売前の業界・専門メディアの供給不足／高騰予測記事は未発見。発売後(6/13前後)の受注生産導入報道は施策報道のため該当外。",
+       "event_date_in_article": "未確認"
+      }
+     },
+     "S-C": {
+      "first_known": "2023-04-17",
+      "label": "2023-04-17",
+      "lead_days": 61,
+      "measurable": true,
+      "detail": {
+       "title": "ポケモンカードゲーム",
+       "week": "2023-04-10..2023-04-16",
+       "sum": 4911,
+       "base_median8": 1429.0,
+       "ratio": 3.44,
+       "known_date": "2023-04-17"
+      }
+     },
+     "S-D": {
+      "first_known": null,
+      "label": "測れず",
+      "lead_days": null,
+      "measurable": false,
+      "detail": {
+       "note": null
+      }
+     },
+     "S-E": {
+      "first_known": null,
+      "label": "発火なし",
+      "lead_days": null,
+      "measurable": true,
+      "detail": {
+       "note": null
+      }
+     },
+     "S-F": {
+      "first_known": null,
+      "label": "該当なし",
+      "lead_days": null,
+      "measurable": false,
+      "detail": {
+       "url": "",
+       "quote": "",
+       "what": null,
+       "event_date_in_article": "該当なし"
+      }
+     },
+     "S-G": {
+      "first_known": null,
+      "label": "未確認",
+      "lead_days": null,
+      "measurable": true,
+      "detail": {
+       "url": "",
+       "quote": "",
+       "what": "Amazon売れ筋・ホビー業界の売上記事で品切れ/急増を報じた記事は未発見",
+       "event_date_in_article": "未確認"
+      }
+     },
+     "S-H": {
+      "first_known": "2023-06-17",
+      "label": "2023-06-17",
+      "lead_days": 0,
+      "measurable": true,
+      "detail": {
+       "url": "https://www.itmedia.co.jp/business/articles/2306/16/news189.html",
+       "quote": "定価5,800円に対し「メルカリ」では「1個につき1万〜1万5000円程度で出品されている」",
+       "what": "メルカリ二次流通相場の上昇を報じた最初の記事（onset と同一記事＝先行 0）",
+       "event_date_in_article": "2023-06-16"
+      }
+     },
+     "S-I": {
+      "first_known": null,
+      "label": "測れず",
+      "lead_days": null,
+      "measurable": false,
+      "detail": {
+       "note": null
+      }
+     },
+     "S-J": {
+      "first_known": null,
+      "label": "測れず",
+      "lead_days": null,
+      "measurable": false,
+      "detail": {
+       "note": "レーン開始 2026-07-25 は窓 2023-12-31 より後＝測れず"
+      }
+     }
+    },
+    "web_meta": {
+     "searches_used": 11,
+     "pages_opened": 8,
+     "unresolved": [
+      "S-B 発売前の品薄予測記事",
+      "S-G 売れ筋ランキング記事",
+      "S-H 二番目に早い記事",
+      "onset 4/7 ヤマダ抽選の一次記事（まとめ経由の二次情報のみ）"
+     ]
+    }
+   },
+   "E06": {
+    "onset": {
+     "date": "2025-01-30",
+     "label": "2025-01-30",
+     "url": "https://www.gdm.or.jp/crew/2025/0130/573212",
+     "quote": "GeForce RTX 5090搭載モデルがASUS、GIGABYTE、MSI、ZOTACなど4メーカー4モデル。肝心な入荷数は1本～10本程度と極少量となる見込み／税込み452,800円～579,980円／ツクモは31日(金)はWEB抽選の当選者のみ購入可能で、店頭販売の予定は無し",
+     "event_date_in_article": "2025-01-30"
+    },
+    "sources": {
+     "S-A": {
+      "first_known": "2025-01-26",
+      "label": "2025-01-26",
+      "lead_days": 4,
+      "measurable": true,
+      "detail": {
+       "url": "https://xenospectrum.com/nvidia-rtx-50-series-expected-to-be-in-severe-short-supply-on-launch-day/",
+       "quote": "MSIは1月22日に、1月30日発売予定のRTX 50シリーズについて供給不足を公式に認めました…「少ないです。30を待ってください」「供給はかなり逼迫しています」",
+       "what": "MSI(AIBメーカー)公式が自社RTX5090/5080の供給が極めて限定的になることを認めた声明(声明 1/22・報道 1/26)",
+       "event_date_in_article": "2025-01-22"
+      }
+     },
+     "S-B": {
+      "first_known": null,
+      "label": "未確認",
+      "lead_days": null,
+      "measurable": true,
+      "detail": {
+       "url": "",
+       "quote": "",
+       "what": "MSI/NVIDIA公式声明の報道(S-Aと重複)か日付不明リークしか見つからず、独立した業界メディア/調査会社の発売前予測記事を確定できず",
+       "event_date_in_article": "未確認"
+      }
+     },
+     "S-C": {
+      "first_known": "2025-01-13",
+      "label": "2025-01-13",
+      "lead_days": 17,
+      "measurable": true,
+      "detail": {
+       "title": "GeForce",
+       "week": "2025-01-06..2025-01-12",
+       "sum": 139,
+       "base_median8": 63.5,
+       "ratio": 2.19,
+       "known_date": "2025-01-13"
+      }
+     },
+     "S-D": {
+      "first_known": null,
+      "label": "測れず",
+      "lead_days": null,
+      "measurable": false,
+      "detail": {
+       "note": null
+      }
+     },
+     "S-E": {
+      "first_known": null,
+      "label": "発火なし",
+      "lead_days": null,
+      "measurable": true,
+      "detail": {
+       "note": null
+      }
+     },
+     "S-F": {
+      "first_known": null,
+      "label": "該当なし",
+      "lead_days": null,
+      "measurable": false,
+      "detail": {
+       "url": "",
+       "quote": "",
+       "what": null,
+       "event_date_in_article": "該当なし"
+      }
+     },
+     "S-G": {
+      "first_known": null,
+      "label": "未確認",
+      "lead_days": null,
+      "measurable": true,
+      "detail": {
+       "url": "",
+       "quote": "",
+       "what": "BCNランキング/価格.com売れ筋での品切れ初報を示す具体的記事を特定できず",
+       "event_date_in_article": "未確認"
+      }
+     },
+     "S-H": {
+      "first_known": "2025-02-04",
+      "label": "2025-02-04",
+      "lead_days": -5,
+      "measurable": true,
+      "detail": {
+       "url": "https://pc.watch.impress.co.jp/docs/news/yajiuma/1660155.html",
+       "quote": "各メーカーのGeForce RTX 5090搭載カードの価格は40万円台後半から50万円台後半だが、メルカリやヤフオク、楽天ラクマ、ジモティーなどのサイトでは、現在価格55～90万円台、即決では70～100万円までの価格が確認できる。",
+       "what": "発売1週間後、個人間取引(フリマ・ヤフオク等)相場が定価を大幅に上回って高騰と報じた最初期の記事",
+       "event_date_in_article": "2025-02-04"
+      }
+     },
+     "S-I": {
+      "first_known": null,
+      "label": "測れず",
+      "lead_days": null,
+      "measurable": false,
+      "detail": {
+       "note": null
+      }
+     },
+     "S-J": {
+      "first_known": null,
+      "label": "測れず",
+      "lead_days": null,
+      "measurable": false,
+      "detail": {
+       "note": "レーン開始 2026-07-25 は窓 2025-06-30 より後＝測れず"
+      }
+     }
+    },
+    "web_meta": {
+     "searches_used": 14,
+     "pages_opened": 13,
+     "unresolved": [
+      "S-B 独立した業界メディア/調査会社の発売前予測記事",
+      "S-G BCNランキング/価格.com売れ筋での品切れ初報",
+      "S-H second_earliest notebookcheck 記事(2025-02-02頃)が 403 で日付確認不能"
+     ]
+    }
+   },
+   "E07": {
+    "onset": {
+     "date": "2024-08-23",
+     "label": "2024-08-23",
+     "url": "https://www.jcp.or.jp/akahata/aik24/2024-08-23/2024082301_01_0.html",
+     "quote": "スーパーみらべる東十条店...は20日から米が品切れ状態で...入荷して２日で売り切れた",
+     "event_date_in_article": "2024-08-20"
+    },
+    "sources": {
+     "S-A": {
+      "first_known": "2024-06-28",
+      "label": "2024-06-28",
+      "lead_days": 56,
+      "measurable": true,
+      "detail": {
+       "url": "https://www.nikkei.com/article/DGXZQOUB27DD30X20C24A6000000/",
+       "quote": "農林水産省が28日発表した5月末時点の在庫量は計145万トンだった",
+       "what": "農水省の民間在庫統計。前年同月比22%減、5月として150万トンを割ったのは2012年以来。コメ卸「一部銘柄で調達が難しくなっている」",
+       "event_date_in_article": "2024-06-28"
+      }
+     },
+     "S-B": {
+      "first_known": "2024-07-05",
+      "label": "2024-07-05",
+      "lead_days": 49,
+      "measurable": true,
+      "detail": {
+       "url": "https://www.nikkei.com/article/DGXZQOUB038W40T00C24A7000000/",
+       "quote": "（有料記事・要約）米穀安定供給確保支援機構調査の価格見通し判断DIが85（6月）となり5月の79から6ポイント上昇、過去最高",
+       "what": "業界調査機関の需給逼迫感DIの最高値更新。4月時点DI59の情報は年の特定に確信が持てず不採用",
+       "event_date_in_article": "2024-07-05"
+      }
+     },
+     "S-C": {
+      "first_known": "2024-03-11",
+      "label": "2024-03-11",
+      "lead_days": 165,
+      "measurable": true,
+      "detail": {
+       "title": "令和の米騒動",
+       "week": "2024-03-04..2024-03-10",
+       "sum": 113,
+       "base_median8": 38.5,
+       "ratio": 2.94,
+       "known_date": "2024-03-11"
+      }
+     },
+     "S-D": {
+      "first_known": "2024-10-15",
+      "label": "2024-10-15",
+      "lead_days": -53,
+      "measurable": true,
+      "detail": {
+       "month": "202409",
+       "yoy_pct": 39.6,
+       "known_date": "2024-10-15"
+      }
+     },
+     "S-E": {
+      "first_known": null,
+      "label": "発火なし",
+      "lead_days": null,
+      "measurable": true,
+      "detail": {
+       "note": null
+      }
+     },
+     "S-F": {
+      "first_known": "2024-10-18",
+      "label": "2024-10-18",
+      "lead_days": -56,
+      "measurable": true,
+      "detail": {
+       "url": "https://www.maff.go.jp/j/press/nousan/kikaku/241018.html",
+       "quote": "令和6年9月の相対取引価格は全銘柄平均22,700円/玄米60kg（前年同月比+7,409円、約+48%）",
+       "what": "相対取引価格+25%初超過月と公表日。7月・8月の正確なYoY%は確認できず（6月は+11%程度）、25%超過がより早かった可能性は排除できない",
+       "event_date_in_article": "2024-09"
+      }
+     },
+     "S-G": {
+      "first_known": "2024-10-03",
+      "label": "2024-10-03",
+      "lead_days": -41,
+      "measurable": true,
+      "detail": {
+       "url": "https://nkpos.nikkei.co.jp/column/日本のコメは本当に不足していた？　posデータで",
+       "quote": "7月29日週は前年同期比26%増、8月5日週で58%増と大幅に伸びている",
+       "what": "日経POS「うるち米」千人当り販売個数の前年同期比。記事は事後(10/3)の振り返りコラム＝当時リアルタイムで報じられたわけではない",
+       "event_date_in_article": "2024-07-29"
+      }
+     },
+     "S-H": {
+      "first_known": "2024-08-16",
+      "label": "2024-08-16",
+      "lead_days": 7,
+      "measurable": true,
+      "detail": {
+       "url": "https://agora-web.jp/archives/240816210754.html",
+       "quote": "値上がり見越して買い占めするバカは転売ヤーくらいだ",
+       "what": "メルカリでの米取引を巡る論争記事（意見記事・高値転売の一次ニュースではない）。具体的転売価格は出典特定できず不採用",
+       "event_date_in_article": "2024-08-16"
+      }
+     },
+     "S-I": {
+      "first_known": "2024-05-21",
+      "label": "2024-05-21",
+      "lead_days": 94,
+      "measurable": true,
+      "detail": {
+       "code": "2700",
+       "cross_date": "20240521",
+       "confirmed_date": "20240617",
+       "ret_20d_pct": 6.5,
+       "close": 1078.0,
+       "ma50": 1073.5
+      }
+     },
+     "S-J": {
+      "first_known": null,
+      "label": "測れず",
+      "lead_days": null,
+      "measurable": false,
+      "detail": {
+       "note": "レーン開始 2026-07-25 は窓 2025-06-30 より後＝測れず"
+      }
+     }
+    },
+    "web_meta": {
+     "searches_used": 18,
+     "pages_opened": 12,
+     "unresolved": [
+      "S-B より早い月次DI（4月分DI59等）は年の特定に確信が持てず不採用",
+      "S-H 具体的な高値転売の一次報道日が特定できず",
+      "S-F 2024年7・8月の前年同月比%が公式資料で確認できず、+25%超過が9月より早かった可能性",
+      "onset 8/6以前にTVが全国的品薄を報じていた間接証拠はあるが原文引用が取れず不採用"
+     ]
+    }
+   },
+   "E08": {
+    "onset": {
+     "date": "2023-02-21",
+     "label": "2023-02-21",
+     "url": "https://www.jacom.or.jp/articles/230221-64883",
+     "quote": "今月の鶏卵の全国平均小売価格は、1パック当たり262円で、平年比で25%上昇し、現在のサイズで統計を取り始めた令和元年7月以降、最高値を更新した。",
+     "event_date_in_article": "2023-02-21"
+    },
+    "sources": {
+     "S-A": {
+      "first_known": "2023-01-09",
+      "label": "2023-01-09",
+      "lead_days": 43,
+      "measurable": true,
+      "detail": {
+       "url": "https://www.nikkei.com/article/DGXZQOUE0912C0Z00C23A1000000/",
+       "quote": "今シーズンの高病原性鳥インフルエンザによる鶏などの殺処分対象数が計約998万羽となり、これまで最も多かった2020年11月〜21年3月のシーズンの計約987万羽を上回って過去最多となった",
+       "what": "農水省の集計を報じた記事。殺処分数が過去最多を更新",
+       "event_date_in_article": "2023-01-09"
+      }
+     },
+     "S-B": {
+      "first_known": "2022-12-15",
+      "label": "2022-12-15",
+      "lead_days": 68,
+      "measurable": true,
+      "detail": {
+       "url": "https://keimei.ne.jp/article/2022%E5%B9%B412%E6%9C%8815%E6%97%A5%E5%8F%B7%E3%82%92%E7%99%BA%E8%A1%8C%E3%81%97%E3%81%BE%E3%81%97%E3%81%9F.html",
+       "quote": "最需要期に鳥インフルが加わり需給がひっ迫 鶏卵相場は280円前後にまで上昇",
+       "what": "鶏鳴新聞2022年12月15日号の見出し。業界メディアによる需給ひっ迫報道",
+       "event_date_in_article": "2022-12-15"
+      }
+     },
+     "S-C": {
+      "first_known": null,
+      "label": "発火なし",
+      "lead_days": null,
+      "measurable": true,
+      "detail": {
+       "note": null
+      }
+     },
+     "S-D": {
+      "first_known": "2022-12-15",
+      "label": "2022-12-15",
+      "lead_days": 68,
+      "measurable": true,
+      "detail": {
+       "month": "202211",
+       "yoy_pct": 25.5,
+       "known_date": "2022-12-15"
+      }
+     },
+     "S-E": {
+      "first_known": null,
+      "label": "発火なし",
+      "lead_days": null,
+      "measurable": true,
+      "detail": {
+       "note": null
+      }
+     },
+     "S-F": {
+      "first_known": "2022-12-01",
+      "label": "2022-12-01",
+      "lead_days": 82,
+      "measurable": true,
+      "detail": {
+       "url": "https://www.jz-tamago.co.jp/business/souba/monthly/",
+       "quote": "2022年11月の東京M基準値262円(2021年11月207円)＝前年同月比+26.6%",
+       "what": "鶏卵相場 +25% 初超過月。2022年10月は+12.2%で未達、11月に+26.6%で初超過。jz-tamago.co.jp 月次アーカイブ(WebFetch要約・生データの目視再確認は未了)",
+       "event_date_in_article": "2022-11"
+      }
+     },
+     "S-G": {
+      "first_known": null,
+      "label": "未確認",
+      "lead_days": null,
+      "measurable": true,
+      "detail": {
+       "url": "",
+       "quote": "",
+       "what": "日経POSに「卵の店頭価格、前年比37.2%増」という記事タイトルがあるが公開日未確認",
+       "event_date_in_article": "未確認"
+      }
+     },
+     "S-H": {
+      "first_known": null,
+      "label": "未確認",
+      "lead_days": null,
+      "measurable": true,
+      "detail": {
+       "url": "",
+       "quote": "",
+       "what": "卵のフリマ・オークション高値転売を報じた記事は見つからず",
+       "event_date_in_article": "未確認"
+      }
+     },
+     "S-I": {
+      "first_known": "2022-10-25",
+      "label": "2022-10-25",
+      "lead_days": 119,
+      "measurable": true,
+      "detail": {
+       "code": "1384",
+       "cross_date": "20221025",
+       "confirmed_date": "20221122",
+       "ret_20d_pct": 11.4,
+       "close": 624.0,
+       "ma50": 610.5
+      }
+     },
+     "S-J": {
+      "first_known": null,
+      "label": "測れず",
+      "lead_days": null,
+      "measurable": false,
+      "detail": {
+       "note": "レーン開始 2026-07-25 は窓 2023-09-30 より後＝測れず"
+      }
+     }
+    },
+    "web_meta": {
+     "searches_used": 17,
+     "pages_opened": 13,
+     "unresolved": [
+      "S-H フリマ/転売は3検索で未発見",
+      "S-G 日経POS記事の公開日未確認",
+      "北海道の2022年11〜12月購入制限は紐付きURLが2025-11-13付で別シーズン＝不採用",
+      "hokuren.or.jp 出荷制限ページは JS 表示で本文取得できず"
+     ]
+    }
+   },
+   "E09": {
+    "onset": {
+     "date": "2025-05-22",
+     "label": "2025-05-22",
+     "url": "https://ulysses-nabi.hatenablog.com/entry/2025/05/22/180602",
+     "quote": "販売開始からすぐに在庫切れになる店舗も見られました。特に楽天市場やトイザらすなどでは、予約初日に完売したとの声もSNS上で確認できます。",
+     "event_date_in_article": "2025-05-21"
+    },
+    "sources": {
+     "S-A": {
+      "first_known": "2025-05-29",
+      "label": "2025-05-29",
+      "lead_days": -7,
+      "measurable": true,
+      "detail": {
+       "url": "https://premium.gamepedia.jp/hobby/archives/6533",
+       "quote": "抽選応募期間：2025年5月22日(木)10:00～2025年6月22日(日)23:59",
+       "what": "ファミリーマートオンラインストアでの本体抽選販売（小売の告知・バンダイ本社ではない・記事更新日 5/29）。バンダイ公式は 2025-07-09 プレス（second）",
+       "event_date_in_article": "2025-05-22"
+      }
+     },
+     "S-B": {
+      "first_known": null,
+      "label": "未確認",
+      "lead_days": null,
+      "measurable": true,
+      "detail": {
+       "url": "",
+       "quote": "",
+       "what": "玩具業界紙等による品薄予測の初出は見つからず。ascii.jp(2025-11-21) は事後報道",
+       "event_date_in_article": "未確認"
+      }
+     },
+     "S-C": {
+      "first_known": null,
+      "label": "発火なし",
+      "lead_days": null,
+      "measurable": true,
+      "detail": {
+       "note": null
+      }
+     },
+     "S-D": {
+      "first_known": null,
+      "label": "測れず",
+      "lead_days": null,
+      "measurable": false,
+      "detail": {
+       "note": null
+      }
+     },
+     "S-E": {
+      "first_known": null,
+      "label": "発火なし",
+      "lead_days": null,
+      "measurable": true,
+      "detail": {
+       "note": null
+      }
+     },
+     "S-F": {
+      "first_known": null,
+      "label": "該当なし",
+      "lead_days": null,
+      "measurable": false,
+      "detail": {
+       "url": "",
+       "quote": "",
+       "what": null,
+       "event_date_in_article": "該当なし"
+      }
+     },
+     "S-G": {
+      "first_known": null,
+      "label": "未確認",
+      "lead_days": null,
+      "measurable": true,
+      "detail": {
+       "url": "",
+       "quote": "",
+       "what": "ランキング 1 位・月間 3,000 個超の記事はあるが 2025 年窓内で日付が明確な物を確認できず",
+       "event_date_in_article": "未確認"
+      }
+     },
+     "S-H": {
+      "first_known": null,
+      "label": "未確認",
+      "lead_days": null,
+      "measurable": true,
+      "detail": {
+       "url": "",
+       "quote": "",
+       "what": "本体限定・日付明確な買取価格上昇記事を確認できず",
+       "event_date_in_article": "未確認"
+      }
+     },
+     "S-I": {
+      "first_known": "2025-07-23",
+      "label": "2025-07-23",
+      "lead_days": -62,
+      "measurable": true,
+      "detail": {
+       "code": "7832",
+       "cross_date": "20250723",
+       "confirmed_date": "20250820",
+       "ret_20d_pct": 14.1,
+       "close": 4785.0,
+       "ma50": 4719.5
+      }
+     },
+     "S-J": {
+      "first_known": null,
+      "label": "測れず",
+      "lead_days": null,
+      "measurable": false,
+      "detail": {
+       "note": "レーン開始 2026-07-25 は窓 2025-12-31 より後＝測れず"
+      }
+     }
+    },
+    "web_meta": {
+     "searches_used": 15,
+     "pages_opened": 13,
+     "unresolved": [
+      "S-B 業界メディアの品薄予測初出なし",
+      "S-G 日付付きランキング記事なし",
+      "S-H 本体限定の買取価格記事なし"
+     ]
+    }
+   },
+   "E10": {
+    "onset": {
+     "date": "2023-07-23",
+     "label": "2023-07-23",
+     "url": "https://everyday-life.net/2023/07/23/beyblade-x-sold-out/",
+     "quote": "調べた結果、発売開始が２０２３年７月１５日からなので、この記事を書いている時点でようやく発売開始１種間目になります。",
+     "event_date_in_article": "2023-07-23"
+    },
+    "sources": {
+     "S-A": {
+      "first_known": null,
+      "label": "未確認",
+      "lead_days": null,
+      "measurable": true,
+      "detail": {
+       "url": "",
+       "quote": "",
+       "what": "2023年当時のタカラトミー公式の品薄お詫び・増産・抽選販売の発表ページは見つからず。検索結果は2026年の別の品薄waveの公式発表ばかり。",
+       "event_date_in_article": "未確認"
+      }
+     },
+     "S-B": {
+      "first_known": null,
+      "label": "未確認",
+      "lead_days": null,
+      "measurable": true,
+      "detail": {
+       "url": "",
+       "quote": "",
+       "what": "2023年当時の需要超過/品薄予測の初出記事は見つからず。famitsu(2023-05-17)・toynes.jp(2023-05-18)は発売告知のみ。",
+       "event_date_in_article": "未確認"
+      }
+     },
+     "S-C": {
+      "first_known": null,
+      "label": "測れず（PV coverage 23%）",
+      "lead_days": null,
+      "measurable": false,
+      "detail": {
+       "note": "題名が転送ページ等で PV がほぼ無い",
+       "titles": {
+        "ベイブレードX": {
+         "n_days": 98,
+         "span_days": 429,
+         "coverage": 0.228,
+         "failed_months": [],
+         "first_day": "20231123",
+         "n_weeks_in_window": 53,
+         "first_fire": null,
+         "n_fires": 0,
+         "fires": []
+        }
+       }
+      }
+     },
+     "S-D": {
+      "first_known": null,
+      "label": "測れず",
+      "lead_days": null,
+      "measurable": false,
+      "detail": {
+       "note": null
+      }
+     },
+     "S-E": {
+      "first_known": null,
+      "label": "発火なし",
+      "lead_days": null,
+      "measurable": true,
+      "detail": {
+       "note": null
+      }
+     },
+     "S-F": {
+      "first_known": null,
+      "label": "該当なし",
+      "lead_days": null,
+      "measurable": false,
+      "detail": {
+       "url": "",
+       "quote": "",
+       "what": null,
+       "event_date_in_article": "該当なし"
+      }
+     },
+     "S-G": {
+      "first_known": null,
+      "label": "未確認",
+      "lead_days": null,
+      "measurable": true,
+      "detail": {
+       "url": "",
+       "quote": "",
+       "what": "2023年のAmazon売れ筋・おもちゃ大賞で品切れ/急増を報じた記事は見つけられず。",
+       "event_date_in_article": "未確認"
+      }
+     },
+     "S-H": {
+      "first_known": null,
+      "label": "未確認",
+      "lead_days": null,
+      "measurable": true,
+      "detail": {
+       "url": "",
+       "quote": "",
+       "what": "『2023年12月にフェニックスウイング(定価2,400円)がメルカリで3,000〜4,000円超え』は2026年公開の回顧記事のみで当時の初出記事を確認できず不採用。",
+       "event_date_in_article": "未確認"
+      }
+     },
+     "S-I": {
+      "first_known": "2023-12-13",
+      "label": "2023-12-13",
+      "lead_days": -143,
+      "measurable": true,
+      "detail": {
+       "code": "7867",
+       "cross_date": "20231213",
+       "confirmed_date": "20240115",
+       "ret_20d_pct": 15.0,
+       "close": 2168.5,
+       "ma50": 2058.6
+      }
+     },
+     "S-J": {
+      "first_known": null,
+      "label": "測れず",
+      "lead_days": null,
+      "measurable": false,
+      "detail": {
+       "note": "レーン開始 2026-07-25 は窓 2024-03-31 より後＝測れず"
+      }
+     }
+    },
+    "web_meta": {
+     "searches_used": 18,
+     "pages_opened": 9,
+     "unresolved": [
+      "S-A 公式お詫び・増産発表(2023年7月下旬〜8月頃と推定)は2026年記事に検索が汚染され分離不能。Wayback の news2307xx.html 直接列挙は未実施。",
+      "S-B/S-G/S-H いずれも2023年当時の初出を特定できず",
+      "2026年に別の大規模品薄waveがあり検索結果の大半がそちら"
+     ]
+    }
+   }
+  },
+  "by_source": {
+   "S-A": {
+    "measured": 10,
+    "fired": 9,
+    "lead7": 5,
+    "median_lead": 8,
+    "verdict": "合格"
+   },
+   "S-B": {
+    "measured": 10,
+    "fired": 5,
+    "lead7": 3,
+    "median_lead": 37,
+    "verdict": "合格"
+   },
+   "S-C": {
+    "measured": 9,
+    "fired": 7,
+    "lead7": 5,
+    "median_lead": 27,
+    "verdict": "合格"
+   },
+   "S-D": {
+    "measured": 4,
+    "fired": 4,
+    "lead7": 1,
+    "median_lead": -33.0,
+    "verdict": "不合格"
+   },
+   "S-E": {
+    "measured": 10,
+    "fired": 1,
+    "lead7": 0,
+    "median_lead": -42,
+    "verdict": "不合格"
+   },
+   "S-F": {
+    "measured": 2,
+    "fired": 2,
+    "lead7": 1,
+    "median_lead": 13.0,
+    "verdict": "判定不能（測れた <3）"
+   },
+   "S-G": {
+    "measured": 10,
+    "fired": 5,
+    "lead7": 0,
+    "median_lead": -61,
+    "verdict": "不合格"
+   },
+   "S-H": {
+    "measured": 10,
+    "fired": 6,
+    "lead7": 1,
+    "median_lead": -30.0,
+    "verdict": "不合格"
+   },
+   "S-I": {
+    "measured": 8,
+    "fired": 8,
+    "lead7": 4,
+    "median_lead": 40.5,
+    "verdict": "合格"
+   },
+   "S-J": {
+    "measured": 0,
+    "fired": 0,
+    "lead7": 0,
+    "median_lead": null,
+    "verdict": "判定不能（測れた <3）"
+   }
+  },
+  "cells": {
+   "given": 100,
+   "measured": 73
+  }
+ }
 }
