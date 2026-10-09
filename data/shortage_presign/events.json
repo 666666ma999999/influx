@@ -1,0 +1,292 @@
+{
+ "_meta": {
+  "prereg_at": "2026-10-09T17:00+09:00",
+  "decision": "P-INF-42 a,a（2026-10-09）",
+  "onset_definition": "フリマ成約中央値が定価の 1.2 倍を初めて超えた日。flea_panel 追跡開始 2026-09-23 より前の事件は国内記事初出で代用（URL＋原文 1 行）",
+  "pass_rule": "源ごと: 測れた事件 ≥3 かつ 先行 ≥7 日が 3 事件以上",
+  "lead_days": "①の開始日 − 源の初出日（正= 先行）",
+  "not_measurable_in_backfill": [
+   "空振り率",
+   "取得遅延（記事初出は実際より遅れる＝先行は過小評価の方向）"
+  ],
+  "status": "pre-registered（結果は未記入）"
+ },
+ "sources": {
+  "S-A": "メーカー・公式の告知",
+  "S-B": "業界メディア・調査会社の予測",
+  "S-C": "Wikipedia PV 週合計が直前 8 週中央値の 2 倍",
+  "S-D": "日銀 企業物価 前年比 +25% 初超過（当時知れた日= 翌月 15 日仮置き）",
+  "S-E": "TDnet 開示表題（supply_lane 語 × 事件語）",
+  "S-F": "公的市況（米 相対取引価格／鶏卵相場）",
+  "S-G": "販売ランキング・週販",
+  "S-H": "買取価格・二次流通相場",
+  "S-I": "受益銘柄の株価初動日（50 日線上抜け 20 営業日維持・参考列）",
+  "S-J": "自前 X レーン（2026-07-25〜）"
+ },
+ "events": [
+  {
+   "id": "E01",
+   "name": "DDR4／DRAM 値上がり 2025",
+   "window": [
+    "2025-01-01",
+    "2025-12-31"
+   ],
+   "codes": [
+    {
+     "code": "6146",
+     "name": "ディスコ",
+     "tier": "confirmed"
+    },
+    {
+     "code": "6871",
+     "name": "日本マイクロニクス",
+     "tier": "confirmed"
+    },
+    {
+     "code": "8035",
+     "name": "東京エレクトロン",
+     "tier": "confirmed"
+    },
+    {
+     "code": "7735",
+     "name": "SCREENホールディングス",
+     "tier": "confirmed"
+    }
+   ],
+   "wiki": [
+    "Dynamic_Random_Access_Memory"
+   ],
+   "boj_series": [
+    "PRCG20_2600850005"
+   ],
+   "tdnet_regex": "DRAM|メモリ|半導体",
+   "onset_prereg": {
+    "date": "2025-06-27",
+    "basis": "代理= 記事初出（日経 DDR4 スポット 1 か月で 2 倍・vault 10-06 ノート実読）",
+    "status": "事前値・SubAgent が原文 URL で確認"
+   }
+  },
+  {
+   "id": "E02",
+   "name": "NAND／SSD 値上がり・品薄 2025Q4〜",
+   "window": [
+    "2025-06-01",
+    "2026-03-31"
+   ],
+   "codes": [
+    {
+     "code": "285A",
+     "name": "キオクシアHD",
+     "tier": "confirmed"
+    }
+   ],
+   "wiki": [
+    "ソリッドステートドライブ",
+    "キオクシア"
+   ],
+   "boj_series": [
+    "PRCG20_2600850005"
+   ],
+   "tdnet_regex": "NAND|SSD|フラッシュ",
+   "onset_prereg": {
+    "date": null,
+    "basis": "代理= 国内記事初出（SSD 値上がり・品薄）",
+    "status": "未確認"
+   }
+  },
+  {
+   "id": "E03",
+   "name": "Nintendo Switch 2（2025-06-05 発売）",
+   "window": [
+    "2025-01-01",
+    "2025-12-31"
+   ],
+   "codes": [
+    {
+     "code": "7974",
+     "name": "任天堂",
+     "tier": "reference_flea_panel"
+    }
+   ],
+   "wiki": [
+    "Nintendo_Switch_2",
+    "Nintendo_Switch"
+   ],
+   "boj_series": [],
+   "tdnet_regex": "Switch|ゲーム機",
+   "onset_prereg": {
+    "date": null,
+    "basis": "代理= フリマ・転売価格が定価 49,980 円の 1.2 倍超えの初報／抽選・購入制限の初報",
+    "status": "未確認"
+   }
+  },
+  {
+   "id": "E04",
+   "name": "PlayStation 5（2020-11-12 発売）",
+   "window": [
+    "2020-06-01",
+    "2021-06-30"
+   ],
+   "codes": [
+    {
+     "code": "6758",
+     "name": "ソニーグループ",
+     "tier": "reference_flea_panel"
+    }
+   ],
+   "wiki": [
+    "PlayStation_5"
+   ],
+   "boj_series": [],
+   "tdnet_regex": "PlayStation|PS5|ゲーム機",
+   "onset_prereg": {
+    "date": null,
+    "basis": "代理= 転売価格 定価 1.2 倍超えの初報",
+    "status": "未確認"
+   }
+  },
+  {
+   "id": "E05",
+   "name": "ポケモンカード 151（2023-06-16 発売）",
+   "window": [
+    "2023-01-01",
+    "2023-12-31"
+   ],
+   "codes": [],
+   "wiki": [
+    "ポケモンカードゲーム"
+   ],
+   "boj_series": [],
+   "tdnet_regex": "ポケモンカード|トレーディングカード",
+   "onset_prereg": {
+    "date": null,
+    "basis": "代理= BOX 価格 定価 1.2 倍超えの初報",
+    "status": "未確認"
+   }
+  },
+  {
+   "id": "E06",
+   "name": "GeForce RTX 5090（2025-01-30 発売）",
+   "window": [
+    "2024-10-01",
+    "2025-06-30"
+   ],
+   "codes": [],
+   "wiki": [
+    "GeForce"
+   ],
+   "boj_series": [],
+   "tdnet_regex": "GPU|グラフィック",
+   "onset_prereg": {
+    "date": null,
+    "basis": "代理= 国内価格 定価超え・品薄の初報",
+    "status": "未確認"
+   }
+  },
+  {
+   "id": "E07",
+   "name": "米（令和の米騒動 2024-08〜）",
+   "window": [
+    "2024-01-01",
+    "2025-06-30"
+   ],
+   "codes": [
+    {
+     "code": "2700",
+     "name": "木徳神糧",
+     "tier": "reference_unverified_segment"
+    }
+   ],
+   "wiki": [
+    "令和の米騒動"
+   ],
+   "boj_series": [
+    "精米（zip で特定）"
+   ],
+   "tdnet_regex": "精米|米穀|コメ",
+   "onset_prereg": {
+    "date": null,
+    "basis": "代理= 店頭品薄・購入制限の初報",
+    "status": "未確認"
+   }
+  },
+  {
+   "id": "E08",
+   "name": "鶏卵（鳥インフル 2023）",
+   "window": [
+    "2022-10-01",
+    "2023-09-30"
+   ],
+   "codes": [
+    {
+     "code": "1384",
+     "name": "ホクリヨウ",
+     "tier": "reference_unverified_segment"
+    }
+   ],
+   "wiki": [
+    "鶏卵"
+   ],
+   "boj_series": [
+    "鶏卵（zip で特定）"
+   ],
+   "tdnet_regex": "鶏卵|たまご",
+   "onset_prereg": {
+    "date": null,
+    "basis": "代理= 店頭品薄・値上がりの初報",
+    "status": "未確認"
+   }
+  },
+  {
+   "id": "E09",
+   "name": "たまごっち（Tamagotchi Paradise 2025-07-12 発売）",
+   "window": [
+    "2025-04-01",
+    "2025-12-31"
+   ],
+   "codes": [
+    {
+     "code": "7832",
+     "name": "バンダイナムコHD",
+     "tier": "reference_flea_panel"
+    }
+   ],
+   "wiki": [
+    "たまごっち"
+   ],
+   "boj_series": [],
+   "tdnet_regex": "たまごっち",
+   "onset_prereg": {
+    "date": null,
+    "basis": "代理= プレ値・品薄・受注生産の初報",
+    "status": "未確認"
+   }
+  },
+  {
+   "id": "E10",
+   "name": "ベイブレードX（2023-07-15 発売）",
+   "window": [
+    "2023-04-01",
+    "2024-03-31"
+   ],
+   "codes": [
+    {
+     "code": "7867",
+     "name": "タカラトミー",
+     "tier": "reference_flea_panel"
+    }
+   ],
+   "wiki": [
+    "ベイブレードX"
+   ],
+   "boj_series": [],
+   "tdnet_regex": "ベイブレード",
+   "onset_prereg": {
+    "date": null,
+    "basis": "代理= 品薄・プレ値の初報",
+    "status": "未確認"
+   }
+  }
+ ],
+ "results": {}
+}
