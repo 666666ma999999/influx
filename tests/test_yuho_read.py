@@ -1153,6 +1153,121 @@ class T10ReadTest(unittest.TestCase):
             yr.main(["--code", "9999", "--make-targets", "--renominate-base"])
         self.assertEqual(cm.exception.code, 2)
 
+    # ---- T11 5 期化: 基準期より前の期だけを、今の targets.json のまま指名読み（--older-than-base）
+    def test_older_than_base_dump_and_import(self):
+        self._base_and_targets()
+        doc = self._targets()
+        doc["targets"].append({"target_id": "T02", "segment": "x", "item": "新製品", "kpi_name": "k", "geo": None,
+                               "value_type": None, "value_basis": None, "added_from": "S100TESTA",
+                               "added_period_end": "2026-03-31", "added_rows": [1]})
+        (self.out / "9999" / "targets.json").write_text(json.dumps(doc, ensure_ascii=False), encoding="utf-8")
+        z = _sections("S100TESTB")
+        z.update(doc_id="S100TESTZ", period_start="2023-04-01", period_end="2024-03-31", submit_date="2024-06-15 09:00")
+        (self.data / "9999" / "S100TESTZ.sections.json").write_text(json.dumps(z, ensure_ascii=False), encoding="utf-8")
+        base_read = (self.out / "9999" / "S100TESTB.read.json").read_text(encoding="utf-8")
+        with mock.patch("sys.stdout", io.StringIO()), self.assertRaises(SystemExit) as cm:
+            yr.dump_prompts("9999", self.data, self.out)                  # フラグなし＝基準期がずれて止まる（従来どおり）
+        self.assertIn("今の基準期 'S100TESTZ' と違う", str(cm.exception))
+        self.assertEqual(self._cli("--dump-prompts", "--older-than-base"), 0)
+        self.assertEqual(sorted(x.name for x in self.pdir.iterdir()), ["S100TESTZ.prompt.txt"])   # 古い期だけ
+        p = (self.pdir / "S100TESTZ.prompt.txt").read_text(encoding="utf-8")
+        self.assertIn("指名読み", p)
+        self.assertIn("- T01: segment=Seasonings And Foods", p)
+        self.assertNotIn("- T02:", p)                                     # 足した品目は新設前の期に指名しない
+        self.assertIn('status="new" の行は 0 行', p)
+        (self.pdir / "S100TESTZ.response.json").write_text(json.dumps(
+            [{"target_id": "T01", "status": "found", "kpi_value": 105, "segment": "Seasonings And Foods"}],
+            ensure_ascii=False), encoding="utf-8")
+        (self.pdir / "S100TESTB.response.json").write_text("[]", encoding="utf-8")   # 基準期の応答は取り込まない
+        self.assertEqual(self._cli("--import-responses", "--older-than-base"), 0)
+        rec = json.loads((self.out / "9999" / "S100TESTZ.read.json").read_text(encoding="utf-8"))
+        self.assertEqual(rec["mode"], "nominated")
+        self.assertEqual([(r["target_id"], r["status"], r["kpi_value"]) for r in rec["rows"]], [("T01", "found", 105)])
+        self.assertFalse(any("今の入力から作るプロンプトと違う" in w for w in rec["warnings"]), rec["warnings"])
+        self.assertEqual((self.out / "9999" / "S100TESTB.read.json").read_text(encoding="utf-8"), base_read)
+        self.assertEqual(self._targets(), doc)                             # targets.json も変えない
+
+    def _add_sec(self, doc_id, start, end):
+        z = _sections("S100TESTB")
+        z.update(doc_id=doc_id, period_start=start, period_end=end, submit_date=f"{(end or '2020')[:4]}-06-15 09:00")
+        (self.data / "9999" / f"{doc_id}.sections.json").write_text(json.dumps(z, ensure_ascii=False), encoding="utf-8")
+
+    def test_older_than_base_api_path_reads_only_older(self):        # (a) API 経路
+        self._base_and_targets()
+        self._add_sec("S100TESTZ", "2023-04-01", "2024-03-31")
+        with mock.patch.object(yr, "read_one", return_value={"doc_id": "x"}) as ro, \
+                mock.patch("sys.stdout", io.StringIO()), mock.patch("sys.stderr", io.StringIO()):
+            rc = yr.main(["--code", "9999", "--data-dir", str(self.data), "--out-dir", str(self.out),
+                          "--older-than-base", "--force"])
+        self.assertEqual(rc, 0)
+        self.assertEqual([c.args[0]["doc_id"] for c in ro.call_args_list], ["S100TESTZ"])
+        kw = ro.call_args.kwargs
+        self.assertEqual((kw["mode"], kw["max_new_rows"], kw["renominated_base"]), ("nominated", 0, False))
+        self.assertEqual([t["target_id"] for t in kw["targets"]], ["T01"])
+
+    def test_older_than_base_import_cuts_new_rows(self):              # (b) new の行は 0 行に切る
+        self._base_and_targets()
+        self._add_sec("S100TESTZ", "2023-04-01", "2024-03-31")
+        self.assertEqual(self._cli("--dump-prompts", "--older-than-base"), 0)
+        (self.pdir / "S100TESTZ.response.json").write_text(json.dumps(
+            [{"target_id": "T01", "status": "found", "kpi_value": 105, "segment": "Seasonings And Foods"},
+             {"status": "new", "item": "余計", "kpi_name": "k"}], ensure_ascii=False), encoding="utf-8")
+        self.assertEqual(self._cli("--import-responses", "--older-than-base"), 0)
+        rec = json.loads((self.out / "9999" / "S100TESTZ.read.json").read_text(encoding="utf-8"))
+        self.assertEqual([r["status"] for r in rec["rows"]], ["found"])
+        self.assertTrue(any("new の行数 1 が上限 0" in w for w in rec["warnings"]), rec["warnings"])
+
+    def test_older_than_base_selection_guards(self):                 # (c)(d)(e)
+        tdoc = {"base_doc_id": "B", "base_period_end": "2025-03-31", "targets": []}
+        docs = [{"doc_id": "B", "period_end": None}, {"doc_id": "N", "period_end": None},
+                {"doc_id": "Q", "period_end": "2025-3-31"}, {"doc_id": "Z", "period_end": "2024-03-31"},
+                {"doc_id": "A", "period_end": "2026-03-31"}]
+        out = io.StringIO()
+        with mock.patch("sys.stdout", out):
+            base_id, older = yr.older_than_base_docs(docs, tdoc)
+        self.assertEqual((base_id, [d["doc_id"] for d in older]), ("B", ["Z"]))   # 期末欠損・基準期は入らない
+        self.assertIn("期末の無い doc 3 本は対象外", out.getvalue())
+        with mock.patch("sys.stdout", io.StringIO()):
+            _, older = yr.older_than_base_docs([{"doc_id": "B", "period_end": "2024-03-31"}],
+                                               dict(tdoc, base_period_end="2026-03-31"))
+        self.assertEqual(older, [])                                       # 期末が前でも基準期そのものは除く
+        with self.assertRaises(SystemExit) as cm:                         # (d) 旧形式（base_period_end 無し）
+            yr.older_than_base_docs(docs, {"base_doc_id": "B", "targets": []})
+        self.assertIn("base_period_end", str(cm.exception))
+        self._base_and_targets()                                          # (e) 前の期が無い＝正常終了
+        out = io.StringIO()
+        with mock.patch.object(yr, "call_claude", side_effect=AssertionError("API を呼んだ")), mock.patch("sys.stdout", out):
+            rc = yr.main(["--code", "9999", "--data-dir", str(self.data), "--out-dir", str(self.out),
+                          "--dump-prompts", "--older-than-base"])
+        self.assertEqual(rc, 0)
+        self.assertIn("より前の期が無い", out.getvalue())
+        self.assertFalse(self.pdir.exists())
+
+    def test_older_than_base_judge_five_periods(self):               # (f) judge が 5 期を昇順に並べる
+        import yuho_judge as yj
+        self._base_and_targets()
+        self._add_sec("S100TESTZ", "2023-04-01", "2024-03-31")
+        self._add_sec("S100TESTY", "2022-04-01", "2023-03-31")
+        for d in ("S100TESTY", "S100TESTZ", "S100TESTB", "S100TESTA", "S100TESTC"):
+            self._write(d, "nominated", [dict(TARGET_T01, status="found", kpi_value=100)])
+        docs, reads = yj.load_inputs("9999", self.data, self.out)
+        targets, ir_texts = yj.load_extras("9999", self.data, self.out, reads)
+        res = yj.build_products(docs, reads, targets, ir_texts)
+        t01 = next(p for p in res["products"] if p["target_id"] == "T01")
+        self.assertEqual([per["period_end"] for per in t01["periods"]],
+                         ["2023-03-31", "2024-03-31", "2025-03-31", "2026-03-31", "2027-03-31"])
+        self.assertTrue(all(per["label"] != yj.LABEL_OUT_OF_SCOPE for per in t01["periods"]))
+        self.assertTrue(t01["three_period_complete"])
+
+    def test_older_than_base_refusals(self):
+        with mock.patch("sys.stdout", io.StringIO()), self.assertRaises(SystemExit) as cm:
+            yr.dump_prompts("9999", self.data, self.out, older_than_base=True)   # targets.json が無い
+        self.assertIn("targets.json が要る", str(cm.exception))
+        for flags in (["--make-targets"], ["--dump-prompts", "--renominate-base"]):
+            with mock.patch("sys.stderr", io.StringIO()), self.assertRaises(SystemExit) as cm:
+                yr.main(["--code", "9999", *flags, "--older-than-base"])
+            self.assertEqual(cm.exception.code, 2)
+
 
 if __name__ == "__main__":
     unittest.main()

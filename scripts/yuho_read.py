@@ -937,6 +937,20 @@ def doc_mode(sections_json: dict, base_id: Optional[str], targets_doc: Optional[
     return MODE_NOMINATED, targets_for_doc(sections_json, targets_doc.get("targets") or [])
 
 
+def older_than_base_docs(docs: List[dict], targets_doc: Optional[dict]) -> Tuple[str, List[dict]]:
+    """--older-than-base（T11・5 期化）: targets.json の基準期を基準に保ち、それより前の期だけを返す（基準期以降は触らない）。"""
+    if not (targets_doc and targets_doc.get("base_doc_id") and targets_doc.get("base_period_end")):
+        raise SystemExit("--older-than-base には base_doc_id・base_period_end のある targets.json が要る")
+    base_id, end = targets_doc["base_doc_id"], targets_doc["base_period_end"]
+    dated = [d for d in docs if re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(d.get("period_end") or ""))]
+    if len(dated) < len(docs):
+        print(f"--older-than-base: 期末の無い doc {len(docs) - len(dated)} 本は対象外")
+    older = [d for d in dated if d.get("doc_id") != base_id and d["period_end"] < end]
+    if not older:
+        print(f"--older-than-base: 基準期（{base_id}・{end}）より前の期が無い")
+    return base_id, older
+
+
 def max_new_rows_for(sections_json: dict, base_id: Optional[str], renominate_base: bool) -> int:
     """指名読みで足してよい new の行数。基準期の指名読み直し（T10g）は 0・それ以外は MAX_NEW_ROWS_NOMINATED。"""
     if renominate_base and sections_json.get("doc_id") == base_id:
@@ -1214,7 +1228,8 @@ def make_targets(code4: str, data_dir: Path = DEFAULT_DATA_DIR, out_dir: Path = 
 
 
 def dump_prompts(code4: str, data_dir: Path = DEFAULT_DATA_DIR, out_dir: Path = DEFAULT_OUT_DIR,
-                 max_ir_chars: int = 20000, renominate_base: bool = False) -> Dict[str, List[str]]:
+                 max_ir_chars: int = 20000, renominate_base: bool = False,
+                 older_than_base: bool = False) -> Dict[str, List[str]]:
     """代走用に `<out_dir>/<code4>/prompts/<docID>.prompt.txt` を書く（API を呼ばない・T9a ⑤）。
 
     基準期は基準期の型。後の期は targets.json がある時だけ指名読みの型で書き、無ければ書かずに docID を表示する。
@@ -1228,6 +1243,8 @@ def dump_prompts(code4: str, data_dir: Path = DEFAULT_DATA_DIR, out_dir: Path = 
         raise SystemExit(f"sections.json が無い: {data_dir / code4}/*.sections.json（先に scripts/yuho_fetch.py）")
     base_id = base_doc_id(docs)
     targets_doc = load_targets(code4, out_dir)
+    if older_than_base:
+        base_id, docs = older_than_base_docs(docs, targets_doc)
     pdir = out_dir / code4 / "prompts"
     written: List[str] = []
     skipped: List[str] = []
@@ -1239,7 +1256,7 @@ def dump_prompts(code4: str, data_dir: Path = DEFAULT_DATA_DIR, out_dir: Path = 
             skipped.append(sec["doc_id"])
             continue
         prompt, ir_path = make_prompt(sec, data_dir, max_ir_chars, mode, targets,
-                                      max_new_rows_for(sec, base_id, renominate_base))
+                                      0 if older_than_base else max_new_rows_for(sec, base_id, renominate_base))
         pdir.mkdir(parents=True, exist_ok=True)
         path = pdir / f"{sec['doc_id']}.prompt.txt"
         path.write_text(prompt, encoding="utf-8")
@@ -1254,7 +1271,7 @@ def dump_prompts(code4: str, data_dir: Path = DEFAULT_DATA_DIR, out_dir: Path = 
 
 def import_responses(code4: str, data_dir: Path = DEFAULT_DATA_DIR, out_dir: Path = DEFAULT_OUT_DIR,
                      max_ir_chars: int = 20000, agent_tokens: Optional[Dict[str, Any]] = None,
-                     renominate_base: bool = False) -> Dict[str, List[str]]:
+                     renominate_base: bool = False, older_than_base: bool = False) -> Dict[str, List[str]]:
     """代走の応答 `prompts/<docID>.response.json` を `<docID>.read.json` にする（API 未使用・T9a ⑤）。
 
     model は PROXY_MODEL（「代走」）・usage は 0・usage_ok は False。行は normalize_response で API 経路と同じ検証を通す。
@@ -1271,6 +1288,8 @@ def import_responses(code4: str, data_dir: Path = DEFAULT_DATA_DIR, out_dir: Pat
         raise SystemExit(f"sections.json が無い: {data_dir / code4}/*.sections.json（先に scripts/yuho_fetch.py）")
     base_id = base_doc_id(docs)
     targets_doc = load_targets(code4, out_dir)
+    if older_than_base:
+        base_id, docs = older_than_base_docs(docs, targets_doc)
     pdir = out_dir / code4 / "prompts"
     agent_tokens = agent_tokens or {}
     converted: List[str] = []
@@ -1286,7 +1305,7 @@ def import_responses(code4: str, data_dir: Path = DEFAULT_DATA_DIR, out_dir: Pat
             print(f"{doc_id}: no response {resp_path}")
             continue
         mode, targets = doc_mode(sec, base_id, targets_doc, renominate_base)
-        max_new = max_new_rows_for(sec, base_id, renominate_base)
+        max_new = 0 if older_than_base else max_new_rows_for(sec, base_id, renominate_base)
         if mode is None:
             errors.append(f"{doc_id}: targets.json が無いので指名読みの応答を検証できない（先に --make-targets）")
             print(f"{doc_id}: skip（targets.json が無い）")
@@ -1350,11 +1369,15 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--renominate-base", action="store_true",
                     help="基準期も自分の targets で指名読み（new 0 行・mode=nominated）。--dump-prompts／--import-responses／"
                          "API の読みで使う（T10g）")
+    ap.add_argument("--older-than-base", action="store_true",
+                    help="targets.json の基準期を保ち、それより前の期だけを指名読み（new 0 行・T11 の 5 期化）")
     args = ap.parse_args(argv)
     if args.extend and not args.make_targets:
         ap.error("--extend は --make-targets と一緒に使う")
     if args.renominate_base and args.make_targets:
         ap.error("--renominate-base は --make-targets と一緒に使えない")
+    if args.older_than_base and (args.make_targets or args.renominate_base):
+        ap.error("--older-than-base は --make-targets・--renominate-base と一緒に使えない")
 
     code4 = args.code.zfill(4)
     if args.make_targets:
@@ -1364,12 +1387,13 @@ def main(argv: Optional[List[str]] = None) -> int:
             make_targets(code4, args.data_dir, args.out_dir, force=args.force)
         return 0
     if args.dump_prompts:
-        dump_prompts(code4, args.data_dir, args.out_dir, args.max_ir_chars, renominate_base=args.renominate_base)
+        dump_prompts(code4, args.data_dir, args.out_dir, args.max_ir_chars, renominate_base=args.renominate_base,
+                     older_than_base=args.older_than_base)
         return 0
     if args.import_responses:
         tokens = json.loads(args.agent_tokens) if args.agent_tokens else None
         res = import_responses(code4, args.data_dir, args.out_dir, args.max_ir_chars, agent_tokens=tokens,
-                               renominate_base=args.renominate_base)
+                               renominate_base=args.renominate_base, older_than_base=args.older_than_base)
         if res["errors"]:
             print("error docs: " + " | ".join(res["errors"]), file=sys.stderr)
             return 1
@@ -1380,6 +1404,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         raise SystemExit(f"sections.json が無い: {args.data_dir / code4}/*.sections.json（先に scripts/yuho_fetch.py）")
     base_id = base_doc_id(docs)
     targets_doc = load_targets(code4, args.out_dir)
+    if args.older_than_base:
+        base_id, docs = older_than_base_docs(docs, targets_doc)
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     total_in = total_out = 0
     errors: List[str] = []
@@ -1394,7 +1420,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             continue
         info = read_one(doc, args.model, api_key, args.data_dir, args.out_dir, args.dry_run,
                         args.max_ir_chars, args.max_tokens, force=args.force, mode=mode, targets=targets,
-                        max_new_rows=max_new_rows_for(doc, base_id, args.renominate_base),
+                        max_new_rows=0 if args.older_than_base else max_new_rows_for(doc, base_id, args.renominate_base),
                         renominated_base=args.renominate_base and doc["doc_id"] == base_id)
         processed += 1
         if info.get("usage"):
