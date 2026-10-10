@@ -142,5 +142,5 @@ Google News ja RSS（42 主題）┐                                            
 ## Session Handoff
 
 - 2026-10-10 夜 完了: 実装 3 本・Docker 一括 869 OK（基準 768）・疎通便 dry-run 3 本＋`PRESIGN_DRY_RUN=1` runner 連結 exit 0（台帳未作成）・Codex gpt-6-astra 実装レビュー 1 回目 全件反映・2 回目は使用上限で validator（別文脈 Claude）照合 8/8 → commit a2c5e83（実装）/ 9e272c5（docs）/ 3199044（price-discover plist コメント）。
-- 残= オーナー手番 1 件（masa-2 で）: `cp config/launchd/com.influx.wiki-pv-watch.plist ~/Library/LaunchAgents/ && launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.influx.wiki-pv-watch.plist`（README の作法＝repo パスから `launchctl load` を打たない・2026-07-29 の事故）。登録確認= `launchctl list | grep wiki-pv-watch`。初便 2026-10-13 火 09:30。presign 便は news-shock 日次便の末尾で 10/13 から自動開始（開始日ゲート・登録作業なし）。
+- 登録済み: 2026-10-10 21:25 オーナーが masa-2 で `cp`→`launchctl bootstrap`・`launchctl list` に `-	0	com.influx.wiki-pv-watch`・`launchctl print` runs=0 を実測（README の作法どおり `~/Library/LaunchAgents/` へコピーしてから bootstrap・RunAtLoad false のため即時実行なし）。presign 便は news-shock 日次便の末尾で 10/13 から自動開始（開始日ゲート・登録作業なし）。残= オーナー手番なし。
 - 次: 初便後（10/13 火）に `data/wiki_pv_watch/ledger.jsonl`・`data/news_shock/presign_log.jsonl`・`output/shortage_presign/forward_report.md` の生成と `~/.claude/state/wiki-pv-watch.err.log` が空かを確認。採点は毎週火曜の runner 末尾で自動。延長判定 2026-12-12・最終採点 2027-02-10 以降。**規則・合格線は結果を見てから変えない**。
