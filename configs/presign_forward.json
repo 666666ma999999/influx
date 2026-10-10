@@ -1,0 +1,466 @@
+{
+ "_comment": "品薄予兆の前向き採点（P-INF-43 b・事前登録 2026-10-10・Codex gpt-6-astra 設計レビュー 14 件を反映した版・tasks/shortage_presign_forward.md §事前登録 C/D が正本）。主題→① の計器（flea_panel query_id／price_universe series_id）はここ 1 か所。結果を見てから変えない（変更は version を上げ、変更日以降の発火にだけ適用）。",
+ "version": 1,
+ "fixed_at": "2026-10-10",
+ "state_model": {
+  "_note": "① は日ごとの状態〈成立／不成立／不明〉で表す。開始日（onset）= 成立の日 t で、直前 lookback 内の観測に成立が無く不成立が 1 つ以上ある日（不明は不成立に数えない）。直前 lookback が全て不明なら onset_unknown（開始日を特定できない成立）。成立が続く間は同一の ①",
+  "ratio": 1.2,
+  "onset_lookback_days": {
+   "daily": 14,
+   "weekly": 14,
+   "monthly": 45
+  }
+ },
+ "onset_rule": {
+  "flea": {
+   "source": "data/flea_panel/daily.jsonl",
+   "event_date_field": "window",
+   "observed_date_field": "date",
+   "value_field": "sold_median",
+   "min_n_field": "sold_n_top100",
+   "min_n": 3,
+   "smooth_days": 7,
+   "smooth_min_values": 4,
+   "baseline_window_days": [
+    -63,
+    -8
+   ],
+   "baseline_min_values": 14,
+   "cadence": "daily",
+   "_note": "事象日= window（成約の対象日）・観測可能日= date（翌日 21:40 の便）。x_t= sold_median（sold_n_top100 ≥ 3 の日・それ以外は不明）。m_t= 事象日 t-6〜t の x の中央値（最低 4 日）。b_t= t-63〜t-8 の x の中央値（最低 14 日・9/23 開始のため 28 日では 10/28 まで判定不能になる）。成立 iff m_t ≥ 1.2×b_t。b_t か m_t が無い日は不明。これは『固定クエリの成約中央値の上昇』という代理指標＝商品構成の変化でも成立する（PS5 の版違い・SSD の容量違い等）と承知のうえで ① と扱う。sold_d1_capped は x に無関係（x は成約一覧 top100 の中央値）"
+  },
+  "flea_list_price": {
+   "ratio": 1.2,
+   "_note": "list_prices に定価がある query_id は 成立 iff m_t ≥ 1.2×定価（P-INF-42 の ① と同形）。2026-10-10 時点 登録なし"
+  },
+  "pu_weekly": {
+   "source": "data/price_watch/universe_weekly.jsonl",
+   "id_field": "id",
+   "status": "ok",
+   "dedupe": "同一 (id,date) は最後の行",
+   "event_date_field": "date",
+   "value_field": "value",
+   "baseline_window_days": [
+    -63,
+    -8
+   ],
+   "baseline_min_values": 4,
+   "cadence": "weekly",
+   "_note": "週 1 便（月曜全系列）＋日次型は平日毎日。x_t= value。b_t= date が t-63〜t-8 の値の中央値（最低 4 観測）。成立 iff x_t ≥ 1.2×b_t。本発火行（forward_log firing/rise）は使わない＝米・鶏卵・小麦・コーヒーは上昇アラートが無効で本発火が出ない・本発火は開始日でも非成立の記録でもない（Codex 指摘 1・2）"
+  },
+  "pu_monthly": {
+   "source": "data/price_watch/universe_weekly.jsonl",
+   "id_field": "id",
+   "status": "ok",
+   "dedupe": "同一 (id,src_date) は最初に観測した行＝公表を知った日",
+   "event_date_field": "date",
+   "value_field": "yoy_pct",
+   "threshold_pct": 20.0,
+   "cadence": "monthly",
+   "_note": "月次系列（cadence=monthly: rice-aitai／egg-tokyo-m／cgpi-*）は台帳に 2026-08 以降しか無く 12 か月の中央値が作れないため、収集器が源の履歴から計算済みの前年同月比 yoy_pct ≥ +20% を成立とする（1.2 倍と同義）。yoy_pct が null の月は不明"
+  },
+  "pu_cadence": {
+   "toreca-sar": "weekly",
+   "nand_spot": "weekly",
+   "dram_spot_ddr5_16gb": "weekly",
+   "copper": "weekly",
+   "gold-int": "weekly",
+   "gold-tanaka": "weekly",
+   "lithium": "weekly",
+   "cgpi-cobalt-import": "monthly",
+   "cgpi-tin-import": "monthly",
+   "fmbi-iridium": "weekly",
+   "fmbi-ruthenium": "weekly",
+   "uranium": "weekly",
+   "lumber": "weekly",
+   "scrap-steel": "weekly",
+   "scrap-tokyosteel": "weekly",
+   "scfi": "weekly",
+   "bdi": "weekly",
+   "rice-aitai": "monthly",
+   "egg-tokyo-m": "monthly",
+   "coffee": "weekly",
+   "cocoa": "weekly",
+   "wti": "weekly",
+   "brent": "weekly",
+   "naphtha": "weekly",
+   "wheat": "weekly"
+  }
+ },
+ "list_prices": {},
+ "_list_prices_note": "2026-10-10 時点 登録なし（Switch 2 公式価格ページは JS 描画で機械取得不可・PS5 本体は 55,000 円の国内向け版と標準版が混在）。2026-10-13 09:30 の初便より前の登録は v1 のまま可・以後は version 2 として変更日以降の発火にだけ適用",
+ "scoring": {
+  "horizon_days": 60,
+  "confirm_lookback_days": 28,
+  "grace_days": 14,
+  "collect_interval": {
+   "start": "2026-10-13",
+   "end_exclusive": "2026-12-12",
+   "_note": "known_date（JST 日付）が [start, end) の発火を母集団にする＝60 日。2026-10-13 は火曜（初便）"
+  },
+  "extension": {
+   "decide_on": "2026-12-12",
+   "rule": "源ごとに採点対象エピソード数 N（pending 含む）< 5 なら、その源だけ収集を 2027-02-10（排他）まで 1 回延長。最終採点は最後の発火の known_date+60+14 日後（延長なしなら 2027-02-24 まで）",
+   "max_extensions": 1
+  },
+  "verdict_table_per_instrument": [
+   "1. K= known_date。K 以前の lookback 内の最後の判定可能日の状態が成立、または onset ∈ [K-28, K] → confirm_after（① が先）",
+   "2. それ以外で onset の事象日 ∈ (K, K+60] → hit（lead_days= onset − K・検出遅延= 観測可能日 − 事象日 を別記）",
+   "3. それ以外で 採点日 < K+60 → pending",
+   "4. それ以外で (K, K+60] の判定可能観測が十分（daily: ≥42 日／weekly: ≥6 観測／monthly: ≥2 観測）→ miss",
+   "5. それ以外で 採点日 < K+60+14 → pending（遅着データの猶予）／以後 → unobserved",
+   "lookback が全て不明（10/28 以前の flea 等）は confirm_after にせず 2 以降へ進み lookback_partial=true を付ける"
+  ],
+  "combine_instruments": "主題（または題名の instruments_override）の計器を OR で束ねる。優先順位= hit > confirm_after > pending > miss > unobserved。計器が無い主題= unscorable。hit の onset は最も早い計器のもの。Switch 2 の記事は switch2 の計器だけで採点する（題名・主題を細分化・総称の『ゲーム機』だけが両計器）",
+  "verdicts": [
+   "hit",
+   "miss",
+   "confirm_after",
+   "unobserved",
+   "pending",
+   "unscorable"
+  ],
+  "state_transitions": "pending → {hit, miss, confirm_after, unobserved} の 1 回だけ。確定後は再採点しない（同じ (source, episode_id, spec_version) の確定行は 1 行）",
+  "comparison_rate": {
+   "method": "同じ主題・同じ計器・同じ判定表を、収集区間内の毎週火曜 T を疑似発火（K=T）として適用し hit/(hit+miss) を主題ごとに出す。源の比較率= その源の発火数で重み付けした主題別比較率の加重平均",
+   "_note": "無条件の ① 発生率を同じ手続きで測る＝追認除外・複数計器 OR・観測可能性を発火側と揃える（Codex 指摘 5）"
+  },
+  "pass_line": {
+   "min_scored": 5,
+   "min_hit_rate": 0.5,
+   "min_margin_over_comparison": 0.2,
+   "_note": "源ごと: 採点できた (H+M) ≥ 5 かつ H/(H+M) ≥ 0.5 かつ 的中率 − 比較率 ≥ 0.2 → 合格＝**見張りを続ける運用上の便宜基準であり有効性の証明ではない**（N=5 では偶然でも 3/5 以上が出る確率 ≈ 32%・Codex 指摘 6）。報告には Wilson 95% 区間・独立した ① の件数（distinct onset）・主題数を併記する。(H+M) < 5 → 判定不能"
+  }
+ },
+ "ledger": "data/shortage_presign/forward_eval.jsonl",
+ "report": "output/shortage_presign/forward_report.md",
+ "sources": {
+  "wiki": "data/wiki_pv_watch/ledger.jsonl",
+  "rss": "data/news_shock/presign_log.jsonl"
+ },
+ "source_classes": {
+  "wiki": "Wikipedia 閲覧数",
+  "feed-official": "発行元 RSS（メーカー・官公庁）= 公式告知",
+  "feed-industry": "発行元 RSS（調査会社・業界紙）= 業界予測",
+  "gnews-media": "Google News ja 検索（一般媒体経由・族は語彙で付与・公式性は機械で確認できないため別行で報告）"
+ },
+ "subjects": {
+  "switch2": {
+   "label": "Nintendo Switch 2",
+   "flea": [
+    "switch2-honntai"
+   ],
+   "pu": []
+  },
+  "ps5": {
+   "label": "PlayStation 5",
+   "flea": [
+    "ps5-honntai"
+   ],
+   "pu": []
+  },
+  "game-console": {
+   "label": "ゲーム機（総称）",
+   "flea": [
+    "switch2-honntai",
+    "ps5-honntai"
+   ],
+   "pu": []
+  },
+  "gpu-graphics": {
+   "label": "GPU/グラボ",
+   "flea": [
+    "rtx5090"
+   ],
+   "pu": []
+  },
+  "pokeca": {
+   "label": "ポケモンカード",
+   "flea": [
+    "pokeca-151-box",
+    "lizardon-psa10"
+   ],
+   "pu": [
+    "toreca-sar"
+   ]
+  },
+  "yugioh": {
+   "label": "遊戯王",
+   "flea": [
+    "9766-遊戯王-25th-クォーターセンチュリー"
+   ],
+   "pu": []
+  },
+  "toreka": {
+   "label": "トレカ（総称）",
+   "flea": [
+    "pokeca-151-box",
+    "lizardon-psa10",
+    "9766-遊戯王-25th-クォーターセンチュリー"
+   ],
+   "pu": [
+    "toreca-sar"
+   ]
+  },
+  "gunpla": {
+   "label": "ガンプラ",
+   "flea": [
+    "7832-ガンプラ-未組立"
+   ],
+   "pu": []
+  },
+  "onepiece-figure": {
+   "label": "ワンピース フィギュア",
+   "flea": [
+    "figure-onepiece-pop"
+   ],
+   "pu": []
+  },
+  "figure-plamo": {
+   "label": "フィギュア・プラモ（総称）",
+   "flea": [
+    "7832-ガンプラ-未組立",
+    "figure-onepiece-pop"
+   ],
+   "pu": []
+  },
+  "beyblade": {
+   "label": "ベイブレードX",
+   "flea": [
+    "7867-ベイブレードx"
+   ],
+   "pu": []
+  },
+  "tamagotchi": {
+   "label": "たまごっち",
+   "flea": [],
+   "pu": [],
+   "note": "計器なし＝採点不能（発火数のみ報告）"
+  },
+  "nand-ssd": {
+   "label": "NAND/SSD",
+   "flea": [
+    "285a-kioxia-ssd"
+   ],
+   "pu": [
+    "nand_spot"
+   ]
+  },
+  "dram": {
+   "label": "DRAM/HBM",
+   "flea": [],
+   "pu": [
+    "dram_spot_ddr5_16gb"
+   ]
+  },
+  "semiconductor": {
+   "label": "半導体（総称）",
+   "flea": [],
+   "pu": [
+    "dram_spot_ddr5_16gb",
+    "nand_spot"
+   ]
+  },
+  "hdd": {
+   "label": "HDD",
+   "flea": [],
+   "pu": [],
+   "note": "計器なし＝採点不能"
+  },
+  "cpu-logic": {
+   "label": "CPU",
+   "flea": [],
+   "pu": [],
+   "note": "計器なし＝採点不能"
+  },
+  "copper": {
+   "label": "銅",
+   "flea": [],
+   "pu": [
+    "copper"
+   ]
+  },
+  "gold": {
+   "label": "金",
+   "flea": [],
+   "pu": [
+    "gold-int",
+    "gold-tanaka"
+   ]
+  },
+  "rare-metal": {
+   "label": "レアメタル",
+   "flea": [],
+   "pu": [
+    "lithium",
+    "cgpi-cobalt-import",
+    "cgpi-tin-import",
+    "fmbi-iridium",
+    "fmbi-ruthenium"
+   ]
+  },
+  "uranium": {
+   "label": "ウラン",
+   "flea": [],
+   "pu": [
+    "uranium"
+   ]
+  },
+  "lumber": {
+   "label": "木材",
+   "flea": [],
+   "pu": [
+    "lumber"
+   ]
+  },
+  "steel-kenzai": {
+   "label": "鉄鋼・建材",
+   "flea": [],
+   "pu": [
+    "scrap-steel",
+    "scrap-tokyosteel"
+   ]
+  },
+  "kaiun-unchin": {
+   "label": "海運運賃",
+   "flea": [],
+   "pu": [
+    "scfi",
+    "bdi"
+   ]
+  },
+  "kome": {
+   "label": "米",
+   "flea": [],
+   "pu": [
+    "rice-aitai"
+   ],
+   "note": "price_universe の上昇アラートは無効（999）＝本発火行は使わず、値（前年同月比）から ① を判定する"
+  },
+  "keiran": {
+   "label": "鶏卵",
+   "flea": [],
+   "pu": [
+    "egg-tokyo-m"
+   ],
+   "note": "同上（上昇アラート無効・値から判定）"
+  },
+  "coffee-cacao": {
+   "label": "コーヒー・カカオ",
+   "flea": [],
+   "pu": [
+    "coffee",
+    "cocoa"
+   ],
+   "note": "coffee は上昇アラート無効（999）・値から判定"
+  },
+  "gasoline": {
+   "label": "ガソリン",
+   "flea": [],
+   "pu": [
+    "wti",
+    "brent"
+   ]
+  },
+  "genyu": {
+   "label": "原油",
+   "flea": [],
+   "pu": [
+    "wti",
+    "brent"
+   ]
+  },
+  "naphtha-x": {
+   "label": "ナフサ",
+   "flea": [],
+   "pu": [
+    "naphtha"
+   ]
+  },
+  "pan": {
+   "label": "パン・小麦",
+   "flea": [],
+   "pu": [
+    "wheat"
+   ],
+   "note": "wheat は上昇アラート無効（999）・値から判定"
+  },
+  "zojirushi": {
+   "label": "象印",
+   "flea": [
+    "7965-象印-炊飯器"
+   ],
+   "pu": []
+  },
+  "asics": {
+   "label": "アシックス",
+   "flea": [
+    "7936-アシックス-スニーカー-未使用"
+   ],
+   "pu": []
+  },
+  "tamron": {
+   "label": "タムロン",
+   "flea": [
+    "7740-tamron-レンズ"
+   ],
+   "pu": []
+  },
+  "nikon": {
+   "label": "ニコン",
+   "flea": [
+    "7731-nikon-z-ボディ"
+   ],
+   "pu": []
+  },
+  "mizuno": {
+   "label": "ミズノ",
+   "flea": [
+    "8022-ミズノ-グローブ"
+   ],
+   "pu": []
+  },
+  "makita": {
+   "label": "マキタ",
+   "flea": [
+    "6586-マキタ-18v-本体"
+   ],
+   "pu": []
+  },
+  "gshock": {
+   "label": "G-SHOCK（カシオ）",
+   "flea": [
+    "6952-g-shock-新品"
+   ],
+   "pu": []
+  },
+  "grandseiko": {
+   "label": "グランドセイコー",
+   "flea": [
+    "8050-グランドセイコー"
+   ],
+   "pu": []
+  },
+  "shimano": {
+   "label": "シマノ",
+   "flea": [
+    "7309-シマノ-コンポーネント"
+   ],
+   "pu": []
+  },
+  "yamaha": {
+   "label": "ヤマハ",
+   "flea": [
+    "7951-ヤマハ-電子ピアノ"
+   ],
+   "pu": []
+  },
+  "globeride": {
+   "label": "ダイワ（グローブライド）",
+   "flea": [
+    "7990-ダイワ-リール"
+   ],
+   "pu": []
+  }
+ }
+}

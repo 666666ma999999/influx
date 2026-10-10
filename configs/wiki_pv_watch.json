@@ -1,0 +1,302 @@
+{
+ "_comment": "品薄予兆・Wikipedia 閲覧数の週次見張り（P-INF-43 b・事前登録 2026-10-10・Codex gpt-6-astra 設計レビュー反映版・tasks/shortage_presign_forward.md §事前登録 A が正本）。P-INF-42 遡り測定 S-C（9 事件中 7 で測れ 5 事件で先行・中央値 27 日）の昇格。題名は API の転送解決後の最終題名。主題→① 計器は configs/presign_forward.json に 1 か所。結果を見てから規則を変えない（変更は version を上げ、変更日以降の発火にだけ適用）。",
+ "version": 1,
+ "fixed_at": "2026-10-10",
+ "api": {
+  "base": "https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/ja.wikipedia/all-access/user",
+  "granularity": "daily",
+  "user_agent": "influx-wiki-pv-watch/0.1 (research script; shortage presign forward)",
+  "fetch_weeks": 10,
+  "retry": 6,
+  "sleep_sec": 0.5,
+  "timeout_sec": 60,
+  "_note": "429 は Retry-After（無ければ 5×試行回数 秒）で最大 6 回。題名ごとに失敗は status=error 行（便は続行）"
+ },
+ "schedule": {
+  "weekday": "tuesday",
+  "time": "09:30",
+  "launchd_label": "com.influx.wiki-pv-watch",
+  "_note": "週= 月曜〜日曜（UTC 日付）。日曜分が API に揃うのは月曜 UTC のため火曜に判定"
+ },
+ "rule": {
+  "week_start": "monday",
+  "require_days": 7,
+  "base_weeks": 8,
+  "base_min_weeks": 6,
+  "ratio": 2.0,
+  "base_floor_per_week": 200,
+  "episode_days": 56,
+  "_note": "週合計 S ≥ ratio × 直前 base_weeks 週（7/7 日そろった週・最低 base_min_weeks）の中央値 B かつ B ≥ base_floor_per_week（P-INF-42 §次回規則 ③）。エピソード= 題名ごと・初発火の week_start から 56 日以内の発火は同一（連鎖させない）"
+ },
+ "judging": {
+  "unique_key": "(title, week_start)",
+  "eligible_weeks": "取得範囲内の週で week_end ≤ 便の UTC 前日 のもの全て。既に judged=true の週は再判定しない（初回判定が最終・PV の後日訂正は無視）",
+  "incomplete_week": "7/7 日そろわない週は week_obs(judged=false, days<7) を記録し、以後の便で fetch_weeks 内なら再判定できる。fetch_weeks を出たら unjudgeable で確定",
+  "baseline_insufficient": "直前 8 週のうち 7/7 日そろった週が 6 未満なら judged=false, reason=base_insufficient（同上）",
+  "known_date": "判定した便の実行日（JST）。以後変えない",
+  "score_eligible": "week_end ≥ known_date − 8 日 の週だけ採点対象（初便が過去 10 週をまとめて判定する分は基準線づくり＝score_eligible=false）。かつ known_date が presign_forward.json の collect_interval 内",
+  "provenance": "fire 行と week_obs 行に config_version・config_sha（本ファイルの sha256 先頭 12 桁）を焼き込む"
+ },
+ "baseline_from": "2026-08-03",
+ "excluded_titles": {
+  "家電": "2026-09 週換算 19/週・下限未満",
+  "電気料金": "26/週・下限未満",
+  "中古車": "119/週・下限未満",
+  "ヤーマン": "161/週・下限未満",
+  "リザードン": "一覧ページ『ポケモンの一覧 (1-51)』への転送",
+  "GeForce 50シリーズ": "記事なし（API missing）",
+  "エア・コンディショナー／オートバイ／冷凍食品／ハム": "① の計器なし"
+ },
+ "titles": [
+  {
+   "title": "Nintendo Switch 2",
+   "subject": "switch2",
+   "pv_2026_09_month": 17324
+  },
+  {
+   "title": "PlayStation 5",
+   "subject": "ps5",
+   "pv_2026_09_month": 17926
+  },
+  {
+   "title": "ゲーム機",
+   "subject": "game-console",
+   "pv_2026_09_month": 7883
+  },
+  {
+   "title": "NVIDIA GeForce",
+   "subject": "gpu-graphics",
+   "pv_2026_09_month": 5841
+  },
+  {
+   "title": "GPU",
+   "subject": "gpu-graphics",
+   "pv_2026_09_month": 2561
+  },
+  {
+   "title": "ポケモンカードゲーム",
+   "subject": "pokeca",
+   "pv_2026_09_month": 5126
+  },
+  {
+   "title": "遊☆戯☆王オフィシャルカードゲーム",
+   "subject": "yugioh",
+   "pv_2026_09_month": 3670
+  },
+  {
+   "title": "トレーディングカード",
+   "subject": "toreka",
+   "pv_2026_09_month": 2416
+  },
+  {
+   "title": "ガンプラ",
+   "subject": "gunpla",
+   "pv_2026_09_month": 2443
+  },
+  {
+   "title": "フィギュア",
+   "subject": "figure-plamo",
+   "pv_2026_09_month": 1310
+  },
+  {
+   "title": "ONE PIECE",
+   "subject": "onepiece-figure",
+   "pv_2026_09_month": 63457
+  },
+  {
+   "title": "BEYBLADE X",
+   "subject": "beyblade",
+   "pv_2026_09_month": 11609
+  },
+  {
+   "title": "たまごっち",
+   "subject": "tamagotchi",
+   "pv_2026_09_month": 9395
+  },
+  {
+   "title": "キオクシア",
+   "subject": "nand-ssd",
+   "pv_2026_09_month": 20665
+  },
+  {
+   "title": "フラッシュメモリ",
+   "subject": "nand-ssd",
+   "pv_2026_09_month": 2808
+  },
+  {
+   "title": "ソリッドステートドライブ",
+   "subject": "nand-ssd",
+   "pv_2026_09_month": 2706
+  },
+  {
+   "title": "DDR4 SDRAM",
+   "subject": "dram",
+   "pv_2026_09_month": 1175
+  },
+  {
+   "title": "DDR5 SDRAM",
+   "subject": "dram",
+   "pv_2026_09_month": 1799
+  },
+  {
+   "title": "Dynamic Random Access Memory",
+   "subject": "dram",
+   "pv_2026_09_month": 934
+  },
+  {
+   "title": "High Bandwidth Memory",
+   "subject": "dram",
+   "pv_2026_09_month": 1072
+  },
+  {
+   "title": "半導体",
+   "subject": "semiconductor",
+   "pv_2026_09_month": 5882
+  },
+  {
+   "title": "ハードディスクドライブ",
+   "subject": "hdd",
+   "pv_2026_09_month": 2240
+  },
+  {
+   "title": "CPU",
+   "subject": "cpu-logic",
+   "pv_2026_09_month": 2823
+  },
+  {
+   "title": "銅",
+   "subject": "copper",
+   "pv_2026_09_month": 5668
+  },
+  {
+   "title": "金",
+   "subject": "gold",
+   "pv_2026_09_month": 7412
+  },
+  {
+   "title": "レアメタル",
+   "subject": "rare-metal",
+   "pv_2026_09_month": 2420
+  },
+  {
+   "title": "ウラン",
+   "subject": "uranium",
+   "pv_2026_09_month": 5239
+  },
+  {
+   "title": "木材",
+   "subject": "lumber",
+   "pv_2026_09_month": 1118
+  },
+  {
+   "title": "鋼",
+   "subject": "steel-kenzai",
+   "pv_2026_09_month": 4046
+  },
+  {
+   "title": "海運",
+   "subject": "kaiun-unchin",
+   "pv_2026_09_month": 823
+  },
+  {
+   "title": "米",
+   "subject": "kome",
+   "pv_2026_09_month": 6441
+  },
+  {
+   "title": "令和の米騒動",
+   "subject": "kome",
+   "pv_2026_09_month": 4825
+  },
+  {
+   "title": "鶏卵",
+   "subject": "keiran",
+   "pv_2026_09_month": 2890
+  },
+  {
+   "title": "コーヒー",
+   "subject": "coffee-cacao",
+   "pv_2026_09_month": 8258
+  },
+  {
+   "title": "カカオ",
+   "subject": "coffee-cacao",
+   "pv_2026_09_month": 4831
+  },
+  {
+   "title": "ガソリン",
+   "subject": "gasoline",
+   "pv_2026_09_month": 3868
+  },
+  {
+   "title": "原油",
+   "subject": "genyu",
+   "pv_2026_09_month": 1975
+  },
+  {
+   "title": "ナフサ",
+   "subject": "naphtha-x",
+   "pv_2026_09_month": 3121
+  },
+  {
+   "title": "パン",
+   "subject": "pan",
+   "pv_2026_09_month": 5183
+  },
+  {
+   "title": "象印マホービン",
+   "subject": "zojirushi",
+   "pv_2026_09_month": 2512
+  },
+  {
+   "title": "アシックス",
+   "subject": "asics",
+   "pv_2026_09_month": 9805
+  },
+  {
+   "title": "タムロン",
+   "subject": "tamron",
+   "pv_2026_09_month": 1242
+  },
+  {
+   "title": "ニコン",
+   "subject": "nikon",
+   "pv_2026_09_month": 5295
+  },
+  {
+   "title": "ミズノ",
+   "subject": "mizuno",
+   "pv_2026_09_month": 4254
+  },
+  {
+   "title": "マキタ",
+   "subject": "makita",
+   "pv_2026_09_month": 2419
+  },
+  {
+   "title": "G-SHOCK",
+   "subject": "gshock",
+   "pv_2026_09_month": 1983
+  },
+  {
+   "title": "グランドセイコー",
+   "subject": "grandseiko",
+   "pv_2026_09_month": 1469
+  },
+  {
+   "title": "シマノ",
+   "subject": "shimano",
+   "pv_2026_09_month": 3555
+  },
+  {
+   "title": "ヤマハ",
+   "subject": "yamaha",
+   "pv_2026_09_month": 10227
+  },
+  {
+   "title": "グローブライド",
+   "subject": "globeride",
+   "pv_2026_09_month": 1741
+  }
+ ]
+}

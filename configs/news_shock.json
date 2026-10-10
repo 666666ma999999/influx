@@ -69,5 +69,550 @@
     {"facility_group": "oil_chokepoints",
      "or_terms": ["Abqaiq", "\"Ras Tanura\"", "\"Kharg Island\"", "\"Strait of Hormuz\"", "Novorossiysk", "Primorsk", "Druzhba", "Ceyhan"],
      "series_ids": ["wti", "brent"]}
-  ]
+  ],
+  "presign": {
+    "_comment": "品薄予兆レーン（P-INF-43 b・事前登録 2026-10-10・Codex gpt-6-astra 設計レビュー反映版・tasks/shortage_presign_forward.md §事前登録 B が正本）。供給ショックレーン（上の vocab/queries/version）とは別台帳 presign_log.jsonl・実行は news_shock_collect.py --lane presign・判定は同じ〈主題語〉AND〈凍結語彙〉に〈除外語〉〈否定語〉〈方向語〉を足した形。P-INF-42 で合格した源 2 本（公式告知 10/9/5・中央値 8 日先／業界予測 10/5/3・37 日先）の前向き版。『高騰』は実況語（① 当体）なので語彙に入れない。",
+    "version": 1,
+    "fixed_at": "2026-10-10",
+    "ledger": "data/news_shock/presign_log.jsonl",
+    "collect": {
+      "when_days": 2,
+      "timeout_sec": 20,
+      "hl": "ja",
+      "gl": "JP",
+      "ceid": "JP:ja"
+    },
+    "search_or_phrases": [
+      "値上げ",
+      "価格改定",
+      "生産終了",
+      "出荷停止",
+      "出荷調整",
+      "供給不足",
+      "抽選販売",
+      "購入制限",
+      "入荷未定",
+      "販売休止",
+      "受注停止",
+      "価格予測",
+      "上昇見通し",
+      "上昇見込み",
+      "値上がり見込み",
+      "契約価格"
+    ],
+    "_search_note": "日本語語彙は全て検索句に含める（カバレッジ規則・selftest で検査）。英語語彙は発行元 RSS（feeds）向けで Google 検索には使わない",
+    "vocab_families": {
+      "official_notice": [
+        "値上げ",
+        "価格改定",
+        "生産終了",
+        "出荷停止",
+        "出荷調整",
+        "供給不足",
+        "抽選販売",
+        "購入制限",
+        "入荷未定",
+        "販売休止",
+        "受注停止",
+        "price increase",
+        "price hike",
+        "end of life",
+        "EOL",
+        "discontinue",
+        "allocation",
+        "supply shortage",
+        "supply constraint",
+        "lottery"
+      ],
+      "industry_forecast": [
+        "価格予測",
+        "上昇見通し",
+        "上昇見込み",
+        "値上がり見込み",
+        "契約価格",
+        "forecast",
+        "outlook",
+        "contract price",
+        "to rise",
+        "QoQ",
+        "persist"
+      ]
+    },
+    "direction_required": [
+      "契約価格",
+      "価格予測",
+      "forecast",
+      "outlook",
+      "contract price",
+      "QoQ",
+      "persist"
+    ],
+    "direction_words": [
+      "上昇",
+      "上げ",
+      "高",
+      "不足",
+      "逼迫",
+      "増",
+      "increase",
+      "rise",
+      "rising",
+      "higher",
+      "hike",
+      "tight",
+      "shortage",
+      "constraint",
+      "surge",
+      "gain",
+      "up "
+    ],
+    "negation_words": [
+      "見送り",
+      "見送る",
+      "撤回",
+      "据え置き",
+      "据置",
+      "値下げ",
+      "引き下げ",
+      "下落",
+      "下方修正",
+      "to fall",
+      "decline",
+      "decrease",
+      "drop",
+      "lower",
+      "downward",
+      "cut"
+    ],
+    "_judge_note": "判定順: ①主題語（ASCII= 単語境界・日本語= 部分一致・query.exclude の語は本文から除いてから照合） ②凍結語彙（全一致語を記録） ③direction_required の語彙だけは direction_words のいずれかを伴う時のみ有効 ④negation_words を含む記事は status=negated で台帳に残し発火にしない（固定反例: 『ジャパン航空が運賃の価格改定』→パン非該当／『たまごっちの抽選販売』→鶏卵非該当／『パンの価格改定を見送り』→negated／『DRAM contract price forecast to fall』→negated）",
+    "family_assignment": "source_class ごと: feed-official（kind=maker/government）= official 語彙があれば official_notice・なければ industry_forecast／feed-industry（kind=industry/trade-press）= forecast 語彙があれば industry_forecast・なければ official_notice／gnews-media= official 語彙があれば official_notice・なければ industry_forecast。全一致語彙と全該当族を matched_vocab_all / families_all に残す",
+    "identity": {
+      "article_id": "sha256(source_id|link の utm_* と fragment を除いた正規化 URL) 先頭 16",
+      "dedupe": "同一 (source_id, link_norm) は 2 度書かない。別源で同じ記事が見つかった時は別行（源ごとに測るため）",
+      "known_date": "最初に取得した便の実行日（JST）。以後変えない",
+      "pubdate": "RSS= RFC822／Atom= ISO8601 を UTC 日付に。解釈できない時は便の UTC 日付を使い pubdate_parsed=false",
+      "event_id": "sha256(subject|family|pubdate_utc_date|source_class) 先頭 16",
+      "episode": "(source_class, subject, family) ごと。最初の hit の known_date を起点に 7 日以内の hit は同一・次の hit から新エピソード（連鎖させない）。episode_id= source_class:subject:family:起点 known_date",
+      "desc_snippet": "判定に使った title+desc の先頭 300 字を台帳に残す（再検証用）"
+    },
+    "queries": [
+      {
+        "subject": "dram",
+        "terms": [
+          "DRAM",
+          "DDR5",
+          "DDR4",
+          "HBM",
+          "メモリ価格",
+          "メモリー価格"
+        ]
+      },
+      {
+        "subject": "nand-ssd",
+        "terms": [
+          "NAND",
+          "SSD",
+          "フラッシュメモリ",
+          "キオクシア",
+          "Kioxia"
+        ]
+      },
+      {
+        "subject": "hdd",
+        "terms": [
+          "HDD",
+          "ハードディスク"
+        ]
+      },
+      {
+        "subject": "gpu-graphics",
+        "terms": [
+          "GeForce",
+          "RTX",
+          "GPU",
+          "グラフィックボード",
+          "グラボ"
+        ]
+      },
+      {
+        "subject": "cpu-logic",
+        "terms": [
+          "CPU",
+          "Ryzen",
+          "Core Ultra"
+        ]
+      },
+      {
+        "subject": "semiconductor",
+        "terms": [
+          "半導体"
+        ]
+      },
+      {
+        "subject": "switch2",
+        "terms": [
+          "Switch 2",
+          "Switch2",
+          "スイッチ2",
+          "Nintendo Switch 2"
+        ]
+      },
+      {
+        "subject": "ps5",
+        "terms": [
+          "PS5",
+          "PlayStation 5",
+          "PlayStation5",
+          "プレステ5"
+        ]
+      },
+      {
+        "subject": "game-console",
+        "terms": [
+          "ゲーム機"
+        ]
+      },
+      {
+        "subject": "pokeca",
+        "terms": [
+          "ポケモンカード",
+          "ポケカ"
+        ]
+      },
+      {
+        "subject": "yugioh",
+        "terms": [
+          "遊戯王"
+        ]
+      },
+      {
+        "subject": "toreka",
+        "terms": [
+          "トレカ",
+          "トレーディングカード"
+        ]
+      },
+      {
+        "subject": "gunpla",
+        "terms": [
+          "ガンプラ"
+        ]
+      },
+      {
+        "subject": "onepiece-figure",
+        "terms": [
+          "ワンピース フィギュア",
+          "ONE PIECE フィギュア",
+          "P.O.P"
+        ]
+      },
+      {
+        "subject": "figure-plamo",
+        "terms": [
+          "フィギュア",
+          "プラモデル"
+        ]
+      },
+      {
+        "subject": "beyblade",
+        "terms": [
+          "ベイブレード"
+        ]
+      },
+      {
+        "subject": "tamagotchi",
+        "terms": [
+          "たまごっち"
+        ]
+      },
+      {
+        "subject": "copper",
+        "terms": [
+          "銅価格",
+          "銅地金",
+          "銅相場",
+          "copper"
+        ],
+        "exclude": [
+          "Copperfield"
+        ]
+      },
+      {
+        "subject": "gold",
+        "terms": [
+          "金価格",
+          "金地金",
+          "ゴールド",
+          "gold price"
+        ]
+      },
+      {
+        "subject": "rare-metal",
+        "terms": [
+          "レアメタル",
+          "リチウム",
+          "コバルト",
+          "ニッケル",
+          "レアアース"
+        ]
+      },
+      {
+        "subject": "uranium",
+        "terms": [
+          "ウラン",
+          "uranium"
+        ]
+      },
+      {
+        "subject": "lumber",
+        "terms": [
+          "木材",
+          "製材",
+          "合板",
+          "lumber"
+        ]
+      },
+      {
+        "subject": "steel-kenzai",
+        "terms": [
+          "鉄鋼",
+          "鋼材",
+          "H形鋼",
+          "建材"
+        ]
+      },
+      {
+        "subject": "kaiun-unchin",
+        "terms": [
+          "海運",
+          "コンテナ運賃",
+          "海上運賃"
+        ]
+      },
+      {
+        "subject": "kome",
+        "terms": [
+          "コメ",
+          "米価",
+          "米の価格",
+          "銘柄米",
+          "備蓄米"
+        ]
+      },
+      {
+        "subject": "keiran",
+        "terms": [
+          "鶏卵",
+          "卵価",
+          "卵の価格",
+          "たまごの価格"
+        ],
+        "exclude": [
+          "たまごっち"
+        ]
+      },
+      {
+        "subject": "coffee-cacao",
+        "terms": [
+          "コーヒー",
+          "カカオ",
+          "チョコレート"
+        ]
+      },
+      {
+        "subject": "gasoline",
+        "terms": [
+          "ガソリン",
+          "軽油"
+        ]
+      },
+      {
+        "subject": "genyu",
+        "terms": [
+          "原油"
+        ]
+      },
+      {
+        "subject": "naphtha-x",
+        "terms": [
+          "ナフサ"
+        ]
+      },
+      {
+        "subject": "pan",
+        "terms": [
+          "パン",
+          "小麦"
+        ],
+        "exclude": [
+          "ジャパン",
+          "パンダ",
+          "パンフ",
+          "パンク",
+          "パンツ",
+          "パンチ",
+          "パンプ",
+          "パンデミ",
+          "フライパン",
+          "パンケーキ",
+          "ジパング",
+          "パンサー",
+          "パンテ",
+          "パンナ",
+          "パンパ",
+          "パンジー",
+          "パンツ",
+          "コンパニ",
+          "パンドラ",
+          "ホットパンツ"
+        ]
+      },
+      {
+        "subject": "zojirushi",
+        "terms": [
+          "象印"
+        ]
+      },
+      {
+        "subject": "asics",
+        "terms": [
+          "アシックス"
+        ]
+      },
+      {
+        "subject": "tamron",
+        "terms": [
+          "タムロン"
+        ]
+      },
+      {
+        "subject": "nikon",
+        "terms": [
+          "ニコン"
+        ]
+      },
+      {
+        "subject": "mizuno",
+        "terms": [
+          "ミズノ"
+        ]
+      },
+      {
+        "subject": "makita",
+        "terms": [
+          "マキタ"
+        ]
+      },
+      {
+        "subject": "gshock",
+        "terms": [
+          "G-SHOCK",
+          "Gショック",
+          "カシオ"
+        ],
+        "exclude": [
+          "カシオペア"
+        ]
+      },
+      {
+        "subject": "grandseiko",
+        "terms": [
+          "グランドセイコー",
+          "セイコー"
+        ]
+      },
+      {
+        "subject": "shimano",
+        "terms": [
+          "シマノ"
+        ]
+      },
+      {
+        "subject": "yamaha",
+        "terms": [
+          "ヤマハ"
+        ],
+        "exclude": [
+          "ヤマハ発動機"
+        ]
+      },
+      {
+        "subject": "globeride",
+        "terms": [
+          "ダイワ",
+          "グローブライド"
+        ]
+      }
+    ],
+    "feeds": [
+      {
+        "id": "trendforce-semiconductors",
+        "url": "https://www.trendforce.com/feed/Semiconductors.html",
+        "subjects": [
+          "dram",
+          "nand-ssd",
+          "gpu-graphics",
+          "cpu-logic",
+          "semiconductor"
+        ],
+        "kind": "industry",
+        "source_class": "feed-industry",
+        "reach_2026_10_10": "200 items=10"
+      },
+      {
+        "id": "samsung-newsroom",
+        "url": "https://news.samsung.com/global/feed",
+        "subjects": [
+          "dram",
+          "nand-ssd"
+        ],
+        "kind": "maker",
+        "source_class": "feed-official",
+        "reach_2026_10_10": "200 items=50"
+      },
+      {
+        "id": "skhynix-newsroom",
+        "url": "https://news.skhynix.com/en/feed/",
+        "subjects": [
+          "dram",
+          "nand-ssd"
+        ],
+        "kind": "maker",
+        "source_class": "feed-official",
+        "reach_2026_10_10": "200 items=10"
+      },
+      {
+        "id": "nvidia-newsroom",
+        "url": "https://nvidianews.nvidia.com/rss.xml",
+        "subjects": [
+          "gpu-graphics"
+        ],
+        "kind": "maker",
+        "source_class": "feed-official",
+        "reach_2026_10_10": "200 items=4"
+      },
+      {
+        "id": "keimei-shimbun",
+        "url": "https://www.keimei.ne.jp/feed/",
+        "subjects": [
+          "keiran"
+        ],
+        "kind": "trade-press",
+        "source_class": "feed-industry",
+        "reach_2026_10_10": "200 items=10"
+      },
+      {
+        "id": "meti-release",
+        "url": "https://www.meti.go.jp/ml_index_release_atom.xml",
+        "subjects": [
+          "*"
+        ],
+        "kind": "government",
+        "source_class": "feed-official",
+        "format": "atom",
+        "reach_2026_10_10": "200 entries=25"
+      }
+    ],
+    "_feeds_unreachable_2026_10_10": "TrendForce /presscenter/rss・/rss 404（カテゴリ feed /feed/Semiconductors.html は到達）／Micron IR 403／Kioxia・Nintendo・Sony・TakaraTomy・Bandai RSS 404or403／農水省 RSS 403／WDC・Sandisk IR 403／日経 404 → 直接取れないメーカー IR は Google News 検索（queries・source_class=gnews-media）が代用＝公式性は機械で確認できないので別行で報告"
+  }
 }
