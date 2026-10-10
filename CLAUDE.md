@@ -47,6 +47,11 @@ bash scripts/price_universe_run.sh   # Docker待機→全系列取得→発火(�
 docker compose run --rm xstock python scripts/price_universe_check.py   # 素の実行（通知なし）
 docker exec -e DISPLAY=:99 xstock-vnc python3 /app/scripts/price_watch_discover.py  # 新商品名の候補キュー生成
 docker compose run --rm xstock python scripts/price_watch_forward.py --eval          # 発火の前向き記録を評価（8/15週後）
+
+# 品薄予兆の前向き測定（P-INF-43 b・2026-10-10・事前登録= tasks/shortage_presign_forward.md。収集 2026-10-13〜12-11・採点は 60 日後）
+bash scripts/wiki_pv_watch_run.sh                                          # Wikipedia 閲覧数の週次見張り（launchd com.influx.wiki-pv-watch 火曜 09:30・題名は configs/wiki_pv_watch.json）→ 末尾で採点器も走る
+/usr/bin/python3 scripts/news_shock_collect.py --lane presign --dry-run    # 公式告知・業界予測の RSS レーン（本番便は news_shock_run.sh に同乗・台帳 data/news_shock/presign_log.jsonl）
+/usr/bin/python3 scripts/presign_forward_eval.py --dry-run                 # 60 日採点（① の計器と合格線は configs/presign_forward.json・報告 output/shortage_presign/forward_report.md）
 # 銘柄→センターピン（利益を動かす中心の価格）の全977社台帳: data/center_pin/center_pin.jsonl
 # 帰属ルール（誤帰属の防ぎ方）と系列の罠は docs/price-watch-universe.md §0a/§0b が正本
 
@@ -116,7 +121,7 @@ scripts/run_research.sh --phase report
 ## 完了前に回す検証（入口はこの1つ）
 
 ```bash
-docker compose run --rm -v "$PWD/tests:/app/tests" xstock python -m unittest discover -s tests   # 392件・数秒（2026-10-03 実測）。ホスト直実行は numpy/playwright 等が無く 11 本が import エラーになる＝Docker で回す。pytest は入っていない
+docker compose run --rm -v "$PWD/tests:/app/tests" xstock python -m unittest discover -s tests   # 869件・数秒（2026-10-10 実測）。ホスト直実行は numpy/playwright 等が無く 11 本が import エラーになる＝Docker で回す。pytest は入っていない
 ```
 
 これが**唯一の一括ゲート**。個別スクリプトの `--selftest`（`coverage_census` `foreign_forward`

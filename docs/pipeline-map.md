@@ -13,12 +13,12 @@
      旧: influx-stock-algo-architecture.md §4-1 の手書き表（2026-08-14 に本ブロックへ移設・向こうはポインタ1行に） -->
 
 <!-- AUTOGEN:start(schedule) -->
-<!-- このブロックは scripts/gen_pipeline_map.py が上書きします（手で編集しない）。件数 18・生成元= git ls-files の plist / workflows -->
+<!-- このブロックは scripts/gen_pipeline_map.py が上書きします（手で編集しない）。件数 20・生成元= git ls-files の plist / workflows -->
 
 | ジョブ（Label / workflow） | いつ動くか | 入口 | 定義ファイル |
 |---|---|---|---|
 | com.influx.edinet-tob | 月曜 18:45／火曜 18:45／水曜 18:45／木曜 18:45／金曜 18:45 | `exec /usr/bin/python3 ~/Desktop/biz/influx/scripts/edinet_fetch.py --dataset documents_all` | `config/launchd/com.influx.edinet-tob.plist` |
-| com.influx.flea-panel | 毎日 21:40 | `bash ~/Desktop/biz/influx/scripts/flea_panel_run.sh` | `config/launchd/com.influx.flea-panel.plist`（2026-09-22 新設・P-INF-19・2026-09-23 登録済み） |
+| com.influx.flea-panel | 毎日 21:40 | `bash ~/Desktop/biz/influx/scripts/flea_panel_run.sh` | `config/launchd/com.influx.flea-panel.plist` |
 | com.influx.fxnia-forward | 月曜 10:30 | `exec ~/Desktop/biz/influx/scripts/fxnia_forward_launchd.sh` | `config/launchd/com.influx.fxnia-forward.plist` |
 | com.influx.jsf-archive | 月曜 12:30／月曜 19:30／火曜 12:30／火曜 19:30／水曜 12:30／水曜 19:30／木曜 12:30／木曜 19:30／金曜 12:30／金曜 19:30 | `exec /usr/bin/python3 ~/Desktop/biz/influx/scripts/jsf_daily_archive.py` | `config/launchd/com.influx.jsf-archive.plist` |
 | com.influx.kpi-clock-sla | 月曜 08:45／火曜 08:45／水曜 08:45／木曜 08:45／金曜 08:45 | `exec /usr/bin/python3 ~/Desktop/biz/influx/scripts/kpi_clock_sla.py` | `config/launchd/com.influx.kpi-clock-sla.plist` |
@@ -27,14 +27,15 @@
 | com.influx.news-shock | 毎日 07:20／毎日 19:00 | `bash ~/Desktop/biz/influx/scripts/news_shock_run.sh` | `config/launchd/com.influx.news-shock.plist` |
 | com.influx.okasira-forward | 月曜 11:15 | `exec ~/Desktop/biz/influx/scripts/fxnia_forward_launchd.sh` | `config/launchd/com.influx.okasira-forward.plist` |
 | com.influx.paper-screen | 月曜 07:30／火曜 07:30／水曜 07:30／木曜 07:30／金曜 07:30 | `exec /usr/bin/python3 ~/Desktop/biz/influx/scripts/daily_screen.py` | `config/launchd/com.influx.paper-screen.plist` |
-| com.influx.price-discover | 日曜・水曜 10:40（2026-10-04 P-INF-29 で週 2 便・plist 実測 Weekday 0/3） | `bash ~/Desktop/biz/influx/scripts/price_discover_run.sh` | `config/launchd/com.influx.price-discover.plist` |
-| com.influx.price-universe | 月〜金 11:00（月=全系列・火〜金=日次型のみ） | `bash ~/Desktop/biz/influx/scripts/price_universe_run.sh` | `config/launchd/com.influx.price-universe.plist` |
+| com.influx.price-discover | 日曜 10:40／水曜 10:40 | `bash ~/Desktop/biz/influx/scripts/price_discover_run.sh` | `config/launchd/com.influx.price-discover.plist` |
+| com.influx.price-universe | 月曜 11:00／火曜 11:00／水曜 11:00／木曜 11:00／金曜 11:00 | `bash ~/Desktop/biz/influx/scripts/price_universe_run.sh` | `config/launchd/com.influx.price-universe.plist` |
 | com.influx.price-watch | 毎日 22:10 | `bash ~/Desktop/biz/influx/scripts/xprice_watch_run.sh` | `config/launchd/com.influx.price-watch.plist` |
 | com.influx.research-weekly | 土曜 09:00 | `exec ~/Desktop/biz/influx/scripts/research_weekly_launchd.sh` | `config/launchd/com.influx.research-weekly.plist` |
 | com.influx.sedori-trend | 月曜 09:00 | `bash ~/Desktop/biz/influx/scripts/sedori_trend_run.sh` | `config/launchd/com.influx.sedori-trend.plist` |
 | com.influx.tob-forward | 毎日 07:15 | `exec ~/Desktop/biz/influx/scripts/tob_forward_launchd.sh` | `config/launchd/com.influx.tob-forward.plist` |
 | com.influx.tob-monthly | 毎月1日 07:30／毎月2日 07:30／毎月3日 07:30／毎月4日 07:30／毎月5日 07:30／毎月6日 07:30／毎月7日 07:30／毎月8日 07:30／毎月9日 07:30／毎月10日 07:30 | `exec /usr/bin/python3 ~/Desktop/biz/influx/scripts/kpi_tob_candidate_score.py --forward -- …（全文は定義ファイル）` | `config/launchd/com.influx.tob-monthly.plist` |
 | com.influx.us-watchlist | 火曜 10:30 | `exec "$HOME/Desktop/biz/influx/scripts/us_watchlist_launchd.sh"` | `config/launchd/com.influx.us-watchlist.plist` |
+| com.influx.wiki-pv-watch | 火曜 09:30 | `bash ~/Desktop/biz/influx/scripts/wiki_pv_watch_run.sh` | `config/launchd/com.influx.wiki-pv-watch.plist` |
 | （cron）crontab.txt | cron `30 6 * * 1` | `cd ~/Desktop/biz/influx && /usr/bin/env python3 scripts/check_inactive_accounts.py >> outp …（全文は定義ファイル）` | `scripts/scheduler/crontab.txt` |
 
 <!-- AUTOGEN:end(schedule) -->
