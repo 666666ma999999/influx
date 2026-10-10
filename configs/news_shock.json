@@ -188,7 +188,7 @@
     "family_assignment": "source_class ごと: feed-official（kind=maker/government）= official 語彙があれば official_notice・なければ industry_forecast／feed-industry（kind=industry/trade-press）= forecast 語彙があれば industry_forecast・なければ official_notice／gnews-media= official 語彙があれば official_notice・なければ industry_forecast。全一致語彙と全該当族を matched_vocab_all / families_all に残す",
     "identity": {
       "article_id": "sha256(source_id|link の utm_* と fragment を除いた正規化 URL) 先頭 16",
-      "dedupe": "同一 (source_id, link_norm) は 2 度書かない。別源で同じ記事が見つかった時は別行（源ごとに測るため）",
+      "dedupe": "鍵= (source_id, subject, link_norm)。同一記事でも主題ごとに 1 行（feed 1 本が多主題を持つため・article_id は同じ値）・便をまたぐ再書き込みは防ぐ。別源で同じ記事が見つかった時は別行（源ごとに測るため）",
       "known_date": "最初に取得した便の実行日（JST）。以後変えない",
       "pubdate": "RSS= RFC822／Atom= ISO8601 を UTC 日付に。解釈できない時は便の UTC 日付を使い pubdate_parsed=false",
       "event_id": "sha256(subject|family|pubdate_utc_date|source_class) 先頭 16",
