@@ -34,3 +34,11 @@ if ! /usr/bin/python3 "$INFLUX/scripts/news_shock_eval.py"; then
   echo "WARN: 評価が失敗（冪等・次回再試行）" >&2
   osascript -e 'display notification "評価が失敗（次回再試行・詳細は news-shock ログ）" with title "⚠️ news_shock 評価失敗"' 2>/dev/null || true
 fi
+
+# 品薄予兆レーン presign（P-INF-43 b・2026-10-10・正本= tasks/shortage_presign_forward.md §B）。
+# shock 便と評価の後に fail-soft で実行＝失敗しても shock 便の rc に混ぜない（ここに来た時点で shock は成功済み・
+# 台帳は別 data/news_shock/presign_log.jsonl・新規エピソードの通知は collector 自身が出す。ここは失敗通知だけ）
+if ! /usr/bin/python3 "$INFLUX/scripts/news_shock_collect.py" --lane presign; then
+  echo "WARN: presign 便が失敗（次回再試行・shock 便の成否には混ぜない）" >&2
+  osascript -e 'display notification "presign 便が失敗（次回再試行・詳細は news-shock ログ）" with title "⚠️ news_shock presign 失敗"' 2>/dev/null || true
+fi

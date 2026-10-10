@@ -34,7 +34,7 @@
   "incomplete_week": "7/7 日そろわない週は week_obs(judged=false, days<7) を記録し、以後の便で fetch_weeks 内なら再判定できる。fetch_weeks を出たら unjudgeable で確定",
   "baseline_insufficient": "直前 8 週のうち 7/7 日そろった週が 6 未満なら judged=false, reason=base_insufficient（同上）",
   "known_date": "判定した便の実行日（JST）。以後変えない",
-  "score_eligible": "week_end ≥ known_date − 8 日 の週だけ採点対象（初便が過去 10 週をまとめて判定する分は基準線づくり＝score_eligible=false）。かつ known_date が presign_forward.json の collect_interval 内",
+  "score_eligible": "week_end ≥ known_date − 8 日 の週だけ採点対象（鮮度条件・初便が過去 10 週をまとめて判定する分は基準線づくり＝score_eligible=false）。収集区間（延長込み）の判定は presign_forward_eval.py が known_date で行う＝収集器は presign_forward.json を読まない（2026-10-10 Codex 実装レビュー #1/#4）",
   "provenance": "fire 行と week_obs 行に config_version・config_sha（本ファイルの sha256 先頭 12 桁）を焼き込む"
  },
  "baseline_from": "2026-08-03",

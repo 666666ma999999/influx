@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.influx.wiki-pv-watch</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>-lc</string>
+        <string>bash /Users/masaaki_nagasawa/Desktop/biz/influx/scripts/wiki_pv_watch_run.sh</string>
+    </array>
+
+    <!-- 毎週火曜 09:30（Weekday 2=火）。週= 月〜日（UTC）・日曜分が API に揃うのは月曜 UTC のため火曜に判定
+         （P-INF-43 b・tasks/shortage_presign_forward.md §A・configs/wiki_pv_watch.json schedule） -->
+    <key>StartCalendarInterval</key>
+    <array>
+        <dict>
+            <key>Weekday</key>
+            <integer>2</integer>
+            <key>Hour</key>
+            <integer>9</integer>
+            <key>Minute</key>
+            <integer>30</integer>
+        </dict>
+    </array>
+
+    <key>RunAtLoad</key>
+    <false/>
+
+    <key>StandardOutPath</key>
+    <string>/Users/masaaki_nagasawa/.claude/state/wiki-pv-watch.out.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/masaaki_nagasawa/.claude/state/wiki-pv-watch.err.log</string>
+</dict>
+</plist>

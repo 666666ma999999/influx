@@ -100,18 +100,20 @@
   },
   "extension": {
    "decide_on": "2026-12-12",
+   "end_exclusive": "2027-02-10",
    "rule": "源ごとに採点対象エピソード数 N（pending 含む）< 5 なら、その源だけ収集を 2027-02-10（排他）まで 1 回延長。最終採点は最後の発火の known_date+60+14 日後（延長なしなら 2027-02-24 まで）",
    "max_extensions": 1
   },
   "verdict_table_per_instrument": [
    "1. K= known_date。K 以前の lookback 内の最後の判定可能日の状態が成立、または onset ∈ [K-28, K] → confirm_after（① が先）",
-   "2. それ以外で onset の事象日 ∈ (K, K+60] → hit（lead_days= onset − K・検出遅延= 観測可能日 − 事象日 を別記）",
+   "2. それ以外で (K, K+60] の最初の成立の開始が onset（開始日あり）→ hit（lead_days= onset − K・検出遅延= 観測可能日 − 事象日 を別記）",
+   "2b. それ以外で (K, K+60] の最初の成立の開始が onset_unknown（lookback 全不明＝開始日を特定できない成立）→ confirm_after（onset_unknown=true・① が先の可能性を否定できないため hit/miss の分母外。2026-10-10 初便前の v1 明確化＝S の解釈 1 を置換・結果はまだ無い）",
    "3. それ以外で 採点日 < K+60 → pending",
    "4. それ以外で (K, K+60] の判定可能観測が十分（daily: ≥42 日／weekly: ≥6 観測／monthly: ≥2 観測）→ miss",
    "5. それ以外で 採点日 < K+60+14 → pending（遅着データの猶予）／以後 → unobserved",
    "lookback が全て不明（10/28 以前の flea 等）は confirm_after にせず 2 以降へ進み lookback_partial=true を付ける"
   ],
-  "combine_instruments": "主題（または題名の instruments_override）の計器を OR で束ねる。優先順位= hit > confirm_after > pending > miss > unobserved。計器が無い主題= unscorable。hit の onset は最も早い計器のもの。Switch 2 の記事は switch2 の計器だけで採点する（題名・主題を細分化・総称の『ゲーム機』だけが両計器）",
+  "combine_instruments": "主題（または題名の instruments_override）の計器を OR で束ねる。いずれかが hit → hit（確定）／それ以外でいずれかが pending → pending（未確定・後日 hit に変わり得るため confirm_after でも確定しない）／全計器が確定した後の優先= confirm_after > miss > unobserved（2026-10-10 Codex 質問 3 で旧「hit > confirm_after > pending > miss > unobserved」を置換・pending > miss は不変）。計器が無い主題= unscorable。hit の onset は最も早い計器のもの。Switch 2 の記事は switch2 の計器だけで採点する（題名・主題を細分化・総称の『ゲーム機』だけが両計器）",
   "verdicts": [
    "hit",
    "miss",
@@ -129,8 +131,10 @@
    "min_scored": 5,
    "min_hit_rate": 0.5,
    "min_margin_over_comparison": 0.2,
-   "_note": "源ごと: 採点できた (H+M) ≥ 5 かつ H/(H+M) ≥ 0.5 かつ 的中率 − 比較率 ≥ 0.2 → 合格＝**見張りを続ける運用上の便宜基準であり有効性の証明ではない**（N=5 では偶然でも 3/5 以上が出る確率 ≈ 32%・Codex 指摘 6）。報告には Wilson 95% 区間・独立した ① の件数（distinct onset）・主題数を併記する。(H+M) < 5 → 判定不能"
-  }
+   "_note": "源ごと: 採点できた (H+M) ≥ 5 かつ H/(H+M) ≥ 0.5 かつ 的中率 − 比較率 ≥ 0.2 → 合格＝**見張りを続ける運用上の便宜基準であり有効性の証明ではない**（N=5 では偶然でも 3/5 以上が出る確率 ≈ 32%・Codex 指摘 6）。報告には Wilson 95% 区間・独立した ① の件数（distinct onset）・主題数を併記する。(H+M) < 5 → 判定不能",
+   "_tolerance_note": "≥ の比較は浮動小数の誤差許容（1e-9）つき＝7/10−1/2=0.19999999999999996 を 20pt 以上と判定する（Codex 実装レビュー #3）"
+  },
+  "eligibility": "採点対象の発火= first_in_episode かつ（wiki は）score_eligible（鮮度: week_end ≥ known_date−8）かつ known_date ∈ その源の収集区間（延長された源は延長区間）。区間判定は収集器でなく本採点器が行う（2026-10-10 Codex 実装レビュー #1）。presign 便は collect_interval.start より前はスキップ（news_shock_collect.py 側のゲート）"
  },
  "ledger": "data/shortage_presign/forward_eval.jsonl",
  "report": "output/shortage_presign/forward_report.md",
@@ -462,5 +466,6 @@
    ],
    "pu": []
   }
- }
+ },
+ "ledger_lock": "data/shortage_presign/.eval.lock（採点器は台帳読込前から報告生成後まで排他保持・取れなければスキップ exit 0・Codex 実装レビュー #2）"
 }

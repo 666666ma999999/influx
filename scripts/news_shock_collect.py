@@ -16,6 +16,10 @@
     python3 scripts/news_shock_collect.py               # 収集→判定→通知→台帳
     python3 scripts/news_shock_collect.py --dry-run     # 通知しない（台帳には書く）
     python3 scripts/news_shock_collect.py --selftest    # 判定ロジックの固定テスト
+    # 品薄予兆レーン（P-INF-43 b・2026-10-10）: 別台帳 data/news_shock/presign_log.jsonl・既定経路は不変
+    python3 scripts/news_shock_collect.py --lane presign                      # 収集→判定→台帳→新規エピソード時のみ通知
+    python3 scripts/news_shock_collect.py --lane presign --dry-run [--date YYYY-MM-DD]  # 台帳に書かず要約だけ（疎通便）
+    python3 scripts/news_shock_collect.py --lane presign --selftest           # presign 判定の固定テスト（固定反例 4 件）
 """
 from __future__ import annotations
 
@@ -27,7 +31,7 @@ import sys
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 APP = Path("/app") if Path("/app/scripts").exists() else Path(__file__).resolve().parent.parent
@@ -404,13 +408,511 @@ def run_probe() -> int:
     return 1 if n_err > 3 else 0
 
 
+# =============================================================================
+# 品薄予兆レーン presign（P-INF-43 b・事前登録 2026-10-10・正本= tasks/shortage_presign_forward.md §B/§E
+# と configs/news_shock.json の presign ブロック）。
+# 上の供給ショックレーンの関数は 1 つも変えない。--lane presign の時だけ以下が動き、台帳も別
+# （data/news_shock/presign_log.jsonl・news_log.jsonl には書かない）。
+# =============================================================================
+PRESIGN_LEDGER = APP / "data/news_shock/presign_log.jsonl"
+PRESIGN_LANE = "presign"
+# 収集区間（known_date ∈ [start, end)）の正本= 採点器の config（§C/§D）。便はここの start より前なら書かずに終える
+PRESIGN_FORWARD_CONFIG = APP / "configs/presign_forward.json"
+JST = timezone(timedelta(hours=9))
+
+
+def presign_config(cfg: dict | None = None) -> dict:
+    """configs/news_shock.json の presign ブロック（無ければ fail-closed）。"""
+    cfg = load_config() if cfg is None else cfg
+    pcfg = cfg.get("presign")
+    if not pcfg:
+        raise KeyError("configs/news_shock.json に presign ブロックが無い")
+    return pcfg
+
+
+def presign_collect_start(path: Path = PRESIGN_FORWARD_CONFIG) -> date:
+    """configs/presign_forward.json の scoring.collect_interval.start（収集区間の開始日・JST 日付）。
+
+    読めない・キーが無い・日付でない時は例外＝呼び手は非ゼロ終了する（黙って skip も黙って走るもしない・
+    2026-10-10 team-lead 裁定）。
+    """
+    fwd = json.loads(path.read_text(encoding="utf-8"))
+    return date.fromisoformat(fwd["scoring"]["collect_interval"]["start"])
+
+
+def _presign_token_in(t: str, phrase: str) -> bool:
+    """presign 用の語照合（t は小文字化済み）。
+
+    ASCII 語= 英数字境界の完全語句一致・日本語= 部分一致（§B「ASCII= 単語境界・日本語= 部分一致」）。
+    既存 `_contains_token` の `\\b` は CJK 文字を語構成文字と見なすため「DRAM契約価格」「PS5の」で
+    境界が立たず正例（§B 固定正例）を落とす＝英数字以外の文字を境界に取る lookaround に置き換える。
+    gold→golden・coal→coalition の誤爆防止は同じ。
+    """
+    p = phrase.lower()
+    if p.isascii():
+        return re.search(r"(?<![a-z0-9])" + re.escape(p) + r"(?![a-z0-9])", t) is not None
+    return p in t
+
+
+def _strip_excludes(t: str, excludes: list[str] | None) -> str:
+    """query.exclude の語を本文から除く。exclude は**本文照合だけ**に使い、Google News の検索クエリには
+    入れない（presign_gnews_query は terms と search_or_phrases だけで組む・§B ①）。語彙・方向語・否定語の
+    判定は除去前の本文で行う。"""
+    for ex in excludes or []:
+        t = t.replace(ex.lower(), " ")
+    return t
+
+
+def normalize_link(link: str) -> str:
+    """utm_* クエリと fragment を除いた URL（article_id と重複排除の鍵・識別規則 identity）。"""
+    s = (link or "").strip()
+    try:
+        sp = urllib.parse.urlsplit(s)
+    except ValueError:
+        return s
+    q = [(k, v) for k, v in urllib.parse.parse_qsl(sp.query, keep_blank_values=True)
+         if not k.lower().startswith("utm_")]
+    return urllib.parse.urlunsplit((sp.scheme, sp.netloc, sp.path,
+                                    urllib.parse.urlencode(q, doseq=True), ""))
+
+
+def presign_article_id(source_id: str, link_norm: str) -> str:
+    import hashlib
+    return hashlib.sha256(f"{source_id}|{link_norm}".encode()).hexdigest()[:16]
+
+
+def presign_event_id(subject: str, family: str, pubdate_utc_date: str, source_class: str) -> str:
+    import hashlib
+    raw = f"{subject}|{family}|{pubdate_utc_date}|{source_class}"
+    return hashlib.sha256(raw.encode()).hexdigest()[:16]
+
+
+def parse_pubdate_utc(pubdate: str, run_at: str) -> tuple[str, bool]:
+    """RSS の RFC822／Atom の ISO8601 を UTC 日付 'YYYY-MM-DD' に。解釈不能は便の UTC 日付＋False。"""
+    from email.utils import parsedate_to_datetime
+    s = (pubdate or "").strip()
+    if s:
+        dt = None
+        try:
+            dt = parsedate_to_datetime(s)
+        except (TypeError, ValueError, IndexError):   # 3.9 は TypeError・3.10+ は ValueError
+            dt = None
+        if dt is None:
+            iso = s[:-1] + "+00:00" if s.endswith("Z") else s
+            try:
+                dt = datetime.fromisoformat(iso)
+            except ValueError:
+                dt = None
+        if dt is not None:
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            return dt.astimezone(timezone.utc).strftime("%Y-%m-%d"), True
+    return run_at[:10], False
+
+
+def parse_feed_items(data: bytes) -> list[dict]:
+    """RSS 2.0（item/title/link/description/pubDate）と Atom（entry/title/link@href/summary|content/
+    published|updated）を同じ形 {title, link, desc, pubdate} に揃える。RSS 1.0 (RDF)・content:encoded・
+    dc:date も名前空間を剥がして拾う。"""
+    # 先頭の空白・改行・BOM を剥がす（鶏鳴新聞 feed は 1 行目が空行で XML 宣言が 2 行目にあり、
+    # そのままだと「XML declaration not at start of entity」で落ちる・2026-10-10 疎通便で実測）
+    root = ET.fromstring(data.lstrip(b"\xef\xbb\xbf \t\r\n"))
+    items = []
+    for el in root.iter():
+        if el.tag.rsplit("}", 1)[-1] not in ("item", "entry"):
+            continue
+        fields, link = {}, ""
+        for ch in el:
+            name = ch.tag.rsplit("}", 1)[-1]
+            text = (ch.text or "").strip()
+            if name == "link":
+                href = (ch.get("href") or "").strip()
+                if href:                                   # Atom: rel 省略= alternate
+                    if (ch.get("rel") or "alternate") == "alternate" and not link:
+                        link = href
+                elif text and not link:                    # RSS: 要素テキスト
+                    link = text
+            elif name not in fields and text:
+                fields[name] = text
+        if not link and fields.get("guid", "").startswith("http"):
+            link = fields["guid"]
+        desc = (fields.get("description") or fields.get("encoded")
+                or fields.get("summary") or fields.get("content") or "")
+        pub = (fields.get("pubDate") or fields.get("published")
+               or fields.get("updated") or fields.get("date") or "")
+        items.append({"title": _TAG.sub(" ", fields.get("title", "")).strip(),
+                      "link": link, "desc": _TAG.sub(" ", desc).strip(), "pubdate": pub})
+    return items
+
+
+def _fetch_bytes(url: str, timeout: int) -> bytes:
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    with urllib.request.urlopen(req, timeout=timeout) as res:
+        return res.read()
+
+
+def presign_gnews_query(qe: dict, pcfg: dict) -> str:
+    """§B ①: (主題語 OR) (検索句 OR) when:Nd。空白を含む主題語は引用符で囲む。query.exclude は検索クエリに
+    入れない（本文照合でだけ除く・_strip_excludes）。"""
+    terms = [f'"{x}"' if " " in x else x for x in qe["terms"]]
+    or_block = " OR ".join(pcfg["search_or_phrases"])
+    days = pcfg.get("collect", {}).get("when_days", 2)
+    return f"({' OR '.join(terms)}) ({or_block}) when:{days}d"
+
+
+def fetch_presign_gnews(qe: dict, pcfg: dict) -> list[dict]:
+    """Google News RSS 検索（ja/JP）1 主題ぶん。"""
+    collect = pcfg.get("collect", {})
+    url = ("https://news.google.com/rss/search?q=" + urllib.parse.quote(presign_gnews_query(qe, pcfg))
+           + f"&hl={collect.get('hl', 'ja')}&gl={collect.get('gl', 'JP')}"
+           + f"&ceid={urllib.parse.quote(collect.get('ceid', 'JP:ja'))}")
+    return parse_feed_items(_fetch_bytes(url, collect.get("timeout_sec", 20)))
+
+
+def fetch_feed(feed: dict, pcfg: dict) -> list[dict]:
+    """発行元 RSS/Atom 1 本ぶん。"""
+    return parse_feed_items(_fetch_bytes(feed["url"], pcfg.get("collect", {}).get("timeout_sec", 20)))
+
+
+def _assign_family(source_class: str, families_all: list[str]) -> str:
+    """family_assignment: feed-industry は forecast 優先・それ以外（feed-official／gnews-media）は official 優先。"""
+    prefer = "industry_forecast" if source_class == "feed-industry" else "official_notice"
+    return prefer if prefer in families_all else families_all[0]
+
+
+def presign_judge(text: str, qe: dict, pcfg: dict, source_class: str) -> dict | None:
+    """§B の判定順。①主題語（exclude 除去後の本文に対し ASCII= 英数字境界・日本語= 部分一致）
+    ②凍結語彙（全一致語を記録）③direction_required の語彙は direction_words を伴う時だけ有効
+    ④negation_words を含めば type=negated（発火にしない）。
+
+    返り値: None（主題語なし／語彙なし／方向語を欠く）または
+    {type: hit|negated, matched_term, matched_vocab, matched_vocab_all, vocab_family, families_all}。
+    **否定語の判定は方向語の判定より先に行う**＝type のラベル（negated 行を残すか・行なしか）を決めるだけで、
+    hit になる条件〈否定語なし AND 有効語彙あり〉は順序に依らない（固定反例 4「DRAM contract price forecast
+    to fall 10% QoQ」は方向語を欠くが negated として台帳に残す・方向語があっても否定語があれば negated）。
+    方向語・否定語は部分一致（config の "up " 等が前提）。exclude 語は主題語の照合でだけ除く。
+    """
+    t = text.lower()
+    hit_term = next((x for x in qe["terms"] if _presign_token_in(_strip_excludes(t, qe.get("exclude")), x)),
+                    None)
+    if hit_term is None:
+        return None
+    raw = [(fam, v) for fam, words in pcfg["vocab_families"].items() for v in words
+           if _presign_token_in(t, v)]
+    if not raw:
+        return None
+    negated = any(w.lower() in t for w in pcfg.get("negation_words", []))
+    if negated:
+        eff = raw
+    else:
+        has_dir = any(w.lower() in t for w in pcfg.get("direction_words", []))
+        need = set(pcfg.get("direction_required", []))
+        eff = [(fam, v) for fam, v in raw if v not in need or has_dir]
+        if not eff:
+            return None
+    families_all: list[str] = []
+    for fam, _ in eff:
+        if fam not in families_all:
+            families_all.append(fam)
+    family = _assign_family(source_class, families_all)
+    return {"type": "negated" if negated else "hit", "matched_term": hit_term,
+            "matched_vocab": next(v for fam, v in eff if fam == family),
+            "matched_vocab_all": [v for _, v in eff],
+            "vocab_family": family, "families_all": families_all}
+
+
+def load_presign_seen(path: Path) -> tuple[set[tuple[str, str]], set[str], dict]:
+    """既存台帳から〈(source_id, subject, link_norm) の既出〉〈hit の event_id〉〈(source_class, subject, family)
+    ごとの最新エピソード起点 known_date〉を復元する（hit/negated 行だけ・壊れ行は読み飛ばす）。
+
+    鍵に subject を含める（2026-10-10 team-lead 裁定 b）: feed 1 記事が複数主題に当たる時は主題ごとに 1 行
+    （article_id は同じ値）・便をまたぐ同一 (源, 主題, 記事) の再書き込みは防ぐ。"""
+    seen, seen_events, episodes = set(), set(), {}
+    if path.exists():
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            try:
+                r = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if r.get("type") not in ("hit", "negated"):
+                continue
+            seen.add((r.get("source_id", ""), r.get("subject", ""), normalize_link(r.get("link", ""))))
+            if r.get("type") != "hit":
+                continue
+            if r.get("event_id"):
+                seen_events.add(r["event_id"])
+            key = (r.get("source_class"), r.get("subject"), r.get("vocab_family"))
+            start = (r.get("episode_id") or "")[-10:]
+            if len(start) == 10 and start > episodes.get(key, ""):
+                episodes[key] = start
+    return seen, seen_events, episodes
+
+
+def presign_episode(episodes: dict, source_class: str, subject: str, family: str,
+                    known_date: str) -> tuple[str, bool]:
+    """エピソード= (source_class, subject, family) ごと。境界= 初 hit の known_date から **7 日未満**
+    （day0〜day6）は同一・**7 日目（day7）から新規**。起点は初 hit に固定し連鎖させない（day6 の hit で
+    起点を動かさない）。Wikipedia 側（wiki_pv_watch）は「差 56 日を含む」別規則＝ここの規則とは一致させない。
+    episodes は副作用で更新する。"""
+    key = (source_class, subject, family)
+    start = episodes.get(key)
+    if start:
+        delta = (date.fromisoformat(known_date) - date.fromisoformat(start)).days
+        if 0 <= delta <= 6:
+            return f"{source_class}:{subject}:{family}:{start}", False
+    episodes[key] = known_date
+    return f"{source_class}:{subject}:{family}:{known_date}", True
+
+
+def run_presign(dry_run: bool = False, date_override: str | None = None) -> int:
+    """presign 便: Google News ja 検索（queries）＋発行元 feed → 判定 → 台帳 presign_log.jsonl → 通知。
+
+    dry_run= 台帳に書かず・通知もせず要約だけ出す（疎通便用）。date_override= known_date の上書き。
+    収集開始日ゲート: known_date < configs/presign_forward.json の scoring.collect_interval.start なら
+    「収集区間前のためスキップ」で rc=0・台帳に何も書かない（presign 便は既存 news-shock 便に同乗するため
+    commit 直後の便から走る＝区間前の hit とエピソードを台帳に残さない・2026-10-10 team-lead 裁定）。
+    dry-run は区間前でも走る（疎通便）。設定が読めない・キーが無い時は rc=1（runner の失敗通知に乗る）。
+    終了日はゲートしない（延長判定は採点器の仕事）。
+    部分障害ゲート: 失敗した source（query+feed）が全体の 1/3 超なら rc=1。
+    """
+    try:
+        known_date = (date.fromisoformat(date_override).isoformat() if date_override
+                      else datetime.now(JST).strftime("%Y-%m-%d"))
+    except ValueError:
+        print(f"ERROR: --date は YYYY-MM-DD で指定（受け取った値: {date_override}）", file=sys.stderr)
+        return 2
+    try:
+        start = presign_collect_start(PRESIGN_FORWARD_CONFIG)   # 引数で渡す＝モジュール変数の差替（テスト）が効く
+    except (OSError, ValueError, KeyError, TypeError) as e:
+        print(f"ERROR: 収集開始日が読めない（{PRESIGN_FORWARD_CONFIG} scoring.collect_interval.start）: "
+              f"{type(e).__name__}: {e}", file=sys.stderr)
+        return 1
+    if date.fromisoformat(known_date) < start:
+        if not dry_run:
+            print(f"収集区間前のためスキップ（開始 {start.isoformat()}・known_date {known_date}）")
+            return 0
+        print(f"[presign dry-run] 収集区間前（開始 {start.isoformat()}）だが疎通便のため実行する")
+    cfg = load_config()
+    pcfg = presign_config(cfg)
+    cfg_sha = __import__("hashlib").sha256(CONFIG.read_bytes()).hexdigest()[:12]
+    version = pcfg.get("version")
+    run_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    ledger = PRESIGN_LEDGER
+    if not dry_run:
+        # 多重起動ロック（shock 便の .collect.lock とは別ファイル）
+        import fcntl
+        ledger.parent.mkdir(parents=True, exist_ok=True)
+        lock = (ledger.parent / ".presign.lock").open("w")
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError:
+            print("別の presign 便が実行中のためスキップ（多重起動ガード）")
+            return 0
+    seen, seen_events, episodes = load_presign_seen(ledger)
+    queries = pcfg["queries"]
+    feeds = pcfg.get("feeds", [])
+    rows: list[dict] = []
+    items_per_source: dict[str, int] = {}
+    counts = {"q_err": 0, "f_err": 0, "hit": 0, "negated": 0, "new_ep": 0}
+    first_hits: list[str] = []
+
+    def judge_items(items: list[dict], source_class: str, source_id: str, qes: list[dict]) -> None:
+        for it in items:
+            text = f"{it['title']} {it['desc']}"
+            link_norm = normalize_link(it["link"])
+            for qe in qes:
+                # identity.dedupe（裁定 b）: 同一 (source_id, subject, link_norm) は 2 度書かない。
+                # 1 記事が複数主題に当たれば主題ごとに 1 行（article_id は同じ）
+                key = (source_id, qe["subject"], link_norm)
+                if key in seen:
+                    continue
+                j = presign_judge(text, qe, pcfg, source_class)
+                if not j:
+                    continue
+                seen.add(key)
+                pub_date, parsed = parse_pubdate_utc(it["pubdate"], run_at)
+                eid = presign_event_id(qe["subject"], j["vocab_family"], pub_date, source_class)
+                row = {"type": j["type"], "lane": PRESIGN_LANE, "run_at": run_at,
+                       "known_date": known_date, "source_class": source_class,
+                       "source_id": source_id, "subject": qe["subject"],
+                       "matched_term": j["matched_term"], "matched_vocab": j["matched_vocab"],
+                       "matched_vocab_all": j["matched_vocab_all"],
+                       "vocab_family": j["vocab_family"], "families_all": j["families_all"],
+                       "article_id": presign_article_id(source_id, link_norm),
+                       "event_id": eid, "dup_event": eid in seen_events,
+                       "episode_id": None, "first_in_episode": False,
+                       "title": it["title"], "desc_snippet": text[:300], "link": it["link"],
+                       "pubdate": it["pubdate"], "pubdate_utc_date": pub_date,
+                       "pubdate_parsed": parsed,
+                       "presign_version": version, "config_sha": cfg_sha}
+                if j["type"] == "hit":
+                    seen_events.add(eid)
+                    ep, first = presign_episode(episodes, source_class, qe["subject"],
+                                                j["vocab_family"], known_date)
+                    row["episode_id"], row["first_in_episode"] = ep, first
+                    counts["hit"] += 1
+                    counts["new_ep"] += int(first)
+                    if first:
+                        first_hits.append(f"{qe['subject']}/{j['vocab_family']}: {it['title'][:40]}")
+                    print(f"🔔 [{source_id}] {qe['subject']}/{j['vocab_family']}"
+                          f"{'' if first else '（同一エピソード）'} | {it['title'][:60]}")
+                else:
+                    counts["negated"] += 1
+                    print(f"   [{source_id}] negated {qe['subject']}/{j['vocab_family']} | {it['title'][:60]}")
+                rows.append(row)
+
+    for qe in queries:
+        source_id = f"gnews:{qe['subject']}"
+        try:
+            items = fetch_presign_gnews(qe, pcfg)
+        except Exception as e:                           # fail-closed: エラーも台帳に残す
+            counts["q_err"] += 1
+            rows.append({"type": "error", "lane": PRESIGN_LANE, "run_at": run_at,
+                         "known_date": known_date, "source_class": "gnews-media",
+                         "source_id": source_id, "error": str(e)[:200]})
+            print(f"[{source_id}] ERROR {e}", file=sys.stderr)
+            continue
+        items_per_source[source_id] = len(items)
+        judge_items(items, "gnews-media", source_id, [qe])
+    for fd in feeds:
+        source_id = fd["id"]
+        subjects = fd.get("subjects") or []
+        qes = queries if "*" in subjects else [q for q in queries if q["subject"] in subjects]
+        try:
+            items = fetch_feed(fd, pcfg)
+        except Exception as e:
+            counts["f_err"] += 1
+            rows.append({"type": "error", "lane": PRESIGN_LANE, "run_at": run_at,
+                         "known_date": known_date, "source_class": fd.get("source_class"),
+                         "source_id": source_id, "error": str(e)[:200]})
+            print(f"[{source_id}] ERROR {e}", file=sys.stderr)
+            continue
+        items_per_source[source_id] = len(items)
+        judge_items(items, fd.get("source_class", "feed-official"), source_id, qes)
+
+    summary = {"type": "run_summary", "lane": PRESIGN_LANE, "run_at": run_at, "known_date": known_date,
+               "queries_planned": len(queries), "queries_ok": len(queries) - counts["q_err"],
+               "feeds_planned": len(feeds), "feeds_ok": len(feeds) - counts["f_err"],
+               "items": items_per_source, "hits": counts["hit"], "negated": counts["negated"],
+               "new_episodes": counts["new_ep"], "presign_version": version, "config_sha": cfg_sha}
+    if dry_run:
+        print("[presign dry-run] 台帳・通知なし")
+    else:
+        with ledger.open("a", encoding="utf-8") as fh:
+            for r in rows:
+                fh.write(json.dumps(r, ensure_ascii=False) + "\n")
+            fh.write(json.dumps(summary, ensure_ascii=False) + "\n")
+        if first_hits:        # 新規エピソードがある便だけ 1 回通知（同一エピソードの 2 件目以降は台帳のみ）
+            notify(f"🔔 品薄予兆 presign: 新規エピソード {len(first_hits)}件",
+                   " / ".join(first_hits[:3])[:200])
+    print(json.dumps(summary, ensure_ascii=False))
+    print(f"[presign done] hits={counts['hit']} negated={counts['negated']} new_episodes={counts['new_ep']} "
+          f"queries_ok={summary['queries_ok']}/{len(queries)} feeds_ok={summary['feeds_ok']}/{len(feeds)}")
+    n_fail, total = counts["q_err"] + counts["f_err"], len(queries) + len(feeds)
+    if n_fail * 3 > total:
+        print(f"ERROR: 失敗 source {n_fail}/{total}（許容= 1/3 以下）", file=sys.stderr)
+        return 1
+    return 0
+
+
+def _selftest_presign() -> int:
+    """presign 判定の固定テスト（§B 固定反例 4 件＋正例 2 件＋カバレッジ規則＋同一性・エピソード）。"""
+    pcfg = presign_config()
+    by = {q["subject"]: q for q in pcfg["queries"]}
+    cases = [
+        ("ジャパン航空が運賃の価格改定を発表", "pan", "gnews-media", None, None,
+         "固定反例1: ジャパン→パン非該当（exclude 除去後に照合）"),
+        ("たまごっちの抽選販売", "keiran", "gnews-media", None, None,
+         "固定反例2: たまごっち→鶏卵非該当"),
+        ("パンの価格改定を見送り", "pan", "gnews-media", "negated", None,
+         "固定反例3: 見送り→negated（発火しない）"),
+        ("DRAM contract price forecast to fall 10% QoQ", "dram", "gnews-media", "negated", None,
+         "固定反例4: to fall→negated"),
+        ("ナンヤテクノロジー、DRAM契約価格を最大20%引き上げへ 供給不足深刻化", "dram", "gnews-media",
+         "hit", ["official_notice", "industry_forecast"],
+         "正例1: 供給不足（official）＋契約価格×上げ（forecast）の両族"),
+        ("HBM Supply Constraints Persist, 2027 Price Outlook Revised Upward", "dram", "feed-industry",
+         "hit", ["industry_forecast"], "正例2: feed-industry は industry_forecast"),
+        ("たまごっちの抽選販売", "tamagotchi", "gnews-media", "hit", ["official_notice"],
+         "exclude は query ごと（たまごっち主題では発火）"),
+        ("DRAM contract price forecast flat QoQ", "dram", "gnews-media", None, None,
+         "方向語なしの direction_required 語彙だけでは発火しない（否定語もなし→行なし）"),
+    ]
+    ng = 0
+    for text, subject, sc, want_type, want_fams, why in cases:
+        got = presign_judge(text, by[subject], pcfg, sc)
+        ok = (got is None and want_type is None) or (
+            got is not None and got["type"] == want_type
+            and (want_fams is None or got["families_all"] == want_fams))
+        ng += not ok
+        print(f"  {'OK ' if ok else 'NG '} {why}（期待={want_type}/{want_fams} 実際="
+              f"{None if got is None else (got['type'], got['families_all'])}）")
+    g1 = presign_judge(cases[4][0], by["dram"], pcfg, "gnews-media")
+    g2 = presign_judge(cases[5][0], by["dram"], pcfg, "feed-industry")
+    ok_f = g1["vocab_family"] == "official_notice" and g2["vocab_family"] == "industry_forecast"
+    print(f"  {'OK ' if ok_f else 'NG '} 族の付与: gnews=official 優先／feed-industry=forecast 優先")
+    ng += not ok_f
+    # カバレッジ規則: presign の日本語語彙は全て検索句に含まれる（Google 検索の母集団に届く）
+    jp_vocab = [v for words in pcfg["vocab_families"].values() for v in words if not v.isascii()]
+    uncovered = [v for v in jp_vocab if v not in pcfg["search_or_phrases"]]
+    print(f"  {'OK ' if not uncovered else 'NG '} 語彙カバレッジ: 検索句に無い日本語語彙 {uncovered or 'なし'}")
+    ng += bool(uncovered)
+    # 同一性: utm と fragment を除いた URL が鍵
+    a = presign_article_id("gnews:dram", normalize_link("https://x/a?utm_source=t&id=1#top"))
+    b = presign_article_id("gnews:dram", normalize_link("https://x/a?id=1"))
+    c = presign_article_id("trendforce-semiconductors", normalize_link("https://x/a?id=1"))
+    ok_i = a == b and a != c
+    print(f"  {'OK ' if ok_i else 'NG '} article_id: utm/fragment を無視・別源は別 id")
+    ng += not ok_i
+    # エピソード: day0 起点・day6 同一・day7 は新
+    eps: dict = {}
+    e0 = presign_episode(eps, "gnews-media", "dram", "official_notice", "2026-10-13")
+    e6 = presign_episode(eps, "gnews-media", "dram", "official_notice", "2026-10-19")
+    e7 = presign_episode(eps, "gnews-media", "dram", "official_notice", "2026-10-20")
+    ok_e = (e0 == ("gnews-media:dram:official_notice:2026-10-13", True)
+            and e6 == ("gnews-media:dram:official_notice:2026-10-13", False)
+            and e7 == ("gnews-media:dram:official_notice:2026-10-20", True))
+    print(f"  {'OK ' if ok_e else 'NG '} エピソード: 7 日以内は同一・連鎖しない")
+    ng += not ok_e
+    # pubdate: RFC822/ISO8601 → UTC 日付・解釈不能は便の日付＋False
+    run_at = "2026-10-13T00:30:00+00:00"
+    p1 = parse_pubdate_utc("Tue, 13 Oct 2026 08:30:00 +0900", run_at)
+    p2 = parse_pubdate_utc("2026-10-13T08:30:00+09:00", run_at)
+    p3 = parse_pubdate_utc("いつか", run_at)
+    ok_p = p1 == ("2026-10-12", True) and p2 == ("2026-10-12", True) and p3 == ("2026-10-13", False)
+    print(f"  {'OK ' if ok_p else 'NG '} pubdate: RFC822/ISO→UTC 日付・解釈不能= 便の日付+parsed=false")
+    ng += not ok_p
+    # クエリ合成: 空白を含む主題語は引用符・検索句ブロック・when
+    q = presign_gnews_query(by["switch2"], pcfg)
+    ok_q = '"Nintendo Switch 2"' in q and "値上げ OR 価格改定" in q and q.endswith("when:2d")
+    print(f"  {'OK ' if ok_q else 'NG '} クエリ合成: 引用符・検索句 OR・when（長さ{len(urllib.parse.quote(q))}）")
+    ng += not ok_q
+    return ng
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--selftest", action="store_true")
     ap.add_argument("--dry-run", action="store_true", help="通知を出さない")
     ap.add_argument("--first-seen-probe", action="store_true",
                     help="R2時計: first_seen 記録だけの対照モード（通知・受益引き当て・本線台帳なし）")
+    ap.add_argument("--lane", choices=("shock", "presign"), default="shock",
+                    help="shock= 供給ショック（既定・従来どおり）／presign= 品薄予兆（P-INF-43 b・別台帳 "
+                         "presign_log.jsonl・--dry-run は台帳にも書かない）")
+    ap.add_argument("--date", default=None,
+                    help="presign 専用: known_date の上書き（YYYY-MM-DD・既定= 今日 JST）")
     args = ap.parse_args()
+    if args.lane == "presign":
+        # 品薄予兆レーン: ここで分岐して戻る＝以下の shock 経路には一切入らない
+        if args.selftest:
+            ng = _selftest_presign()
+            print("OK: presign 全通過" if not ng else f"NG: presign {ng}件失敗")
+            return 1 if ng else 0
+        return run_presign(dry_run=args.dry_run, date_override=args.date)
+    if args.date:
+        print("WARN: --date は --lane presign 専用（shock 経路では無視）", file=sys.stderr)
     if args.selftest:
         ng = _selftest()
         print("OK: 全通過" if not ng else f"NG: {ng}件失敗")
