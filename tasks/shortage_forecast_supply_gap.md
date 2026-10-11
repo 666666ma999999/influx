@@ -45,3 +45,7 @@
 ## 進捗
 
 - 2026-10-11 着手（本ファイル）・調査役 5 体を発注
+
+## Session Handoff
+
+- 2026-10-11: 調査役（Sonnet 5）を分野 A〜D と既存 3 社の決算裏取り E で発注済み。出力= scratchpad `forecast/`（共通ブリーフ `brief_common.md`・統合用 `stock_check.py`）。次= 返却を読んで 1 表に統合 → 柱と株価 → 2 段目の決算裏取り → 検証役 → 敵対レビュー → vault 叩き台。現在地の詳細= `~/.claude/state/session-checkpoint/78f230cb-b67a-4ee8-885d-864f7b9fc161.md`
