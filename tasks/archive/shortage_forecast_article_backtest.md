@@ -52,3 +52,12 @@
 ## 進捗
 
 - 2026-10-11 事前登録（本ファイル）
+- 2026-10-11 実行（事前登録 commit d2ae47d の後・結果を見てから基準は変えていない）: 取得 369／369 ページ・発表 1,845／1,845 本（TrendForce 一覧の 1 ページ目〜最古 2016-05-30・失敗 0）→ 期間内（2016-07-05〜2026-09-30）1,800 本 → 品目語ヒット 642 本（DRAM 223・NAND 186・PANEL 174・WAFER 29・MLCC 27・SUBSTRATE 3）→ 方向あり 370 本（方向なし 241・混在 31 を除外）→ 束ね 58 本除外 → イベント 312 件（UP 189・DN 123）→ 採点できた +20= 214 件（UP 134・DN 80）／+60= 205 件（UP 126・DN 79）。採点不可 98 件= NAND のキオクシア上場（2024-12-18）前 87・日足の始まり（2016-07）より前の入口 9・窓未到達の直近 2（+60 のみ未到達 9）。
+- **結果: 不合格 0／3 → 事前登録どおり「業界予測の題名で買う型」は使わない。** 基準 1 ✗（UP +60: n=126・勝ち 69＝54.8%・中央値 +1.93pt・平均 +10.58）／基準 2 ✗（UP +1.93 − DN +0.84〔n=79・勝ち 42〕= +1.09pt）／基準 3 ✗（偽薬 500 回の中央値分布 p50 +1.83・p90 +3.15・実際 +1.93 は 54.6 パーセンタイル）。
+- 副指標: +20= UP n=134 勝ち 71（53.0%）中央値 +0.35／DN n=80 勝ち 39 中央値 −0.09。pre60= UP n=130 正 84（64.6%）中央値 +4.72（**受益株は記事の前 60 営業日で既に TOPIX を 4.7pt 上回っている**）／DN 中央値 +0.09。品目別 +60（UP）: NAND 9 件 6 勝 中央値 +104.2（全部キオクシア 2025〜26 の 1 銘柄）／DRAM 67 件 33 勝 −0.1（DN 39 件 26 勝 +3.2＝向きが逆）／PANEL 34 件 20 勝 +1.9／WAFER 11 件 8 勝 +4.0／MLCC 5 件 2 勝 −9.8／SUBSTRATE 0 件（DN 1 件 +26.8）。NAND を除く UP 117 件 63 勝 中央値 +1.64・2026 年を除く UP 111 件 62 勝 +1.96＝結論は同じ。
+- 道具= scratchpad `tf_crawl.py`（一覧取得）・`tf_score.py`（判定・採点・偽薬）・`tf/list.jsonl`・`tf_score_out.json`。写し= repo `output/shortage_forecast_article_backtest/`（gitignore 配下・`scripts/` には足していない）。Codex レビュー無し（使用上限・`scratchpad/codex_probe_1011.log:15`・Claude 単独）。
+- 報告= vault 叩き台 `02_Ai/influx/notes/influx-shortage-next-chain-2026-10-10.md` §9。次の裁定= P-INF-46（vault `02_Ai/AI日報-提案履歴.md`・a 閉じる／b 記事前 60 日の源を遡る／c 本文の数字で再採点）。
+
+## Handoff
+
+- 完了（測定・判定・報告まで同セッション）。本 task は `tasks/archive/` へ移動。再実行は `output/shortage_forecast_article_backtest/tf_score.py` を repo 直下で `python3 <path>/tf_score.py`（一覧は同フォルダの `trendforce_list.jsonl` を `tf/list.jsonl` として読む）。
