@@ -50,3 +50,11 @@ probe（R2時計・2時間毎）の登録:
 ```
 ! cp ~/Desktop/biz/influx/config/launchd/com.influx.news-shock.plist ~/Library/LaunchAgents/ && launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.influx.news-shock.plist && launchctl print gui/$(id -u)/com.influx.news-shock | head -5
 ```
+
+## 2026-10-11 古い記事の通知止め（P-INF-46 付帯・オーナー「続けて」＝推奨どおりと解釈）
+
+- **実害の実測**（母集団= 本線台帳 `data/news_shock/news_log.jsonl` の status=hit 852／852 行・2026-08-16〜10-11 07:20 便・pubdate 解釈不能 0）: 掲載から便までの日数= 7 日以内 269・8〜30 日 110・31〜180 日 266・**180 日超 207**（最古 2012-09）。検索句の `when:2d` を Google News RSS が守っていない。通知した事象（dup_event=false）360／360 件では 2 日以内 68・7 日超 283・**180 日超 159**。
+- **入れた物**: `scripts/news_shock_collect.py` に鮮度関門（`pub_age_days`・`is_stale`・既定 `NOTIFY_MAX_AGE_DAYS = 180`・config `collect.notify_max_age_days` があれば優先）。掲載から 180 日超の記事は **Mac 通知だけ**止める。台帳は従来どおり status=hit で残し `pub_age_days`／`stale` を足す・run_summary に `stale` 件数。**発火条件・語彙・config は変えていない**（config の sha は不変＝事前登録の母集団はそのまま）。日付が読めない記事は通す。
+- **検証**: `--selftest` 全通過（鮮度関門 1 件追加・実害 2 本= 2022-08 Boliden 亜鉛 1507.3 日・2021-05 Johnson Matthey プラチナ 1971.8 日が stale）／`tests/test_news_shock_stale_gate.py` 5／5（本線 main() を取得と通知だけ差し替えて実走・関門を外すと古い記事も通知される故障注入つき）／一括ゲート 874 本 OK（Docker）／台帳の読み手 3 本（news_shock_eval・news_shock_clock_report・coverage_census）の selftest 通過。本番便の初回実走= 次の定時便（2026-10-11 19:00）＝未実走。
+- **採点側の所見（事後の層別・判定には使っていない・P-INF-47 で裁定待ち）**: 評価済み事象（+5 営業日・338／338 事象・訂正行反映）は全体 勝ち 206・中央値 +2.23pt と見えるが、**掲載 2 日以内の本来の対象 57 事象は勝ち 15（26%）・中央値 −2.93pt**。8〜180 日 120 事象（勝ち 92）と 180 日超 153 事象（勝ち 95）は入口日が初便 2026-08-16 に 144 事象集中＝1 日の相場を数え直している。+20 営業日（278／278 事象）も 2 日以内 25 事象 勝ち 6・中央値 −5.64pt。
+- presign レーン（P-INF-43 b）の同種リスク: 2026-10-11 の試走（--dry-run・台帳に書かない・クエリ 42／42・feed 6／6）で当たった記事 14／14 本は 7 日以内 12・8〜30 日 2・180 日超 0＝現時点で古い記事の混入なし。

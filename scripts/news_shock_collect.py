@@ -160,6 +160,37 @@ def event_id_of(series_ids: list[str], family: str, pubdate: str, run_at: str,
     return hashlib.sha256(raw.encode()).hexdigest()[:12]
 
 
+# 通知の鮮度関門（2026-10-11 P-INF-46 付帯・オーナー裁定）: Google News RSS は検索句の when:2d を守らず
+# 数年前の記事を返す（実測 2026-08-16〜10-10: 通知した 360 事象のうち掲載から 180 日超が 159）。
+# 掲載から NOTIFY_MAX_AGE_DAYS 日を超えた記事は **Mac 通知だけ**止める。台帳には従来どおり
+# status=hit で残し pub_age_days / stale を足す＝事前登録（tasks/news_shock_preregister.md）の
+# 発火母集団は変えない。configs の collect.notify_max_age_days があればそちらを使う。
+NOTIFY_MAX_AGE_DAYS = 180
+
+
+def pub_age_days(pubdate: str, run_at: str) -> float | None:
+    """記事の掲載時刻（pubdate・RFC822）から便の時刻（run_at・ISO8601）までの日数。解釈不能は None。"""
+    from email.utils import parsedate_to_datetime
+    try:
+        pub = parsedate_to_datetime((pubdate or "").strip())
+        run = datetime.fromisoformat(run_at)
+    except (TypeError, ValueError, IndexError):   # 3.9 は TypeError・3.10+ は ValueError
+        return None
+    if pub is None:
+        return None
+    if pub.tzinfo is None:
+        pub = pub.replace(tzinfo=timezone.utc)
+    if run.tzinfo is None:
+        run = run.replace(tzinfo=timezone.utc)
+    return round((run - pub).total_seconds() / 86400, 1)
+
+
+def is_stale(age_days: float | None, max_age_days: float | None = NOTIFY_MAX_AGE_DAYS) -> bool:
+    """鮮度関門: 掲載から max_age_days 日を超えたら True。日数不明・関門なし（None）は False
+    ＝鳴らす側に倒す（本物の事象を落とさない）。"""
+    return age_days is not None and max_age_days is not None and age_days > float(max_age_days)
+
+
 def fetch_rss(qe: dict, cfg: dict) -> list[dict]:
     """1クエリ分の RSS を取得して item の (title, link, desc, pubdate) を返す。
 
@@ -343,6 +374,19 @@ def _selftest() -> int:
     ok_l = ("copper", "http://v1") in s and ("gold", "http://v2") in s and se == {"abc"}
     print(f"  {'OK ' if ok_l else 'NG '} load_seen: v1/v2混在+壊れ行で落ちない")
     ng += not ok_l
+    # 通知の鮮度関門: 実害 2 件（2022・2021 年の記事が 2026-10 に発火）は stale・当日記事は通す・
+    # 境界 180.0 日は通す／180.1 日は止める・日付が読めない記事は通す（鳴らす側に倒す）
+    run = "2026-10-09T13:20:00+00:00"
+    a_old = pub_age_days("Wed, 24 Aug 2022 07:00:00 GMT", run)      # Boliden 亜鉛（実害）
+    a_old2 = pub_age_days("Mon, 17 May 2021 07:00:00 GMT", "2026-10-10T01:00:00+00:00")   # JM プラチナ
+    a_new = pub_age_days("Fri, 09 Oct 2026 10:00:00 GMT", run)
+    a_bad = pub_age_days("いつか", run)
+    ok_s = (a_old is not None and a_old > 1500 and is_stale(a_old) and is_stale(a_old2)
+            and a_new is not None and 0 <= a_new < 1 and not is_stale(a_new)
+            and not is_stale(180.0) and is_stale(180.1)
+            and a_bad is None and not is_stale(a_bad) and not is_stale(9999.0, None))
+    print(f"  {'OK ' if ok_s else 'NG '} 鮮度関門: 古い記事（{a_old}日・{a_old2}日）は通知抑止・当日/日付不明は通す・境界180日")
+    ng += not ok_s
     return ng
 
 
@@ -936,7 +980,8 @@ def main() -> int:
     cfg_sha = __import__("hashlib").sha256(CONFIG.read_bytes()).hexdigest()[:12]
     seen, seen_events = load_seen()
     run_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
-    n_hit, n_err = 0, 0
+    n_hit, n_err, n_stale = 0, 0, 0
+    max_age = cfg.get("collect", {}).get("notify_max_age_days", NOTIFY_MAX_AGE_DAYS)
     items_per_term = {}    # recall のサイレント崩壊検知用（敵対R3 A10: 0件返答と事象なしを区別）
     hits_for_notify = []
     with LEDGER.open("a", encoding="utf-8") as fh:
@@ -967,6 +1012,9 @@ def main() -> int:
                 dup = eid in seen_events
                 seen_events.add(eid)
                 bens = beneficiaries_of(qe["series_ids"])
+                age = pub_age_days(it["pubdate"], run_at)
+                stale = is_stale(age, max_age)     # 古い記事は通知だけ止める（台帳は hit のまま）
+                n_stale += int(stale)
                 # 版とconfig指紋を発火行へ焼き込む（語彙変更後も母集団を分離再現できる・Codex指摘）
                 rec = {"run_at": run_at, "term": term, "matched_term": hit_term,
                        "series_ids": qe["series_ids"],
@@ -974,20 +1022,24 @@ def main() -> int:
                        "event_id": eid, "dup_event": dup,
                        "title": it["title"], "link": it["link"],
                        "pubdate": it["pubdate"], "beneficiaries": bens, "status": "hit",
+                       "pub_age_days": age, "stale": stale,
                        "config_version": cfg.get("version"), "config_sha": cfg_sha}
                 fh.write(json.dumps(rec, ensure_ascii=False) + "\n")
                 n_hit += 1
                 labels = "/".join(f"{b['code']}{'(仮)' if b['tier']=='provisional' else ''}"
                                   + (f"[{b['type_label']}]" if b["type_label"] else "")
                                   for b in bens[:4]) or "受益カードなし"
-                if not dup:    # 同一事象（event_id）の2件目以降は台帳のみ・通知しない
+                if not dup and not stale:    # 同一事象の2件目以降・古い記事は台帳のみ・通知しない
                     hits_for_notify.append(f"{hit_term}:{v} → {labels}")
-                print(f"🛑 [{term}] {v}{'（同一事象・通知抑止）' if dup else ''} | {it['title'][:60]}")
+                note = ("（同一事象・通知抑止）" if dup
+                        else f"（掲載から {age:.0f} 日＝古い記事・通知抑止）" if stale else "")
+                print(f"🛑 [{term}] {v}{note} | {it['title'][:60]}")
                 print(f"    受益: {labels}")
         # 実行サマリ行（欠測の見える化・空振りの日もこの1行は必ず残る）。
         # items= クエリ別の RSS 取得件数: 全クエリ 0件が続けば「事象が無い」でなく
         # 「Google 側の recall 崩壊」を疑う（敵対R3 A10）
         fh.write(json.dumps({"type": "run_summary", "run_at": run_at, "hit": n_hit,
+                             "stale": n_stale,
                              "ok": len(cfg["queries"]) - n_err, "error": n_err,
                              "items": items_per_term,
                              "config_version": cfg.get("version"), "config_sha": cfg_sha},
@@ -996,7 +1048,7 @@ def main() -> int:
     if hits_for_notify and not args.dry_run:
         notify(f"🛑 供給ショック検知: {len(hits_for_notify)}事象",
                " / ".join(hits_for_notify)[:200])
-    print(f"[done] hit={n_hit} error={n_err}/{len(cfg['queries'])}クエリ")
+    print(f"[done] hit={n_hit}（うち古い記事で通知抑止 {n_stale}）error={n_err}/{len(cfg['queries'])}クエリ")
     # 部分障害ゲート: 4クエリ以上失敗（ok<15/18）で異常終了→runner が失敗通知（Codex指摘）
     if n_err > 3:
         print(f"ERROR: 失敗クエリ {n_err}件（許容3）", file=sys.stderr)
