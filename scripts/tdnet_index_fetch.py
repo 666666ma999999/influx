@@ -180,6 +180,28 @@ def main() -> int:
                             "status": "saved", "items": n, "sha256": sha, "bytes": nbytes})
             if i % 50 == 0 or n == 0:
                 print(f"  [{i}/{len(ranges)}] {path.name} items={n} 累計={total_items:,}")
+            if n >= LIMIT and x != y:
+                # 上限に当たった週は古い日から欠ける（決算集中週・2026-10-11 実測 58 週）＝1 日ずつ取り直す
+                print(f"  [{i}/{len(ranges)}] {path.name} items={n} 上限到達 → 日別に再取得")
+                for k in range((y - x).days + 1):
+                    d = x + dt.timedelta(days=k)
+                    dpath = chunk_path(d, d)
+                    if dpath.exists() and not a.force:
+                        continue
+                    time.sleep(a.interval)
+                    durl = API.format(since=f"{d:%Y%m%d}", until=f"{d:%Y%m%d}", limit=LIMIT)
+                    dpayload, dstatus = fetch_json(durl)
+                    if dpayload is None:
+                        failed += 1
+                        append_receipt({"run_id": run_id, "ts": jst_now(), "chunk": dpath.name,
+                                        "url": durl, "status": dstatus, "items": None})
+                        continue
+                    dn = count_items(dpayload)
+                    dsha, dbytes = save_atomic(dpath, dpayload)
+                    saved += 1
+                    append_receipt({"run_id": run_id, "ts": jst_now(), "chunk": dpath.name, "url": durl,
+                                    "status": "saved", "items": dn, "sha256": dsha, "bytes": dbytes,
+                                    "capped": dn >= LIMIT})
         time.sleep(a.interval)
 
     append_receipt({"run_id": run_id, "ts": jst_now(), "status": "run_end",
