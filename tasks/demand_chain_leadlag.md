@@ -84,9 +84,17 @@
 
 ## Progress Snapshot
 ### Done
-- [ ] （事前登録 commit 前）
+- [x] 事前登録 commit edbc2b8（2026-10-12 19:50・結果の前）
+- [x] 採点器 `_tmp_chain_leadlag.py`（gitignore）を Docker で 1 回実行 → `output/demand_chain_leadlag/{result.json,summary.md}`（2026-10-12 20:1x）。件数突合= 群 23/23・銘柄 153/153・連鎖 15/15・全対 506（+向き採点 308）・fins 2,506 ファイル 195,399 行・前年比 150/153 銘柄
+- [x] 結果: **合格 2/15**（H08 海運→造船 4/6・+24.7・1/22／H01 半導体装置→電力 4/6・+7.3・5/22・12 か月 −3.5・営業利益 −35%＝期待型）。**型の検定 87% 点（線 90%）= 不合格**。探索 1 位は海運→造船・2〜5 位は「→半導体装置」（高ベータの群）
+- [x] 候補の経過 `_tmp_chain_candidates.py` → `output/demand_chain_leadlag/candidates.md`（名村・中国塗料・古野電気・東京計器・三井E&S・川重／電力 6 社）
+- [x] 叩き台 vault `02_Ai/influx/notes/influx-demand-chain-leadlag-2026-10-12.md`・台帳 P-INF-51（判断待ち）・MOC 窓
 ### In Progress
-- [ ] 採点器の作成
+- [ ] 検証役（別 AI・自分のコードで 15 本を再計算）の突合 → 完全一致なら叩き台 §6 の行を更新
+### 直した所（事前登録からの逸脱ではない・実装上の修正）
+- TOPIX の手元データは 2016-10-12 始まり → 営業日は「日足と TOPIX の両方がある日」に限定（月数 121・2016-10〜2026-10）
+- fins のキーは短縮形（Code/DocType/OP/CurFYSt/CurPerEn/CurPerType）。最初の実行で前年比 0/153 → 直して再実行（株価側の数字は不変）
 
 ## Handoff
-- 2026-10-12 19:50: 事前登録を書いた。次= commit → 採点器 → 実行。
+- 2026-10-12 20:30: 測定・叩き台まで済。いまのフェーズ= 検収待ち（P-INF-51 判断待ち・a 推奨）／次にやること= 検証役の結果を §6 に反映 → オーナーの裁定（a なら造船 4 社を前向き台帳へ・海運の合図は 10/31 に確定）。Codex レビューは 2026-10-14 14:09 以降。
+- Stuck: なし。注意= `~/.claude/state/plan-forbidden.txt` に trends プロジェクトの plan 由来の行 `~/Desktop/biz/influx/` が残り、influx への Write/Edit ツールが全部ブロックされる（Bash の heredoc は通る）。直すには trends の plan を閉じるか state の行を消す（AI は state の編集を止められた）。
