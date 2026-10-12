@@ -1,0 +1,1282 @@
+{
+ "fetched_at": "2026-10-12",
+ "raw_dir": "data/history/raw_20261012",
+ "series_dir": "data/history/series_20261012",
+ "series": [
+  {
+   "id": "cmo_crude_avg",
+   "name": "原油（平均）（世界銀行 CMO 月次）",
+   "source_url": "https://thedocs.worldbank.org/en/doc/74e8be41ceb20fa0da750cda2f6b9e4e-0050012026/related/CMO-Historical-Data-Monthly.xlsx",
+   "fetched_at": "2026-10-12",
+   "period": [
+    "1960-01",
+    "2026-09"
+   ],
+   "n_months": 801,
+   "freq_source": "monthly",
+   "freq_used": "monthly",
+   "unit": "($/bbl)",
+   "provenance": "一次（世界銀行 Pink Sheet）",
+   "raw_file": "CMO-Historical-Data-Monthly_20261012.xlsx",
+   "note": ""
+  },
+  {
+   "id": "cmo_coal_aus",
+   "name": "石炭（豪州）（世界銀行 CMO 月次）",
+   "source_url": "https://thedocs.worldbank.org/en/doc/74e8be41ceb20fa0da750cda2f6b9e4e-0050012026/related/CMO-Historical-Data-Monthly.xlsx",
+   "fetched_at": "2026-10-12",
+   "period": [
+    "1970-01",
+    "2026-09"
+   ],
+   "n_months": 681,
+   "freq_source": "monthly",
+   "freq_used": "monthly",
+   "unit": "($/mt)",
+   "provenance": "一次（世界銀行 Pink Sheet）",
+   "raw_file": "CMO-Historical-Data-Monthly_20261012.xlsx",
+   "note": ""
+  },
+  {
+   "id": "cmo_natgas_us",
+   "name": "天然ガス（米）（世界銀行 CMO 月次）",
+   "source_url": "https://thedocs.worldbank.org/en/doc/74e8be41ceb20fa0da750cda2f6b9e4e-0050012026/related/CMO-Historical-Data-Monthly.xlsx",
+   "fetched_at": "2026-10-12",
+   "period": [
+    "1960-01",
+    "2026-09"
+   ],
+   "n_months": 801,
+   "freq_source": "monthly",
+   "freq_used": "monthly",
+   "unit": "($/mmbtu)",
+   "provenance": "一次（世界銀行 Pink Sheet）",
+   "raw_file": "CMO-Historical-Data-Monthly_20261012.xlsx",
+   "note": ""
+  },
+  {
+   "id": "cmo_natgas_eu",
+   "name": "天然ガス（欧州）（世界銀行 CMO 月次）",
+   "source_url": "https://thedocs.worldbank.org/en/doc/74e8be41ceb20fa0da750cda2f6b9e4e-0050012026/related/CMO-Historical-Data-Monthly.xlsx",
+   "fetched_at": "2026-10-12",
+   "period": [
+    "1960-01",
+    "2026-09"
+   ],
+   "n_months": 801,
+   "freq_source": "monthly",
+   "freq_used": "monthly",
+   "unit": "($/mmbtu)",
+   "provenance": "一次（世界銀行 Pink Sheet）",
+   "raw_file": "CMO-Historical-Data-Monthly_20261012.xlsx",
+   "note": ""
+  },
+  {
+   "id": "cmo_lng_japan",
+   "name": "LNG（日本）（世界銀行 CMO 月次）",
+   "source_url": "https://thedocs.worldbank.org/en/doc/74e8be41ceb20fa0da750cda2f6b9e4e-0050012026/related/CMO-Historical-Data-Monthly.xlsx",
+   "fetched_at": "2026-10-12",
+   "period": [
+    "1977-01",
+    "2026-09"
+   ],
+   "n_months": 597,
+   "freq_source": "monthly",
+   "freq_used": "monthly",
+   "unit": "($/mmbtu)",
+   "provenance": "一次（世界銀行 Pink Sheet）",
+   "raw_file": "CMO-Historical-Data-Monthly_20261012.xlsx",
+   "note": ""
+  },
+  {
+   "id": "cmo_cocoa",
+   "name": "ココア（世界銀行 CMO 月次）",
+   "source_url": "https://thedocs.worldbank.org/en/doc/74e8be41ceb20fa0da750cda2f6b9e4e-0050012026/related/CMO-Historical-Data-Monthly.xlsx",
+   "fetched_at": "2026-10-12",
+   "period": [
+    "1960-01",
+    "2026-09"
+   ],
+   "n_months": 801,
+   "freq_source": "monthly",
+   "freq_used": "monthly",
+   "unit": "($/kg)",
+   "provenance": "一次（世界銀行 Pink Sheet）",
+   "raw_file": "CMO-Historical-Data-Monthly_20261012.xlsx",
+   "note": ""
+  },
+  {
+   "id": "cmo_coffee_arabica",
+   "name": "コーヒー（アラビカ）（世界銀行 CMO 月次）",
+   "source_url": "https://thedocs.worldbank.org/en/doc/74e8be41ceb20fa0da750cda2f6b9e4e-0050012026/related/CMO-Historical-Data-Monthly.xlsx",
+   "fetched_at": "2026-10-12",
+   "period": [
+    "1960-01",
+    "2026-09"
+   ],
+   "n_months": 801,
+   "freq_source": "monthly",
+   "freq_used": "monthly",
+   "unit": "($/kg)",
+   "provenance": "一次（世界銀行 Pink Sheet）",
+   "raw_file": "CMO-Historical-Data-Monthly_20261012.xlsx",
+   "note": ""
+  },
+  {
+   "id": "cmo_palm_oil",
+   "name": "パーム油（世界銀行 CMO 月次）",
+   "source_url": "https://thedocs.worldbank.org/en/doc/74e8be41ceb20fa0da750cda2f6b9e4e-0050012026/related/CMO-Historical-Data-Monthly.xlsx",
+   "fetched_at": "2026-10-12",
+   "period": [
+    "1960-01",
+    "2026-09"
+   ],
+   "n_months": 801,
+   "freq_source": "monthly",
+   "freq_used": "monthly",
+   "unit": "($/mt)",
+   "provenance": "一次（世界銀行 Pink Sheet）",
+   "raw_file": "CMO-Historical-Data-Monthly_20261012.xlsx",
+   "note": ""
+  },
+  {
+   "id": "cmo_soybean_oil",
+   "name": "大豆油（世界銀行 CMO 月次）",
+   "source_url": "https://thedocs.worldbank.org/en/doc/74e8be41ceb20fa0da750cda2f6b9e4e-0050012026/related/CMO-Historical-Data-Monthly.xlsx",
+   "fetched_at": "2026-10-12",
+   "period": [
+    "1960-01",
+    "2026-09"
+   ],
+   "n_months": 801,
+   "freq_source": "monthly",
+   "freq_used": "monthly",
+   "unit": "($/mt)",
+   "provenance": "一次（世界銀行 Pink Sheet）",
+   "raw_file": "CMO-Historical-Data-Monthly_20261012.xlsx",
+   "note": ""
+  },
+  {
+   "id": "cmo_maize",
+   "name": "トウモロコシ（世界銀行 CMO 月次）",
+   "source_url": "https://thedocs.worldbank.org/en/doc/74e8be41ceb20fa0da750cda2f6b9e4e-0050012026/related/CMO-Historical-Data-Monthly.xlsx",
+   "fetched_at": "2026-10-12",
+   "period": [
+    "1960-01",
+    "2026-09"
+   ],
+   "n_months": 801,
+   "freq_source": "monthly",
+   "freq_used": "monthly",
+   "unit": "($/mt)",
+   "provenance": "一次（世界銀行 Pink Sheet）",
+   "raw_file": "CMO-Historical-Data-Monthly_20261012.xlsx",
+   "note": ""
+  },
+  {
+   "id": "cmo_wheat_hrw",
+   "name": "小麦（米 HRW）（世界銀行 CMO 月次）",
+   "source_url": "https://thedocs.worldbank.org/en/doc/74e8be41ceb20fa0da750cda2f6b9e4e-0050012026/related/CMO-Historical-Data-Monthly.xlsx",
+   "fetched_at": "2026-10-12",
+   "period": [
+    "1960-01",
+    "2026-09"
+   ],
+   "n_months": 801,
+   "freq_source": "monthly",
+   "freq_used": "monthly",
+   "unit": "($/mt)",
+   "provenance": "一次（世界銀行 Pink Sheet）",
+   "raw_file": "CMO-Historical-Data-Monthly_20261012.xlsx",
+   "note": ""
+  },
+  {
+   "id": "cmo_logs_malaysia",
+   "name": "丸太（マレーシア）（世界銀行 CMO 月次）",
+   "source_url": "https://thedocs.worldbank.org/en/doc/74e8be41ceb20fa0da750cda2f6b9e4e-0050012026/related/CMO-Historical-Data-Monthly.xlsx",
+   "fetched_at": "2026-10-12",
+   "period": [
+    "1960-01",
+    "2026-09"
+   ],
+   "n_months": 801,
+   "freq_source": "monthly",
+   "freq_used": "monthly",
+   "unit": "($/cubic meter)",
+   "provenance": "一次（世界銀行 Pink Sheet）",
+   "raw_file": "CMO-Historical-Data-Monthly_20261012.xlsx",
+   "note": ""
+  },
+  {
+   "id": "cmo_sawnwood_malaysia",
+   "name": "製材（マレーシア）（世界銀行 CMO 月次）",
+   "source_url": "https://thedocs.worldbank.org/en/doc/74e8be41ceb20fa0da750cda2f6b9e4e-0050012026/related/CMO-Historical-Data-Monthly.xlsx",
+   "fetched_at": "2026-10-12",
+   "period": [
+    "1960-01",
+    "2026-09"
+   ],
+   "n_months": 801,
+   "freq_source": "monthly",
+   "freq_used": "monthly",
+   "unit": "($/cubic meter)",
+   "provenance": "一次（世界銀行 Pink Sheet）",
+   "raw_file": "CMO-Historical-Data-Monthly_20261012.xlsx",
+   "note": ""
+  },
+  {
+   "id": "cmo_plywood",
+   "name": "合板（世界銀行 CMO 月次）",
+   "source_url": "https://thedocs.worldbank.org/en/doc/74e8be41ceb20fa0da750cda2f6b9e4e-0050012026/related/CMO-Historical-Data-Monthly.xlsx",
+   "fetched_at": "2026-10-12",
+   "period": [
+    "1979-01",
+    "2026-09"
+   ],
+   "n_months": 573,
+   "freq_source": "monthly",
+   "freq_used": "monthly",
+   "unit": "(cents/sheet)",
+   "provenance": "一次（世界銀行 Pink Sheet）",
+   "raw_file": "CMO-Historical-Data-Monthly_20261012.xlsx",
+   "note": ""
+  },
+  {
+   "id": "cmo_rubber_tsr20",
+   "name": "天然ゴム（TSR20）（世界銀行 CMO 月次）",
+   "source_url": "https://thedocs.worldbank.org/en/doc/74e8be41ceb20fa0da750cda2f6b9e4e-0050012026/related/CMO-Historical-Data-Monthly.xlsx",
+   "fetched_at": "2026-10-12",
+   "period": [
+    "1999-01",
+    "2026-09"
+   ],
+   "n_months": 333,
+   "freq_source": "monthly",
+   "freq_used": "monthly",
+   "unit": "($/kg)",
+   "provenance": "一次（世界銀行 Pink Sheet）",
+   "raw_file": "CMO-Historical-Data-Monthly_20261012.xlsx",
+   "note": ""
+  },
+  {
+   "id": "cmo_phosphate_rock",
+   "name": "リン鉱石（世界銀行 CMO 月次）",
+   "source_url": "https://thedocs.worldbank.org/en/doc/74e8be41ceb20fa0da750cda2f6b9e4e-0050012026/related/CMO-Historical-Data-Monthly.xlsx",
+   "fetched_at": "2026-10-12",
+   "period": [
+    "1960-01",
+    "2026-09"
+   ],
+   "n_months": 801,
+   "freq_source": "monthly",
+   "freq_used": "monthly",
+   "unit": "($/mt)",
+   "provenance": "一次（世界銀行 Pink Sheet）",
+   "raw_file": "CMO-Historical-Data-Monthly_20261012.xlsx",
+   "note": ""
+  },
+  {
+   "id": "cmo_dap",
+   "name": "DAP（リン酸二アンモニウム）（世界銀行 CMO 月次）",
+   "source_url": "https://thedocs.worldbank.org/en/doc/74e8be41ceb20fa0da750cda2f6b9e4e-0050012026/related/CMO-Historical-Data-Monthly.xlsx",
+   "fetched_at": "2026-10-12",
+   "period": [
+    "1967-01",
+    "2026-09"
+   ],
+   "n_months": 717,
+   "freq_source": "monthly",
+   "freq_used": "monthly",
+   "unit": "($/mt)",
+   "provenance": "一次（世界銀行 Pink Sheet）",
+   "raw_file": "CMO-Historical-Data-Monthly_20261012.xlsx",
+   "note": ""
+  },
+  {
+   "id": "cmo_urea",
+   "name": "尿素（世界銀行 CMO 月次）",
+   "source_url": "https://thedocs.worldbank.org/en/doc/74e8be41ceb20fa0da750cda2f6b9e4e-0050012026/related/CMO-Historical-Data-Monthly.xlsx",
+   "fetched_at": "2026-10-12",
+   "period": [
+    "1960-01",
+    "2026-09"
+   ],
+   "n_months": 801,
+   "freq_source": "monthly",
+   "freq_used": "monthly",
+   "unit": "($/mt)",
+   "provenance": "一次（世界銀行 Pink Sheet）",
+   "raw_file": "CMO-Historical-Data-Monthly_20261012.xlsx",
+   "note": ""
+  },
+  {
+   "id": "cmo_aluminum",
+   "name": "アルミニウム（世界銀行 CMO 月次）",
+   "source_url": "https://thedocs.worldbank.org/en/doc/74e8be41ceb20fa0da750cda2f6b9e4e-0050012026/related/CMO-Historical-Data-Monthly.xlsx",
+   "fetched_at": "2026-10-12",
+   "period": [
+    "1960-01",
+    "2026-09"
+   ],
+   "n_months": 801,
+   "freq_source": "monthly",
+   "freq_used": "monthly",
+   "unit": "($/mt)",
+   "provenance": "一次（世界銀行 Pink Sheet）",
+   "raw_file": "CMO-Historical-Data-Monthly_20261012.xlsx",
+   "note": ""
+  },
+  {
+   "id": "cmo_iron_ore",
+   "name": "鉄鉱石（世界銀行 CMO 月次）",
+   "source_url": "https://thedocs.worldbank.org/en/doc/74e8be41ceb20fa0da750cda2f6b9e4e-0050012026/related/CMO-Historical-Data-Monthly.xlsx",
+   "fetched_at": "2026-10-12",
+   "period": [
+    "1960-01",
+    "2026-09"
+   ],
+   "n_months": 801,
+   "freq_source": "monthly",
+   "freq_used": "monthly",
+   "unit": "($/dmtu)",
+   "provenance": "一次（世界銀行 Pink Sheet）",
+   "raw_file": "CMO-Historical-Data-Monthly_20261012.xlsx",
+   "note": ""
+  },
+  {
+   "id": "cmo_copper",
+   "name": "銅（世界銀行 CMO 月次）",
+   "source_url": "https://thedocs.worldbank.org/en/doc/74e8be41ceb20fa0da750cda2f6b9e4e-0050012026/related/CMO-Historical-Data-Monthly.xlsx",
+   "fetched_at": "2026-10-12",
+   "period": [
+    "1960-01",
+    "2026-09"
+   ],
+   "n_months": 801,
+   "freq_source": "monthly",
+   "freq_used": "monthly",
+   "unit": "($/mt)",
+   "provenance": "一次（世界銀行 Pink Sheet）",
+   "raw_file": "CMO-Historical-Data-Monthly_20261012.xlsx",
+   "note": ""
+  },
+  {
+   "id": "cmo_nickel",
+   "name": "ニッケル（世界銀行 CMO 月次）",
+   "source_url": "https://thedocs.worldbank.org/en/doc/74e8be41ceb20fa0da750cda2f6b9e4e-0050012026/related/CMO-Historical-Data-Monthly.xlsx",
+   "fetched_at": "2026-10-12",
+   "period": [
+    "1960-01",
+    "2026-09"
+   ],
+   "n_months": 801,
+   "freq_source": "monthly",
+   "freq_used": "monthly",
+   "unit": "($/mt)",
+   "provenance": "一次（世界銀行 Pink Sheet）",
+   "raw_file": "CMO-Historical-Data-Monthly_20261012.xlsx",
+   "note": ""
+  },
+  {
+   "id": "bdi_monthly",
+   "name": "バルチック海運指数 BDI（日次→月平均）",
+   "source_url": "https://stock-marketdata.com/time-series/charts/commodity-bdi-baltic-dry-index.html（親ページ https://stock-marketdata.com/bdi.html・出所表記 The Baltic Exchange）",
+   "fetched_at": "2026-10-12",
+   "period": [
+    "1985-01",
+    "2026-10"
+   ],
+   "n_months": 502,
+   "freq_source": "daily",
+   "freq_used": "monthly",
+   "unit": "指数（1985-01-04=1000）",
+   "provenance": "二次（stock-marketdata.com が Baltic Exchange の値を掲載）",
+   "raw_file": "stockmarketdata_bdi_chart_20261012.html",
+   "note": "日次 10462 点を月平均。原データの出所は Baltic Exchange（有料）"
+  },
+  {
+   "id": "scfi_monthly",
+   "name": "上海輸出コンテナ運賃指数 SCFI（週次→月平均）",
+   "source_url": "https://stock-marketdata.com/time-series/charts/commodity-container-scfi-index.html（親ページ https://stock-marketdata.com/container-scfi-index・出所表記 Shanghai Shipping Exchange）",
+   "fetched_at": "2026-10-12",
+   "period": [
+    "2009-10",
+    "2026-10"
+   ],
+   "n_months": 205,
+   "freq_source": "weekly",
+   "freq_used": "monthly",
+   "unit": "指数（2009-10-16=1000）",
+   "provenance": "二次（stock-marketdata.com が上海航運交易所の値を掲載）",
+   "raw_file": "stockmarketdata_scfi_chart_20261012.html",
+   "note": "週次 869 点を月平均"
+  },
+  {
+   "id": "jsea_contracts_cgt",
+   "name": "輸出船契約実績 CGT（月次）",
+   "source_url": "https://www.jsea.or.jp/results/（月次 PDF 293 本・FY2002-04〜FY2026-08）",
+   "fetched_at": "2026-10-12",
+   "period": [
+    "2002-04",
+    "2026-08"
+   ],
+   "n_months": 292,
+   "freq_source": "monthly",
+   "freq_used": "monthly",
+   "unit": "CGT",
+   "provenance": "一次（日本船舶輸出組合）",
+   "raw_file": "jsea_pdf/, jsea_txt/",
+   "note": "PDF 293 本を pdftotext -layout で文字化し、契約実績表の『計』行から当月列を取得。本文の隻数と照合一致 283 本・本文に隻数表記なし 9 本・欠損 200705（PDF に文字情報なし・画像）"
+  },
+  {
+   "id": "jsea_contracts_gt",
+   "name": "輸出船契約実績 総トン（月次）",
+   "source_url": "https://www.jsea.or.jp/results/（月次 PDF 293 本・FY2002-04〜FY2026-08）",
+   "fetched_at": "2026-10-12",
+   "period": [
+    "2002-04",
+    "2026-08"
+   ],
+   "n_months": 292,
+   "freq_source": "monthly",
+   "freq_used": "monthly",
+   "unit": "総トン",
+   "provenance": "一次（日本船舶輸出組合）",
+   "raw_file": "jsea_pdf/, jsea_txt/",
+   "note": "PDF 293 本を pdftotext -layout で文字化し、契約実績表の『計』行から当月列を取得。本文の隻数と照合一致 283 本・本文に隻数表記なし 9 本・欠損 200705（PDF に文字情報なし・画像）"
+  },
+  {
+   "id": "jsea_contracts_ships",
+   "name": "輸出船契約実績 隻数（月次）",
+   "source_url": "https://www.jsea.or.jp/results/（月次 PDF 293 本・FY2002-04〜FY2026-08）",
+   "fetched_at": "2026-10-12",
+   "period": [
+    "2002-04",
+    "2026-08"
+   ],
+   "n_months": 292,
+   "freq_source": "monthly",
+   "freq_used": "monthly",
+   "unit": "隻",
+   "provenance": "一次（日本船舶輸出組合）",
+   "raw_file": "jsea_pdf/, jsea_txt/",
+   "note": "PDF 293 本を pdftotext -layout で文字化し、契約実績表の『計』行から当月列を取得。本文の隻数と照合一致 283 本・本文に隻数表記なし 9 本・欠損 200705（PDF に文字情報なし・画像）"
+  },
+  {
+   "id": "jmtba_orders_total",
+   "name": "工作機械受注額 総額（月次）",
+   "source_url": "https://www.jmtba.or.jp/statistics/（受注確報 PDF kakuhouYYMM.pdf 212 本・2009-01〜2026-08）",
+   "fetched_at": "2026-10-12",
+   "period": [
+    "2009-01",
+    "2026-08"
+   ],
+   "n_months": 212,
+   "freq_source": "monthly",
+   "freq_used": "monthly",
+   "unit": "百万円",
+   "provenance": "一次（日本工作機械工業会）",
+   "raw_file": "jmtba_pdf/, jmtba_txt/",
+   "note": "PDF 212 本から当月の受注総額・内需計・外需を取得（総額=内需+外需 を全件確認）。暦年合計は『工作機械主要統計』の年計と 2009〜2025 年で一致。失敗 なし"
+  },
+  {
+   "id": "jmtba_orders_domestic",
+   "name": "工作機械受注額 内需（月次）",
+   "source_url": "https://www.jmtba.or.jp/statistics/（受注確報 PDF kakuhouYYMM.pdf 212 本・2009-01〜2026-08）",
+   "fetched_at": "2026-10-12",
+   "period": [
+    "2009-01",
+    "2026-08"
+   ],
+   "n_months": 212,
+   "freq_source": "monthly",
+   "freq_used": "monthly",
+   "unit": "百万円",
+   "provenance": "一次（日本工作機械工業会）",
+   "raw_file": "jmtba_pdf/, jmtba_txt/",
+   "note": "PDF 212 本から当月の受注総額・内需計・外需を取得（総額=内需+外需 を全件確認）。暦年合計は『工作機械主要統計』の年計と 2009〜2025 年で一致。失敗 なし"
+  },
+  {
+   "id": "jmtba_orders_foreign",
+   "name": "工作機械受注額 外需（月次）",
+   "source_url": "https://www.jmtba.or.jp/statistics/（受注確報 PDF kakuhouYYMM.pdf 212 本・2009-01〜2026-08）",
+   "fetched_at": "2026-10-12",
+   "period": [
+    "2009-01",
+    "2026-08"
+   ],
+   "n_months": 212,
+   "freq_source": "monthly",
+   "freq_used": "monthly",
+   "unit": "百万円",
+   "provenance": "一次（日本工作機械工業会）",
+   "raw_file": "jmtba_pdf/, jmtba_txt/",
+   "note": "PDF 212 本から当月の受注総額・内需計・外需を取得（総額=内需+外需 を全件確認）。暦年合計は『工作機械主要統計』の年計と 2009〜2025 年で一致。失敗 なし"
+  },
+  {
+   "id": "seaj_bookings_3mma",
+   "name": "半導体製造装置（日本製）受注額 3か月移動平均",
+   "source_url": "https://www.seaj.or.jp/statistics/34972023587350.xls（Back Number・https://www.seaj.or.jp/statistics/ から）",
+   "fetched_at": "2026-10-12",
+   "period": [
+    "2005-01",
+    "2017-03"
+   ],
+   "n_months": 142,
+   "freq_source": "monthly(3MMA)",
+   "freq_used": "monthly",
+   "unit": "百万円",
+   "provenance": "一次（SEAJ）",
+   "raw_file": "seaj_semi_backnumber_20261012.csv",
+   "note": "xls を xlrd で CSV 化（seaj_semi_backnumber_20261012.csv）。値は SEAJ 公表の 3 か月移動平均。受注額は 2017-03 で公表終了（表に値なし）"
+  },
+  {
+   "id": "seaj_billings_3mma",
+   "name": "半導体製造装置（日本製）販売額 3か月移動平均",
+   "source_url": "https://www.seaj.or.jp/statistics/34972023587350.xls（Back Number・https://www.seaj.or.jp/statistics/ から）",
+   "fetched_at": "2026-10-12",
+   "period": [
+    "2005-01",
+    "2026-08"
+   ],
+   "n_months": 251,
+   "freq_source": "monthly(3MMA)",
+   "freq_used": "monthly",
+   "unit": "百万円",
+   "provenance": "一次（SEAJ）",
+   "raw_file": "seaj_semi_backnumber_20261012.csv",
+   "note": "xls を xlrd で CSV 化（seaj_semi_backnumber_20261012.csv）。値は SEAJ 公表の 3 か月移動平均"
+  },
+  {
+   "id": "wsts_ww_monthly",
+   "name": "世界半導体売上 月次（WSTS）",
+   "source_url": "https://www.wsts.org/esraCMS/extension/media/f/WST/7803/WSTS-Historical-Billings-Report-Aug_2026.xlsx（https://www.wsts.org/67/Historical-Billings-Report）",
+   "fetched_at": "2026-10-12",
+   "period": [
+    "1986-01",
+    "2026-08"
+   ],
+   "n_months": 488,
+   "freq_source": "monthly",
+   "freq_used": "monthly",
+   "unit": "千米ドル（Worldwide）",
+   "provenance": "一次（WSTS）",
+   "raw_file": "wsts_historical_billings_20261012.xlsx",
+   "note": ""
+  },
+  {
+   "id": "wsts_ww_3mma",
+   "name": "世界半導体売上 3か月移動平均（WSTS）",
+   "source_url": "https://www.wsts.org/esraCMS/extension/media/f/WST/7803/WSTS-Historical-Billings-Report-Aug_2026.xlsx（https://www.wsts.org/67/Historical-Billings-Report）",
+   "fetched_at": "2026-10-12",
+   "period": [
+    "1986-01",
+    "2026-08"
+   ],
+   "n_months": 488,
+   "freq_source": "monthly",
+   "freq_used": "monthly",
+   "unit": "千米ドル（Worldwide）",
+   "provenance": "一次（WSTS）",
+   "raw_file": "wsts_historical_billings_20261012.xlsx",
+   "note": ""
+  },
+  {
+   "id": "jnto_visitors",
+   "name": "訪日外客数 総数（月次）",
+   "source_url": "https://www.jnto.go.jp/statistics/data/_files/20260916_1615-5.xlsx（https://www.jnto.go.jp/statistics/data/visitors-statistics/）",
+   "fetched_at": "2026-10-12",
+   "period": [
+    "2003-01",
+    "2026-08"
+   ],
+   "n_months": 284,
+   "freq_source": "monthly",
+   "freq_used": "monthly",
+   "unit": "人",
+   "provenance": "一次（JNTO）",
+   "raw_file": "jnto_visitors_monthly_20261012.xlsx",
+   "note": ""
+  },
+  {
+   "id": "jepx_system_price_avg",
+   "name": "JEPX スポット システムプライス 月平均（全コマ単純平均）",
+   "source_url": "https://www.jepx.jp/electricpower/market-data/spot/（CSV: https://www.jepx.jp/js/csv_read.php?dir=spot_summary&file=spot_summary_YYYY.csv・FY2005〜FY2026）",
+   "fetched_at": "2026-10-12",
+   "period": [
+    "2005-04",
+    "2026-09"
+   ],
+   "n_months": 258,
+   "freq_source": "30min",
+   "freq_used": "monthly",
+   "unit": "円/kWh",
+   "provenance": "一次（JEPX）",
+   "raw_file": "jepx/",
+   "note": "半期ではなく年度ファイル 22 本。コマ数が 20 日分未満の月は除外"
+  },
+  {
+   "id": "iip_inv_ratio_total",
+   "name": "鉱工業 在庫率指数（原指数）",
+   "source_url": "経済産業省 鉱工業指数 2020年基準 財別 原指数（手元 data/iip/b2020_zom1j.xlsx・https://www.meti.go.jp/statistics/tyo/iip/b2020_result-2.html）",
+   "fetched_at": "2026-10-12",
+   "period": [
+    "2018-01",
+    "2026-08"
+   ],
+   "n_months": 104,
+   "freq_source": "monthly",
+   "freq_used": "monthly",
+   "unit": "2020年=100",
+   "provenance": "一次（経産省）",
+   "raw_file": "data/iip/b2020_zom1j.xlsx（repo 既存）",
+   "note": "2020 年基準の表は 2018-01 から。末尾の p は速報"
+  },
+  {
+   "id": "iip_inv_ratio_prod_machinery",
+   "name": "資本財・生産用機械工業 在庫率指数（原指数）",
+   "source_url": "経済産業省 鉱工業指数 2020年基準 財別 原指数（手元 data/iip/b2020_zom1j.xlsx・https://www.meti.go.jp/statistics/tyo/iip/b2020_result-2.html）",
+   "fetched_at": "2026-10-12",
+   "period": [
+    "2018-01",
+    "2026-08"
+   ],
+   "n_months": 104,
+   "freq_source": "monthly",
+   "freq_used": "monthly",
+   "unit": "2020年=100",
+   "provenance": "一次（経産省）",
+   "raw_file": "data/iip/b2020_zom1j.xlsx（repo 既存）",
+   "note": "2020 年基準の表は 2018-01 から。末尾の p は速報"
+  },
+  {
+   "id": "boj_cgpi_domestic_total",
+   "name": "国内企業物価指数 総平均（2020年=100）",
+   "source_url": "https://www.stat-search.boj.or.jp/ssi/mtshtml/csv/pr01_m_1.csv（主要時系列統計データ表）",
+   "fetched_at": "2026-10-12",
+   "period": [
+    "1980-01",
+    "2026-08"
+   ],
+   "n_months": 560,
+   "freq_source": "monthly",
+   "freq_used": "monthly",
+   "unit": "2020年=100",
+   "provenance": "一次（日本銀行）",
+   "raw_file": "boj_pr01_m_1_utf8_20261012.csv",
+   "note": ""
+  },
+  {
+   "id": "dram_spot_ddr4_16gb",
+   "name": "DRAM スポット DDR4 16Gb 月次終値（既存履歴）",
+   "source_url": "repo 既存 data/price_watch/dram_spot_history_dtm_20260913.json（DRAMeXchange 由来）",
+   "fetched_at": "2026-10-12",
+   "period": [
+    "2026-01",
+    "2026-09"
+   ],
+   "n_months": 9,
+   "freq_source": "monthly",
+   "freq_used": "monthly",
+   "unit": "米ドル",
+   "provenance": "二次（既存履歴）",
+   "raw_file": "data/price_watch/dram_spot_history_dtm_20260913.json",
+   "note": "2026-01〜2026-09 の 9 か月のみ＝先行遅行は測れない"
+  }
+ ],
+ "not_obtained": [
+  {
+   "id": "electricity_demand_jp",
+   "name": "電力需要（月次）",
+   "reason": "資源エネルギー庁 電力調査統計ページは 403/404（bot 遮断）・OCCTO 需給実績の旧 URL は 404・電気事業連合会は PDF/年次のみ。長期月次の無料一次系列を確保できず"
+  },
+  {
+   "id": "jama_vehicle_production",
+   "name": "自工会 四輪車生産台数（月次）",
+   "reason": "jama.or.jp は月報 PDF のみ。データベース jamaserv.jama.or.jp/newdb はフレーム+JSF の対話式で、直接 POST は 829 byte の空応答。取れず"
+  },
+  {
+   "id": "cmo_uranium",
+   "name": "ウラン",
+   "reason": "CMO 月次 xlsx の列に無い（年次表のみ）。取りに行かず"
+  },
+  {
+   "id": "boj_cgpi_items",
+   "name": "企業物価指数 品目別（変圧器・開閉制御装置・セメント・シリコンウエハ・紙パルプ）",
+   "reason": "時系列統計データ検索サイトは対話式（famecgi2 への POST/AJAX は『ページを表示できません』で拒否・直リンク CSV は総平均等の主要表 pr01_m_1 のみ）。品目コード一覧も取得できず。ブラウザ操作で取る案は未実施"
+  },
+  {
+   "id": "dram_contract_trendforce",
+   "name": "DRAM 契約価格（TrendForce）",
+   "reason": "公開の長期月次系列なし（有料レポート・プレスリリースの四半期見通しのみ）。取りに行かず"
+  }
+ ],
+ "pairs_fixed_before_measurement": [
+  {
+   "pid": "P01",
+   "up": "bdi_monthly",
+   "dn": "jsea_contracts_cgt",
+   "label": "海運市況→新造船発注"
+  },
+  {
+   "pid": "P02",
+   "up": "scfi_monthly",
+   "dn": "jsea_contracts_cgt",
+   "label": "コンテナ運賃→新造船発注"
+  },
+  {
+   "pid": "P03",
+   "up": "cmo_iron_ore",
+   "dn": "bdi_monthly",
+   "label": "鉄鉱石価格→ばら積み運賃"
+  },
+  {
+   "pid": "P04",
+   "up": "cmo_coal_aus",
+   "dn": "bdi_monthly",
+   "label": "石炭価格→ばら積み運賃"
+  },
+  {
+   "pid": "P05",
+   "up": "cmo_iron_ore",
+   "dn": "jsea_contracts_cgt",
+   "label": "鉄鉱石→新造船発注"
+  },
+  {
+   "pid": "P06",
+   "up": "cmo_crude_avg",
+   "dn": "cmo_urea",
+   "label": "原油→尿素"
+  },
+  {
+   "pid": "P07",
+   "up": "cmo_natgas_us",
+   "dn": "cmo_urea",
+   "label": "天然ガス（米）→尿素"
+  },
+  {
+   "pid": "P08",
+   "up": "cmo_natgas_eu",
+   "dn": "cmo_urea",
+   "label": "天然ガス（欧）→尿素"
+  },
+  {
+   "pid": "P09",
+   "up": "cmo_crude_avg",
+   "dn": "cmo_lng_japan",
+   "label": "原油→日本 LNG（JCC 連動・陽性対照）"
+  },
+  {
+   "pid": "P10",
+   "up": "cmo_lng_japan",
+   "dn": "jepx_system_price_avg",
+   "label": "日本 LNG→JEPX 電力価格"
+  },
+  {
+   "pid": "P11",
+   "up": "cmo_crude_avg",
+   "dn": "jepx_system_price_avg",
+   "label": "原油→JEPX 電力価格"
+  },
+  {
+   "pid": "P12",
+   "up": "wsts_ww_3mma",
+   "dn": "seaj_billings_3mma",
+   "label": "世界半導体売上→日本製装置販売"
+  },
+  {
+   "pid": "P13",
+   "up": "wsts_ww_3mma",
+   "dn": "seaj_bookings_3mma",
+   "label": "世界半導体売上→日本製装置受注"
+  },
+  {
+   "pid": "P14",
+   "up": "seaj_bookings_3mma",
+   "dn": "seaj_billings_3mma",
+   "label": "装置受注→装置販売（陽性対照）"
+  },
+  {
+   "pid": "P15",
+   "up": "dram_spot_ddr4_16gb",
+   "dn": "seaj_billings_3mma",
+   "label": "DRAM スポット→装置販売"
+  },
+  {
+   "pid": "P16",
+   "up": "jmtba_orders_total",
+   "dn": "iip_inv_ratio_prod_machinery",
+   "label": "工作機械受注→生産用機械 在庫率"
+  },
+  {
+   "pid": "P17",
+   "up": "wsts_ww_3mma",
+   "dn": "jmtba_orders_foreign",
+   "label": "世界半導体売上→工作機械 外需"
+  },
+  {
+   "pid": "P18",
+   "up": "cmo_copper",
+   "dn": "jmtba_orders_foreign",
+   "label": "銅→工作機械 外需"
+  },
+  {
+   "pid": "P19",
+   "up": "cmo_logs_malaysia",
+   "dn": "cmo_sawnwood_malaysia",
+   "label": "丸太→製材（陽性対照）"
+  },
+  {
+   "pid": "P20",
+   "up": "cmo_crude_avg",
+   "dn": "cmo_rubber_tsr20",
+   "label": "原油→天然ゴム"
+  },
+  {
+   "pid": "P21",
+   "up": "cmo_crude_avg",
+   "dn": "boj_cgpi_domestic_total",
+   "label": "原油→国内企業物価 総平均"
+  },
+  {
+   "pid": "P22",
+   "up": "cmo_copper",
+   "dn": "boj_cgpi_item_transformer",
+   "label": "銅→変圧器 CGPI"
+  },
+  {
+   "pid": "P23",
+   "up": "cmo_coal_aus",
+   "dn": "boj_cgpi_item_cement",
+   "label": "石炭→セメント CGPI"
+  },
+  {
+   "pid": "P24",
+   "up": "electricity_demand_jp",
+   "dn": "jepx_system_price_avg",
+   "label": "電力需要→JEPX"
+  },
+  {
+   "pid": "P25",
+   "up": "cmo_phosphate_rock",
+   "dn": "cmo_dap",
+   "label": "リン鉱石→DAP（陽性対照）"
+  },
+  {
+   "pid": "P26",
+   "up": "bdi_monthly",
+   "dn": "jmtba_orders_foreign",
+   "label": "海運市況→工作機械 外需（負の対照＝筋のない対）"
+  }
+ ],
+ "method": {
+  "stationarize": "100*(ln x_t - ln x_{t-12})；jsea_contracts_* は 3 か月移動合計の後に同じ変換",
+  "lags": "0..24 (上流を k か月先行)",
+  "placebo": "上流の定常化系列を seed 20261012 で 1000 回シャッフル・max_k|r| の 95% 点",
+  "halves": "重なり期間の中央で二分し各半分で最良の遅れ（各 n>=36）"
+ },
+ "results_summary": [
+  {
+   "pid": "P01",
+   "up": "bdi_monthly",
+   "dn": "jsea_contracts_cgt",
+   "label": "海運市況→新造船発注",
+   "status": "測定",
+   "lag": 2,
+   "r": 0.4630685635060039,
+   "n": 273,
+   "r0": 0.37123159306090403,
+   "period": [
+    "2003-06",
+    "2026-08"
+   ],
+   "placebo95": 0.17485822829440073,
+   "visible": true
+  },
+  {
+   "pid": "P02",
+   "up": "scfi_monthly",
+   "dn": "jsea_contracts_cgt",
+   "label": "コンテナ運賃→新造船発注",
+   "status": "測定",
+   "lag": 5,
+   "r": 0.23990200102558706,
+   "n": 186,
+   "r0": 0.17059304533863914,
+   "period": [
+    "2010-10",
+    "2026-08"
+   ],
+   "placebo95": 0.21640708592947752,
+   "visible": true
+  },
+  {
+   "pid": "P03",
+   "up": "cmo_iron_ore",
+   "dn": "bdi_monthly",
+   "label": "鉄鉱石価格→ばら積み運賃",
+   "status": "測定",
+   "lag": 0,
+   "r": 0.5179664341528533,
+   "n": 489,
+   "r0": 0.5179664341528533,
+   "period": [
+    "1986-01",
+    "2026-09"
+   ],
+   "placebo95": 0.1278489362583171,
+   "visible": true
+  },
+  {
+   "pid": "P04",
+   "up": "cmo_coal_aus",
+   "dn": "bdi_monthly",
+   "label": "石炭価格→ばら積み運賃",
+   "status": "測定",
+   "lag": 11,
+   "r": -0.41074651081751035,
+   "n": 490,
+   "r0": 0.32984870862266435,
+   "period": [
+    "1986-01",
+    "2026-09"
+   ],
+   "placebo95": 0.12985570805811755,
+   "visible": true
+  },
+  {
+   "pid": "P05",
+   "up": "cmo_iron_ore",
+   "dn": "jsea_contracts_cgt",
+   "label": "鉄鉱石→新造船発注",
+   "status": "測定",
+   "lag": 3,
+   "r": 0.3847954985974343,
+   "n": 273,
+   "r0": 0.2806117065978028,
+   "period": [
+    "2003-06",
+    "2026-08"
+   ],
+   "placebo95": 0.1762087820686281,
+   "visible": true
+  },
+  {
+   "pid": "P06",
+   "up": "cmo_crude_avg",
+   "dn": "cmo_urea",
+   "label": "原油→尿素",
+   "status": "測定",
+   "lag": 1,
+   "r": 0.5689645256653401,
+   "n": 788,
+   "r0": 0.5602103589583999,
+   "period": [
+    "1961-01",
+    "2026-09"
+   ],
+   "placebo95": 0.09986709410979926,
+   "visible": true
+  },
+  {
+   "pid": "P07",
+   "up": "cmo_natgas_us",
+   "dn": "cmo_urea",
+   "label": "天然ガス（米）→尿素",
+   "status": "測定",
+   "lag": 1,
+   "r": 0.31135659217360967,
+   "n": 788,
+   "r0": 0.306364616573773,
+   "period": [
+    "1961-01",
+    "2026-09"
+   ],
+   "placebo95": 0.10066605763066189,
+   "visible": true
+  },
+  {
+   "pid": "P08",
+   "up": "cmo_natgas_eu",
+   "dn": "cmo_urea",
+   "label": "天然ガス（欧）→尿素",
+   "status": "測定",
+   "lag": 0,
+   "r": 0.5572784849906365,
+   "n": 789,
+   "r0": 0.5572784849906365,
+   "period": [
+    "1961-01",
+    "2026-09"
+   ],
+   "placebo95": 0.10250680915216667,
+   "visible": true
+  },
+  {
+   "pid": "P09",
+   "up": "cmo_crude_avg",
+   "dn": "cmo_lng_japan",
+   "label": "原油→日本 LNG（JCC 連動・陽性対照）",
+   "status": "測定",
+   "lag": 4,
+   "r": 0.8245866745323568,
+   "n": 585,
+   "r0": 0.5577858725042384,
+   "period": [
+    "1978-01",
+    "2026-09"
+   ],
+   "placebo95": 0.11485718329880279,
+   "visible": true
+  },
+  {
+   "pid": "P10",
+   "up": "cmo_lng_japan",
+   "dn": "jepx_system_price_avg",
+   "label": "日本 LNG→JEPX 電力価格",
+   "status": "測定",
+   "lag": 0,
+   "r": 0.6546299934064183,
+   "n": 246,
+   "r0": 0.6546299934064183,
+   "period": [
+    "2006-04",
+    "2026-09"
+   ],
+   "placebo95": 0.18829351759625307,
+   "visible": true
+  },
+  {
+   "pid": "P11",
+   "up": "cmo_crude_avg",
+   "dn": "jepx_system_price_avg",
+   "label": "原油→JEPX 電力価格",
+   "status": "測定",
+   "lag": 1,
+   "r": 0.6399990823007952,
+   "n": 246,
+   "r0": 0.606222166402129,
+   "period": [
+    "2006-04",
+    "2026-09"
+   ],
+   "placebo95": 0.19340061857555385,
+   "visible": true
+  },
+  {
+   "pid": "P12",
+   "up": "wsts_ww_3mma",
+   "dn": "seaj_billings_3mma",
+   "label": "世界半導体売上→日本製装置販売",
+   "status": "測定",
+   "lag": 3,
+   "r": 0.6443619348529399,
+   "n": 230,
+   "r0": 0.592981406366254,
+   "period": [
+    "2006-01",
+    "2026-08"
+   ],
+   "placebo95": 0.1785921344004906,
+   "visible": true
+  },
+  {
+   "pid": "P13",
+   "up": "wsts_ww_3mma",
+   "dn": "seaj_bookings_3mma",
+   "label": "世界半導体売上→日本製装置受注",
+   "status": "測定",
+   "lag": 0,
+   "r": 0.8999680495753004,
+   "n": 127,
+   "r0": 0.8999680495753004,
+   "period": [
+    "2006-01",
+    "2017-03"
+   ],
+   "placebo95": 0.24715712494404993,
+   "visible": true
+  },
+  {
+   "pid": "P14",
+   "up": "seaj_bookings_3mma",
+   "dn": "seaj_billings_3mma",
+   "label": "装置受注→装置販売（陽性対照）",
+   "status": "測定",
+   "lag": 2,
+   "r": 0.9152754348858344,
+   "n": 119,
+   "r0": 0.822821826300364,
+   "period": [
+    "2006-01",
+    "2017-03"
+   ],
+   "placebo95": 0.2564501992709359,
+   "visible": true
+  },
+  {
+   "pid": "P15",
+   "up": "dram_spot_ddr4_16gb",
+   "dn": "seaj_billings_3mma",
+   "label": "DRAM スポット→装置販売",
+   "status": "測れず・重なり 0 か月（36 未満）"
+  },
+  {
+   "pid": "P16",
+   "up": "jmtba_orders_total",
+   "dn": "iip_inv_ratio_prod_machinery",
+   "label": "工作機械受注→生産用機械 在庫率",
+   "status": "測定",
+   "lag": 0,
+   "r": -0.7347446893959958,
+   "n": 92,
+   "r0": -0.7347446893959958,
+   "period": [
+    "2019-01",
+    "2026-08"
+   ],
+   "placebo95": 0.2953040533820099,
+   "visible": true
+  },
+  {
+   "pid": "P17",
+   "up": "wsts_ww_3mma",
+   "dn": "jmtba_orders_foreign",
+   "label": "世界半導体売上→工作機械 外需",
+   "status": "測定",
+   "lag": 2,
+   "r": 0.6420553596686471,
+   "n": 200,
+   "r0": 0.6178074266728713,
+   "period": [
+    "2010-01",
+    "2026-08"
+   ],
+   "placebo95": 0.20089479317381076,
+   "visible": true
+  },
+  {
+   "pid": "P18",
+   "up": "cmo_copper",
+   "dn": "jmtba_orders_foreign",
+   "label": "銅→工作機械 外需",
+   "status": "測定",
+   "lag": 2,
+   "r": 0.7960601926116122,
+   "n": 200,
+   "r0": 0.7682181476956511,
+   "period": [
+    "2010-01",
+    "2026-08"
+   ],
+   "placebo95": 0.20143168557146385,
+   "visible": true
+  },
+  {
+   "pid": "P19",
+   "up": "cmo_logs_malaysia",
+   "dn": "cmo_sawnwood_malaysia",
+   "label": "丸太→製材（陽性対照）",
+   "status": "測定",
+   "lag": 0,
+   "r": 0.739899691207644,
+   "n": 789,
+   "r0": 0.739899691207644,
+   "period": [
+    "1961-01",
+    "2026-09"
+   ],
+   "placebo95": 0.09788337966074849,
+   "visible": true
+  },
+  {
+   "pid": "P20",
+   "up": "cmo_crude_avg",
+   "dn": "cmo_rubber_tsr20",
+   "label": "原油→天然ゴム",
+   "status": "測定",
+   "lag": 0,
+   "r": 0.5927285843197936,
+   "n": 321,
+   "r0": 0.5927285843197936,
+   "period": [
+    "2000-01",
+    "2026-09"
+   ],
+   "placebo95": 0.1540399309682345,
+   "visible": true
+  },
+  {
+   "pid": "P21",
+   "up": "cmo_crude_avg",
+   "dn": "boj_cgpi_domestic_total",
+   "label": "原油→国内企業物価 総平均",
+   "status": "測定",
+   "lag": 4,
+   "r": 0.5687808552606595,
+   "n": 548,
+   "r0": 0.4412968723603432,
+   "period": [
+    "1981-01",
+    "2026-08"
+   ],
+   "placebo95": 0.11747662754144815,
+   "visible": true
+  },
+  {
+   "pid": "P22",
+   "up": "cmo_copper",
+   "dn": "boj_cgpi_item_transformer",
+   "label": "銅→変圧器 CGPI",
+   "status": "測れず・系列なし（boj_cgpi_item_transformer）"
+  },
+  {
+   "pid": "P23",
+   "up": "cmo_coal_aus",
+   "dn": "boj_cgpi_item_cement",
+   "label": "石炭→セメント CGPI",
+   "status": "測れず・系列なし（boj_cgpi_item_cement）"
+  },
+  {
+   "pid": "P24",
+   "up": "electricity_demand_jp",
+   "dn": "jepx_system_price_avg",
+   "label": "電力需要→JEPX",
+   "status": "測れず・系列なし（electricity_demand_jp）"
+  },
+  {
+   "pid": "P25",
+   "up": "cmo_phosphate_rock",
+   "dn": "cmo_dap",
+   "label": "リン鉱石→DAP（陽性対照）",
+   "status": "測定",
+   "lag": 0,
+   "r": 0.421534043975115,
+   "n": 705,
+   "r0": 0.421534043975115,
+   "period": [
+    "1968-01",
+    "2026-09"
+   ],
+   "placebo95": 0.09907843250143442,
+   "visible": true
+  },
+  {
+   "pid": "P26",
+   "up": "bdi_monthly",
+   "dn": "jmtba_orders_foreign",
+   "label": "海運市況→工作機械 外需（負の対照＝筋のない対）",
+   "status": "測定",
+   "lag": 3,
+   "r": 0.5233294044632778,
+   "n": 200,
+   "r0": 0.3637703395150054,
+   "period": [
+    "2010-01",
+    "2026-08"
+   ],
+   "placebo95": 0.19340868295066457,
+   "visible": true
+  }
+ ]
+}
