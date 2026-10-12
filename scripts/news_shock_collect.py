@@ -168,8 +168,8 @@ def event_id_of(series_ids: list[str], family: str, pubdate: str, run_at: str,
 NOTIFY_MAX_AGE_DAYS = 180
 
 
-def pub_age_days(pubdate: str, run_at: str) -> float | None:
-    """記事の掲載時刻（pubdate・RFC822）から便の時刻（run_at・ISO8601）までの日数。解釈不能は None。"""
+def _pub_age_exact(pubdate: str, run_at: str) -> float | None:
+    """掲載時刻→便の時刻の日数（丸めなし）。pub_age_days（表示用 0.1 日丸め）と v3 関門（丸めずに比べる）が共用。"""
     from email.utils import parsedate_to_datetime
     try:
         pub = parsedate_to_datetime((pubdate or "").strip())
@@ -182,13 +182,51 @@ def pub_age_days(pubdate: str, run_at: str) -> float | None:
         pub = pub.replace(tzinfo=timezone.utc)
     if run.tzinfo is None:
         run = run.replace(tzinfo=timezone.utc)
-    return round((run - pub).total_seconds() / 86400, 1)
+    return (run - pub).total_seconds() / 86400
+
+
+def pub_age_days(pubdate: str, run_at: str) -> float | None:
+    """記事の掲載時刻（pubdate・RFC822）から便の時刻（run_at・ISO8601）までの日数。解釈不能は None。"""
+    age = _pub_age_exact(pubdate, run_at)
+    return None if age is None else round(age, 1)
 
 
 def is_stale(age_days: float | None, max_age_days: float | None = NOTIFY_MAX_AGE_DAYS) -> bool:
     """鮮度関門: 掲載から max_age_days 日を超えたら True。日数不明・関門なし（None）は False
     ＝鳴らす側に倒す（本物の事象を落とさない）。"""
     return age_days is not None and max_age_days is not None and age_days > float(max_age_days)
+
+
+# v3 の発火母集団の印（2026-10-12 P-INF-47 b・オーナー裁定「取り直す」・正本= tasks/news_shock_preregister.md §8）。
+# v2 の通知対象（status=hit・dup_event=false）のうち掲載から便まで V3_MAX_AGE_DAYS 日以内の事象だけが v3 の対象。
+# 掲載時刻が読めない記事は対象外（安全側）。v2 の発火条件・台帳行の意味・config は変えず、hit 行に v3_target を
+# **足すだけ**＝値はコード内の定数に置き configs/news_shock.json を触らない（config_sha が変わると v2 の母集団の
+# 同一性が崩れるため）。開始の境目= V3_START_UTC（2026-10-12 18:00 JST＝事前登録 §8 を固めた後・同日 19:00 便の前）より前の便は対象外＝過去行は v3 に数えない。
+V3_MAX_AGE_DAYS = 2.0
+V3_MIN_AGE_DAYS = -1.0   # 便より後の掲載時刻（負の日数）は 1 日先まで＝媒体の時差の付け間違いを許す幅。それより先は時刻が信用できない＝対象外
+V3_START_UTC = "2026-10-12T09:00:00+00:00"
+
+
+def is_v3_target(pubdate: str, run_at: str, dup_event: bool,
+                 start_utc: str = V3_START_UTC, max_age_days: float = V3_MAX_AGE_DAYS,
+                 min_age_days: float = V3_MIN_AGE_DAYS) -> bool:
+    """v3 の対象か: 重複事象でなく・便が開始の境目以後で・掲載から便までが min_age_days〜max_age_days 日（丸めずに比べる）。
+
+    掲載時刻・便の時刻が解釈できない時は False（通知の鮮度関門 is_stale とは逆向き＝落とす側に倒す）。
+    """
+    if dup_event:
+        return False
+    try:
+        run = datetime.fromisoformat(run_at)
+        start = datetime.fromisoformat(start_utc)
+    except (TypeError, ValueError):
+        return False
+    if run.tzinfo is None:
+        run = run.replace(tzinfo=timezone.utc)
+    if run < start:
+        return False
+    age = _pub_age_exact(pubdate, run_at)
+    return age is not None and float(min_age_days) <= age <= float(max_age_days)
 
 
 def fetch_rss(qe: dict, cfg: dict) -> list[dict]:
@@ -387,6 +425,16 @@ def _selftest() -> int:
             and a_bad is None and not is_stale(a_bad) and not is_stale(9999.0, None))
     print(f"  {'OK ' if ok_s else 'NG '} 鮮度関門: 古い記事（{a_old}日・{a_old2}日）は通知抑止・当日/日付不明は通す・境界180日")
     ng += not ok_s
+    # v3 の印（§8）: 掲載 2.0 日以内は対象・2.01 日（丸めると 2.0）は対象外・日付不明/重複事象/開始前の便は対象外
+    r3 = "2026-10-13T10:00:00+00:00"
+    ok_v3 = (is_v3_target("Sun, 11 Oct 2026 10:00:00 GMT", r3, False)
+             and not is_v3_target("Sun, 11 Oct 2026 09:45:36 GMT", r3, False)    # 2.01 日
+             and not is_v3_target("いつか", r3, False)
+             and not is_v3_target("Sun, 11 Oct 2026 10:00:00 GMT", r3, True)
+             and not is_v3_target("Fri, 09 Oct 2026 22:00:00 GMT", "2026-10-11T00:00:00+00:00", False)
+             and not is_stale(pub_age_days("Sun, 11 Oct 2026 09:45:36 GMT", r3)))  # v2 の通知は従来どおり
+    print(f"  {'OK ' if ok_v3 else 'NG '} v3 の印: 2.0 日以内のみ・2.01 日/日付不明/重複事象/開始前は対象外・v2 の通知は不変")
+    ng += not ok_v3
     return ng
 
 
@@ -980,7 +1028,7 @@ def main() -> int:
     cfg_sha = __import__("hashlib").sha256(CONFIG.read_bytes()).hexdigest()[:12]
     seen, seen_events = load_seen()
     run_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
-    n_hit, n_err, n_stale = 0, 0, 0
+    n_hit, n_err, n_stale, n_v3 = 0, 0, 0, 0
     max_age = cfg.get("collect", {}).get("notify_max_age_days", NOTIFY_MAX_AGE_DAYS)
     items_per_term = {}    # recall のサイレント崩壊検知用（敵対R3 A10: 0件返答と事象なしを区別）
     hits_for_notify = []
@@ -1015,6 +1063,9 @@ def main() -> int:
                 age = pub_age_days(it["pubdate"], run_at)
                 stale = is_stale(age, max_age)     # 古い記事は通知だけ止める（台帳は hit のまま）
                 n_stale += int(stale)
+                # v3 の印（§8）: 行を足さず印だけ。定数は呼ぶ時に読む（テストで差し替えが効く・鮮度関門と同じ型）
+                v3 = is_v3_target(it["pubdate"], run_at, dup, V3_START_UTC, V3_MAX_AGE_DAYS)
+                n_v3 += int(v3)
                 # 版とconfig指紋を発火行へ焼き込む（語彙変更後も母集団を分離再現できる・Codex指摘）
                 rec = {"run_at": run_at, "term": term, "matched_term": hit_term,
                        "series_ids": qe["series_ids"],
@@ -1022,7 +1073,7 @@ def main() -> int:
                        "event_id": eid, "dup_event": dup,
                        "title": it["title"], "link": it["link"],
                        "pubdate": it["pubdate"], "beneficiaries": bens, "status": "hit",
-                       "pub_age_days": age, "stale": stale,
+                       "pub_age_days": age, "stale": stale, "v3_target": v3,
                        "config_version": cfg.get("version"), "config_sha": cfg_sha}
                 fh.write(json.dumps(rec, ensure_ascii=False) + "\n")
                 n_hit += 1
@@ -1039,7 +1090,7 @@ def main() -> int:
         # items= クエリ別の RSS 取得件数: 全クエリ 0件が続けば「事象が無い」でなく
         # 「Google 側の recall 崩壊」を疑う（敵対R3 A10）
         fh.write(json.dumps({"type": "run_summary", "run_at": run_at, "hit": n_hit,
-                             "stale": n_stale,
+                             "stale": n_stale, "v3_target": n_v3,
                              "ok": len(cfg["queries"]) - n_err, "error": n_err,
                              "items": items_per_term,
                              "config_version": cfg.get("version"), "config_sha": cfg_sha},
@@ -1048,7 +1099,7 @@ def main() -> int:
     if hits_for_notify and not args.dry_run:
         notify(f"🛑 供給ショック検知: {len(hits_for_notify)}事象",
                " / ".join(hits_for_notify)[:200])
-    print(f"[done] hit={n_hit}（うち古い記事で通知抑止 {n_stale}）error={n_err}/{len(cfg['queries'])}クエリ")
+    print(f"[done] hit={n_hit}（うち古い記事で通知抑止 {n_stale}・v3 対象 {n_v3}）error={n_err}/{len(cfg['queries'])}クエリ")
     # 部分障害ゲート: 4クエリ以上失敗（ok<15/18）で異常終了→runner が失敗通知（Codex指摘）
     if n_err > 3:
         print(f"ERROR: 失敗クエリ {n_err}件（許容3）", file=sys.stderr)

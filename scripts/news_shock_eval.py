@@ -117,6 +117,23 @@ def _split_scan(code5: str, entry_day: str, ev_day: str, scale_base: str,
     return [(d, _split_factors(d, bars_dir)[code5]) for d in days if code5 in _split_factors(d, bars_dir)]
 
 
+def _representative_hits(rows: list[dict], fp_links: set) -> list[dict]:
+    """評価対象の代表行。分析単位=事象: 各 event_id の**最初の非 false_positive 行**だけを代表にする
+    （プレレジ§6の代表行規則。先頭行が後日FP化されたら次の非FP行へ繰り上がる＝Codex再審の注文。
+    v1行は event_id が無いので従来どおり行単位・FP除外のみ＝後方互換）。evaluate と report が共用。"""
+    hits, seen_ev = [], set()
+    for r in rows:
+        if r.get("status") != "hit" or r.get("link") in fp_links:
+            continue
+        eid = r.get("event_id")
+        if eid:
+            if eid in seen_ev:
+                continue
+            seen_ev.add(eid)
+        hits.append(r)
+    return hits
+
+
 def evaluate(ledger: Path = LEDGER, bars_dir: Path = BARS_DIR,
              topix_path: Path = TOPIX_PATH) -> int:
     if not ledger.exists():
@@ -134,19 +151,7 @@ def evaluate(ledger: Path = LEDGER, bars_dir: Path = BARS_DIR,
     rows = [json.loads(l) for l in ledger.read_text(encoding="utf-8").splitlines()
             if l.strip()]
     fp_links = {r.get("link") for r in rows if r.get("type") == "false_positive"}
-    # 分析単位=事象: 各 event_id の**最初の非 false_positive 行**だけを代表として評価する
-    # （プレレジ§6の代表行規則。先頭行が後日FP化されたら次の非FP行へ繰り上がる＝Codex再審の注文。
-    #  v1行は event_id が無いので従来どおり行単位・FP除外のみ＝後方互換）
-    hits, seen_ev = [], set()
-    for r in rows:
-        if r.get("status") != "hit" or r.get("link") in fp_links:
-            continue
-        eid = r.get("event_id")
-        if eid:
-            if eid in seen_ev:
-                continue
-            seen_ev.add(eid)
-        hits.append(r)
+    hits = _representative_hits(rows, fp_links)
     done = {(r.get("link"), r.get("code"), r.get("window")) for r in rows
             if r.get("type") in ("evaluation", "evaluation_skipped")}
     bdays = sorted(Path(f).name[:8] for f in glob.glob(str(bars_dir / "*.json.gz")))
@@ -277,6 +282,74 @@ def _correct_split_rows(rows: list[dict], fh, bdays: list[str], bars_dir: Path, 
     return n
 
 
+def _effective_evals(rows: list[dict]) -> dict[tuple, dict]:
+    """(link, code, window) → 読む側の評価行。同じ鍵の evaluation_correction があればそれを優先（冒頭の規約）。"""
+    ev: dict[tuple, dict] = {}
+    for r in rows:
+        if r.get("type") == "evaluation":
+            ev.setdefault((r.get("link"), r.get("code"), r.get("window")), r)
+    for r in rows:
+        if r.get("type") == "evaluation_correction":
+            ev[(r.get("link"), r.get("code"), r.get("window"))] = r
+    return ev
+
+
+def _window_stats(evals: dict[tuple, dict], links: set) -> dict[str, dict]:
+    """窓ごとの記述統計（プレレジ§4: 超過 pt の分布だけ・しきい値判定なし）。
+
+    銘柄行= (事象, 受益銘柄) 1 組の超過 pt。事象= 同じ事象の受益銘柄の超過 pt の平均（受益カードを選別しない
+    §3 の対象全件を 1 事象に畳む読み方）。勝ち= 超過 pt > 0。
+    """
+    import statistics
+    out = {}
+    for win in WINDOWS_BD:
+        by_link: dict[str, list[float]] = {}
+        for (link, _code, w), r in evals.items():
+            if w == win and link in links and r.get("excess_pt") is not None:
+                by_link.setdefault(link, []).append(r["excess_pt"])
+        rows_x = [x for xs in by_link.values() for x in xs]
+        ev_x = [statistics.fmean(xs) for xs in by_link.values()]
+        out[win] = {"events": len(ev_x), "event_wins": sum(x > 0 for x in ev_x),
+                    "event_median": round(statistics.median(ev_x), 2) if ev_x else None,
+                    "rows": len(rows_x), "row_wins": sum(x > 0 for x in rows_x),
+                    "row_median": round(statistics.median(rows_x), 2) if rows_x else None}
+    return out
+
+
+def report(ledger: Path = LEDGER) -> str:
+    """成績表（読み取り専用・台帳に書かない）。v2= config_version 2 の代表行すべて（従来の評価対象）／
+    v3= そのうち v3_target=true の代表行だけ（掲載 2 日以内・プレレジ§8・凍結 2026-10-12）。
+    期間・指標は両方とも §3/§4 と同じ物を使い、v3 の事象が 0 件でも落とさず「0 件」と出す。"""
+    rows = []
+    if ledger.exists():
+        rows = [json.loads(l) for l in ledger.read_text(encoding="utf-8").splitlines() if l.strip()]
+    fp_links = {r.get("link") for r in rows if r.get("type") == "false_positive"}
+    hits = _representative_hits(rows, fp_links)
+    evals = _effective_evals(rows)
+    v2 = [h for h in hits if h.get("config_version") == 2]
+    v3 = [h for h in v2 if h.get("v3_target") is True]
+    n_v1 = len(hits) - len(v2)
+    lines = ["# news_shock 成績表（記述統計のみ・しきい値判定なし・正本= tasks/news_shock_preregister.md §3/§4/§8）",
+             f"- 台帳: {ledger}（hit 行 {sum(1 for r in rows if r.get('status') == 'hit')}・"
+             f"false_positive {len(fp_links)}・v1 行 {n_v1} は両表に入れない）",
+             "- 事象= 代表行（各 event_id の最初の非 FP 行）・事象の超過 pt= 受益銘柄の平均・勝ち= 超過 pt > 0・"
+             "訂正行（evaluation_correction）を優先"]
+    for title, hs in (("v2（従来の発火条件・凍結 2026-08-16）", v2),
+                      ("v3（v2 ＋ 掲載 2 日以内・凍結 2026-10-12・§8）", v3)):
+        st = _window_stats(evals, {h["link"] for h in hs})
+        lines += ["", f"## {title}", f"- 発火事象 {len(hs)} 件（評価は期日到来分のみ）"]
+        if not hs:
+            lines.append("- 対象 0 件（まだ発火していない）")
+        lines += ["", "| 窓 | 評価済み事象 | 勝ち（事象） | 中央値 pt（事象） | 銘柄行 | 勝ち（行） | 中央値 pt（行） |",
+                  "|---|---|---|---|---|---|---|"]
+        for win, n_bd in WINDOWS_BD.items():
+            s = st[win]
+            fmt = lambda x: "—" if x is None else f"{x:+.2f}"
+            lines.append(f"| +{n_bd} 営業日 | {s['events']} | {s['event_wins']} | {fmt(s['event_median'])} | "
+                         f"{s['rows']} | {s['row_wins']} | {fmt(s['row_median'])} |")
+    return "\n".join(lines)
+
+
 def _selftest() -> int:
     import tempfile
     ng = 0
@@ -305,10 +378,11 @@ def _selftest() -> int:
                                     {"Code": "77770", "AdjO": 200 + i, "AdjC": 202 + i}]}, fh)
         led = td / "log.jsonl"
         mk = lambda run_at, link, code="9999": {"run_at": run_at, "link": link, "status": "hit",
+                                   "config_version": 2,
                                    "beneficiaries": [{"code": code, "tier": "confirmed",
                                                       "type_label": "価格直結型"}]}
-        rows = [mk("2026-01-01T21:20:00+00:00", "http://a"),   # JST 1/2 06:20 <9時 → 基準1/2
-                mk("2026-01-02T10:00:00+00:00", "http://b"),   # JST 1/2 19:00 ≥9時 → 基準1/3
+        rows = [{**mk("2026-01-01T21:20:00+00:00", "http://a"), "v3_target": True},   # JST 1/2 06:20 <9時 → 基準1/2・v3 対象
+                {**mk("2026-01-02T10:00:00+00:00", "http://b"), "v3_target": False},  # JST 1/2 19:00 ≥9時 → 基準1/3
                 mk("2026-01-01T21:20:00+00:00", "http://c", "7777"),  # 基準1/2でAdjO欠損→1/3へ繰延
                 mk("2026-01-08T22:20:00+00:00", "http://d", "8888"),  # 基準1/9=最終日でAdjO欠損・繰延先データ未到来→保留
                 {"run_at": "2026-01-01T21:20:00+00:00", "link": "http://fp", "status": "hit",
@@ -346,6 +420,16 @@ def _selftest() -> int:
         evaluate(led, bars, td / "topix.json.gz")       # 再実行
         n_after = len(led.read_text(encoding="utf-8").splitlines())
         checks.append((n_before == n_after, "再実行で増えない（冪等）"))
+        # 成績表（§8）: v3 の表は v3_target=true の代表行だけを数える・v2 の表は従来の全代表行・読み取り専用
+        rep = report(led)
+        st_v2 = _window_stats(_effective_evals(out), {r["link"] for r in rows
+                                                        if r.get("status") == "hit" and r.get("config_version") == 2})
+        st_v3 = _window_stats(_effective_evals(out), {"http://a"})
+        checks.append((st_v3["w5"]["events"] == 1 and st_v2["w5"]["events"] >= 3
+                       and "v3（v2 ＋ 掲載 2 日以内" in rep and "| +5 営業日 | 1 | " in rep.split("## v3")[1]
+                       and n_after == len(led.read_text(encoding="utf-8").splitlines()),
+                       "成績表: v3 表は v3_target の事象だけ・v2 表は全事象・台帳に書かない"))
+        checks.append(("対象 0 件" in report(td / "none.jsonl"), "成績表: 台帳なし/v3 0 件でも落ちず「0 件」と出す"))
         for ok, why in checks:
             print(f"  {'OK ' if ok else 'NG '} {why}")
             ng += not ok
@@ -357,11 +441,16 @@ def _selftest() -> int:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--selftest", action="store_true")
+    ap.add_argument("--report", action="store_true",
+                    help="成績表（v2 全発火と v3=掲載 2 日以内の 2 表・記述統計のみ）を表示する。台帳に書かない")
     args = ap.parse_args()
     if args.selftest:
         ng = _selftest()
         print("OK: 全通過" if not ng else f"NG: {ng}件失敗")
         return 1 if ng else 0
+    if args.report:
+        print(report())
+        return 0
     return evaluate()
 
 
