@@ -32,7 +32,7 @@
 - 進行役の機械検証（15:08〜15:09）: 分野つき書き出し 6 本は md5 が 3 組で一致（買い物＝技術／ビジネス＝ゲーム／食＝趣味）＝分野の絞りは効いていない／`config/launchd/*.plist` は 19 本／HF 保存庫 README 65〜70 行に「Marketing or commercial targeting (intended for academic research only)」を実読／Google の robots は禁止 2 行のみ（http 200・93 bytes）／公式 RSS は 10 語／Wikipedia 上位は 1,000 記事。
 - 2026-10-12 15:10 Opus 返却（transcript の model= claude-opus-5-5）＝渡した 4 ／返った 4。15:14 Fable の仕分け返却: 一致 8・1 体だけの着眼 12・割れ 4（置き場／Google の書き出しボタンの自動操作と頻度／X を入れるか／保存期限）。置き場は 3 体が「influx の外」、Fable も自案（中）を取り下げて外へ。
 - 進行役の追加の確かめ: Google ニュースの robots は一般向け `Disallow: /`・`rss` を含む行 0 件（既存便 `scripts/news_shock_collect.py:246` がこの RSS を取っている＝範囲外の所見・今回は触らない）／X の robots は `Disallow: /`／GitHub `fdciabdul/Google-Trends-Keywords-Scraper` は `license None`。
-- 報告（叩き台）= vault `02_Ai/influx/reports/influx-trend-collector-4model-2026-10-12.md`（235 行）。台帳= P-INF-50 を新規記帳・P-INF-44 行の 6 回目の 3 案は失効と記載・調査ノートの該当表に失効の注意書き 1 行。
+- 報告（叩き台）= vault `02_Ai/trends/reports/trends-collector-4model-2026-10-12.md`（235 行）。台帳= P-INF-50 を新規記帳・P-INF-44 行の 6 回目の 3 案は失効と記載・調査ノートの該当表に失効の注意書き 1 行。
 - 判断待ち（オーナー）: ①置き場〈a 新しい小さな置き場（推奨）／b influx の中／c 画面の自動操作なし／d 作らない〉②Google の書き出しを自動で毎日 1 回押すか ③X を入れるか ④登録が要る無料窓口と公式 API の申請。既定値= 日本だけ・masa-2・有料なし・保存庫は広告用途に渡さない。
 - 未確認（作る前に読む）: YouTube の保存制限の原文／Google・X の規約の該当文／Wikipedia の API の利用条件／所要の見積り（Fable の見立てのみ）。
 - 作った物: 0（定期便・登録・課金なし）。
