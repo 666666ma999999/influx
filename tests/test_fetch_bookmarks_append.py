@@ -214,5 +214,62 @@ class TestWriteStatusJson(unittest.TestCase):
         self.assertTrue(os.path.exists(nested_path))
 
 
+
+
+class TestParseTweetEntryScreenName(unittest.TestCase):
+    """GraphQL 応答から URL を組み立てる時の screen_name の読み取り位置（2026-10-20 回帰）。
+
+    X は screen_name を user_results.result.legacy から .core へ移した。旧実装は legacy だけを
+    見ていたため URL が空になり、GraphQL 経由の取得が初回から 0 件だった。
+    """
+
+    def _tweet(self, user):
+        return {
+            "__typename": "Tweet",
+            "rest_id": "123",
+            "core": {"user_results": {"result": user}},
+            "legacy": {"id_str": "123", "full_text": "本文", "created_at": "Mon Oct 20 00:00:00 +0000 2026"},
+        }
+
+    def test_new_shape_core_screen_name(self):
+        bm = fetch_bookmarks._parse_tweet_entry(self._tweet({"core": {"screen_name": "newshape"}}))
+        self.assertEqual(bm.url, "https://x.com/newshape/status/123")
+        self.assertEqual(bm.author, "@newshape")
+
+    def test_old_shape_legacy_screen_name(self):
+        bm = fetch_bookmarks._parse_tweet_entry(self._tweet({"legacy": {"screen_name": "oldshape"}}))
+        self.assertEqual(bm.url, "https://x.com/oldshape/status/123")
+
+    def test_visibility_wrapper_is_unwrapped(self):
+        entry = {"__typename": "TweetWithVisibilityResults", "tweet": self._tweet({"core": {"screen_name": "w"}})}
+        self.assertEqual(fetch_bookmarks._parse_tweet_entry(entry).url, "https://x.com/w/status/123")
+
+    def test_created_at_normalized_to_iso_utc(self):
+        bm = fetch_bookmarks._parse_tweet_entry(self._tweet({"core": {"screen_name": "a"}}))
+        self.assertEqual(bm.created_at, "2026-10-20T00:00:00.000Z")
+
+
+class TestMergeDomGraphql(unittest.TestCase):
+    """DOM 版と GraphQL 版の項目ごとの合わせ方（空欄で上書きしない・本文は長い方）。"""
+
+    def test_empty_graphql_text_keeps_dom_text(self):
+        dom = fetch_bookmarks.Bookmark(url="u", text="DOMの本文", author="@a", created_at="2026-01-01T00:00:00.000Z")
+        gql = fetch_bookmarks.Bookmark(url="u", text="", author="@a", created_at="")
+        m = fetch_bookmarks._merge_dom_graphql(dom, gql)
+        self.assertEqual(m.text, "DOMの本文")
+        self.assertEqual(m.created_at, "2026-01-01T00:00:00.000Z")
+
+    def test_longer_graphql_text_wins(self):
+        dom = fetch_bookmarks.Bookmark(url="u", text="途中まで…", author="@a")
+        gql = fetch_bookmarks.Bookmark(url="u", text="途中まで…の続きの全文", author="@a", is_long_form=True)
+        m = fetch_bookmarks._merge_dom_graphql(dom, gql)
+        self.assertEqual(m.text, "途中まで…の続きの全文")
+        self.assertTrue(m.is_long_form)
+
+    def test_no_dom_returns_graphql(self):
+        gql = fetch_bookmarks.Bookmark(url="u", text="t")
+        self.assertIs(fetch_bookmarks._merge_dom_graphql(None, gql), gql)
+
+
 if __name__ == "__main__":
     unittest.main()

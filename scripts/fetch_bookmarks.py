@@ -40,7 +40,7 @@ import sys
 import tempfile
 import time
 from dataclasses import asdict, dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -371,7 +371,10 @@ def _parse_tweet_entry(entry: dict) -> Optional[Bookmark]:
         legacy = tweet.get("legacy", {})
         user_legacy = core.get("legacy", {})
 
-        screen_name = user_legacy.get("screen_name", "")
+        # X の仕様変更で screen_name は user_results.result.core へ移った（legacy には無い・
+        # 2026-10-20 実測）。旧形の legacy も読めるよう両方を見る。ここが空だと URL が作れず
+        # GraphQL 経由の全件が捨てられていた（2026-08-07 以降 GraphQL=0 の原因）。
+        screen_name = core.get("core", {}).get("screen_name") or user_legacy.get("screen_name", "")
         tweet_id = legacy.get("id_str", tweet.get("rest_id", ""))
         full_text = legacy.get("full_text", "")
         created_at = legacy.get("created_at", "")
@@ -385,6 +388,13 @@ def _parse_tweet_entry(entry: dict) -> Optional[Bookmark]:
             is_long = True
 
         url = f"https://x.com/{screen_name}/status/{tweet_id}" if screen_name and tweet_id else ""
+        # GraphQL の日時は "Mon Oct 20 00:00:00 +0000 2026" 形式。DOM（<time datetime>）と同じ
+        # ISO 8601 の UTC へ揃える（下流の fromisoformat が読めず期間集計から漏れるため）。
+        try:
+            created_at = datetime.strptime(created_at, "%a %b %d %H:%M:%S %z %Y").astimezone(
+                timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+        except (ValueError, TypeError):
+            pass
 
         return Bookmark(
             url=url, text=full_text, author=f"@{screen_name}",
@@ -393,6 +403,20 @@ def _parse_tweet_entry(entry: dict) -> Optional[Bookmark]:
     except Exception as exc:
         logger.debug("ツイート解析エラー: %s", exc)
         return None
+
+
+def _merge_dom_graphql(dom_bm: Optional[Bookmark], gql_bm: Bookmark) -> Bookmark:
+    """同じ URL の DOM 版と GraphQL 版を項目ごとに合わせる（空欄で上書きしない・本文は長い方）。"""
+    if dom_bm is None:
+        return gql_bm
+    text = gql_bm.text if len(gql_bm.text) >= len(dom_bm.text) else dom_bm.text
+    return Bookmark(
+        url=gql_bm.url,
+        text=text,
+        author=gql_bm.author or dom_bm.author,
+        is_long_form=gql_bm.is_long_form or dom_bm.is_long_form,
+        created_at=gql_bm.created_at or dom_bm.created_at,
+    )
 
 
 # ── テキスト空ブックマーク補完取得 ──────────────────────────────
@@ -518,11 +542,9 @@ def fetch_bookmarks(
     def _flush_new_bookmarks(scroll: int) -> None:
         """マージ結果から新規分をJSONLにappendし、チェックポイントを更新する。"""
         # GraphQL（より詳細）を優先し、DOM（確実）で補完してマージ
-        merged: Dict[str, Bookmark] = {}
-        for url, bm in dom_bookmarks.items():
-            merged[url] = bm
+        merged: Dict[str, Bookmark] = dict(dom_bookmarks)
         for url, bm in graphql_bookmarks.items():
-            merged[url] = bm
+            merged[url] = _merge_dom_graphql(merged.get(url), bm)
 
         new_count = 0
         for url, bm in merged.items():
@@ -553,7 +575,7 @@ def fetch_bookmarks(
                 bm = _parse_tweet_entry(entry)
                 if bm and bm.url and bm.url not in graphql_bookmarks:
                     graphql_bookmarks[bm.url] = bm
-                    logger.info("[GraphQL] @%s - %s...", bm.author, bm.text[:40])
+                    logger.info("[GraphQL] %s - %s...", bm.author, bm.text[:40])
         except Exception as exc:
             logger.debug("GraphQLレスポンス解析スキップ: %s", exc)
 
@@ -689,6 +711,10 @@ def fetch_bookmarks(
 
         # 最終フラッシュ（取りこぼし防止）
         _flush_new_bookmarks(scroll_count)
+        # DOM 版を先に保存した URL に、後から届いた GraphQL（長文の全文など）を反映する
+        for i, bm in enumerate(all_bookmarks):
+            if bm.url in graphql_bookmarks:
+                all_bookmarks[i] = _merge_dom_graphql(bm, graphql_bookmarks[bm.url])
 
         # テキスト空ブックマークを個別ページから補完取得
         filled = _backfill_empty_text(page, all_bookmarks)
