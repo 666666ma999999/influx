@@ -877,6 +877,34 @@ python3 scripts/x_mention_dict.py            # 辞書の自己テスト（誤検
 python3 scripts/x_mention_extract.py --selftest   # 判定の自己テスト（見逃し/鳴りすぎの番人）
 ```
 
+### 判定器 Jev で関係ない投稿を外してから数える（2026-10-29 追記・P-ENV-242 案 1 の③・オーナー「推奨で」）
+
+辞書に当たった投稿の約 4 割は株価の話・決算の感想・銘柄紹介など「供給・値上げの話ではない」（過去 3,503 件で
+線 0.15 未満が 1,325 件＝38%）。数えの手前で判定器 Jev（はい確率を返す小さな判定器）に聞き、**明らかに関係ない
+投稿だけ外す**。オーナーの確認は 0 件で使う（正解 56 件の当たりの見逃し 0）。
+
+- 口: `x_mention_extract.extract_day(..., keep=)`。重複を除いた後・数える直前で 1 投稿 1 回聞く（`scripts/x_mention_jev.py`）
+- 問い= 試しで合格した v2 の英語 2 問・点= 2 問の高い方・**線 0.15 未満だけ外す**（`configs/x_mention_jev.json`）
+- **対象日だけでなく直前 14 日も同じ規約で数え直してから** z を取る（対象日だけ外すと基準が高いまま＝鳴りにくくなる）。
+  数え直した件数は `data/x_price_watch/mentions_jev.jsonl`。規則だけの `mentions.jsonl` はこれまでどおり書く
+- 送るのは伏せた本文だけ（URL・@名前・メール・電話。伏せきれない物は送らずに数えに残す）
+- 判定器が失敗・鍵なし・時間切れ・429・予算切れ（1 回 600 秒）→ **外さない**（今までどおり数える）。理由は
+  `data/x_price_watch/jev_filter_log.jsonl`（実行ごと）に、外した投稿は `data/x_price_watch/jev_dropped/<日>.jsonl` に〈id・点・理由〉
+- 点は status_id ごとに `data/x_price_watch/jev_scores.jsonl` に貯める（毎晩送るのは新しい投稿だけ）。初回は過去 3,503 件を入れた
+- Jev の呼び出しは `~/.claude/hooks/lib/jev.py`（正本）を読むだけで使う。本線はホストの `/usr/bin/python3` で動くため
+  compose の変更は不要。鍵は `TYPESAFE_API_KEY`（環境変数→`~/.zshrc` の順に探す）
+- 発火台帳の行に `jev: {threshold, qv, rule_count}`（判定器を通した後の件数で鳴った印）。通知の文面・送り先は不変
+- **切り方**: `configs/x_mention_jev.json` の `enabled` を `false`（今までと全く同じ動き・2026-10-29 に 10-27 分で
+  台帳・発火・画面出力の一致を確認）。1 回だけ試す時は `--jev on|off`、台帳を書かずに見る時は `--dry-run`
+
+当て直し（線 0.15・7/28〜10/26）: 急増の判定 138 → 70（両方 66・規則だけ 72・判定器だけ 4）。本番の口で 10-26 を
+流すと 6 → 2 社で当て直しと一致、10-27 は 3 → 2 社（判定にかけた 68 件中 外した 27 件）。経緯= `tasks/x_mention_jev_filter.md`
+
+```bash
+/usr/bin/python3 scripts/x_mention_extract.py --date 2026-10-27 --dry-run          # 判定器つき・台帳を書かない（点の貯めだけ書く）
+/usr/bin/python3 scripts/x_mention_extract.py --date 2026-10-27 --dry-run --jev off # 規則だけ
+```
+
 ### 検証結果（2026-07-29・2024年32日分を実収集）— **先行しない。ほぼ後追い**
 
 ユーザー指摘「過去ぶんデータが取れるはずなので検証してよ」を受けて 2024-03-20〜04-20 の32日を

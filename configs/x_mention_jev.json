@@ -1,0 +1,10 @@
+{
+  "_doc": "銘柄言及の数えの手前で、判定器 Jev が『供給・値上げの話ではない』とした投稿だけ外す（P-ENV-242 案 1 の③・2026-10-29 オーナー「推奨で」）。enabled を false にすると今までと全く同じ動きに戻る。正本の説明= docs/price-watch-universe.md §16c 追記・tasks/x_mention_jev_filter.md",
+  "enabled": true,
+  "threshold": 0.15,
+  "timeout_sec": 10,
+  "budget_sec": 600,
+  "retry_429_wait_sec": 30,
+  "max_consecutive_fail": 5,
+  "jev_lib": "~/.claude/hooks/lib"
+}

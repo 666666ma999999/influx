@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta, timezone
@@ -152,8 +153,13 @@ def canonical_run(rows: list[dict], quality: dict[str, int] | None = None
     return by_run[best], len(rows) - len(by_run[best]), note
 
 
-def extract_day(day: str, matcher, codes: set[str]) -> list[dict]:
-    """1日分の本文から (code, query_id) 別の言及数を作る。"""
+def extract_day(day: str, matcher, codes: set[str], keep=None, quiet: bool = False) -> list[dict]:
+    """1日分の本文から (code, query_id) 別の言及数を作る。
+
+    keep: 省略時は今までと同じ。渡すと、重複を除いた後に数える直前で keep(投稿, 銘柄の一覧) を呼び、
+    False の投稿は数えない（判定器 Jev で関係ない投稿を外す口・x_mention_jev.py・2026-10-29）。
+    quiet: 同日複数回収集の説明行を出さない（判定器つきで基準の日を数え直す時の重複表示を避ける）。
+    """
     path = TEXTS_DIR / f"{day}.jsonl"
     if not path.exists():
         return []
@@ -166,7 +172,7 @@ def extract_day(day: str, matcher, codes: set[str]) -> list[dict]:
     q_all = run_quality()
     quality = {run_at: n for (d, run_at), n in q_all.items() if d == day}
     rows, dropped, note = canonical_run(rows, quality)
-    if note:
+    if note and not quiet:
         # 何を捨てたか・なぜその回を選んだかを必ず出す（黙って母集団を変えない）
         print(f"[{day}] {note}" + (f"／{dropped}行を判定から除外" if dropped else ""))
     for r in rows:
@@ -186,6 +192,10 @@ def extract_day(day: str, matcher, codes: set[str]) -> list[dict]:
             if tkey in seen_text:
                 continue
             seen_text.add(tkey)
+            # 判定器の口（keep 省略時は通らない＝今までと同じ）。重複の印は付けた後に決める＝
+            # 過去の当て直し（規則が数えた言及のうち点が線以上の物だけ残す）と同じ順番
+            if keep is not None and not keep(r, [x["code"] for x in ms]):
+                continue
             per[(m["code"], m["name"], r.get("query_id", ""))] += 1
     run_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
     out = [{"date": day, "code": c, "name": n, "query_id": q, "count": v,
@@ -616,6 +626,10 @@ def main() -> int:
     ap.add_argument("--date", help="対象日 YYYY-MM-DD（省略時=texts/ の最新日）")
     ap.add_argument("--rebuild", action="store_true", help="texts/ の全日を作り直す")
     ap.add_argument("--top", type=int, default=20)
+    ap.add_argument("--dry-run", action="store_true",
+                    help="数えと判定を出すだけ（mentions/発火台帳/外した記録を書かない。判定器の点の貯めだけは書く）")
+    ap.add_argument("--jev", choices=("on", "off"),
+                    help="判定器 Jev をこの 1 回だけ入/切（省略時= configs/x_mention_jev.json の enabled）")
     args = ap.parse_args()
 
     if args.selftest:
@@ -645,16 +659,59 @@ def main() -> int:
               "過去の発火記録は再整合しません（前向き記録は追記専用）。\n"
               "    再計算で判定が変わった日がある場合は、発火台帳と突き合わせて手で確認してください。")
 
+    mem = load_mentions() if args.dry_run else None   # dry-run は台帳を書かず手元で差し替える
     for day in targets:
         rows = extract_day(day, matcher, codes)
-        n = write_day(rows, day)
+        if mem is not None:
+            mem = [r for r in mem if r.get("date") != day] + rows
+            n = len(rows)
+        else:
+            n = write_day(rows, day)
         scanned = rows[0]["posts_scanned"] if rows else 0
         print(f"[{day}] 本文 {scanned} 件 → 言及 {n} 行 / {len({r['code'] for r in rows})} 銘柄")
 
     target = targets[-1]
-    all_rows = load_mentions()
+    all_rows = mem if mem is not None else load_mentions()
     res = judge(all_rows, target)
-    print(f"\n=== 銘柄言及の判定 {target}（baseline {BASELINE_DAYS}日・z>={Z_THRESHOLD}）===")
+
+    # --- 判定器 Jev で関係ない投稿を外してから判定（2026-10-29・x_mention_jev.py・切れば上の res のまま） ---
+    import x_mention_jev as xj
+    jcfg = xj.load_config()
+    jev_on = (args.jev == "on") if args.jev else bool(jcfg.get("enabled"))
+    rule_count: dict[str, int] = {}
+    if jev_on:
+        # 対象日だけ外すと基準（直前14日）が高いまま＝鳴りにくくなる偏り。規則側が処理した日と同じ日を
+        # 同じ規約で数え直す（過去の当て直し 7/28〜10/26 と同じ当て方）
+        scanned_days = {r["date"] for r in all_rows if r.get("code") == SCANNED_MARK}
+        t = datetime.strptime(target, "%Y-%m-%d")
+        window = {(t - timedelta(days=i)).strftime("%Y-%m-%d") for i in range(0, BASELINE_DAYS + 1)}
+        jdays = sorted(window & scanned_days)
+        flt = xj.JevFilter(jcfg)
+        jrows: list[dict] = []
+        for day in jdays:
+            jrows += extract_day(day, matcher, codes, keep=flt.keeper(day), quiet=True)
+        if not args.dry_run:
+            xj.write_mentions_jev(jrows, jdays)
+        flt.flush(target, jdays, dry_run=args.dry_run)
+        rule_count = {r["code"]: r["count"] for r in res}
+        n_rule_alert = sum(1 for r in res if r["verdict"] in ("alert", "sigma0_jump"))
+        res = judge(jrows, target)
+        n_jev_alert = sum(1 for r in res if r["verdict"] in ("alert", "sigma0_jump"))
+        summ = flt.summary()
+        tot, why = Counter(), Counter()
+        for s in summ.values():
+            why.update(s["理由別（残した）"])
+            tot.update({k: v for k, v in s.items() if k != "理由別（残した）"})
+        st = summ.get(target, {})
+        print(f"\n[判定器 Jev] 線 {flt.th}・{len(jdays)} 日を数え直し（対象日＋基準の日）: "
+              f"判定にかけた {tot['判定にかけた']}／外した {tot['外した']}／判定できず残した {tot['判定できず残した']}"
+              + (f"（理由 {dict(why)}）" if why else "") + f"・新しく送った {flt.sent}"
+              + (f"・途中で止めた理由 {flt.stop_reason}" if flt.stop_reason else ""))
+        print(f"[判定器 Jev] 対象日 {target}: 判定にかけた {st.get('判定にかけた', 0)}／外した {st.get('外した', 0)}"
+              f"／判定できず残した {st.get('判定できず残した', 0)}"
+              f" → 急増の判定 規則だけなら {n_rule_alert} 社・判定器を通すと {n_jev_alert} 社")
+    print(f"\n=== 銘柄言及の判定 {target}（baseline {BASELINE_DAYS}日・z>={Z_THRESHOLD}"
+          f"{'・判定器 Jev で外した後' if jev_on else ''}）===")
     hdr = f"{'code':<7}{'銘柄':<22}{'言及':>5}{'平均':>7}{'z':>7}  verdict"
     print(hdr)
     print("-" * 62)
@@ -689,7 +746,10 @@ def main() -> int:
         n_dup = sum(1 for r in alerts if (target, r["code"]) in already)
         if n_dup:
             print(f"  （うち {n_dup} 件は記録済みのため台帳へは追記しない）")
-        with ALERTS_OUT.open("a", encoding="utf-8") as fh:
+        if args.dry_run:
+            print("  （--dry-run: 発火台帳へは書かない）")
+        sink = open(os.devnull, "w", encoding="utf-8") if args.dry_run else ALERTS_OUT.open("a", encoding="utf-8")
+        with sink as fh:
             for r in alerts:
                 o = origin.get(r["code"], {})
                 # 収集日ラベルではなく実投稿日（JST最大）を基準にする（look-ahead 除去）
@@ -729,6 +789,11 @@ def main() -> int:
                                      "price_linkage": pl,
                                      "goal_candidate": bool(not in_list and pl
                                                            and pl["stock_pct"] > 0),
+                                     # 判定器 Jev を通した後の件数で鳴った印（切っている時は付かない＝従来と同じ行）
+                                     **({"jev": {"threshold": jcfg.get("threshold"),
+                                                 "qv": xj.QV,
+                                                 "rule_count": rule_count.get(r["code"], 0)}}
+                                        if jev_on else {}),
                                      "run_at": run_at}, ensure_ascii=False) + "\n")
     else:
         print("\nアラートなし")
