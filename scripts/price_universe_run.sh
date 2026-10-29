@@ -49,9 +49,23 @@ if [ "$PU_MODE" = auto ]; then
   if [ "$(date +%u)" = 1 ]; then PU_MODE=weekly; else PU_MODE=daily; fi
 fi
 ONLY_ARGS=()
+# 系列の読み出しは jq ではなく macOS 標準の /usr/bin/python3（標準ライブラリのみ）で行う。
+# launchd の `bash -lc` では PATH に /opt/homebrew/bin が無く jq が見つからず、DAILY_IDS が空になって
+# 10-20〜10-29 の平日便が FATAL で止まっていた（job-doctor の見立て・10-29 修理）。
+PU_SOURCES=configs/price_universe_sources.json
 if [ "$PU_MODE" = daily ]; then
-  DAILY_IDS=$(jq -r '[.series[] | select(.cadence!="monthly" and (.type|IN("te","spread","dramexchange","fmbi","tanaka","jepx"))) | .id] | join(",")' configs/price_universe_sources.json)
+  # 絞り込み条件は旧 jq 式と同じ: cadence!="monthly" かつ type が下の 6 種のどれか
+  DAILY_IDS=$(/usr/bin/python3 -c 'import json,sys
+d=json.load(open(sys.argv[1]))
+t=("te","spread","dramexchange","fmbi","tanaka","jepx")
+print(",".join(s["id"] for s in d["series"] if s.get("cadence")!="monthly" and s.get("type") in t))' "$PU_SOURCES")
   n_daily=$(printf '%s' "$DAILY_IDS" | tr ',' '\n' | grep -c .)
+  # 安全策: 系列が 0 本なら止めて知らせる（空の --only で FATAL になる前に、原因を読める形で止める）
+  if [ "$n_daily" -eq 0 ]; then
+    echo "FATAL: 日次型の系列が 0 本（$PU_SOURCES の読み出し失敗を疑う）" >&2
+    osascript -e 'display notification "日次型の系列が 0 本（設定の読み出し失敗）" with title "⚠️ B2B価格チェッカー失敗"' 2>/dev/null || true
+    exit 1
+  fi
   ONLY_ARGS=(--only "$DAILY_IDS")
   # 健全性下限は系列数に比例（週次と同じ 8 割）。環境変数 PU_MIN_OK_DAILY で上書き可
   MIN_OK=${PU_MIN_OK_DAILY:-$(( n_daily * 8 / 10 ))}
@@ -60,7 +74,13 @@ else
   # 週次も系列数に比例（全系列の 8 割）。旧値 42 は 52 系列時（約 8 割）の固定値で、72→81 系列に増えた後は
   # 約 5 割まで緩んでいた（2026-10-04 P-INF-29 案 4 で 81 系列）。直近 7 回の週次便は最悪でも 50/54（93%）。
   # 環境変数 MIN_OK で上書き可（従来どおり）
-  n_series=$(jq '.series|length' configs/price_universe_sources.json)
+  n_series=$(/usr/bin/python3 -c 'import json,sys; print(len(json.load(open(sys.argv[1]))["series"]))' "$PU_SOURCES")
+  # 安全策: 系列数が読めないと下限が 0 になり取得低下の知らせが鳴らなくなる（10-26 の週次便で実測）＝止めて知らせる
+  if ! [ "${n_series:-0}" -gt 0 ] 2>/dev/null; then
+    echo "FATAL: 全系列の数が読めない（$PU_SOURCES の読み出し失敗を疑う）" >&2
+    osascript -e 'display notification "全系列の数が読めない（設定の読み出し失敗）" with title "⚠️ B2B価格チェッカー失敗"' 2>/dev/null || true
+    exit 1
+  fi
   MIN_OK=${MIN_OK_OVERRIDE:-$(( n_series * 8 / 10 ))}
   echo "[mode] weekly: ${n_series} series (MIN_OK=${MIN_OK})"
 fi
