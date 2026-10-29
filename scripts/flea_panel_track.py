@@ -319,7 +319,7 @@ def write_jsonl(path: Path, rows: List[Dict[str, Any]]) -> None:
 
 
 # ---------------------------------------------------------------- main
-def run(cfg: Dict[str, Any], today: str, data_dir: Path, fetch=fetch_html) -> int:
+def run(cfg: Dict[str, Any], today: str, data_dir: Path, fetch=fetch_html, sleep=time.sleep) -> int:
     state_path = data_dir / "state.json"
     daily_path = data_dir / "daily.jsonl"
     snap_path = data_dir / "snapshots" / f"{today}.jsonl"
@@ -335,7 +335,9 @@ def run(cfg: Dict[str, Any], today: str, data_dir: Path, fetch=fetch_html) -> in
     win_start, win_end = day - timedelta(days=1), day          # 「前日」= [D-1 00:00, D 00:00) JST
     interval = float(cfg.get("request_interval_sec", 2.0))
 
-    for q in cfg["queries"]:
+    def observe(q: Dict[str, Any]) -> str:
+        """1 クエリを観測して daily に 1 行足す。戻り値= "ok" / "error" / "429"（429 が解けずに失敗）。"""
+        nonlocal errors, processed
         qid, query = q["id"], q["query"]
         # subject= X 品薄対応表（configs/x_shortage_map.json）の受益 subject id。記録だけ＝判断・発火に使わない（P-INF-29 案5）
         row: Dict[str, Any] = {"date": today, "query_id": qid, "query": query, "group": q.get("group"),
@@ -356,7 +358,7 @@ def run(cfg: Dict[str, Any], today: str, data_dir: Path, fetch=fetch_html) -> in
             errors += 1
             daily.append(row)
             print(f"[ERROR] {qid}: {row['error']}", file=sys.stderr)
-            continue
+            return "429" if isinstance(e, urllib.error.HTTPError) and e.code == 429 else "error"
 
         open_items = [slim(i) for i in open_raw if i.get("itemStatus") == "OPEN" and title_ok(i.get("title"), q)]
         sold_items = [i for i in sold_w["items"] if i.get("status") == "SOLD"]
@@ -368,7 +370,7 @@ def run(cfg: Dict[str, Any], today: str, data_dir: Path, fetch=fetch_html) -> in
             errors += 1
             daily.append(row)
             print(f"[ERROR] {qid}: {row['error']}", file=sys.stderr)
-            continue
+            return "error"
 
         for it in open_items + sold_items:
             snaps.append({"date": today, "query_id": qid, **it})
@@ -394,6 +396,28 @@ def run(cfg: Dict[str, Any], today: str, data_dir: Path, fetch=fetch_html) -> in
         print(f"[ok] {qid}: open_total={open_total} new_open_d1={row['new_open_d1']} sold_d1={row['sold_d1']}"
               f"{'(capped)' if sold_w['capped'] else ''} sold_d1_med={row['sold_d1_median']} "
               f"sold/open_total={row['sold_d1_over_open_total']} open_med={row['open_median']}")
+        return "ok"
+
+    failed_429 = [q for q in cfg["queries"] if observe(q) == "429"]
+
+    # 429 で落ちたクエリの 2 周目（2026-10-29 job-doctor 修理）。実測 10-28: 429 は 1 回の待ち（計 660 秒）では
+    # 解けない間が続く一方、同じ便の途中で 10 クエリは通った＝制限は断続的。一巡の後に長く休んでもう 1 回だけ試す。
+    # 2 周目でも最初に 429 で落ちたら打ち切る（制限が続いている＝残りを試しても待ち時間が延びるだけ）。
+    # 落ちたままのクエリは error 行のまま＝exit 2 も変えない（件数の不一致を隠さない）。
+    wait_429 = float(cfg.get("retry_429_wait_sec", 900))
+    if failed_429 and wait_429 > 0:
+        print(f"[retry-429] {len(failed_429)} queries; waiting {wait_429:.0f}s before the 2nd pass", file=sys.stderr)
+        sleep(wait_429)
+        for i, q in enumerate(failed_429):
+            daily[:] = [r for r in daily if not (r.get("date") == today and r.get("query_id") == q["id"])]
+            errors -= 1                       # 1 周目の error 行を外した分（2 周目で落ちれば observe が数え直す）
+            if observe(q) == "429":
+                left = failed_429[i + 1:]
+                print(f"[retry-429] still 429 at {q['id']}; giving up {len(left)} remaining", file=sys.stderr)
+                break
+        retried_ok = sum(1 for r in daily if r.get("date") == today and r.get("status") == "ok"
+                         and r.get("query_id") in {q["id"] for q in failed_429})
+        print(f"[retry-429] recovered {retried_ok}/{len(failed_429)}", file=sys.stderr)
 
     # 書き順= 生観測 → 日次 → state（全て一時ファイル→置換）。件数は state の日付から導くので途中失敗後の再実行でも同じ値になる
     write_jsonl(snap_path, snaps)

@@ -205,6 +205,71 @@ class RunTest(unittest.TestCase):
             self.assertEqual(rc, 2)
 
 
+class Retry429Test(unittest.TestCase):
+    """2026-10-29: 429 で落ちたクエリを一巡の後に 1 回だけ試し直す（2 周目でも 429 なら打ち切り）。"""
+
+    @staticmethod
+    def _cfg(n):
+        return dict(CFG, queries=[{"id": f"q{i}", "query": f"kw{i}x"} for i in range(n)])
+
+    @staticmethod
+    def _fetch(blocked):
+        """blocked(query_text) が True の間は 429 を投げる取得器。"""
+        import urllib.error
+        def f(url, ua):
+            if blocked(url):
+                raise urllib.error.HTTPError(url, 429, "Too Many Requests", {}, None)
+            if "page=" in url:
+                return page([], total=0)
+            return page([item(1, "SOLD" if "sold=1" in url else "OPEN", 100)])
+        return f
+
+    def _rows(self, d):
+        lines = [json.loads(l) for l in (Path(d) / "daily.jsonl").read_text().splitlines()]
+        keys = [(r["date"], r["query_id"]) for r in lines]
+        self.assertEqual(len(keys), len(set(keys)))             # 同じ日・同じクエリの行が二重にならない
+        return {r["query_id"]: r for r in lines}
+
+    def test_second_pass_recovers_and_exit0(self):
+        state = {"pass": 1}
+        waits = []
+        def blocked(url):
+            return state["pass"] == 1 and ("kw1x" in url or "kw2x" in url)
+        def sleep(s):
+            waits.append(s); state["pass"] = 2
+        with tempfile.TemporaryDirectory() as d:
+            rc = fpt.run(dict(self._cfg(3), retry_429_wait_sec=900), "2026-09-01", Path(d),
+                         fetch=self._fetch(blocked), sleep=sleep)
+            rows = self._rows(d)
+            self.assertEqual(rc, 0)
+            self.assertEqual(waits, [900])
+            self.assertEqual(len(rows), 3)                       # error 行が残って二重にならない
+            self.assertTrue(all(r["status"] == "ok" for r in rows.values()))
+
+    def test_still_429_gives_up_rest_and_exit2(self):
+        tried = []
+        def blocked(url):
+            tried.append(url)
+            return "kw0x" not in url                             # q0 だけ通る
+        with tempfile.TemporaryDirectory() as d:
+            rc = fpt.run(dict(self._cfg(4), retry_429_wait_sec=5), "2026-09-01", Path(d),
+                         fetch=self._fetch(blocked), sleep=lambda s: None)
+            rows = self._rows(d)
+            self.assertEqual(rc, 2)
+            self.assertEqual([rows[f"q{i}"]["status"] for i in range(4)], ["ok", "error", "error", "error"])
+            self.assertEqual(sum("kw1x" in u for u in tried), 2)  # 2 周目は q1 で 429 → 打ち切り
+            self.assertEqual(sum("kw2x" in u for u in tried), 1)  # q2・q3 は 2 周目に試さない
+            out = (Path(d) / "daily.jsonl").read_text().splitlines()
+            self.assertEqual(len(out), 4)
+
+    def test_non_429_error_is_not_retried(self):
+        waits = []
+        with tempfile.TemporaryDirectory() as d:
+            rc = fpt.run(self._cfg(1), "2026-09-01", Path(d),
+                         fetch=lambda u, ua: "<html>Error Page</html>", sleep=waits.append)
+            self.assertEqual((rc, waits), (2, []))
+
+
 class SubjectLinkTest(unittest.TestCase):
     """P-INF-29 案5: クエリの subject（X 品薄対応表の受益 subject id）を daily 行に出す（記録だけ）。"""
 

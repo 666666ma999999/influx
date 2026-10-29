@@ -5,6 +5,7 @@
   "sold_param": "sold=1",
   "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 Safari/605.1.15",
   "request_interval_sec": 6.0,
+  "retry_429_wait_sec": 900,
   "stale_days": 7,
   "queries": [
     {
