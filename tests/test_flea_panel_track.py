@@ -270,6 +270,108 @@ class Retry429Test(unittest.TestCase):
             self.assertEqual((rc, waits), (2, []))
 
 
+class Retry404Test(unittest.TestCase):
+    """2026-11-13: Yahoo!フリマが時々返す一時的な 404 を試し直す（fetch_html で待って再試行・一巡の後の 2 周目にも乗せる）。"""
+
+    URL = "https://x.example/search/kw?sold=1"
+
+    @staticmethod
+    def _http404(url="https://x.example/search/kw"):
+        import urllib.error
+        return urllib.error.HTTPError(url, 404, "Not Found", {}, None)
+
+    def _fetch_html(self, outcomes):
+        """urlopen を outcomes の順（例外 or 本文 bytes）に差し替えて fetch_html を呼ぶ。待ちは記録だけ。"""
+        import io
+        from unittest import mock
+        seq = iter(outcomes)
+        calls, waits = [], []
+        def fake_urlopen(req, timeout=None):
+            calls.append(req.full_url)
+            o = next(seq)
+            if isinstance(o, Exception):
+                raise o
+            return io.BytesIO(o)
+        with mock.patch.object(fpt.urllib.request, "urlopen", side_effect=fake_urlopen):
+            try:
+                return fpt.fetch_html(self.URL, "ua", sleep=waits.append), calls, waits, None
+            except Exception as e:  # noqa: BLE001
+                return None, calls, waits, e
+
+    def test_fetch_html_404_once_then_ok(self):
+        body, calls, waits, err = self._fetch_html([self._http404(), b"<html>ok</html>"])
+        self.assertIsNone(err)
+        self.assertEqual(body, "<html>ok</html>")
+        self.assertEqual(len(calls), 2)
+        self.assertEqual(waits, [fpt.RETRY_WAITS_404[0]])
+        self.assertTrue(all(30 <= w <= 60 for w in fpt.RETRY_WAITS_404))
+
+    def test_fetch_html_404_persists_raises_with_url(self):
+        import urllib.error
+        n = len(fpt.RETRY_WAITS_404) + 1
+        body, calls, waits, err = self._fetch_html([self._http404() for _ in range(n)])
+        self.assertIsNone(body)
+        self.assertIsInstance(err, urllib.error.HTTPError)
+        self.assertEqual(err.code, 404)
+        self.assertIn(self.URL, str(err))                      # どの頁・どの並びで落ちたか追える
+        self.assertEqual(len(calls), n)                        # 2〜3 回まで試し直して打ち切る
+        self.assertEqual(waits, list(fpt.RETRY_WAITS_404))
+
+    def test_fetch_html_other_http_error_not_retried(self):
+        import urllib.error
+        e500 = urllib.error.HTTPError(self.URL, 500, "Server Error", {}, None)
+        body, calls, waits, err = self._fetch_html([e500])
+        self.assertEqual((err.code, len(calls), waits), (500, 1, []))
+
+    @staticmethod
+    def _cfg(n):
+        return dict(CFG, queries=[{"id": f"q{i}", "query": f"kw{i}x"} for i in range(n)], retry_429_wait_sec=900)
+
+    @staticmethod
+    def _fetch(blocked):
+        def f(url, ua):
+            if blocked(url):
+                raise Retry404Test._http404(url)
+            if "page=" in url:
+                return page([], total=0)
+            return page([item(1, "SOLD" if "sold=1" in url else "OPEN", 100)])
+        return f
+
+    def _rows(self, d):
+        lines = [json.loads(l) for l in (Path(d) / "daily.jsonl").read_text().splitlines()]
+        self.assertEqual(len(lines), len({(r["date"], r["query_id"]) for r in lines}))
+        return {r["query_id"]: r for r in lines}
+
+    def test_run_404_once_then_ok_in_second_pass(self):
+        """1 周目で 404（fetch_html の再試行でも解けず）→ 2 周目で通れば ok・exit 0。"""
+        state = {"pass": 1}
+        waits = []
+        def sleep(s):
+            waits.append(s); state["pass"] = 2
+        with tempfile.TemporaryDirectory() as d:
+            rc = fpt.run(self._cfg(3), "2026-09-01", Path(d),
+                         fetch=self._fetch(lambda u: state["pass"] == 1 and "kw1x" in u), sleep=sleep)
+            rows = self._rows(d)
+            self.assertEqual(rc, 0)
+            self.assertEqual(waits, [900])
+            self.assertTrue(all(r["status"] == "ok" for r in rows.values()))
+
+    def test_run_404_persists_is_error_exit2(self):
+        """404 が出続ければ error 行・exit 2。404 では 2 周目を打ち切らない（q1・q2 とも 2 回試す）。"""
+        tried = []
+        def blocked(url):
+            tried.append(url)
+            return "kw1x" in url or "kw2x" in url
+        with tempfile.TemporaryDirectory() as d:
+            rc = fpt.run(self._cfg(3), "2026-09-01", Path(d), fetch=self._fetch(blocked), sleep=lambda s: None)
+            rows = self._rows(d)
+            self.assertEqual(rc, 2)
+            self.assertEqual([rows[f"q{i}"]["status"] for i in range(3)], ["ok", "error", "error"])
+            self.assertIn("404", rows["q1"]["error"])
+            self.assertEqual(sum("kw1x" in u for u in tried), 2)
+            self.assertEqual(sum("kw2x" in u for u in tried), 2)
+
+
 class SubjectLinkTest(unittest.TestCase):
     """P-INF-29 案5: クエリの subject（X 品薄対応表の受益 subject id）を daily 行に出す（記録だけ）。"""
 

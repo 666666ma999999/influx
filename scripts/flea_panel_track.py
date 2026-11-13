@@ -54,27 +54,46 @@ NEXT_DATA_RE = re.compile(r'<script id="__NEXT_DATA__"[^>]*>(.*?)</script>', re.
 
 # ---------------------------------------------------------------- 取得・解析
 RETRY_WAITS = (60, 180, 420)   # 429（Too Many Requests）時の待ち秒・2026-09-23 実走で 3 クエリ目から 429 が出た
+# 404 時の待ち秒（2026-11-13 job-doctor 修理）。Yahoo!フリマは同じ検索 URL に時々 404 を返し、前日・翌日は通る
+# （daily.jsonl 実測: 10/11・10/17・11/1・11/3・11/9・11/10・11/12 に毎回違うクエリで 1 件ずつ）＝一時的な失敗として扱う。
+RETRY_WAITS_404 = (45, 45)
 
 
-def fetch_html(url: str, user_agent: str, timeout: int = 30) -> str:
-    """HTTP GET。429 は RETRY_WAITS の回数だけ待って再試行し、それでも 429 なら例外（error 行として記録される）。"""
+def fetch_html(url: str, user_agent: str, timeout: int = 30, sleep=time.sleep) -> str:
+    """HTTP GET。429 は RETRY_WAITS、404 は RETRY_WAITS_404 の回数だけ待って再試行し、それでも同じなら例外。
+
+    例外は error 行として記録される。404 が出続けた時の例外文には URL を入れる（どの頁・どの並びで落ちたか追えるように）。
+    """
     req = urllib.request.Request(url, headers={"User-Agent": user_agent, "Accept-Language": "ja"})
-    for attempt, wait in enumerate((*RETRY_WAITS, None)):
+    attempt = 0      # 429・通信断で共有する試行回数（従来どおり）
+    tries_404 = 0    # 404 は別に数える
+    while True:
         try:
             with urllib.request.urlopen(req, timeout=timeout) as resp:
                 return resp.read().decode("utf-8", errors="ignore")
         except urllib.error.HTTPError as e:
-            if e.code != 429 or wait is None:
+            if e.code == 404:
+                if tries_404 >= len(RETRY_WAITS_404):
+                    raise urllib.error.HTTPError(url, 404, f"Not Found after {tries_404 + 1} tries: {url}",
+                                                 e.headers, None) from e
+                wait = RETRY_WAITS_404[tries_404]
+                tries_404 += 1
+                print(f"[404] {url}; waiting {wait}s (attempt {tries_404}/{len(RETRY_WAITS_404)})", file=sys.stderr)
+                sleep(wait)
+                continue
+            if e.code != 429 or attempt >= len(RETRY_WAITS):
                 raise
-            print(f"[429] rate limited; waiting {wait}s (attempt {attempt + 1}/{len(RETRY_WAITS)})", file=sys.stderr)
-            time.sleep(wait)
+            wait = RETRY_WAITS[attempt]
+            attempt += 1
+            print(f"[429] rate limited; waiting {wait}s (attempt {attempt}/{len(RETRY_WAITS)})", file=sys.stderr)
+            sleep(wait)
         except (urllib.error.URLError, OSError) as e:
             # 名前解決の失敗・接続断（コンテナの DNS が長時間実行の途中で落ちる実害 2026-09-23）は短く待って再試行
-            if wait is None:
+            if attempt >= len(RETRY_WAITS):
                 raise
-            print(f"[net] {e}; waiting 30s (attempt {attempt + 1}/{len(RETRY_WAITS)})", file=sys.stderr)
-            time.sleep(30)
-    raise RuntimeError("unreachable")
+            attempt += 1
+            print(f"[net] {e}; waiting 30s (attempt {attempt}/{len(RETRY_WAITS)})", file=sys.stderr)
+            sleep(30)
 
 
 def parse_items(html: str) -> Optional[List[Dict[str, Any]]]:
@@ -336,7 +355,7 @@ def run(cfg: Dict[str, Any], today: str, data_dir: Path, fetch=fetch_html, sleep
     interval = float(cfg.get("request_interval_sec", 2.0))
 
     def observe(q: Dict[str, Any]) -> str:
-        """1 クエリを観測して daily に 1 行足す。戻り値= "ok" / "error" / "429"（429 が解けずに失敗）。"""
+        """1 クエリを観測して daily に 1 行足す。戻り値= "ok" / "error" / "429" / "404"（その HTTP コードが解けずに失敗）。"""
         nonlocal errors, processed
         qid, query = q["id"], q["query"]
         # subject= X 品薄対応表（configs/x_shortage_map.json）の受益 subject id。記録だけ＝判断・発火に使わない（P-INF-29 案5）
@@ -358,7 +377,9 @@ def run(cfg: Dict[str, Any], today: str, data_dir: Path, fetch=fetch_html, sleep
             errors += 1
             daily.append(row)
             print(f"[ERROR] {qid}: {row['error']}", file=sys.stderr)
-            return "429" if isinstance(e, urllib.error.HTTPError) and e.code == 429 else "error"
+            if isinstance(e, urllib.error.HTTPError) and e.code in (429, 404):
+                return str(e.code)
+            return "error"
 
         open_items = [slim(i) for i in open_raw if i.get("itemStatus") == "OPEN" and title_ok(i.get("title"), q)]
         sold_items = [i for i in sold_w["items"] if i.get("status") == "SOLD"]
@@ -398,15 +419,17 @@ def run(cfg: Dict[str, Any], today: str, data_dir: Path, fetch=fetch_html, sleep
               f"sold/open_total={row['sold_d1_over_open_total']} open_med={row['open_median']}")
         return "ok"
 
-    failed_429 = [q for q in cfg["queries"] if observe(q) == "429"]
+    failed_429 = [q for q in cfg["queries"] if observe(q) in ("429", "404")]
 
     # 429 で落ちたクエリの 2 周目（2026-10-29 job-doctor 修理）。実測 10-28: 429 は 1 回の待ち（計 660 秒）では
     # 解けない間が続く一方、同じ便の途中で 10 クエリは通った＝制限は断続的。一巡の後に長く休んでもう 1 回だけ試す。
-    # 2 周目でも最初に 429 で落ちたら打ち切る（制限が続いている＝残りを試しても待ち時間が延びるだけ）。
+    # 2026-11-13: 一時的な 404（fetch_html の 404 再試行でも解けなかった物）も同じ 2 周目に乗せる（待ちも同じ）。
+    # 2 周目でも最初に 429 で落ちたら打ち切る（制限が続いている＝残りを試しても待ち時間が延びるだけ）。404 では打ち切らない。
     # 落ちたままのクエリは error 行のまま＝exit 2 も変えない（件数の不一致を隠さない）。
     wait_429 = float(cfg.get("retry_429_wait_sec", 900))
     if failed_429 and wait_429 > 0:
-        print(f"[retry-429] {len(failed_429)} queries; waiting {wait_429:.0f}s before the 2nd pass", file=sys.stderr)
+        print(f"[retry-429] {len(failed_429)} queries (429/404); waiting {wait_429:.0f}s before the 2nd pass",
+              file=sys.stderr)
         sleep(wait_429)
         for i, q in enumerate(failed_429):
             daily[:] = [r for r in daily if not (r.get("date") == today and r.get("query_id") == q["id"])]
