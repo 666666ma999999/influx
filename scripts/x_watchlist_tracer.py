@@ -151,7 +151,11 @@ def fill_full_text(page, rows: list[dict], history: dict, budget: list[int]) -> 
             page.goto(r["url"], wait_until="domcontentloaded", timeout=45_000)
             page.wait_for_selector('article [data-testid="tweetText"]', timeout=25_000)
             page.wait_for_timeout(1000)
-            full = page.locator("article").first.locator('[data-testid="tweetText"]').first.inner_text()
+            # 返信は投稿の画面の上に元の投稿が出るので、この投稿の番号へのリンク（日時）を持つ記事を選ぶ
+            arts = page.locator("article").filter(
+                has=page.locator(f'a[href*="/status/{r["tweet_id"]}"] time'))
+            art = arts.first if arts.count() else page.locator("article").first
+            full = art.locator('[data-testid="tweetText"]').first.inner_text()
             full = (full or "").replace("\u2028", " ").replace("\u2029", " ")
             if len(full) > len(r.get("text") or ""):
                 r.update(text=full, text_truncated=False, text_full=True)

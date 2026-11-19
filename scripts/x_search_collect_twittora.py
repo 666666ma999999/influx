@@ -220,6 +220,9 @@ def scrape_cards_rich(page) -> list[dict]:
             if not m:
                 continue
             content = ""
+            # 2026-11-19: 一覧の画面は長い投稿を 149 字ほどで切り「さらに表示」を付ける。
+            # 印を付け、後で投稿の画面から全文を取り直す（実害: 切れた本文を全文と見なした提案 D-415）
+            truncated = card.locator('[data-testid="tweet-text-show-more-link"]').count() > 0
             tt = card.locator('[data-testid="tweetText"]')
             if tt.count():
                 try:
@@ -256,6 +259,7 @@ def scrape_cards_rich(page) -> list[dict]:
                 # 初出レーン（P-INF-25・2026-10-03）: 発見器が候補語の初出時刻を保存するため、<time datetime> の全文も残す。
                 # 既存の posted_at（日付 10 文字）は消費元との互換のため変えない
                 "posted_at_full": dt_attr,
+                **({"content_truncated": True} if truncated else {}),
                 **metrics,
             })
         except Exception:
@@ -342,6 +346,15 @@ def refetch_content(page, url: str) -> str:
     try:
         page.goto(url, wait_until="domcontentloaded", timeout=30_000)
         time.sleep(random.uniform(2.0, 4.0))
+        # 2026-11-19: 返信は上に元の投稿が出るので、この投稿の番号へのリンク（日時）を持つ記事の本文を取る
+        m = _STATUS_ID_RE.search(url)
+        if m:
+            arts = page.locator("article").filter(
+                has=page.locator(f'a[href*="/status/{m.group(1)}"] time'))
+            if arts.count():
+                el = arts.first.locator('[data-testid="tweetText"]')
+                if el.count():
+                    return (el.first.inner_text(timeout=3000) or "").strip()
         el = page.locator('[data-testid="tweetText"]')
         if el.count():
             return (el.first.inner_text(timeout=3000) or "").strip()
@@ -427,6 +440,8 @@ def main() -> int:
     ap.add_argument("--refetch-cap", type=int, default=8, help="空本文の個別再取得の上限件数")
     # 2026-08-03: 50→120（7/26 実測は空本文29件に対し救済1件＝3%。cap が律速でない可能性も
     # あるが、上げ幅のコストは syndication 個別取得の回数のみで安全側）。
+    ap.add_argument("--fulltext-cap", type=int, default=20,
+                    help="一覧で切れた長い投稿を投稿の画面で全文に取り直す上限件数（いいねの多い順）")
     ap.add_argument("--syndication-cap", type=int, default=120,
                     help="syndication API での空本文救済の上限件数（無認証・refetch-capとは別枠）")
     ap.add_argument("--profile", default="x_profiles/maaaki")
@@ -534,6 +549,20 @@ def main() -> int:
                     refetched += 1
             if empties:
                 print(f"  空本文: {len(empties)} 件（個別再取得で {refetched} 件救済）")
+
+            # 2026-11-19: 一覧で切れた長い投稿を、いいねの多い順に投稿の画面で全文へ取り直す
+            cut = sorted((r for r in deduped if r.get("content_truncated") and r["content"]),
+                         key=lambda r: r["likes"], reverse=True)
+            filled = 0
+            for r in cut[: args.fulltext_cap]:
+                text = refetch_content(page, r["url"])
+                if len(text) > len(r["content"]):
+                    r["content"] = text.replace("\u2028", " ").replace("\u2029", " ")
+                    r.pop("content_truncated", None)
+                    r["content_full"] = True
+                    filled += 1
+            if cut:
+                print(f"  途中で切れた本文: {len(cut)} 件（全文に取り直し {filled} 件・残り {len(cut) - filled} 件は切れたまま）")
 
             # Fix1/Fix4(2026-07-26): syndication API（無認証・cap は refetch-cap と別枠）で
             # DOM再取得後もなお空の行を救済（X Articles対応）し、DOM由来の本文の翻訳/切断も正規化
