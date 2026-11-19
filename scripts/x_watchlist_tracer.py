@@ -95,6 +95,9 @@ def scrape_profile(page, handle: str, max_posts: int) -> list[dict]:
             if t.count():
                 posted_at = t.get_attribute("datetime")
             text = ""
+            # 長い投稿は一覧の画面で途中までしか出ない（「さらに表示」の印がある）。
+            # 印を記録し、後で投稿の画面を開いて全文に差し替える（fill_full_text・2026-11-19）
+            truncated = art.locator('[data-testid="tweet-text-show-more-link"]').count() > 0
             tt = art.locator('[data-testid="tweetText"]')
             if tt.count():
                 # U+2028/U+2029 は json.dumps が素通しし splitlines() を割る → 無害化
@@ -110,7 +113,8 @@ def scrape_profile(page, handle: str, max_posts: int) -> list[dict]:
                 "author": author,
                 "url": f"https://x.com/{author}/status/{tweet_id}",
                 "posted_at": posted_at,
-                "text": (text or "")[:280],
+                "text": text or "",
+                "text_truncated": truncated,
                 "is_repost": is_repost,
                 "social_context": ctx[:40],
                 **met,
@@ -121,6 +125,38 @@ def scrape_profile(page, handle: str, max_posts: int) -> list[dict]:
         except Exception:
             continue
     return rows
+
+
+def fill_full_text(page, rows: list[dict], history: dict, budget: list[int]) -> None:
+    """一覧で途中までしか出ていない投稿の全文を、投稿の画面を開いて取り直す。
+
+    2026-11-19 実害: @kenn の 237 字の投稿が一覧の画面の 149 字で記録され、AI日報が
+    「全文を読んだ」として後半の結論（UI はデザインの語彙がボトルネック）を落とした提案を作った。
+    syndication API も長い投稿は 149 字＋note_tweet の id しか返さないので、画面を開くしかない。
+    - 前の巡回で全文が取れていれば、その文を使い回す（同じ投稿を毎回開かない）
+    - 開くのは 1 回の巡回で budget[0] 件まで。取れなかった行は text_truncated=True のまま残す
+    """
+    for r in rows:
+        if not r.get("text_truncated") or r.get("is_repost"):
+            continue
+        prev_full = next((h["text"] for h in reversed(history.get(r["tweet_id"]) or [])
+                          if h.get("text_full") and h.get("text")), None)
+        if prev_full:
+            r.update(text=prev_full, text_truncated=False, text_full=True)
+            continue
+        if budget[0] <= 0:
+            continue
+        budget[0] -= 1
+        try:
+            page.goto(r["url"], wait_until="domcontentloaded", timeout=45_000)
+            page.wait_for_selector('article [data-testid="tweetText"]', timeout=25_000)
+            page.wait_for_timeout(1000)
+            full = page.locator("article").first.locator('[data-testid="tweetText"]').first.inner_text()
+            full = (full or "").replace("\u2028", " ").replace("\u2029", " ")
+            if len(full) > len(r.get("text") or ""):
+                r.update(text=full, text_truncated=False, text_full=True)
+        except Exception as e:  # 1 件の失敗で巡回を止めない（印は残る）
+            print(f"[{r['handle']}] 全文の取り直し失敗 {r['tweet_id']}: {type(e).__name__}", file=sys.stderr)
 
 
 def detect(rows: list[dict], history: dict, cfg: dict, lane: str) -> list[dict]:
@@ -184,6 +220,7 @@ def main() -> int:
     all_rows: list[dict] = []
     all_alerts: list[dict] = []
     failed: list[str] = []
+    budget = [cfg.get("max_full_text_fetch", 15)]
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         context = browser.new_context()
@@ -193,6 +230,7 @@ def main() -> int:
             handle, lane = h["handle"], h.get("lane", "en")
             try:
                 rows = scrape_profile(page, handle, cfg.get("max_posts_per_handle", 10))
+                fill_full_text(page, rows, history, budget)
                 own = [r for r in rows if not r["is_repost"]]
                 all_alerts.extend(detect(rows, history, cfg, lane))
                 all_rows.extend(rows)
@@ -211,6 +249,8 @@ def main() -> int:
                 f.write(json.dumps(a, ensure_ascii=False) + "\n")
 
     n_series = sum(1 for r in all_rows if not r["is_repost"] and history.get(r["tweet_id"]))
+    n_cut = sum(1 for r in all_rows if not r["is_repost"] and r.get("text_truncated"))
+    print(f"--- 本文: 途中で切れたまま={n_cut}（全文に差し替え済みは text_full=True）")
     print(f"--- self-check: rows={len(all_rows)} 時系列2点目以降={n_series} "
           f"alerts={len(all_alerts)} failed_handles={failed or 'なし'}")
     # 全滅のみ失敗扱い（0件偽装の再発防止・grok収集の教訓）
