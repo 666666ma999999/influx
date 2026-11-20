@@ -70,6 +70,9 @@ influx-architecture.md §2（機能マップ）が代替（rules/05 K-308）。�
 - **未確認**: 道具禁止後の抽出段が stdout に JSON 配列を返すか（単独再試験 19:07 起動・結果は次の記帳で）。
 - **抽出段 単独再試験（19:07:42〜19:10・道具禁止フラグ付き・worklist 890件）**: `claude rc=0`・stdout 9,295 bytes・JSON 配列 18件を parse・末尾は ```` ``` ```` のみ（ラッパー許容内）＝**S2 合格**。`MultiEdit` は「既知の道具でない」警告のため一覧から除去（commit 次項）。
 - **Session Handoff（2026-09-12 19:15）**: 実装・試走とも完了（commit 5dd3a19→7367d79→e0ee441＋本 commit）。**残= T7 登録のみ（オーナーの `!` で `ln -s` + `launchctl load`）**。ロード後に `config/launchd/README.md` の行と `docs/pipeline-map.md` §4 未ロード一覧を「稼働中」へ更新する（次セッションの先頭作業）。
+- **2026-11-20 23:0x masa-2 原因と直し（オーナー「1 全部直して」11-20 22:25）**: 無人の回は登録から毎回 `line 91: docker: command not found`→exit 4（`~/Library/Logs/influx-research-weekly.log` 実読・launchctl の PATH= `/usr/bin:/bin:/usr/sbin:/sbin`・plist に EnvironmentVariables 無し・docker の実体 `/usr/local/bin/docker`）。直し= 台本 40 行目に `export PATH="/usr/local/bin:/opt/homebrew/bin:$PATH"` を 1 行。
+- **確かめ**: `bash -n` rc=0／薄い PATH で `which docker` 直す前 rc=1・直した後 `/usr/local/bin/docker`／`docker compose version` v5.0.2。本体は走らせていない（次の定時 11-21 土 09:00）。
+- **次の回で見る所**: 同ログに `週次完了: 収集…/抽出…/取込…`（Mac 通知と同文）か `FATAL:` の行。当たりうる所= ①claude -p（無人では一度も通っていない・exit 5）②Cookie `x_profiles/maaaki/cookies.json` 10-29 のまま（失効なら exit 4・取り込みはオーナー）③終わる時の `docker compose down` が、前から動いている xstock-vnc（11-20 時点で 3 日稼働）も消す。
 
 ## Decision Log（仕様差分・implementation-checklist STEP 2.7）
 | 項目 | 種別 | 内容 |

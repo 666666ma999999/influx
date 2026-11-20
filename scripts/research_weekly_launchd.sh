@@ -37,6 +37,7 @@ CLAUDE_BIN="${CLAUDE_BIN:-/Users/masaaki_nagasawa/.nvm/versions/node/v22.18.0/bi
 CLAUDE_MODEL="${CLAUDE_MODEL:-sonnet}"
 # launchd の PATH に Claude の shebang が使う node を補う。
 export PATH="$(dirname "$CLAUDE_BIN"):$PATH"
+export PATH="/usr/local/bin:/opt/homebrew/bin:$PATH"
 
 research_notify() {
     local msg
