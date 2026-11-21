@@ -37,7 +37,9 @@ CLAUDE_BIN="${CLAUDE_BIN:-/Users/masaaki_nagasawa/.nvm/versions/node/v22.18.0/bi
 CLAUDE_MODEL="${CLAUDE_MODEL:-sonnet}"
 # launchd の PATH に Claude の shebang が使う node を補う。
 export PATH="$(dirname "$CLAUDE_BIN"):$PATH"
-export PATH="/usr/local/bin:/opt/homebrew/bin:$PATH"
+# docker（/usr/local/bin）を後ろに足す。前に足すと python3 が /opt/homebrew の別版に
+# すり替わり、playwright の無い版で winrate_worklist.py が落ちる（2026-11-21 実害・exit 1）。
+export PATH="$PATH:/usr/local/bin:/opt/homebrew/bin"
 
 research_notify() {
     local msg
