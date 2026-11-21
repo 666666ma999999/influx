@@ -57,6 +57,7 @@ class TestWeeklyCollection(unittest.TestCase):
                  patch.object(research_weekly, '_load_frozen_list', return_value={
                      'research_accounts': ['posted', 'empty', 'missing']}), \
                  patch.object(research_weekly, 'EXPECTED_RESEARCH_ACCOUNTS', 3), \
+                 patch.object(research_weekly, 'RETRY_WAIT_SEC', 0), \
                  patch.object(research_weekly, 'phase_collect', return_value=[str(posted), str(empty)]), \
                  patch('scripts.research_influencers.phase_evaluate', side_effect=AssertionError('legacy evaluation called')), \
                  contextlib.redirect_stdout(output):
@@ -67,6 +68,54 @@ class TestWeeklyCollection(unittest.TestCase):
             self.assertIn('抽出はラッパー側', log.read_text())
             self.assertEqual(len(log.read_text().splitlines()), 1)
 
+
+    def test_accounts_without_posts_are_retried_once_after_first_pass(self):
+        """2026-11-21: 名前引き失敗で取れなかった口座を一巡後に 1 回だけ取り直す。"""
+        with tempfile.TemporaryDirectory() as tmp:
+            directory = Path(tmp)
+            first = directory / 'tweets_first.json'
+            late = directory / 'tweets_late.json'
+            first.write_text('[{"text":"a"}]')
+            late.write_text('[{"text":"b"},{"text":"c"}]')
+            calls = []
+
+            def fake_collect(candidates_files, max_collect, **kwargs):
+                with open(candidates_files[0], encoding='utf-8') as f:
+                    names = [c['username'] for c in json.load(f)['candidates']]
+                calls.append((names, max_collect))
+                return [str(first)] if len(calls) == 1 else [str(late), str(first)]
+
+            output = io.StringIO()
+            with patch.object(research_weekly, 'RESEARCH_DIR', tmp), \
+                 patch.object(research_weekly, 'WEEKLY_LOG_PATH', str(directory / 'weekly_log.md')), \
+                 patch.object(research_weekly, 'ensure_research_dir'), \
+                 patch.object(research_weekly, '_load_frozen_list', return_value={
+                     'research_accounts': ['first', 'late', 'zero']}), \
+                 patch.object(research_weekly, 'EXPECTED_RESEARCH_ACCOUNTS', 3), \
+                 patch.object(research_weekly, 'RETRY_WAIT_SEC', 0), \
+                 patch.object(research_weekly, 'phase_collect', side_effect=fake_collect), \
+                 contextlib.redirect_stdout(output):
+                self.assertEqual(research_weekly.main(), 0)
+            self.assertEqual(calls, [(['first', 'late', 'zero'], 3), (['late', 'zero'], 2)])
+            summary = next(line for line in output.getvalue().splitlines() if line.startswith('RW_SUMMARY '))
+            self.assertEqual(json.loads(summary.removeprefix('RW_SUMMARY ')), {
+                'accounts': 3, 'collected_files': 2, 'zero_post_accounts': 1, 'total_tweets': 3})
+
+    def test_no_retry_when_every_account_has_posts(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            only = Path(tmp) / 'tweets_only.json'
+            only.write_text('[{"text":"a"}]')
+            collect = unittest.mock.MagicMock(return_value=[str(only)])
+            with patch.object(research_weekly, 'RESEARCH_DIR', tmp), \
+                 patch.object(research_weekly, 'WEEKLY_LOG_PATH', str(Path(tmp) / 'weekly_log.md')), \
+                 patch.object(research_weekly, 'ensure_research_dir'), \
+                 patch.object(research_weekly, '_load_frozen_list', return_value={'research_accounts': ['only']}), \
+                 patch.object(research_weekly, 'EXPECTED_RESEARCH_ACCOUNTS', 1), \
+                 patch.object(research_weekly.time, 'sleep', side_effect=AssertionError('retry wait called')), \
+                 patch.object(research_weekly, 'phase_collect', collect), \
+                 contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(research_weekly.main(), 0)
+            self.assertEqual(collect.call_count, 1)
 
 class TestIngestExitCode(unittest.TestCase):
     def run_ingest(self, records):

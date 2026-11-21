@@ -11,6 +11,7 @@ Usage（Docker VNCコンテナ内での実行を想定）:
 import json
 import os
 import sys
+import time
 from datetime import datetime, timedelta
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -25,6 +26,11 @@ FROZEN_LIST_PATH = "data/influencer_list_frozen_2026-07-05.json"
 EXPECTED_RESEARCH_ACCOUNTS = 34  # 凍結34（S1）。数が違えば凍結ファイル事故＝fail-closed
 WEEKLY_LOG_PATH = os.path.join(RESEARCH_DIR, "weekly_log.md")
 COLLECT_LOOKBACK_DAYS = 8  # 週次(7日)+1日のオーバーラップ猶予
+# 一巡の後、投稿が取れなかった口座だけを 1 回だけ取り直すまでの待ち。
+# 2026-11-21 の無人 2 周で、入れ物の中で x.com の名前が引けない失敗
+# （net::ERR_NAME_NOT_RESOLVED）が口座ごとにまばらに・最長 12 分ほど続き、
+# 投稿0件が閾値17を超えて止まった（20・24口座）。別の時間帯で取り直す。
+RETRY_WAIT_SEC = 300
 
 
 def _load_frozen_list(path: str) -> dict:
@@ -49,6 +55,39 @@ def _to_candidates(frozen: dict) -> list:
             f"{len(usernames)} 件・ユニーク {len(set(usernames))}"
         )
     return [{"username": u, "score": 0} for u in usernames]
+
+
+def _write_candidates_file(path: str, candidates: list) -> None:
+    """phase_collect() が読む discovery 形式で候補を書き出す。"""
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(
+            {
+                "discovered_at": datetime.now().isoformat(),
+                "keywords": ["(frozen_list_2026-07-05)"],
+                "candidates_count": len(candidates),
+                "candidates": candidates,
+                "errors": [],
+            },
+            f,
+            ensure_ascii=False,
+            indent=2,
+        )
+
+
+def _count_posts(collected_files: list) -> tuple:
+    """収集ファイルの総投稿数と、投稿が1件以上ある口座名の集合を返す。"""
+    total_tweets = 0
+    accounts_with_posts = set()
+    for fp in collected_files:
+        with open(fp, "r", encoding="utf-8") as f:
+            tweets = json.load(f)
+        if not isinstance(tweets, list):
+            raise ValueError(f"収集結果は投稿配列である必要があります: {fp}")
+        total_tweets += len(tweets)
+        if tweets:
+            username = os.path.splitext(os.path.basename(fp))[0].removeprefix("tweets_")
+            accounts_with_posts.add(username)
+    return total_tweets, accounts_with_posts
 
 
 def _contrarian_usernames(frozen: dict) -> set:
@@ -108,46 +147,38 @@ def main() -> int:
         return 1
 
     adapter_path = os.path.join(RESEARCH_DIR, "_frozen34_candidates.json")
-    with open(adapter_path, "w", encoding="utf-8") as f:
-        json.dump(
-            {
-                "discovered_at": datetime.now().isoformat(),
-                "keywords": ["(frozen_list_2026-07-05)"],
-                "candidates_count": len(candidates),
-                "candidates": candidates,
-                "errors": [],
-            },
-            f,
-            ensure_ascii=False,
-            indent=2,
-        )
+    _write_candidates_file(adapter_path, candidates)
 
     since = (datetime.now() - timedelta(days=COLLECT_LOOKBACK_DAYS)).strftime("%Y-%m-%d")
     until = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
 
+    collect_kwargs = {
+        "scrolls": 10,
+        "since": since,
+        "until": until,
+        "screening_files": [],  # 凍結34アカウントの実行にGrok discoveryのスクリーニングは無関係
+    }
     collected_files = phase_collect(
-        candidates_files=[adapter_path],
-        max_collect=len(candidates),
-        scrolls=10,
-        since=since,
-        until=until,
-        screening_files=[],  # 凍結34アカウントの実行にGrok discoveryのスクリーニングは無関係
+        candidates_files=[adapter_path], max_collect=len(candidates), **collect_kwargs
     )
+
+    # 一巡の後に 1 回だけ取り直す（本当に投稿0件の口座も含む＝失敗の種類は phase_collect が返さない）。
+    _, first_posted = _count_posts(collected_files)
+    missing = [c for c in candidates if c["username"] not in first_posted]
+    if missing:
+        retry_path = os.path.join(RESEARCH_DIR, "_frozen34_retry_candidates.json")
+        _write_candidates_file(retry_path, missing)
+        print(f"\n一巡後の取り直し: 投稿が取れなかった{len(missing)}口座を{RETRY_WAIT_SEC}秒後に1回だけ", flush=True)
+        time.sleep(RETRY_WAIT_SEC)
+        retried = phase_collect(
+            candidates_files=[retry_path], max_collect=len(missing), **collect_kwargs
+        )
+        collected_files += [fp for fp in retried if fp not in collected_files]
 
     if contrarian_usernames:
         _apply_contrarian_flag(collected_files, contrarian_usernames)
 
-    total_tweets = 0
-    accounts_with_posts = set()
-    for fp in collected_files:
-        with open(fp, "r", encoding="utf-8") as f:
-            tweets = json.load(f)
-        if not isinstance(tweets, list):
-            raise ValueError(f"収集結果は投稿配列である必要があります: {fp}")
-        total_tweets += len(tweets)
-        if tweets:
-            username = os.path.splitext(os.path.basename(fp))[0].removeprefix("tweets_")
-            accounts_with_posts.add(username)
+    total_tweets, accounts_with_posts = _count_posts(collected_files)
 
     # phase_collect は投稿0件・収集エラーの口座のファイルを返さない。
     # 今回返された非空ファイルだけを数え、過去のファイルで成功を水増ししない。
