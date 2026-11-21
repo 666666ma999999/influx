@@ -73,6 +73,7 @@ influx-architecture.md §2（機能マップ）が代替（rules/05 K-308）。�
 - **2026-11-20 23:0x masa-2 原因と直し（オーナー「1 全部直して」11-20 22:25）**: 無人の回は登録から毎回 `line 91: docker: command not found`→exit 4（`~/Library/Logs/influx-research-weekly.log` 実読・launchctl の PATH= `/usr/bin:/bin:/usr/sbin:/sbin`・plist に EnvironmentVariables 無し・docker の実体 `/usr/local/bin/docker`）。直し= 台本 40 行目に `export PATH="/usr/local/bin:/opt/homebrew/bin:$PATH"` を 1 行。
 - **確かめ**: `bash -n` rc=0／薄い PATH で `which docker` 直す前 rc=1・直した後 `/usr/local/bin/docker`／`docker compose version` v5.0.2。本体は走らせていない（次の定時 11-21 土 09:00）。
 - **次の回で見る所**: 同ログに `週次完了: 収集…/抽出…/取込…`（Mac 通知と同文）か `FATAL:` の行。当たりうる所= ①claude -p（無人では一度も通っていない・exit 5）②Cookie `x_profiles/maaaki/cookies.json` 10-29 のまま（失効なら exit 4・取り込みはオーナー）③終わる時の `docker compose down` が、前から動いている xstock-vnc（11-20 時点で 3 日稼働）も消す。
+- **2026-11-21 09:00 の回（11:1x 実読）**: Docker 起動 OK＝PATH の直しは効いた。10:24 に exit 4（`投稿0件が閾値以上: 20 >= 17`）。`RW_SUMMARY` accounts 34／collected 14／zero 20／tweets 283。10:11〜10:24 の 14 口座は全部 `net::ERR_NAME_NOT_RESOLVED`（x.com の名前が引けない＝回線か入れ物の DNS の一時断・Cookie 失効ではない。11:1x にホストから x.com は引ける）。claude -p の段は未到達。③は実際に起きた（前から Running の xstock-vnc を終わりに削除・11:15 時点で入れ物なし）。
 
 ## Decision Log（仕様差分・implementation-checklist STEP 2.7）
 | 項目 | 種別 | 内容 |
