@@ -189,6 +189,14 @@ if name == "docker":
     if "research_weekly.py" in " ".join(args):
         if scenario == "collect_fail": sys.exit(9)
         if scenario == "cookie": print("ログイン画面にリダイレクト（Cookie 失効の可能性）")
+        if scenario == "cookie_recovered":
+            print("ログイン画面にリダイレクト（Cookie 失効の可能性）")
+            print('{"message": "ログイン確認OK"}')
+        if scenario == "cookie_repeated":
+            for _ in range(3):
+                print('{"message": "ログイン未確認", "action": "Cookie を抽出してください"}')
+                print("ログイン画面にリダイレクト（Cookie 失効の可能性）")
+            print('{"message": "ログイン確認OK"}')
         if scenario != "no_summary":
             print('RW_SUMMARY ' + json.dumps(dict(accounts=34, collected_files=18,
                   zero_post_accounts=17 if scenario == "threshold" else 16, total_tweets=42)))
@@ -255,6 +263,7 @@ elif name == "python3":
 
     def test_fail_closed_stages(self):
         cases = [("collect_fail", 4, "winrate_worklist.py"), ("cookie", 4, "winrate_worklist.py"),
+                 ("cookie_repeated", 4, "winrate_worklist.py"),
                  ("no_summary", 4, "winrate_worklist.py"), ("threshold", 4, "winrate_worklist.py"),
                  ("work_fail", 3, "claude -p"), ("missing_claude", 5, "winrate_ingest.py"),
                  ("claude_fail", 5, "winrate_ingest.py"), ("bad_json", 5, "winrate_ingest.py"),
@@ -266,6 +275,13 @@ elif name == "python3":
                 self.assertNotIn(forbidden, calls)
                 self.assertIn("osascript", calls)
                 self.assertIn("docker compose -f docker-compose.vnc.yml down", calls)
+
+    def test_single_login_redirect_recovered_later_continues(self):
+        """2026-11-21: 1 口座だけの転送の後に ログイン確認OK が出れば止めずに最後まで進む。"""
+        result, calls, _ = self.run_wrapper("cookie_recovered")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("winrate_score.py", calls)
+        self.assertIn("後の口座で回復したので続行", result.stderr)
 
     def test_empty_worklist_exits_with_success_notification_without_extraction(self):
         result, calls, _ = self.run_wrapper("empty_work")

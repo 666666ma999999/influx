@@ -118,11 +118,19 @@ import sys
 from pathlib import Path
 
 text = Path(sys.argv[1]).read_text()
-for line in text.splitlines():
-    if re.search(r"cookie", line, re.I) and re.search(
-        r"expired|login|401|失効|期限切れ|ログイン|が空|見つかりません", line, re.I
-    ):
+log_lines = text.splitlines()
+cookie_bad = [i for i, line in enumerate(log_lines)
+              if re.search(r"cookie", line, re.I) and re.search(
+                  r"expired|login|401|失効|期限切れ|ログイン|が空|見つかりません", line, re.I)]
+# 1 口座だけのログイン画面への転送は、後の口座でログインが確かめられれば一時的な物として通す
+# （2026-11-21 23:05 に 1 口座だけ転送→後の 5 口座はログイン確認OK、なのに全体が止まった）。
+# 後で回復していない・異常の行が 6 行以上（転送 1 回で 2 行出る＝3 口座分）なら止める。
+if cookie_bad:
+    recovered = any(re.search(r"ログイン確認OK|収集完了: [1-9][0-9]*件", line)
+                    for line in log_lines[cookie_bad[-1] + 1:])
+    if not recovered or len(cookie_bad) >= 6:
         raise SystemExit("Cookie 認証異常を検出")
+    print(f"警告: ログイン画面への転送 {len(cookie_bad)} 行・後の口座で回復したので続行", file=sys.stderr)
 lines = [line.removeprefix("RW_SUMMARY ") for line in text.splitlines()
          if line.startswith("RW_SUMMARY ")]
 if len(lines) != 1:
